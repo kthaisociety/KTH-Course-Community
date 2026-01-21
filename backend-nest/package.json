@@ -45,7 +45,7 @@
     "rxjs": "^7.8.1",
     "supertokens-nestjs": "^0.0.5",
     "supertokens-node": "^22.1.1",
-    "uuid": "^13.0.0",
+    "uuid": "^8.3.2",
     "zod": "^3.23.8"
   },
   "devDependencies": {

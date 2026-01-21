@@ -27,7 +27,7 @@ export default function ContactView({ onSubmit }: ContactViewProps) {
               Get in Touch
             </h1>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Have questions about Course Compass? Want to share feedback or
+              Have questions about Course Community? Want to share feedback or
               suggest improvements? We'd love to hear from you!
             </p>
           </div>
@@ -63,7 +63,7 @@ export default function ContactView({ onSubmit }: ContactViewProps) {
                     Share Your Feedback
                   </h3>
                   <p className="text-muted-foreground">
-                    Your feedback helps us improve Course Compass for all KTH
+                    Your feedback helps us improve Course Community for all KTH
                     students. Let us know below!
                   </p>
                 </div>

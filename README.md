@@ -1,6 +1,19 @@
-# Course Compass
+# KTH-Course-Community
 
-Course Compass is a full-stack application designed to help KTH students search for and explore courses. It features a Next.js frontend and a NestJS backend, powered by ElasticSearch for searching and PostgreSQL for data storage.
+KTH-Course-Community is a full-stack application designed to help KTH students search for and explore courses. It features a Next.js frontend and a NestJS backend, powered by ElasticSearch for searching and PostgreSQL for data storage.
+
+## Open Source Contribution
+All contributions to the project are very welcome! 
+To make a contribution:
+-   Open a new issue
+    - Usually good to await comment from code admins before starting working on the feature.      
+-   Create a new branch or fork
+-   Implement new feature / ticket
+-   Create a PR into the Dev branch
+    - Link issue in PR. 
+-   Wait for approval or comment by code admins
+
+If you have any suggestions you are always welcome to open an issue in the repository!
 
 ## Prerequisites
 
@@ -17,8 +30,8 @@ Follow these steps to get the project up and running on your local machine.
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/Tegelstenen/course-compass.git
-cd course-compass
+git clone https://github.com/kthaisociety/KTH-Course-Community.git
+cd KTH-Course-Community
 ```
 
 ### 2. Install Dependencies
@@ -72,8 +85,8 @@ Once configured, run the database migrations to set up the schema:
 
 ```bash
 cd backend-nest
-npm run db:generate -C backend-nest
-npm run db:push -C backend-nest
+npm run db:generate
+npm run db:push
 ```
 
 ### 5. Start ElasticSearch
@@ -84,7 +97,7 @@ You can run a local instance of ElasticSearch using Docker. The following comman
 curl -fsSL https://elastic.co/start-local | sh
 ```
 
-When it starts, it will print a password for the `elastic` user. **Make sure to copy this password and add it to the `ELASTICSEARCH_PASSWORD` variable in your `backend-nest/.env` file.**
+When the process has finished, it will print a password for the `elastic` user. **Make sure to copy this password and add it to the `ELASTICSEARCH_PASSWORD` variable in your `backend-nest/.env` file.**
 
 ### 6. Start the Development Servers
 

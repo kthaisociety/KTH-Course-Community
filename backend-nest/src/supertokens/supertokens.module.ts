@@ -25,26 +25,38 @@ import { UserService } from "../user/user.service";
           "GOOGLE_CLIENT_SECRET",
         );
         const ST_API_KEY = configService.get<string>("ST_API_KEY");
+        const NODE_ENV = configService.get<string>("NODE_ENV", "development");
+        const isProduction = NODE_ENV === "production"; 
 
-        if (
-          !ST_CONNECTION_URI ||
-          !WEBSITE_DOMAIN ||
-          !GOOGLE_CLIENT_ID ||
-          !GOOGLE_CLIENT_SECRET ||
-          !ST_API_KEY
-        ) {
-          throw new Error("Missing required SuperTokens environment variables");
+        // Checking SuperTokens env variables
+        const missing: string[] = [];
+        if (!ST_CONNECTION_URI) {missing.push("ST_CONNECTION_URI")};
+        if (!WEBSITE_DOMAIN) {missing.push("WEBSITE_DOMAIN")};
+        if (!GOOGLE_CLIENT_ID) {missing.push("GOOGLE_CLIENT_ID")};
+        if (!GOOGLE_CLIENT_SECRET) {missing.push("GOOGLE_CLIENT_SECRET")};
+        if (isProduction && !ST_API_KEY) {missing.push("ST_API_KEY")};
+
+        if (missing.length > 0) {
+          throw new Error(
+            `Missing requried SuperTokens env variables: ${missing.join(", ")}`
+          );
         }
+
+        const connectionURI = ST_CONNECTION_URI as string;
+        const websiteDomain = WEBSITE_DOMAIN as string;
+        const googleClientId = GOOGLE_CLIENT_ID as string;
+        const googleClientSecret = GOOGLE_CLIENT_SECRET as string;
+
         return {
           framework: "express",
           supertokens: {
-            connectionURI: ST_CONNECTION_URI,
+            connectionURI: connectionURI,
             apiKey: ST_API_KEY,
           },
           appInfo: {
             appName: APP_NAME,
             apiDomain: API_DOMAIN,
-            websiteDomain: WEBSITE_DOMAIN,
+            websiteDomain: websiteDomain,
             apiBasePath: "/auth",
             websiteBasePath: "/auth",
           },
@@ -57,8 +69,8 @@ import { UserService } from "../user/user.service";
                       thirdPartyId: "google",
                       clients: [
                         {
-                          clientId: GOOGLE_CLIENT_ID,
-                          clientSecret: GOOGLE_CLIENT_SECRET,
+                          clientId: googleClientId,
+                          clientSecret: googleClientSecret,
                           scope: ["profile", "email", "openid"],
                         },
                       ],

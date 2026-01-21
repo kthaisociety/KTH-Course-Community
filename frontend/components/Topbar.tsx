@@ -10,7 +10,7 @@ export default function Topbar() {
       <Link href="/">
         <Button variant="nav" className="w-full justify-start hover:bg-primary">
           <DiCompass className="text-white !w-9 !h-9" />
-          <h1 className="font-bold text-3xl text-white">Course Compass</h1>
+          <h1 className="font-bold text-3xl text-white">Course Community</h1>
         </Button>
       </Link>
       <nav>
