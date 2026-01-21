@@ -26,19 +26,29 @@ import { UserService } from "../user/user.service";
         );
         const ST_API_KEY = configService.get<string>("ST_API_KEY");
         const NODE_ENV = configService.get<string>("NODE_ENV", "development");
-        const isProduction = NODE_ENV === "production"; 
+        const isProduction = NODE_ENV === "production";
 
         // Checking SuperTokens env variables
         const missing: string[] = [];
-        if (!ST_CONNECTION_URI) {missing.push("ST_CONNECTION_URI")};
-        if (!WEBSITE_DOMAIN) {missing.push("WEBSITE_DOMAIN")};
-        if (!GOOGLE_CLIENT_ID) {missing.push("GOOGLE_CLIENT_ID")};
-        if (!GOOGLE_CLIENT_SECRET) {missing.push("GOOGLE_CLIENT_SECRET")};
-        if (isProduction && !ST_API_KEY) {missing.push("ST_API_KEY")};
+        if (!ST_CONNECTION_URI) {
+          missing.push("ST_CONNECTION_URI");
+        }
+        if (!WEBSITE_DOMAIN) {
+          missing.push("WEBSITE_DOMAIN");
+        }
+        if (!GOOGLE_CLIENT_ID) {
+          missing.push("GOOGLE_CLIENT_ID");
+        }
+        if (!GOOGLE_CLIENT_SECRET) {
+          missing.push("GOOGLE_CLIENT_SECRET");
+        }
+        if (isProduction && !ST_API_KEY) {
+          missing.push("ST_API_KEY");
+        }
 
         if (missing.length > 0) {
           throw new Error(
-            `Missing requried SuperTokens env variables: ${missing.join(", ")}`
+            `Missing requried SuperTokens env variables: ${missing.join(", ")}`,
           );
         }
 
