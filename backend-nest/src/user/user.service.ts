@@ -36,7 +36,8 @@ export class UserService {
         id,
         email,
         name,
-      });
+      })
+      .onConflictDoNothing({target: schema.users.email});
     }
   }
 
