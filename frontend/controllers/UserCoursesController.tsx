@@ -66,7 +66,7 @@ export default function UserpageController() {
     async function fetchCourses() {
       setIsLoadingCourse(true);
       const courses = await Promise.all(
-        userData.userFavorites.map(
+        (userData.userFavorites ?? []).map(
           async (courseCode) => {
             const course: Course = await getFullCourseInfo(courseCode);
             return { ...course, isUserFavorite: true };

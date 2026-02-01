@@ -54,7 +54,7 @@ export default function SearchController() {
     const fetchResultsWithUserInfo = async () => {
       const resultsWithFavorites = results.map((result) => ({
         ...result,
-        isUserFavorite: userFavorites.includes(result.courseCode),
+        isUserFavorite: (userFavorites ?? []).includes(result.courseCode),
       }));
 
       // Fetch credits for each course

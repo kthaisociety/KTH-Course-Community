@@ -31,15 +31,4 @@ export class SearchController {
     );
     return { results, total: results.length };
   }
-
-  @Get(":course_code")
-  async getCourseInfo(@Param("course_code") courseCode: string) {
-    const results: CourseMapping | undefined =
-      await this.searchService.getCourseByCode(courseCode);
-
-    if (!results) {
-      throw new NotFoundException(`Course with code ${courseCode} not found`);
-    }
-    return results;
-  }
 }

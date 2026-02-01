@@ -23,21 +23,27 @@ export class UserService {
   ) {}
 
   async createNewUser(id: string, email: string, name: string): Promise<void> {
-    const users = await this.db
+    const existingById = await this.db
       .select()
       .from(schema.users)
       .where(eq(schema.users.id, id))
       .limit(1);
 
-    const user = users[0];
+    if (existingById[0]) return;
 
-    if (!user) {
-      await this.db.insert(schema.users).values({
-        id,
-        email,
-        name,
-      });
-    }
+    const existingByEmail = await this.db
+      .select()
+      .from(schema.users)
+      .where(eq(schema.users.email, email))
+      .limit(1);
+
+    if (existingByEmail[0]) return;
+
+    await this.db.insert(schema.users).values({
+      id,
+      email,
+      name,
+    });
   }
 
   // This junction table could probably be removed in the future and just keep an array of course code strings in "user" table
