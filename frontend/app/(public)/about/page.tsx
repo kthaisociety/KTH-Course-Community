@@ -4,7 +4,7 @@ export default function AboutPage() {
       <main className="container mx-auto px-6 py-12 pt-32">
         <div className="max-w-4xl mx-auto">
           <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-8 text-center">
-            About Course Compass
+            About KTH Course Community
           </h1>
 
           <div className="prose prose-lg max-w-none">
@@ -13,10 +13,10 @@ export default function AboutPage() {
                 Our Mission
               </h2>
               <p className="text-muted-foreground leading-relaxed">
-                Course Compass is dedicated to helping KTH students navigate
-                their academic journey. By collecting and sharing honest student
-                reviews, we provide an overview of course content, workload, and
-                learning experiences.
+                KTH Course Community is dedicated to helping KTH students
+                navigate their academic journey. By collecting and sharing
+                honest student reviews, we provide an overview of course
+                content, workload, and learning experiences.
               </p>
             </div>
 
@@ -47,9 +47,12 @@ export default function AboutPage() {
               </h2>
               <p className="text-muted-foreground leading-relaxed">
                 We believe in transparency, community, and student empowerment.
-                Every review on Course Compass is written by students, for
+                Every review on KTH Course Community is written by students, for
                 students. We're committed to maintaining an honest and helpful
-                platform that serves the KTH community.
+                platform that serves the KTH community. If you are interested in
+                contributing with new features or fixes for this platform you
+                are very welcome to do so via the officialt KTH Course Community
+                GitHub!
               </p>
             </div>
           </div>

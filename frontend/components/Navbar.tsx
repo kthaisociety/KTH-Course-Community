@@ -63,7 +63,7 @@ export default function Navbar() {
             className="w-full justify-start hover:bg-primary"
           >
             <DiCompass className="text-white !w-12 !h-12" />
-            <h1 className="text-xl">Course Compass</h1>
+            <h1 className="text-xl">Course Community</h1>
           </Button>
         </Link>
       </div>

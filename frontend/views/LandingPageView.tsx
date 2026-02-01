@@ -53,7 +53,7 @@ const childVariants: Variants = {
 };
 
 const titleText =
-  "Explore, find and express your thoughts with Course Compass!";
+  "Explore, find and express your thoughts with Course Community!";
 const subTitleText =
   "What every KTH student has thought of at least once, and it is finally here! A forum for reviewing and exploring all KTH courses! ";
 

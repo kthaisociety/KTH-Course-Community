@@ -3,6 +3,7 @@
 # ROOT
 # =================================
 node_modules/
+/node_modules
 
 # =================================
 # FRONTEND (Next.js)
