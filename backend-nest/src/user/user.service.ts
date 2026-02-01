@@ -32,12 +32,14 @@ export class UserService {
     if (existingById[0]) return;
 
     if (!user) {
-      await this.db.insert(schema.users).values({
-        id,
-        email,
-        name,
-      })
-      .onConflictDoNothing({target: schema.users.email});
+      await this.db
+        .insert(schema.users)
+        .values({
+          id,
+          email,
+          name,
+        })
+        .onConflictDoNothing({ target: schema.users.email });
     }
   }
 
