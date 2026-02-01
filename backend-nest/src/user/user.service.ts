@@ -31,19 +31,14 @@ export class UserService {
 
     if (existingById[0]) return;
 
-    const existingByEmail = await this.db
-      .select()
-      .from(schema.users)
-      .where(eq(schema.users.email, email))
-      .limit(1);
-
-    if (existingByEmail[0]) return;
-
-    await this.db.insert(schema.users).values({
-      id,
-      email,
-      name,
-    });
+    if (!user) {
+      await this.db.insert(schema.users).values({
+        id,
+        email,
+        name,
+      })
+      .onConflictDoNothing({target: schema.users.email});
+    }
   }
 
   // This junction table could probably be removed in the future and just keep an array of course code strings in "user" table

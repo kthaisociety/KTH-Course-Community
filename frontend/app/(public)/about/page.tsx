@@ -13,10 +13,10 @@ export default function AboutPage() {
                 Our Mission
               </h2>
               <p className="text-muted-foreground leading-relaxed">
-                KTH Course Community is dedicated to helping KTH students navigate
-                their academic journey. By collecting and sharing honest student
-                reviews, we provide an overview of course content, workload, and
-                learning experiences.
+                KTH Course Community is dedicated to helping KTH students
+                navigate their academic journey. By collecting and sharing
+                honest student reviews, we provide an overview of course
+                content, workload, and learning experiences.
               </p>
             </div>
 
@@ -49,9 +49,10 @@ export default function AboutPage() {
                 We believe in transparency, community, and student empowerment.
                 Every review on KTH Course Community is written by students, for
                 students. We're committed to maintaining an honest and helpful
-                platform that serves the KTH community. If you are interested in contributing 
-                with new features or fixes for this platform you are very welcome to do 
-                so via the officialt KTH Course Community GitHub! 
+                platform that serves the KTH community. If you are interested in
+                contributing with new features or fixes for this platform you
+                are very welcome to do so via the officialt KTH Course Community
+                GitHub!
               </p>
             </div>
           </div>
