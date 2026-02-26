@@ -104,7 +104,12 @@ describe("SearchService", () => {
               {
                 multi_match: {
                   query: "algebra",
-                  fields: ["course_name^2", "course_code^2", "goals", "content"],
+                  fields: [
+                    "course_name^2",
+                    "course_code^2",
+                    "goals",
+                    "content",
+                  ],
                   fuzziness: "AUTO",
                   type: "best_fields",
                 },
