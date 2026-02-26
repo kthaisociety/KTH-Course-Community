@@ -54,6 +54,8 @@ services:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.12.2
     container_name: elasticsearch
     restart: always
+    ports:
+      - "9200:9200"
     environment:
       - xpack.security.enabled=true # secuirity
       - ELASTIC_PASSWORD=${ES_PASSWORD_SECRET} 
@@ -66,6 +68,6 @@ services:
     volumes:
       - esdata:/usr/share/elasticsearch/data
 
-  volumes:
-    esdata:
-      driver: local
+volumes:
+  esdata:
+    driver: local

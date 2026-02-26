@@ -23,25 +23,25 @@ export class UserService {
   ) {}
 
   async createNewUser(id: string, email: string, name: string): Promise<void> {
-    const users = await this.db
+    const existingById = await this.db
       .select()
       .from(schema.users)
       .where(eq(schema.users.id, id))
       .limit(1);
 
-    const user = users[0];
+    if (existingById[0]) return; // user already exists in database 
+    // TODO: Might want to return that feedback to the system. 
 
-    if (!user) {
-      await this.db.insert(schema.users).values({
+    await this.db
+      .insert(schema.users)
+      .values({
         id,
         email,
         name,
       })
-      .onConflictDoNothing({target: schema.users.email});
-    }
+      .onConflictDoNothing({ target: schema.users.email });
   }
 
-  // This junction table could probably be removed in the future and just keep an array of course code strings in "user" table
   async getUserFavorites(userId: string): Promise<string[]> {
     const userFavorites = await this.db
       .select()
