@@ -91,14 +91,31 @@ describe("SearchService", () => {
         size: 10,
         query: {
           bool: {
-            must: {
-              multi_match: {
-                query: "algebra",
-                fields: ["course_name^2", "course_code^2", "goals", "content"],
-                fuzziness: "AUTO",
-                type: "best_fields",
+            should: [
+              { prefix: { course_code: "ALGEBRA" } },
+              { wildcard: { course_code: "*ALGEBRA*" } },
+              {
+                multi_match: {
+                  query: "algebra",
+                  fields: ["course_name^2"],
+                  type: "phrase_prefix",
+                },
               },
-            },
+              {
+                multi_match: {
+                  query: "algebra",
+                  fields: [
+                    "course_name^2",
+                    "course_code^2",
+                    "goals",
+                    "content",
+                  ],
+                  fuzziness: "AUTO",
+                  type: "best_fields",
+                },
+              },
+            ],
+            minimum_should_match: 1,
             filter: [],
           },
         },

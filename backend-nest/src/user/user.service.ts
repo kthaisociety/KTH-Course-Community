@@ -29,8 +29,8 @@ export class UserService {
       .where(eq(schema.users.id, id))
       .limit(1);
 
-    if (existingById[0]) return; // user already exists in database 
-    // TODO: Might want to return that feedback to the system. 
+    if (existingById[0]) return; // user already exists in database
+    // TODO: Might want to return that feedback to the system.
 
     await this.db
       .insert(schema.users)
