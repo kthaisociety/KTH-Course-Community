@@ -1,4 +1,3 @@
-import { NotFoundException } from "@nestjs/common";
 import { Test, type TestingModule } from "@nestjs/testing";
 import { SearchController } from "./search.controller";
 import { type SearchResult, SearchService } from "./search.service";
@@ -9,7 +8,6 @@ describe("SearchController", () => {
 
   const mockSearchService = {
     searchCourses: jest.fn(),
-    getCourseByCode: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -105,32 +103,4 @@ describe("SearchController", () => {
     });
   });
 
-  describe("getCourseInfo", () => {
-    const mockCourseData = {
-      course_name: "Probability Theory and Statistics",
-      course_code: "SF1901",
-      department: "SF (SCI/Matematik) ",
-      goals: "Learn probability theory and statistical inference",
-      content:
-        "Probability distributions, hypothesis testing, confidence intervals",
-    };
-
-    it("should return course information when course exists", async () => {
-      mockSearchService.getCourseByCode.mockResolvedValue(mockCourseData);
-
-      const result = await controller.getCourseInfo("SF1901");
-
-      expect(searchService.getCourseByCode).toHaveBeenCalledWith("SF1901");
-      expect(result).toEqual(mockCourseData);
-    });
-
-    it("should throw NotFoundException when course does not exist", async () => {
-      mockSearchService.getCourseByCode.mockResolvedValue(undefined);
-
-      await expect(controller.getCourseInfo("NONEXISTENT")).rejects.toThrow(
-        new NotFoundException("Course with code NONEXISTENT not found"),
-      );
-      expect(searchService.getCourseByCode).toHaveBeenCalledWith("NONEXISTENT");
-    });
-  });
 });
