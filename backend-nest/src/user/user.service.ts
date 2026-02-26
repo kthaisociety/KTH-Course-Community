@@ -29,21 +29,19 @@ export class UserService {
       .where(eq(schema.users.id, id))
       .limit(1);
 
-    if (existingById[0]) return;
+    if (existingById[0]) return; // user already exists in database 
+    // TODO: Might want to return that feedback to the system. 
 
-    if (!user) {
-      await this.db
-        .insert(schema.users)
-        .values({
-          id,
-          email,
-          name,
-        })
-        .onConflictDoNothing({ target: schema.users.email });
-    }
+    await this.db
+      .insert(schema.users)
+      .values({
+        id,
+        email,
+        name,
+      })
+      .onConflictDoNothing({ target: schema.users.email });
   }
 
-  // This junction table could probably be removed in the future and just keep an array of course code strings in "user" table
   async getUserFavorites(userId: string): Promise<string[]> {
     const userFavorites = await this.db
       .select()
