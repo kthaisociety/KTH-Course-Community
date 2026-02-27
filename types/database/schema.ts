@@ -14,7 +14,9 @@ export const courseState = pgEnum("course_state", [
   "ESTABLISHED",
   "DEACTIVATED",
 ]);
+// NOTE: Do we add foreign keys / relations to other tables in these tables? 
 export const courses = pgTable("courses", {
+  // TODO: Add new data-fields to expand course table
   code: text("code").primaryKey(),
   department: text("department").notNull(),
   name: text("name").notNull(),
@@ -30,6 +32,7 @@ export type InsertCourse = typeof courses.$inferInsert;
 export type SelectCourse = typeof courses.$inferSelect;
 
 export const users = pgTable("users", {
+  // TODO: Add new user-data to expand user table
   id: text("id").primaryKey(), // This will be the SuperTokens user ID
   email: text("email").notNull().unique(),
   name: text("name").notNull(),

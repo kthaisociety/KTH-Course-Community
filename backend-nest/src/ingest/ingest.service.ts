@@ -2,16 +2,15 @@ import type { Client as ESClient } from "@elastic/elasticsearch";
 import { HttpService } from "@nestjs/axios";
 import { Inject, Injectable, Logger } from "@nestjs/common";
 import { and, eq, isNull, sql } from "drizzle-orm";
-import type { NeonHttpDatabase } from "drizzle-orm/neon-http";
-import { XMLParser, XMLValidator } from "fast-xml-parser";
-import { firstValueFrom } from "rxjs";
 import type { z } from "zod";
+import type { NeonHttpDatabase } from "drizzle-orm/neon-http";
+import { firstValueFrom } from "rxjs";
 import {
   courses as coursesTable,
   type InsertCourse,
 } from "../../../types/database/schema";
 import {
-  CoursePlanSchema,
+  CourseDetailSchema,
   CourseSchema,
   CoursesSchema,
   type Document,
@@ -24,12 +23,21 @@ const INDEX = "courses";
 @Injectable()
 export class IngestService {
   private readonly logger = new Logger(IngestService.name);
-  private readonly fxp = new XMLParser({
-    ignoreAttributes: false,
-    attributeNamePrefix: "@_",
-    parseAttributeValue: true,
-    parseTagValue: true,
-  });
+
+  private readonly status = {
+    neon: {
+      running: false,
+      lastStarted: null as Date | null,
+      lastCompleted: null as Date | null,
+      lastError: null as string | null,
+    },
+    elastic: {
+      running: false,
+      lastStarted: null as Date | null,
+      lastCompleted: null as Date | null,
+      lastError: null as string | null,
+    },
+  };
 
   constructor(
     private readonly http: HttpService,
@@ -37,8 +45,19 @@ export class IngestService {
     @Inject(ES) private readonly es: ESClient,
   ) {}
 
+  // runs the ingestion pipeline --> inserts into SQL tables (Neon) and ElasticSearch. 
   async runFullIngest() {
-    this.logger.log("Starting full ingest process");
+    this.logger.log("Starting full ingest process...");
+    await this.runNeonIngest();
+    await this.runElasticIngest();
+  }
+
+  // ingests courses into neon db
+  async runNeonIngest() {
+    this.status.neon.running = true;
+    this.status.neon.lastStarted = new Date();
+    this.status.neon.lastError = null;
+    this.logger.log("Neon ingestion process started...");
     try {
       this.logger.log("Fetching courses from KTH API...");
       const courses = await this.getCourses();
@@ -49,199 +68,23 @@ export class IngestService {
 
       this.logger.log("Upserting courses to database...");
       await this.upsertCourses(converted);
+      this.status.neon.lastCompleted = new Date();
       this.logger.log("Courses upserted successfully");
-
-      this.logger.log("Getting bulk documents for Elasticsearch...");
-      const docs = await this.getBulkDocs(converted);
-      this.logger.log(`Prepared ${docs.length} documents for indexing`);
-
-      this.logger.log("Indexing documents to Elasticsearch...");
-      await this.indexBulk(docs);
-      this.logger.log("Full ingest process completed successfully");
     } catch (error) {
-      this.logger.error("Ingest process failed:", error);
+      this.status.neon.lastError = String(error);
+      this.logger.error("Neon ingest process failed:", error);
       throw error;
+    } finally {
+      this.status.neon.running = false;
     }
   }
 
-  async ingestCredits() {
-    this.logger.log("Starting credits ingestion process");
-    try {
-      const courseCodes = await this.getCourseCodesMissingCredits();
-      this.logger.log(`Found ${courseCodes.length} courses missing credits`);
-
-      if (courseCodes.length === 0) {
-        this.logger.log("No courses missing credits, skipping ingestion");
-        return;
-      }
-
-      const courseCreditsPairs = await this.getCredits(courseCodes);
-      this.logger.log(
-        `Successfully fetched credits for ${courseCreditsPairs.length} courses`,
-      );
-
-      await this.upsertCredits(courseCreditsPairs);
-      this.logger.log("Credits ingestion completed successfully");
-    } catch (error) {
-      this.logger.error("Credits ingestion failed:", error);
-      throw error;
-    }
-  }
-
-  private async getCredits(courseCodes: string[]) {
-    this.logger.log("Fetching credits for course codes...");
-    const courseCreditsPairs: { courseCode: string; credits: number }[] = [];
-    const failedCourses: string[] = [];
-
-    for (let i = 0; i < courseCodes.length; i++) {
-      const courseCode = courseCodes[i];
-      try {
-        const response = await fetch(
-          `https://api.kth.se/api/kopps/v2/course/${courseCode}`,
-        );
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const data = await response.json();
-        const credits = data.credits;
-
-        courseCreditsPairs.push({
-          courseCode,
-          credits: Number.parseFloat(credits),
-        });
-      } catch (error) {
-        this.logger.error(
-          `Failed to fetch credits for course ${courseCode}:`,
-          error,
-        );
-        failedCourses.push(courseCode);
-      }
-
-      // Rate limiting: add delay between requests to avoid overwhelming the API
-      if (i < courseCodes.length - 1) {
-        await new Promise((resolve) => setTimeout(resolve, 150)); // 150ms delay
-      }
-
-      // Progress tracking
-      if ((i + 1) % 50 === 0 || i === 0) {
-        this.logger.log(
-          `Processed ${i + 1} out of ${courseCodes.length} course codes (${courseCreditsPairs.length} successful, ${failedCourses.length} failed)`,
-        );
-      }
-    }
-
-    this.logger.log(
-      `Credits fetch completed: ${courseCreditsPairs.length} successful, ${failedCourses.length} failed`,
-    );
-    if (failedCourses.length > 0) {
-      this.logger.warn(
-        `Failed courses: ${failedCourses.slice(0, 10).join(", ")}${failedCourses.length > 10 ? "..." : ""}`,
-      );
-    }
-
-    return courseCreditsPairs;
-  }
-
-  private async upsertCredits(
-    courseCreditsPairs: { courseCode: string; credits: number }[],
-  ) {
-    this.logger.log(
-      `Upserting credits for ${courseCreditsPairs.length} courses...`,
-    );
-
-    if (courseCreditsPairs.length === 0) {
-      this.logger.log("No credits to upsert");
-      return;
-    }
-
-    // Process in batches to avoid overwhelming the database
-    const batchSize = 100;
-    let processed = 0;
-
-    for (let i = 0; i < courseCreditsPairs.length; i += batchSize) {
-      const batch = courseCreditsPairs.slice(i, i + batchSize);
-
-      try {
-        // Use Promise.all for concurrent updates within each batch
-        await Promise.all(
-          batch.map((pair) =>
-            this.db
-              .update(coursesTable)
-              .set({ credits: pair.credits })
-              .where(eq(coursesTable.code, pair.courseCode)),
-          ),
-        );
-
-        processed += batch.length;
-        this.logger.log(
-          `Updated credits for ${processed}/${courseCreditsPairs.length} courses`,
-        );
-      } catch (error) {
-        this.logger.error(
-          `Failed to update batch starting at index ${i}:`,
-          error,
-        );
-        // Continue with next batch instead of failing completely
-      }
-    }
-
-    this.logger.log(`Credits upsert completed: ${processed} courses updated`);
-  }
-
-  async getCreditsIngestionStatus() {
-    const totalCourses = await this.db
-      .select({ count: sql<number>`count(*)` })
-      .from(coursesTable)
-      .where(eq(coursesTable.state, "ESTABLISHED"));
-
-    const coursesWithCredits = await this.db
-      .select({ count: sql<number>`count(*)` })
-      .from(coursesTable)
-      .where(
-        and(
-          eq(coursesTable.state, "ESTABLISHED"),
-          sql`${coursesTable.credits} IS NOT NULL`,
-        ),
-      );
-
-    const coursesMissingCredits = await this.db
-      .select({ count: sql<number>`count(*)` })
-      .from(coursesTable)
-      .where(
-        and(
-          eq(coursesTable.state, "ESTABLISHED"),
-          isNull(coursesTable.credits),
-        ),
-      );
-
-    return {
-      total: totalCourses[0]?.count || 0,
-      withCredits: coursesWithCredits[0]?.count || 0,
-      missingCredits: coursesMissingCredits[0]?.count || 0,
-      completionPercentage: totalCourses[0]?.count
-        ? Math.round(
-            ((coursesWithCredits[0]?.count || 0) / totalCourses[0].count) * 100,
-          )
-        : 0,
-    };
-  }
-
-  private async getCourseCodesMissingCredits() {
-    this.logger.log("Fetching course codes missing credits...");
-    const response = await this.db
-      .select({ code: coursesTable.code })
-      .from(coursesTable)
-      .where(
-        and(
-          eq(coursesTable.state, "ESTABLISHED"),
-          isNull(coursesTable.credits),
-        ),
-      );
-    return response.map((row) => row.code);
-  }
-
-  async runElasticTest() {
-    this.logger.log("Starting elastic test process");
+  // ingests into elastic db
+  async runElasticIngest() {
+    this.status.elastic.running = true;
+    this.status.elastic.lastStarted = new Date();
+    this.status.elastic.lastError = null;
+    this.logger.log("Elastic ingestion process started...");
     try {
       this.logger.log("Fetching courses from KTH API...");
       const courses = await this.getCourses();
@@ -250,27 +93,38 @@ export class IngestService {
       this.logger.log("Converting courses...");
       const converted = this.convertCourses(courses as InsertCourse[]);
 
-      this.logger.log("Getting a single document for Elasticsearch...");
-      const firstEstablished = converted.find((c) => c.state === "ESTABLISHED");
-      const candidate = firstEstablished ?? converted[0];
-      const docs = await this.getBulkDocs(candidate ? [candidate] : []);
-      this.logger.log(`Prepared ${docs.length} document for indexing`);
+      this.logger.log("Getting bulk documents for Elasticsearch...");
+      const docs = await this.getBulkDocs(converted);
+      this.logger.log(`Prepared ${docs.length} documents for indexing`);
 
       this.logger.log("Indexing documents to Elasticsearch...");
       await this.indexBulk(docs);
-      this.logger.log("Elastic test process completed successfully");
+      this.status.elastic.lastCompleted = new Date();
+      this.logger.log("Elastic ingest process completed successfully");
     } catch (error) {
-      this.logger.error("Elastic test process failed:", error);
+      this.status.elastic.lastError = String(error);
+      this.logger.error("Elastic ingest process failed:", error);
       throw error;
+    } finally {
+      this.status.elastic.running = false;
     }
   }
 
+  getIngestStatus() {
+    return {
+      neon: { ...this.status.neon },
+      elastic: { ...this.status.elastic },
+    };
+  }
+
+  // fetches list of courses from API --> filter result by CourseSchema
   private async getCourses() {
     const endpoint = "https://api.kth.se/api/kopps/v2/courses?l=en";
     const { data } = await firstValueFrom(this.http.get(endpoint));
     return CoursesSchema.parse(data);
   }
 
+  // converts courses to fit db schema
   private convertCourses(
     courses: z.infer<typeof CoursesSchema>,
   ): InsertCourse[] {
@@ -283,6 +137,15 @@ export class IngestService {
     })) as InsertCourse[];
   }
 
+  // fetches the detailed course info from API --> filter result by CourseSchema
+  private async getCourseInformation(course: z.infer<typeof CourseSchema>) {
+    const endpoint = `https://api.kth.se/api/kopps/v2/course/${course.code}/detailedinformation`;
+    await new Promise((r) => setTimeout(r, 200));
+    const { data } = await firstValueFrom(this.http.get(endpoint));
+    return CourseDetailSchema.parse(data);
+  }
+
+  // inserts courses into db
   private async upsertCourses(courses: InsertCourse[]) {
     const chunkSize = 1000;
     for (let i = 0; i < courses.length; i += chunkSize) {
@@ -303,44 +166,23 @@ export class IngestService {
     }
   }
 
-  private async getCourseDescription(course: z.infer<typeof CourseSchema>) {
-    const endpoint = `https://api.kth.se/api/kopps/v1/course/${course.code}/plan`;
-    await new Promise((r) => setTimeout(r, 200));
-    const res = await firstValueFrom(
-      this.http.get(endpoint, { responseType: "text" }),
-    );
-    const xml = res.data as string;
-
-    const valid = XMLValidator.validate(xml);
-    if (valid !== true) {
-      const preview = xml.slice(0, 400).replace(/\s+/g, " ");
-      throw new Error(
-        `Invalid XML. Validator: ${JSON.stringify(valid)}. Preview: ${preview}`,
-      );
-    }
-
-    const jsonObj = this.fxp.parse(xml);
-    const parsed = CoursePlanSchema.parse(jsonObj);
-    return parsed;
-  }
-
-  private jsonToDocument(
-    coursePlan: z.infer<typeof CoursePlanSchema>,
+  // maps detailed course data to an ES document
+  private toDocument(
+    detail: z.infer<typeof CourseDetailSchema>,
     course: z.infer<typeof CourseSchema>,
   ): Document {
-    const goals = coursePlan.coursePlan.goals.find(
-      (g) => g["@_xml:lang"] === "en",
-    )?.["#text"];
-    const content = coursePlan.coursePlan.content.find(
-      (c) => c["@_xml:lang"] === "en",
-    )?.["#text"];
+    // pick the latest syllabus version by term
+    const latest = detail.publicSyllabusVersions.reduce(
+      (a, b) => (b.validFromTerm.term > a.validFromTerm.term ? b : a),
+      detail.publicSyllabusVersions[0],
+    );
     return {
       course_name: course.name,
       course_code: course.code,
       department: course.department,
       state: course.state,
-      goals: goals || "",
-      content: content || "",
+      goals: latest?.courseSyllabus.goals ?? "",
+      content: latest?.courseSyllabus.content ?? "",
     };
   }
 
@@ -454,11 +296,11 @@ export class IngestService {
       if (count % 10 === 0) {
         this.logger.log(`Processed ${count} courses so far`);
       }
-      const plan = await this.getCourseDescription(course).catch((_e) => {
+      const plan = await this.getCourseInformation(course).catch((_e) => {
         return null;
       });
       const doc = plan
-        ? this.jsonToDocument(plan, course)
+        ? this.toDocument(plan, course)
         : {
             course_name: course.name,
             course_code: course.code,
@@ -470,5 +312,31 @@ export class IngestService {
       docs.push(doc);
     }
     return docs;
+  }
+
+  // runs a test for the elastic ingestion
+  async runElasticTest() {
+    this.logger.log("Starting elastic test process");
+    try {
+      this.logger.log("Fetching courses from KTH API...");
+      const courses = await this.getCourses();
+      this.logger.log(`Fetched ${courses.length} courses`);
+
+      this.logger.log("Converting courses...");
+      const converted = this.convertCourses(courses as InsertCourse[]);
+
+      this.logger.log("Getting a single document for Elasticsearch...");
+      const firstEstablished = converted.find((c) => c.state === "ESTABLISHED");
+      const candidate = firstEstablished ?? converted[0];
+      const docs = await this.getBulkDocs(candidate ? [candidate] : []);
+      this.logger.log(`Prepared ${docs.length} document for indexing`);
+
+      this.logger.log("Indexing documents to Elasticsearch...");
+      await this.indexBulk(docs);
+      this.logger.log("Elastic test process completed successfully");
+    } catch (error) {
+      this.logger.error("Elastic test process failed:", error);
+      throw error;
+    }
   }
 }
