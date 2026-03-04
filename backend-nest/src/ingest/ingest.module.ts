@@ -6,11 +6,12 @@ import { DrizzleModule } from "../database/drizzle.module";
 import { ElasticSearchModule } from "../search/search.module";
 import { IngestController } from "./ingest.controller";
 import { IngestService } from "./ingest.service";
+import { KoppsService } from "./kopps.service";
 
 @Module({
   imports: [HttpModule, DrizzleModule, ElasticSearchModule],
-  providers: [IngestService],
+  providers: [IngestService, KoppsService],
   controllers: [IngestController],
-  exports: [IngestService],
+  exports: [IngestService, KoppsService],
 })
 export class IngestModule {}

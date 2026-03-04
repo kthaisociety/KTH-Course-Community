@@ -1,13 +1,13 @@
 import type { Client as ESClient } from "@elastic/elasticsearch";
-import { HttpService } from "@nestjs/axios";
 import { Inject, Injectable, Logger } from "@nestjs/common";
-import { and, eq, isNull, sql } from "drizzle-orm";
-import type { z } from "zod";
+import { sql } from "drizzle-orm";
 import type { NeonHttpDatabase } from "drizzle-orm/neon-http";
-import { firstValueFrom } from "rxjs";
+import type { z } from "zod";
 import {
+  courseRounds as courseRoundsTable,
   courses as coursesTable,
   type InsertCourse,
+  type InsertCourseRound,
 } from "../../../types/database/schema";
 import {
   CourseDetailSchema,
@@ -17,6 +17,7 @@ import {
 } from "../../../types/ingest/schemas";
 import { DRIZZLE } from "../database/drizzle.module";
 import { ES } from "../search/search.constants.js";
+import { KoppsService } from "./kopps.service";
 
 const INDEX = "courses";
 
@@ -24,6 +25,13 @@ const INDEX = "courses";
 export class IngestService {
   private readonly logger = new Logger(IngestService.name);
 
+  constructor(
+    private readonly kopps: KoppsService,
+    @Inject(DRIZZLE) private readonly db: NeonHttpDatabase,
+    @Inject(ES) private readonly es: ESClient,
+  ) {}
+
+  // used for checking ingest status
   private readonly status = {
     neon: {
       running: false,
@@ -39,13 +47,14 @@ export class IngestService {
     },
   };
 
-  constructor(
-    private readonly http: HttpService,
-    @Inject(DRIZZLE) private readonly db: NeonHttpDatabase,
-    @Inject(ES) private readonly es: ESClient,
-  ) {}
+  getIngestStatus() {
+    return {
+      neon: { ...this.status.neon },
+      elastic: { ...this.status.elastic },
+    };
+  }
 
-  // runs the ingestion pipeline --> inserts into SQL tables (Neon) and ElasticSearch. 
+  // runs the ingestion pipeline --> inserts into SQL tables (Neon) and ElasticSearch.
   async runFullIngest() {
     this.logger.log("Starting full ingest process...");
     await this.runNeonIngest();
@@ -60,14 +69,18 @@ export class IngestService {
     this.logger.log("Neon ingestion process started...");
     try {
       this.logger.log("Fetching courses from KTH API...");
-      const courses = await this.getCourses();
+      const courses = await this.kopps.getCourses();
       this.logger.log(`Fetched ${courses.length} courses`);
 
       this.logger.log("Converting courses...");
-      const converted = this.convertCourses(courses as InsertCourse[]);
+      const { courses: converted, rounds } = await this.convertCourses(courses);
+      this.logger.log(
+        `Converted ${converted.length} courses with ${rounds.length} rounds`,
+      );
 
       this.logger.log("Upserting courses to database...");
       await this.upsertCourses(converted);
+      await this.upsertRounds(rounds);
       this.status.neon.lastCompleted = new Date();
       this.logger.log("Courses upserted successfully");
     } catch (error) {
@@ -87,14 +100,12 @@ export class IngestService {
     this.logger.log("Elastic ingestion process started...");
     try {
       this.logger.log("Fetching courses from KTH API...");
-      const courses = await this.getCourses();
+      const courses = await this.kopps.getCourses();
       this.logger.log(`Fetched ${courses.length} courses`);
 
-      this.logger.log("Converting courses...");
-      const converted = this.convertCourses(courses as InsertCourse[]);
-
+      // TODO: Need to convert API detailed info to Elastic Document as well
       this.logger.log("Getting bulk documents for Elasticsearch...");
-      const docs = await this.getBulkDocs(converted);
+      const docs = await this.getBulkDocs(courses);
       this.logger.log(`Prepared ${docs.length} documents for indexing`);
 
       this.logger.log("Indexing documents to Elasticsearch...");
@@ -110,44 +121,80 @@ export class IngestService {
     }
   }
 
-  getIngestStatus() {
-    return {
-      neon: { ...this.status.neon },
-      elastic: { ...this.status.elastic },
-    };
-  }
-
-  // fetches list of courses from API --> filter result by CourseSchema
-  private async getCourses() {
-    const endpoint = "https://api.kth.se/api/kopps/v2/courses?l=en";
-    const { data } = await firstValueFrom(this.http.get(endpoint));
-    return CoursesSchema.parse(data);
-  }
-
-  // converts courses to fit db schema
-  private convertCourses(
+  /* 
+    Converts courses to fit db schema, fetches detail for each course. 
+    Also maps to course rounds directly --> courses can have different rounds. 
+    E.g. DD2421 is offered in both P1 and P3. 
+  */
+  private async convertCourses(
     courses: z.infer<typeof CoursesSchema>,
-  ): InsertCourse[] {
-    return courses.map((course) => ({
-      code: course.code,
-      department: course.department,
-      name: course.name,
-      state: course.state,
-      lastExaminationSemester: course.last_examination_semester,
-    })) as InsertCourse[];
-  }
+  ): Promise<{ courses: InsertCourse[]; rounds: InsertCourseRound[] }> {
+    const results = await Promise.all(
+      courses.map(async (course) => {
+        // TODO: Rename from "detail" to like "courses" for clarity?
+        const detail = await this.kopps
+          .getCourseInformation(course)
+          .catch(() => null);
+        if (!detail) return null;
 
-  // fetches the detailed course info from API --> filter result by CourseSchema
-  private async getCourseInformation(course: z.infer<typeof CourseSchema>) {
-    const endpoint = `https://api.kth.se/api/kopps/v2/course/${course.code}/detailedinformation`;
-    await new Promise((r) => setTimeout(r, 200));
-    const { data } = await firstValueFrom(this.http.get(endpoint));
-    return CourseDetailSchema.parse(data);
+        // TODO: Clarify
+        const latest = detail.publicSyllabusVersions.reduce(
+          (a, b) => (b.validFromTerm.term > a.validFromTerm.term ? b : a),
+          detail.publicSyllabusVersions[0],
+        );
+
+        const insertCourse: InsertCourse = {
+          code: detail.course.courseCode,
+          name: detail.course.titleOther,
+          titleSwedish: detail.course.title,
+          titleEng: detail.course.titleOther,
+          state: course.state,
+          credits: detail.course.credits,
+          creditUnit: detail.course.creditUnitAbbr,
+          departmentCode: detail.course.departmentCode,
+          department: detail.course.department.name,
+          educationalLevelCode: detail.course.educationalLevelCode,
+          gradeScaleCode: detail.course.gradeScaleCode,
+          goals: latest?.courseSyllabus.goals ?? "",
+          content: latest?.courseSyllabus.content ?? "",
+        };
+
+        const insertRounds: InsertCourseRound[] = detail.roundInfos
+          .filter((r) => r.round.shortName)
+          .map((r) => ({
+            shortName: r.round.shortName!,
+            courseCode: detail.course.courseCode,
+            startTerm: r.startTerm.term,
+            startWeekYear: r.startWeek?.year ?? null,
+            startWeek: r.startWeek?.week ?? null,
+            endWeekYear: r.endWeek?.year ?? null,
+            endWeek: r.endWeek?.week ?? null,
+            studyPace: r.studyPace ?? null,
+            lectureCount: r.lectureCount ?? null,
+            schemaUrl: r.schemaUrl ?? null,
+            language: r.round.language ?? null,
+            tutoringForm: r.round.tutoringForm?.name ?? null,
+            tutoringTimeOfDay: r.round.tutoringTimeOfDay?.name ?? null,
+            formattedPeriodsAndCredits:
+              r.round.courseRoundTerms?.[0]?.formattedPeriodsAndCredits ?? null,
+            isPU: r.isPU,
+            isVU: r.isVU,
+          }));
+
+        return { course: insertCourse, rounds: insertRounds };
+      }),
+    );
+
+    const valid = results.filter((r) => r !== null);
+    return {
+      courses: valid.map((r) => r.course),
+      rounds: valid.flatMap((r) => r.rounds),
+    };
   }
 
   // inserts courses into db
   private async upsertCourses(courses: InsertCourse[]) {
-    const chunkSize = 1000;
+    const chunkSize = 1000; // TODO: Comment on chunk size
     for (let i = 0; i < courses.length; i += chunkSize) {
       const chunk = courses.slice(i, i + chunkSize);
       await this.db
@@ -156,11 +203,49 @@ export class IngestService {
         .onConflictDoUpdate({
           target: coursesTable.code,
           set: {
-            department: sql`excluded.department`,
             name: sql`excluded.name`,
+            titleSwedish: sql`excluded.name_swedish`,
+            titleEng: sql`excluded.name_english`,
             state: sql`excluded.state`,
-            lastExaminationSemester: sql`excluded.last_examination_semester`,
+            credits: sql`excluded.credits`,
+            creditUnit: sql`excluded.credit_unit`,
+            departmentCode: sql`excluded.department_code`,
+            department: sql`excluded.department`,
+            educationalLevelCode: sql`excluded.educational_level_code`,
+            gradeScaleCode: sql`excluded.grade_scale_code`,
+            goals: sql`excluded.goals`,
+            content: sql`excluded.content`,
             updatedAt: sql`now()`,
+          },
+        });
+    }
+  }
+
+  // inserts round infos to database
+  private async upsertRounds(rounds: InsertCourseRound[]) {
+    const chunkSize = 1000;
+    for (let i = 0; i < rounds.length; i += chunkSize) {
+      const chunk = rounds.slice(i, i + chunkSize);
+      await this.db
+        .insert(courseRoundsTable)
+        .values(chunk)
+        .onConflictDoUpdate({
+          target: courseRoundsTable.shortName,
+          set: {
+            startTerm: sql`excluded.start_term`,
+            startWeekYear: sql`excluded.start_week_year`,
+            startWeek: sql`excluded.start_week`,
+            endWeekYear: sql`excluded.end_week_year`,
+            endWeek: sql`excluded.end_week`,
+            studyPace: sql`excluded.study_pace`,
+            lectureCount: sql`excluded.lecture_count`,
+            schemaUrl: sql`excluded.schema_url`,
+            language: sql`excluded.language`,
+            tutoringForm: sql`excluded.tutoring_form`,
+            tutoringTimeOfDay: sql`excluded.tutoring_time_of_day`,
+            formattedPeriodsAndCredits: sql`excluded.formatted_periods_and_credits`,
+            isPU: sql`excluded.is_pu`,
+            isVU: sql`excluded.is_vu`,
           },
         });
     }
@@ -183,6 +268,14 @@ export class IngestService {
       state: course.state,
       goals: latest?.courseSyllabus.goals ?? "",
       content: latest?.courseSyllabus.content ?? "",
+      subject: detail.mainSubjects[0] ?? "", // TODO: rename to just "subject". But need to double check if its always 1 subject or more
+      // flatMap: courseRoundTerms is an array per round, so map would give string[][]
+      periods: detail.roundInfos
+        .flatMap((r) => r.round.courseRoundTerms ?? [])
+        .map((t) => t.formattedPeriodsAndCredits ?? "")
+        .filter(Boolean),
+      short_name: detail.roundInfos[0]?.round.shortName ?? "",
+      course_category: [], // technically can be both
     };
   }
 
@@ -287,7 +380,7 @@ export class IngestService {
     );
   }
 
-  private async getBulkDocs(courses: InsertCourse[]) {
+  private async getBulkDocs(courses: z.infer<typeof CoursesSchema>) {
     let count = 0;
     const docs: Document[] = [];
     for (const course of courses) {
@@ -296,7 +389,7 @@ export class IngestService {
       if (count % 10 === 0) {
         this.logger.log(`Processed ${count} courses so far`);
       }
-      const plan = await this.getCourseInformation(course).catch((_e) => {
+      const plan = await this.kopps.getCourseInformation(course).catch((_e) => {
         return null;
       });
       const doc = plan
@@ -308,6 +401,10 @@ export class IngestService {
             state: course.state,
             goals: "",
             content: "",
+            subject: "",
+            periods: [],
+            short_name: "",
+            course_category: [],
           };
       docs.push(doc);
     }
@@ -319,15 +416,12 @@ export class IngestService {
     this.logger.log("Starting elastic test process");
     try {
       this.logger.log("Fetching courses from KTH API...");
-      const courses = await this.getCourses();
+      const courses = await this.kopps.getCourses();
       this.logger.log(`Fetched ${courses.length} courses`);
 
-      this.logger.log("Converting courses...");
-      const converted = this.convertCourses(courses as InsertCourse[]);
-
       this.logger.log("Getting a single document for Elasticsearch...");
-      const firstEstablished = converted.find((c) => c.state === "ESTABLISHED");
-      const candidate = firstEstablished ?? converted[0];
+      const candidate =
+        courses.find((c) => c.state === "ESTABLISHED") ?? courses[0];
       const docs = await this.getBulkDocs(candidate ? [candidate] : []);
       this.logger.log(`Prepared ${docs.length} document for indexing`);
 
