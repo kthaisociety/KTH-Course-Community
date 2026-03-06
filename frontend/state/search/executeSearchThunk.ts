@@ -82,7 +82,11 @@ export function executeSearch() {
         }),
       );
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Search failed";
+      const rawMessage = err instanceof Error ? err.message : "Search failed";
+      const message =
+        rawMessage === "Failed to fetch"
+          ? "Could not reach the server. Check that the backend is running and NEXT_PUBLIC_BACKEND_DOMAIN is correct."
+          : rawMessage;
       dispatch(searchFailed(message));
     }
   };

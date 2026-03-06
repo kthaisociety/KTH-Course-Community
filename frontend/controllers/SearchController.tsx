@@ -117,6 +117,10 @@ export default function SearchController() {
     [router],
   );
 
+  const onAddToComparison = useCallback((_courseCode: string) => {
+    // TODO: add to comparison state / API
+  }, []);
+
   async function onToggleFavorite(courseCode: string) {
     try {
       const res = await toggleUserFavorite(courseCode);
@@ -154,6 +158,7 @@ export default function SearchController() {
       onFiltersChange={_onFiltersChange}
       onSeeReviews={onSeeReviews}
       onToggleFavorite={onToggleFavorite}
+      onAddToComparison={onAddToComparison}
     />
   );
 }

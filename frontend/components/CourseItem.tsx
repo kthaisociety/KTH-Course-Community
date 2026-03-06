@@ -1,4 +1,4 @@
-import { IoMdHeart, IoMdHeartEmpty } from "react-icons/io";
+import { Bookmark } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Rating, RatingButton } from "@/components/ui/shadcn-io/rating";
 import { Button } from "./ui/button";
@@ -37,11 +37,9 @@ export function CourseItem({
             onClick={onToggleFavorite}
             className="hover:bg-transparent hover:cursor-pointer"
           >
-            {isUserFavorite ? (
-              <IoMdHeart size={25} />
-            ) : (
-              <IoMdHeartEmpty size={25} />
-            )}
+            <Bookmark
+              className={Boolean(isUserFavorite) ? "h-6 w-6 fill-primary text-primary" : "h-6 w-6 text-muted-foreground"}
+            />
           </Button>
         </div>
       </div>
