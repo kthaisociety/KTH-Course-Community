@@ -5,6 +5,7 @@ import {
   pgTable,
   primaryKey,
   real,
+  serial,
   text,
   timestamp,
 } from "drizzle-orm/pg-core";
@@ -14,11 +15,13 @@ export const courseState = pgEnum("course_state", [
   "ESTABLISHED",
   "DEACTIVATED",
 ]);
-// NOTE: Do we add foreign keys / relations to other tables in these tables?
+
+// courses table contains core course data. 
+// more information is stored in courseRounds table
 export const courses = pgTable("courses", {
   code: text("code").primaryKey(),
   name: text("name").notNull(),
-  titleSwedish: text("name_swedish").notNull(),
+  titleSwe: text("name_swedish").notNull(),
   titleEng: text("name_english").notNull(),
   state: courseState("state").notNull(),
 
@@ -33,6 +36,7 @@ export const courses = pgTable("courses", {
   // from latest publicSyllabusVersions entry
   goals: text("goals"),
   content: text("content"),
+  eligibility: text("eligibility"),
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .defaultNow()
     .notNull(),
@@ -45,28 +49,43 @@ export type SelectCourse = typeof courses.$inferSelect;
 // courseRounds is used for multiple course offerings across semesters
 // e.g. DD2421, which can be taken P2 or in P3. This table round-specific information. 
 export const courseRounds = pgTable("course_rounds", {
-  shortName: text("short_name").primaryKey(), // e.g. "MLHT25" — unique per round
+  id: serial("id").primaryKey(),
   courseCode: text("course_code")
     .notNull()
     .references(() => courses.code, { onDelete: "cascade" }),
   startTerm: integer("start_term").notNull(),  // e.g. 20252
-  startWeekYear: integer("start_week_year"),
-  startWeek: integer("start_week"),
-  endWeekYear: integer("end_week_year"),
-  endWeek: integer("end_week"),
   studyPace: integer("study_pace"),            // percentage, e.g. 50
-  lectureCount: integer("lecture_count"),
   schemaUrl: text("schema_url"),
   language: text("language"),
-  tutoringForm: text("tutoring_form"),         // e.g. "NML"
-  tutoringTimeOfDay: text("tutoring_time_of_day"), // e.g. "DAG"
+  tutoringForm: text("tutoring_form"),         // "NML (Normal) or DST (Distance)"
+  tutoringTimeOfDay: text("tutoring_time_of_day"), // "DAG (Day-time) or KVÄ (evenings)"
   formattedPeriodsAndCredits: text("formatted_periods_and_credits"), // e.g. "P1 (7,5 hp)"
-  isPU: boolean("is_pu").notNull(),
-  isVU: boolean("is_vu").notNull(),
+  isPU: boolean("is_pu").notNull(), // Part of KTH programme
+  isVU: boolean("is_vu").notNull(), // open course
 });
 
 export type InsertCourseRound = typeof courseRounds.$inferInsert;
 export type SelectCourseRound = typeof courseRounds.$inferSelect;
+
+
+// courseExaminations stores the examination components for a course.
+// e.g. DD2421 has TEN1 (Tentamen, 6hp, AF) and LAB1 (Laborationer, 1.5hp, PF)
+export const courseExaminations = pgTable(
+  "course_examinations",
+  {
+    courseCode: text("course_code")
+      .notNull()
+      .references(() => courses.code, { onDelete: "cascade" }),
+    examCode: text("exam_code").notNull(), // e.g. "TEN1"
+    title: text("title"),                  // e.g. "Tentamen"
+    credits: real("credits"),
+    gradeScaleCode: text("grade_scale_code"), // e.g. "AF" or "PF"
+  },
+  (table) => [primaryKey({ columns: [table.courseCode, table.examCode] })],
+);
+
+export type InsertCourseExamination = typeof courseExaminations.$inferInsert;
+export type SelectCourseExamination = typeof courseExaminations.$inferSelect;
 
 
 // users contain all user data

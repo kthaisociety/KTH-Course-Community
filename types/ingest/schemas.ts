@@ -17,30 +17,28 @@ export const CoursesSchema = z.array(CourseSchema);
 
 // schema for /api/kopps/v2/course/:code/detailedinformation
 export const CourseDetailSchema = z.object({
+  // First part of the data is general course information.
   course: z.object({
     courseCode: z.string(),
     departmentCode: z.string(),
     department: z.object({ name: z.string() }),
     educationalLevelCode: z.string(),
     gradeScaleCode: z.string(),
-    title: z.string(),
-    titleOther: z.string(),
+    title: z.string(),        // swedish title
+    titleOther: z.string(),   // english title
     credits: z.number(),
     creditUnitAbbr: z.string(),
     state: z.string(),
   }),
+  // Second part of data from API is rounds, e.g. if course runs multiple offerings each year.
   roundInfos: z.array(
     z.object({
-      lectureCount: z.number().optional(),
       schemaUrl: z.string().optional(),
-      isPU: z.boolean(),
-      isVU: z.boolean(),
-      startTerm: z.object({ term: z.number() }),
-      startWeek: z.object({ year: z.number(), week: z.number() }).optional(),
-      endWeek: z.object({ year: z.number(), week: z.number() }).optional(),
-      studyPace: z.number().optional(),
       round: z.object({
-        shortName: z.string().optional(),
+        startTerm: z.object({ term: z.number() }),
+        isPU: z.boolean(),
+        isVU: z.boolean(),
+        studyPace: z.number().optional(),
         tutoringTimeOfDay: z.object({ name: z.string() }).optional(),
         tutoringForm: z.object({ name: z.string() }).optional(),
         language: z.string().optional(),
@@ -50,18 +48,21 @@ export const CourseDetailSchema = z.object({
       }),
     }),
   ),
+  // Third part of the course data from API is examinations, e.g. "TEN1". 
   examinationSets: z.record(
     z.string(),
     z.object({
       examinationRounds: z.array(
         z.object({
           examCode: z.string(),
+          title: z.string().optional(),
           gradeScaleCode: z.string(),
           credits: z.number(),
         }),
       ),
     }),
   ),
+  // Fourth part of API data is the syllabus and course content
   publicSyllabusVersions: z.array(
     z.object({
       validFromTerm: z.object({ term: z.number() }),
@@ -78,7 +79,7 @@ export const CourseDetailSchema = z.object({
 
 
 // schema for course document in Elastic Search
-export type Document = {
+export type CourseDocument = {
   course_name: string;
   course_code: string;
   department: string;
@@ -97,6 +98,6 @@ export type InsertRequest = {
   index: {
     _index: string;
   };
-  document: Document;
+  document: CourseDocument;
 };
 

@@ -13,9 +13,9 @@ import {
 } from "../../../types/database/schema";
 import {
   CourseDetailSchema,
+  type CourseDocument,
   CourseSchema,
   CoursesSchema,
-  type CourseDocument,
 } from "../../../types/ingest/schemas";
 import { DRIZZLE } from "../database/drizzle.module";
 import { ES } from "../search/search.constants.js";
@@ -72,10 +72,16 @@ export class IngestService {
     try {
       this.logger.log("Fetching courses from KTH API...");
       const courses = await this.kopps.getCourses();
-      this.logger.log(`Fetched ${courses.length} courses`);
+      const establishedCourses = courses
+        .filter( (course) => course.state === "ESTABLISHED");
+      this.logger.log(`Fetched ${courses.length} courses. Filtered to ${establishedCourses.length} established courses.`);
 
-      this.logger.log("Converting courses...");
-      const { courses: converted, rounds, examinations } = await this.convertCourses(courses);
+      this.logger.log(`Converting ${establishedCourses.length} courses...`);
+      const {
+        courses: converted,
+        rounds,
+        examinations,
+      } = await this.convertCourses(establishedCourses);
       this.logger.log(
         `Converted ${converted.length} courses with ${rounds.length} rounds and ${examinations.length} examination components`,
       );
@@ -131,7 +137,11 @@ export class IngestService {
   */
   private async convertCourses(
     courses: z.infer<typeof CoursesSchema>,
-  ): Promise<{ courses: InsertCourse[]; rounds: InsertCourseRound[]; examinations: InsertCourseExamination[] }> {
+  ): Promise<{
+    courses: InsertCourse[];
+    rounds: InsertCourseRound[];
+    examinations: InsertCourseExamination[];
+  }> {
     const results = await Promise.all(
       courses.map(async (course) => {
         const courses = await this.kopps
@@ -162,8 +172,8 @@ export class IngestService {
           eligibility: latest?.courseSyllabus.eligibility ?? "",
         };
 
-        const insertRounds: InsertCourseRound[] = courses.roundInfos
-          .map((r) => ({
+        const insertRounds: InsertCourseRound[] = courses.roundInfos.map(
+          (r) => ({
             courseCode: courses.course.courseCode,
             startTerm: r.round.startTerm.term,
             studyPace: r.round.studyPace ?? null,
@@ -171,24 +181,32 @@ export class IngestService {
             language: r.round.language ?? null,
             tutoringForm: r.round.tutoringForm?.name ?? null,
             tutoringTimeOfDay: r.round.tutoringTimeOfDay?.name ?? null,
-            formattedPeriodsAndCredits: r.round.courseRoundTerms?.[0]?.formattedPeriodsAndCredits ?? null,
+            formattedPeriodsAndCredits:
+              r.round.courseRoundTerms?.[0]?.formattedPeriodsAndCredits ?? null,
             isPU: r.round.isPU,
             isVU: r.round.isVU,
-          }));
+          }),
+        );
 
         // examinationSets are historical sets of examination. The latest one is the current set.
-        const latestExamSet = Object.entries(courses.examinationSets)
-          .sort(([a], [b]) => b.localeCompare(a))[0]?.[1];
-        const insertExaminations: InsertCourseExamination[] = (latestExamSet?.examinationRounds ?? [])
-          .map((e) => ({
-            courseCode: courses.course.courseCode,
-            examCode: e.examCode,
-            title: e.title ?? null,
-            credits: e.credits,
-            gradeScaleCode: e.gradeScaleCode,
-          }));
+        const latestExamSet = Object.entries(courses.examinationSets).sort(
+          ([a], [b]) => b.localeCompare(a),
+        )[0]?.[1];
+        const insertExaminations: InsertCourseExamination[] = (
+          latestExamSet?.examinationRounds ?? []
+        ).map((e) => ({
+          courseCode: courses.course.courseCode,
+          examCode: e.examCode,
+          title: e.title ?? null,
+          credits: e.credits,
+          gradeScaleCode: e.gradeScaleCode,
+        }));
 
-        return { course: insertCourse, rounds: insertRounds, examinations: insertExaminations };
+        return {
+          course: insertCourse,
+          rounds: insertRounds,
+          examinations: insertExaminations,
+        };
       }),
     );
 
@@ -234,10 +252,14 @@ export class IngestService {
   private async upsertRounds(rounds: InsertCourseRound[]) {
     if (!rounds.length) return;
     const courseCodes = [...new Set(rounds.map((r) => r.courseCode))];
-    await this.db.delete(courseRoundsTable).where(inArray(courseRoundsTable.courseCode, courseCodes));
+    await this.db
+      .delete(courseRoundsTable)
+      .where(inArray(courseRoundsTable.courseCode, courseCodes));
     const chunkSize = 1000;
     for (let i = 0; i < rounds.length; i += chunkSize) {
-      await this.db.insert(courseRoundsTable).values(rounds.slice(i, i + chunkSize));
+      await this.db
+        .insert(courseRoundsTable)
+        .values(rounds.slice(i, i + chunkSize));
     }
   }
 
@@ -250,7 +272,10 @@ export class IngestService {
         .insert(courseExaminationsTable)
         .values(chunk)
         .onConflictDoUpdate({
-          target: [courseExaminationsTable.courseCode, courseExaminationsTable.examCode],
+          target: [
+            courseExaminationsTable.courseCode,
+            courseExaminationsTable.examCode,
+          ],
           set: {
             title: sql`excluded.title`,
             credits: sql`excluded.credits`,
@@ -431,7 +456,11 @@ export class IngestService {
         .slice(0, 10);
       this.logger.log(`Sampled ${sample.length} courses`);
 
-      const { courses: converted, rounds, examinations } = await this.convertCourses(sample);
+      const {
+        courses: converted,
+        rounds,
+        examinations,
+      } = await this.convertCourses(sample);
       this.logger.log(
         `Converted ${converted.length} courses with ${rounds.length} rounds and ${examinations.length} examination components`,
       );
