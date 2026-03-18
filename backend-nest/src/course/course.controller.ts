@@ -29,7 +29,6 @@ export class CourseController {
       department: course.department,
       name: course.name,
       currentStatus: course.state, // renaming here to status to avoid conflicting naming with "state"
-      lastExaminationSemester: course.lastExaminationSemester,
       updatedAt: course.updatedAt,
     };
   }

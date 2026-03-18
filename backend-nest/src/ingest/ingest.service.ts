@@ -1,19 +1,21 @@
 import type { Client as ESClient } from "@elastic/elasticsearch";
 import { Inject, Injectable, Logger } from "@nestjs/common";
-import { sql } from "drizzle-orm";
+import { inArray, sql } from "drizzle-orm";
 import type { NeonHttpDatabase } from "drizzle-orm/neon-http";
 import type { z } from "zod";
 import {
+  courseExaminations as courseExaminationsTable,
   courseRounds as courseRoundsTable,
   courses as coursesTable,
   type InsertCourse,
+  type InsertCourseExamination,
   type InsertCourseRound,
 } from "../../../types/database/schema";
 import {
   CourseDetailSchema,
   CourseSchema,
   CoursesSchema,
-  type Document,
+  type CourseDocument,
 } from "../../../types/ingest/schemas";
 import { DRIZZLE } from "../database/drizzle.module";
 import { ES } from "../search/search.constants.js";
@@ -73,14 +75,15 @@ export class IngestService {
       this.logger.log(`Fetched ${courses.length} courses`);
 
       this.logger.log("Converting courses...");
-      const { courses: converted, rounds } = await this.convertCourses(courses);
+      const { courses: converted, rounds, examinations } = await this.convertCourses(courses);
       this.logger.log(
-        `Converted ${converted.length} courses with ${rounds.length} rounds`,
+        `Converted ${converted.length} courses with ${rounds.length} rounds and ${examinations.length} examination components`,
       );
 
       this.logger.log("Upserting courses to database...");
       await this.upsertCourses(converted);
       await this.upsertRounds(rounds);
+      await this.upsertExaminations(examinations);
       this.status.neon.lastCompleted = new Date();
       this.logger.log("Courses upserted successfully");
     } catch (error) {
@@ -103,7 +106,7 @@ export class IngestService {
       const courses = await this.kopps.getCourses();
       this.logger.log(`Fetched ${courses.length} courses`);
 
-      // TODO: Need to convert API detailed info to Elastic Document as well
+      // TODO: Need to convert API coursesed info to Elastic Document as well
       this.logger.log("Getting bulk documents for Elasticsearch...");
       const docs = await this.getBulkDocs(courses);
       this.logger.log(`Prepared ${docs.length} documents for indexing`);
@@ -122,66 +125,70 @@ export class IngestService {
   }
 
   /* 
-    Converts courses to fit db schema, fetches detail for each course. 
+    Converts courses to fit db schema, fetches courses for each course. 
     Also maps to course rounds directly --> courses can have different rounds. 
     E.g. DD2421 is offered in both P1 and P3. 
   */
   private async convertCourses(
     courses: z.infer<typeof CoursesSchema>,
-  ): Promise<{ courses: InsertCourse[]; rounds: InsertCourseRound[] }> {
+  ): Promise<{ courses: InsertCourse[]; rounds: InsertCourseRound[]; examinations: InsertCourseExamination[] }> {
     const results = await Promise.all(
       courses.map(async (course) => {
-        // TODO: Rename from "detail" to like "courses" for clarity?
-        const detail = await this.kopps
+        const courses = await this.kopps
           .getCourseInformation(course)
           .catch(() => null);
-        if (!detail) return null;
+        if (!courses) return null;
 
-        // TODO: Clarify
-        const latest = detail.publicSyllabusVersions.reduce(
+        // API returns all historic syllabuses in an array, this fetches just the latest
+        const latest = courses.publicSyllabusVersions.reduce(
           (a, b) => (b.validFromTerm.term > a.validFromTerm.term ? b : a),
-          detail.publicSyllabusVersions[0],
+          courses.publicSyllabusVersions[0],
         );
 
         const insertCourse: InsertCourse = {
-          code: detail.course.courseCode,
-          name: detail.course.titleOther,
-          titleSwedish: detail.course.title,
-          titleEng: detail.course.titleOther,
+          code: courses.course.courseCode,
+          name: courses.course.titleOther,
+          titleSwe: courses.course.title,
+          titleEng: courses.course.titleOther,
           state: course.state,
-          credits: detail.course.credits,
-          creditUnit: detail.course.creditUnitAbbr,
-          departmentCode: detail.course.departmentCode,
-          department: detail.course.department.name,
-          educationalLevelCode: detail.course.educationalLevelCode,
-          gradeScaleCode: detail.course.gradeScaleCode,
+          credits: courses.course.credits,
+          creditUnit: courses.course.creditUnitAbbr,
+          departmentCode: courses.course.departmentCode,
+          department: courses.course.department.name,
+          educationalLevelCode: courses.course.educationalLevelCode,
+          gradeScaleCode: courses.course.gradeScaleCode,
           goals: latest?.courseSyllabus.goals ?? "",
           content: latest?.courseSyllabus.content ?? "",
+          eligibility: latest?.courseSyllabus.eligibility ?? "",
         };
 
-        const insertRounds: InsertCourseRound[] = detail.roundInfos
-          .filter((r) => r.round.shortName)
+        const insertRounds: InsertCourseRound[] = courses.roundInfos
           .map((r) => ({
-            shortName: r.round.shortName!,
-            courseCode: detail.course.courseCode,
-            startTerm: r.startTerm.term,
-            startWeekYear: r.startWeek?.year ?? null,
-            startWeek: r.startWeek?.week ?? null,
-            endWeekYear: r.endWeek?.year ?? null,
-            endWeek: r.endWeek?.week ?? null,
-            studyPace: r.studyPace ?? null,
-            lectureCount: r.lectureCount ?? null,
+            courseCode: courses.course.courseCode,
+            startTerm: r.round.startTerm.term,
+            studyPace: r.round.studyPace ?? null,
             schemaUrl: r.schemaUrl ?? null,
             language: r.round.language ?? null,
             tutoringForm: r.round.tutoringForm?.name ?? null,
             tutoringTimeOfDay: r.round.tutoringTimeOfDay?.name ?? null,
-            formattedPeriodsAndCredits:
-              r.round.courseRoundTerms?.[0]?.formattedPeriodsAndCredits ?? null,
-            isPU: r.isPU,
-            isVU: r.isVU,
+            formattedPeriodsAndCredits: r.round.courseRoundTerms?.[0]?.formattedPeriodsAndCredits ?? null,
+            isPU: r.round.isPU,
+            isVU: r.round.isVU,
           }));
 
-        return { course: insertCourse, rounds: insertRounds };
+        // examinationSets are historical sets of examination. The latest one is the current set.
+        const latestExamSet = Object.entries(courses.examinationSets)
+          .sort(([a], [b]) => b.localeCompare(a))[0]?.[1];
+        const insertExaminations: InsertCourseExamination[] = (latestExamSet?.examinationRounds ?? [])
+          .map((e) => ({
+            courseCode: courses.course.courseCode,
+            examCode: e.examCode,
+            title: e.title ?? null,
+            credits: e.credits,
+            gradeScaleCode: e.gradeScaleCode,
+          }));
+
+        return { course: insertCourse, rounds: insertRounds, examinations: insertExaminations };
       }),
     );
 
@@ -189,6 +196,7 @@ export class IngestService {
     return {
       courses: valid.map((r) => r.course),
       rounds: valid.flatMap((r) => r.rounds),
+      examinations: valid.flatMap((r) => r.examinations),
     };
   }
 
@@ -204,7 +212,7 @@ export class IngestService {
           target: coursesTable.code,
           set: {
             name: sql`excluded.name`,
-            titleSwedish: sql`excluded.name_swedish`,
+            titleSwe: sql`excluded.name_swedish`,
             titleEng: sql`excluded.name_english`,
             state: sql`excluded.state`,
             credits: sql`excluded.credits`,
@@ -215,51 +223,52 @@ export class IngestService {
             gradeScaleCode: sql`excluded.grade_scale_code`,
             goals: sql`excluded.goals`,
             content: sql`excluded.content`,
+            eligibility: sql`excluded.eligibility`,
             updatedAt: sql`now()`,
           },
         });
     }
   }
 
-  // inserts round infos to database
+  // inserts round infos to database — delete existing rounds per course, then insert fresh
   private async upsertRounds(rounds: InsertCourseRound[]) {
+    if (!rounds.length) return;
+    const courseCodes = [...new Set(rounds.map((r) => r.courseCode))];
+    await this.db.delete(courseRoundsTable).where(inArray(courseRoundsTable.courseCode, courseCodes));
     const chunkSize = 1000;
     for (let i = 0; i < rounds.length; i += chunkSize) {
-      const chunk = rounds.slice(i, i + chunkSize);
+      await this.db.insert(courseRoundsTable).values(rounds.slice(i, i + chunkSize));
+    }
+  }
+
+  // inserts examination components into db
+  private async upsertExaminations(examinations: InsertCourseExamination[]) {
+    const chunkSize = 1000;
+    for (let i = 0; i < examinations.length; i += chunkSize) {
+      const chunk = examinations.slice(i, i + chunkSize);
       await this.db
-        .insert(courseRoundsTable)
+        .insert(courseExaminationsTable)
         .values(chunk)
         .onConflictDoUpdate({
-          target: courseRoundsTable.shortName,
+          target: [courseExaminationsTable.courseCode, courseExaminationsTable.examCode],
           set: {
-            startTerm: sql`excluded.start_term`,
-            startWeekYear: sql`excluded.start_week_year`,
-            startWeek: sql`excluded.start_week`,
-            endWeekYear: sql`excluded.end_week_year`,
-            endWeek: sql`excluded.end_week`,
-            studyPace: sql`excluded.study_pace`,
-            lectureCount: sql`excluded.lecture_count`,
-            schemaUrl: sql`excluded.schema_url`,
-            language: sql`excluded.language`,
-            tutoringForm: sql`excluded.tutoring_form`,
-            tutoringTimeOfDay: sql`excluded.tutoring_time_of_day`,
-            formattedPeriodsAndCredits: sql`excluded.formatted_periods_and_credits`,
-            isPU: sql`excluded.is_pu`,
-            isVU: sql`excluded.is_vu`,
+            title: sql`excluded.title`,
+            credits: sql`excluded.credits`,
+            gradeScaleCode: sql`excluded.grade_scale_code`,
           },
         });
     }
   }
 
-  // maps detailed course data to an ES document
+  // maps coursesed course data to an ES document
   private toDocument(
-    detail: z.infer<typeof CourseDetailSchema>,
+    courses: z.infer<typeof CourseDetailSchema>,
     course: z.infer<typeof CourseSchema>,
-  ): Document {
+  ): CourseDocument {
     // pick the latest syllabus version by term
-    const latest = detail.publicSyllabusVersions.reduce(
+    const latest = courses.publicSyllabusVersions.reduce(
       (a, b) => (b.validFromTerm.term > a.validFromTerm.term ? b : a),
-      detail.publicSyllabusVersions[0],
+      courses.publicSyllabusVersions[0],
     );
     return {
       course_name: course.name,
@@ -268,13 +277,13 @@ export class IngestService {
       state: course.state,
       goals: latest?.courseSyllabus.goals ?? "",
       content: latest?.courseSyllabus.content ?? "",
-      subject: detail.mainSubjects[0] ?? "", // TODO: rename to just "subject". But need to double check if its always 1 subject or more
+      subject: courses.mainSubjects[0] ?? "", // TODO: rename to just "subject". But need to double check if its always 1 subject or more
       // flatMap: courseRoundTerms is an array per round, so map would give string[][]
-      periods: detail.roundInfos
+      periods: courses.roundInfos
         .flatMap((r) => r.round.courseRoundTerms ?? [])
         .map((t) => t.formattedPeriodsAndCredits ?? "")
         .filter(Boolean),
-      short_name: detail.roundInfos[0]?.round.shortName ?? "",
+      short_name: "",
       course_category: [], // technically can be both
     };
   }
@@ -315,9 +324,9 @@ export class IngestService {
     }
   }
 
-  private docsToBulkOperations(docs: Document[]) {
+  private docsToBulkOperations(docs: CourseDocument[]) {
     type IndexOp = { index: { _index: string; _id: string } };
-    const ops: Array<IndexOp | Document> = [];
+    const ops: Array<IndexOp | CourseDocument> = [];
     for (const d of docs) {
       ops.push({ index: { _index: INDEX, _id: d.course_code } });
       ops.push(d);
@@ -325,9 +334,9 @@ export class IngestService {
     return ops;
   }
 
-  private async indexBulk(docs: Document[]) {
+  private async indexBulk(docs: CourseDocument[]) {
     if (!docs.length) {
-      this.logger.warn("No documents to index; skipping bulk request");
+      this.logger.warn("No course documents to index; skipping bulk request");
       return;
     }
     await this.ensureIndex();
@@ -382,7 +391,7 @@ export class IngestService {
 
   private async getBulkDocs(courses: z.infer<typeof CoursesSchema>) {
     let count = 0;
-    const docs: Document[] = [];
+    const docs: CourseDocument[] = [];
     for (const course of courses) {
       if (course.state !== "ESTABLISHED") continue;
       count++;
@@ -409,6 +418,32 @@ export class IngestService {
       docs.push(doc);
     }
     return docs;
+  }
+
+  // runs a small test of the neon ingestion with the first 10 established courses
+  async runNeonTest() {
+    this.logger.log("Starting Neon test process...");
+    try {
+      const courses = await this.kopps.getCourses();
+      const sample = courses
+        .filter((c) => c.state === "ESTABLISHED")
+        .sort(() => Math.random() - 0.5)
+        .slice(0, 10);
+      this.logger.log(`Sampled ${sample.length} courses`);
+
+      const { courses: converted, rounds, examinations } = await this.convertCourses(sample);
+      this.logger.log(
+        `Converted ${converted.length} courses with ${rounds.length} rounds and ${examinations.length} examination components`,
+      );
+
+      await this.upsertCourses(converted);
+      await this.upsertRounds(rounds);
+      await this.upsertExaminations(examinations);
+      this.logger.log("Neon test process completed successfully");
+    } catch (error) {
+      this.logger.error("Neon test process failed:", error);
+      throw error;
+    }
   }
 
   // runs a test for the elastic ingestion

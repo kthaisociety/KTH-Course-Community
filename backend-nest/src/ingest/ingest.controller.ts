@@ -36,6 +36,13 @@ export class IngestController {
     return this.ingest.getIngestStatus();
   }
 
+  @Post("test-neon")
+  @HttpCode(200)
+  async testNeon() {
+    await this.ingest.runNeonTest();
+    return { status: "ok", task: "test-neon" };
+  }
+
   @Post("test-elastic")
   @HttpCode(200)
   async testElastic() {
