@@ -72,9 +72,12 @@ export class IngestService {
     try {
       this.logger.log("Fetching courses from KTH API...");
       const courses = await this.kopps.getCourses();
-      const establishedCourses = courses
-        .filter( (course) => course.state === "ESTABLISHED");
-      this.logger.log(`Fetched ${courses.length} courses. Filtered to ${establishedCourses.length} established courses.`);
+      const establishedCourses = courses.filter(
+        (course) => course.state === "ESTABLISHED",
+      );
+      this.logger.log(
+        `Fetched ${courses.length} courses. Filtered to ${establishedCourses.length} established courses.`,
+      );
 
       this.logger.log(`Converting ${establishedCourses.length} courses...`);
       const {
