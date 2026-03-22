@@ -6,8 +6,10 @@ import { CourseItemSkeleton } from "@/components/CourseItemSkeleton";
 import {
   getMockChartData,
   getMockCourseStats,
+  getMockHp,
   getMockKeywords,
   getMockPrerequisites,
+  getMockSummary,
 } from "@/data/courseCardMockData";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,6 +33,7 @@ type SearchViewProps = {
   filters: Record<string, string | string[]>;
   onFiltersChange: (filters: Record<string, string | string[]>) => void;
   onSeeReviews: (courseCode: string) => void;
+  onWriteReview: (courseCode: string) => void;
   onToggleFavorite: (courseCode: string) => void;
   onAddToComparison: (courseCode: string) => void;
 };
@@ -48,6 +51,7 @@ export default function SearchView({
   filters,
   onFiltersChange,
   onSeeReviews,
+  onWriteReview,
   onToggleFavorite,
   onAddToComparison,
 }: SearchViewProps) {
@@ -72,7 +76,7 @@ export default function SearchView({
         </form>
         {error && <p className="text-red-600">Error: {error}</p>}
 
-        <div className="w-full max-w-3xl">
+        <div className="w-full max-w-4xl">
           <div className="flex items-center gap-4 mb-6">
             <Select
               value={(filters.department as string) || ""}
@@ -157,14 +161,30 @@ export default function SearchView({
                   title={course.name}
                   goals={course.goals}
                   content={course.content}
+                  summary={
+                    course.summary?.trim()
+                      ? course.summary
+                      : getMockSummary(course.courseCode)
+                  }
                   courseCode={course.courseCode}
                   department={course.department}
+                  hp={getMockHp(course.courseCode)}
                   keywords={getMockKeywords(course.courseCode)}
                   prerequisites={getMockPrerequisites(course.courseCode)}
                   chartData={getMockChartData(course.courseCode)}
-                  stats={getMockCourseStats(course.courseCode)}
+                  stats={(() => {
+                    const base = getMockCourseStats(course.courseCode);
+                    if (
+                      typeof course.rating === "number" &&
+                      !Number.isNaN(course.rating)
+                    ) {
+                      return { ...base, averageRating: course.rating };
+                    }
+                    return base;
+                  })()}
                   isUserFavorite={course.isUserFavorite}
                   onSeeReviews={() => onSeeReviews(course.courseCode)}
+                  onWriteReview={() => onWriteReview(course.courseCode)}
                   onToggleFavorite={() => onToggleFavorite(course.courseCode)}
                   onAddToComparison={() => onAddToComparison(course.courseCode)}
                 />

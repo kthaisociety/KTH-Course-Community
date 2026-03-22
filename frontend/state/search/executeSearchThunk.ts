@@ -54,6 +54,7 @@ export function executeSearch() {
           course_code: string;
           course_name: string;
           content: string;
+          summary?: string;
           goals: string;
           department: string;
           rating?: number;
@@ -67,6 +68,7 @@ export function executeSearch() {
         courseCode: result.course_code,
         name: result.course_name,
         content: result.content,
+        summary: result.summary,
         goals: result.goals,
         department: result.department,
         rating: result.rating,

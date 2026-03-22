@@ -88,7 +88,14 @@ export class SearchService {
           filter: searchFilters,
         },
       },
-      _source: ["course_name", "course_code", "department", "goals", "content"],
+      _source: [
+        "course_name",
+        "course_code",
+        "department",
+        "goals",
+        "content",
+        "summary",
+      ],
     });
 
     const hits = (res.hits?.hits ?? []) as Array<{

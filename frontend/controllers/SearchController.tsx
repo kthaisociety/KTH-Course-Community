@@ -117,6 +117,13 @@ export default function SearchController() {
     [router],
   );
 
+  const onWriteReview = useCallback(
+    (courseCode: string) => {
+      router.push(`/course/${courseCode}`);
+    },
+    [router],
+  );
+
   const onAddToComparison = useCallback((_courseCode: string) => {
     // TODO: add to comparison state / API
   }, []);
@@ -157,6 +164,7 @@ export default function SearchController() {
       filters={filters}
       onFiltersChange={_onFiltersChange}
       onSeeReviews={onSeeReviews}
+      onWriteReview={onWriteReview}
       onToggleFavorite={onToggleFavorite}
       onAddToComparison={onAddToComparison}
     />

@@ -11,10 +11,10 @@ function ExaminationMethodsBar({ data }: { data: ExaminationMethods }) {
   const { homeAssignments, onCampusExam, laboratoryMoments } = data;
   return (
     <div className="space-y-0.5">
-      <p className="text-[10px] font-medium text-muted-foreground">
-        Examination methods
+      <p className="text-xs font-medium text-muted-foreground">
+        Examination Methods
       </p>
-      <div className="flex h-2.5 w-full overflow-hidden rounded bg-muted">
+      <div className="flex h-3.5 w-full overflow-hidden rounded bg-muted">
         <div
           className="bg-yellow-500 transition-all"
           style={{ width: `${homeAssignments}%` }}
@@ -40,10 +40,10 @@ function TheoreticalVsAppliedBar({ data }: { data: TheoreticalVsApplied }) {
   const { theoretical, applied } = data;
   return (
     <div className="space-y-0.5">
-      <p className="text-[10px] font-medium text-muted-foreground">
-        Theoretical vs applied
+      <p className="text-xs font-medium text-muted-foreground">
+        Theoretical vs Applied
       </p>
-      <div className="flex h-2.5 w-full overflow-hidden rounded bg-muted">
+      <div className="flex h-3.5 w-full overflow-hidden rounded bg-muted">
         <div
           className="bg-sky-400 transition-all"
           style={{ width: `${theoretical}%` }}
@@ -59,7 +59,7 @@ function TheoreticalVsAppliedBar({ data }: { data: TheoreticalVsApplied }) {
   );
 }
 
-/** Gauge 1–10: red fill, rest grey. */
+/** Gauge 1–10: calm grey fill (muted), track stays light grey. */
 function GaugeBar({
   value,
   label,
@@ -70,10 +70,10 @@ function GaugeBar({
   const pct = Math.max(0, Math.min(10, value)) * 10;
   return (
     <div className="space-y-0.5">
-      <p className="text-[10px] font-medium text-muted-foreground">{label}</p>
-      <div className="flex h-2 w-full overflow-hidden rounded bg-muted">
+      <p className="text-xs font-medium text-muted-foreground">{label}</p>
+      <div className="flex h-2 w-full overflow-hidden rounded-sm bg-muted">
         <div
-          className="bg-red-500 transition-all"
+          className="bg-muted-foreground/80 transition-all dark:bg-muted-foreground/70"
           style={{ width: `${pct}%` }}
           title={`${value}/10`}
         />
@@ -84,11 +84,11 @@ function GaugeBar({
 
 export function CourseCardCharts({ data }: { data: CourseCardChartData }) {
   return (
-    <div className="flex w-full min-w-[120px] max-w-[180px] flex-col gap-2">
+    <div className="flex w-full min-w-[120px] max-w-full flex-col gap-3">
       <ExaminationMethodsBar data={data.examinationMethods} />
       <TheoreticalVsAppliedBar data={data.theoreticalVsApplied} />
       <GaugeBar value={data.workload} label="Workload" />
-      <GaugeBar value={data.learningExperience} label="Learning experience" />
+      <GaugeBar value={data.learningExperience} label="Learning Experience" />
     </div>
   );
 }
