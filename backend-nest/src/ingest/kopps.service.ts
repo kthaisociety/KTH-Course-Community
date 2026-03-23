@@ -8,8 +8,8 @@ import {
   CoursesSchema,
 } from "../../../types/ingest/schemas";
 
-/* 
-Service fetches data from the KOPPS API. 
+/*
+Service fetches data from the KOPPS API.
 (or any other new API for fetching courses in the future).
 */
 @Injectable()

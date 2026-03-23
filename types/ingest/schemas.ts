@@ -1,6 +1,5 @@
 import { z } from "zod";
 
-
 // schema for each course from /api/kopps/v2/courses?l=en
 export const CourseState = z.enum(["CANCELLED", "ESTABLISHED", "DEACTIVATED"]);
 export const CourseSchema = z.object({
@@ -13,8 +12,6 @@ export const CourseSchema = z.object({
 // validates an array of CoruseSchemas
 export const CoursesSchema = z.array(CourseSchema);
 
-
-
 // schema for /api/kopps/v2/course/:code/detailedinformation
 export const CourseDetailSchema = z.object({
   // First part of the data is general course information.
@@ -24,8 +21,8 @@ export const CourseDetailSchema = z.object({
     department: z.object({ name: z.string() }),
     educationalLevelCode: z.string(),
     gradeScaleCode: z.string(),
-    title: z.string(),        // swedish title
-    titleOther: z.string(),   // english title
+    title: z.string(), // swedish title
+    titleOther: z.string(), // english title
     credits: z.number(),
     creditUnitAbbr: z.string(),
     state: z.string(),
@@ -43,12 +40,14 @@ export const CourseDetailSchema = z.object({
         tutoringForm: z.object({ name: z.string() }).optional(),
         language: z.string().optional(),
         courseRoundTerms: z
-          .array(z.object({ formattedPeriodsAndCredits: z.string().optional() }))
+          .array(
+            z.object({ formattedPeriodsAndCredits: z.string().optional() }),
+          )
           .optional(),
       }),
     }),
   ),
-  // Third part of the course data from API is examinations, e.g. "TEN1". 
+  // Third part of the course data from API is examinations, e.g. "TEN1".
   examinationSets: z.record(
     z.string(),
     z.object({
@@ -75,29 +74,4 @@ export const CourseDetailSchema = z.object({
   ),
   mainSubjects: z.array(z.string()),
 });
-
-
-
-// schema for course document in Elastic Search
-export type CourseDocument = {
-  course_name: string;
-  course_code: string;
-  department: string;
-  state: "CANCELLED" | "ESTABLISHED" | "DEACTIVATED";
-  goals: string;
-  content: string;
-  subject: string,
-  periods: string[],  // e.g. ["P1 (7,5 hp)", "P3 (7,5 hp)"] — one per active round
-  short_name: string,
-  course_category: ("OPEN COURSE" | "PROGRAMME COURSE")[]; // can be both
-};
-
-
-
-export type InsertRequest = {
-  index: {
-    _index: string;
-  };
-  document: CourseDocument;
-};
 

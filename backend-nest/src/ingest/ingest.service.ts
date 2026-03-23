@@ -13,10 +13,10 @@ import {
 } from "../../../types/database/schema";
 import {
   CourseDetailSchema,
-  type CourseDocument,
   CourseSchema,
   CoursesSchema,
 } from "../../../types/ingest/schemas";
+import type { CourseDocument } from "../../../types/search/elastic.mappings";
 import { DRIZZLE } from "../database/drizzle.module";
 import { ES } from "../search/search.constants.js";
 import { KoppsService } from "./kopps.service";
@@ -133,10 +133,10 @@ export class IngestService {
     }
   }
 
-  /* 
-    Converts courses to fit db schema, fetches courses for each course. 
-    Also maps to course rounds directly --> courses can have different rounds. 
-    E.g. DD2421 is offered in both P1 and P3. 
+  /*
+    Converts courses to fit db schema, fetches courses for each course.
+    Also maps to course rounds directly --> courses can have different rounds.
+    E.g. DD2421 is offered in both P1 and P3.
   */
   private async convertCourses(
     courses: z.infer<typeof CoursesSchema>,
@@ -251,7 +251,7 @@ export class IngestService {
     }
   }
 
-  // inserts round infos to database — delete existing rounds per course, then insert fresh
+  // inserts round infos to database, delete existing rounds per course, then insert fresh
   private async upsertRounds(rounds: InsertCourseRound[]) {
     if (!rounds.length) return;
     const courseCodes = [...new Set(rounds.map((r) => r.courseCode))];
@@ -288,34 +288,42 @@ export class IngestService {
     }
   }
 
-  // maps coursesed course data to an ES document
+  // maps detailed course data to an ES document
   private toDocument(
     courses: z.infer<typeof CourseDetailSchema>,
     course: z.infer<typeof CourseSchema>,
   ): CourseDocument {
     // pick the latest syllabus version by term
-    const latest = courses.publicSyllabusVersions.reduce(
+    const syllabus_latest = courses.publicSyllabusVersions.reduce(
       (a, b) => (b.validFromTerm.term > a.validFromTerm.term ? b : a),
       courses.publicSyllabusVersions[0],
     );
+    const course_categories = new Set<"OPEN COURSE" | "PROGRAMME COURSE">();
+    for (const r of courses.roundInfos) {
+      if (r.round.isVU) course_categories.add("OPEN COURSE");
+      if (r.round.isPU) course_categories.add("PROGRAMME COURSE");
+    }
     return {
-      course_name: course.name,
       course_code: course.code,
+      course_name_swe: courses.course.title,
+      course_name_eng: courses.course.titleOther,
       department: course.department,
-      state: course.state,
-      goals: latest?.courseSyllabus.goals ?? "",
-      content: latest?.courseSyllabus.content ?? "",
-      subject: courses.mainSubjects[0] ?? "", // TODO: rename to just "subject". But need to double check if its always 1 subject or more
+      credits: courses.course.credits,
+      subject: courses.mainSubjects[0] ?? "",
       // flatMap: courseRoundTerms is an array per round, so map would give string[][]
       periods: courses.roundInfos
         .flatMap((r) => r.round.courseRoundTerms ?? [])
         .map((t) => t.formattedPeriodsAndCredits ?? "")
         .filter(Boolean),
-      short_name: "",
-      course_category: [], // technically can be both
+      course_category: [...course_categories],
+      goals: syllabus_latest?.courseSyllabus.goals ?? "",
+      content: syllabus_latest?.courseSyllabus.content ?? "",
+      eligibility: syllabus_latest?.courseSyllabus.eligibility ?? "",
+      state: course.state,
     };
   }
 
+  //
   private async ensureIndex() {
     try {
       await this.es.indices.create({
@@ -324,15 +332,24 @@ export class IngestService {
         mappings: {
           dynamic: "strict",
           properties: {
-            course_name: {
+            course_code: { type: "keyword" },
+            course_name_swe: {
               type: "text",
               fields: { keyword: { type: "keyword", ignore_above: 256 } },
             },
-            course_code: { type: "keyword" },
+            course_name_eng: {
+              type: "text",
+              fields: { keyword: { type: "keyword", ignore_above: 256 } },
+            },
             department: { type: "keyword" },
-            state: { type: "keyword" },
+            credits: { type: "float" },
+            subject: { type: "keyword" },
+            periods: { type: "keyword" },
+            course_category: { type: "keyword" },
             goals: { type: "text" },
             content: { type: "text" },
+            eligibility: { type: "text" },
+            state: { type: "keyword" },
           },
         },
       });
@@ -432,16 +449,18 @@ export class IngestService {
       const doc = plan
         ? this.toDocument(plan, course)
         : {
-            course_name: course.name,
             course_code: course.code,
+            course_name_swe: course.name,
+            course_name_eng: course.name,
             department: course.department,
-            state: course.state,
-            goals: "",
-            content: "",
+            credits: 0,
             subject: "",
             periods: [],
-            short_name: "",
-            course_category: [],
+            course_category: [] as CourseDocument["course_category"],
+            goals: "",
+            content: "",
+            eligibility: "",
+            state: course.state,
           };
       docs.push(doc);
     }

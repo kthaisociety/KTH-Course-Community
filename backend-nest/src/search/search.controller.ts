@@ -5,7 +5,7 @@ import {
   Param,
   Query,
 } from "@nestjs/common";
-import { CourseMapping } from "../../../types/search/elastic.mappings";
+import { CourseDocument } from "../../../types/search/elastic.mappings";
 import { type SearchResult, SearchService } from "./search.service";
 
 @Controller("search")
