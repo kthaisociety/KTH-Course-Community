@@ -311,10 +311,15 @@ export class IngestService {
       credits: courses.course.credits,
       subject: courses.mainSubjects[0] ?? '',
       // flatMap: courseRoundTerms is an array per round, so map would give string[][]
-      periods: courses.roundInfos
-        .flatMap((r) => r.round.courseRoundTerms ?? [])
-        .map((t) => t.formattedPeriodsAndCredits ?? '')
-        .filter(Boolean),
+      // extract just the period e.g. "P3" from "P3 (7,5 hp)"
+      periods: [
+        ...new Set(
+          courses.roundInfos
+            .flatMap((r) => r.round.courseRoundTerms ?? [])
+            .map((t) => t.formattedPeriodsAndCredits?.match(/^(P\d+)/)?.[1])
+            .filter((p): p is string => p !== undefined),
+        ),
+      ],
       course_category: [...course_categories],
       goals: syllabus_latest?.courseSyllabus.goals ?? '',
       content: syllabus_latest?.courseSyllabus.content ?? '',
@@ -443,7 +448,10 @@ export class IngestService {
       if (count % 10 === 0) {
         this.logger.log(`Processed ${count} courses so far`);
       }
-      const plan = await this.kopps.getCourseInformation(course).catch((_e) => {
+      const plan = await this.kopps.getCourseInformation(course).catch((e) => {
+        this.logger.error(
+          `Failed to get course information for ${course.code}: ${e}`,
+        );
         return null;
       });
       const doc = plan

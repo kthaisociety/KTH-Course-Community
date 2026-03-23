@@ -127,7 +127,9 @@ describe("CourseController", () => {
         ),
       );
 
-      expect(mockSearchService.getCourseByCode).toHaveBeenCalledWith("ABCD1234");
+      expect(mockSearchService.getCourseByCode).toHaveBeenCalledWith(
+        "ABCD1234",
+      );
     });
   });
 
@@ -146,7 +148,9 @@ describe("CourseController", () => {
 
       const result = await controller.checkIfCourseCodeExists("ABCD1234");
 
-      expect(mockCourseService.courseCodeExists).toHaveBeenCalledWith("ABCD1234");
+      expect(mockCourseService.courseCodeExists).toHaveBeenCalledWith(
+        "ABCD1234",
+      );
       expect(result).toEqual({ exists: false });
     });
   });
