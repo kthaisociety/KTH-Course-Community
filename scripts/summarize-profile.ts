@@ -7,7 +7,7 @@
  *   npx tsx scripts/summarize-profile.ts api-profile.json > api-profile-summary.json
  */
 
-import { readFileSync } from "fs";
+import { readFileSync } from "node:fs";
 
 const inputPath = process.argv[2];
 if (!inputPath) {

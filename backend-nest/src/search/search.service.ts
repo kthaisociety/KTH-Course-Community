@@ -3,23 +3,24 @@ import { Inject, Injectable } from "@nestjs/common";
 import { inArray, sql } from "drizzle-orm";
 import type { NeonHttpDatabase } from "drizzle-orm/neon-http";
 import * as schema from "../../../types/database/schema";
-import type { CourseDocument } from "../../../types/search/elastic.mappings";
+import type { CourseDocumentES } from "../../../types/search/elastic.mappings.js";
 import { DRIZZLE } from "../database/drizzle.module";
 import { ES } from "./search.constants";
 
 const INDEX = "courses";
 
-export type SearchResult = CourseDocument & {
+// TODO: Migth want to only use one type here, as they are very similar.
+// The ElasticCourse is used as a single course return point, which might not be used in the future either
+export interface SearchResult extends CourseDocumentES {
   _id: string;
   _score: number | null;
   rating?: number;
-};
-
+}
 // This simulates the 'Course' type defined in the frontend 'course_model'
-export type ElasticCourse = CourseDocument & {
+export interface ElasticCourse extends CourseDocumentES {
   _id: string;
   rating?: number;
-};
+}
 
 @Injectable()
 export class SearchService {
@@ -59,7 +60,7 @@ export class SearchService {
       }
     }
 
-    const res = await this.es.search<unknown, CourseDocument>({
+    const res = await this.es.search<unknown, CourseDocumentES>({
       index: INDEX,
       size: filters?.minRating ? size * 5 : size, // get more results for rating filter
       query: {
@@ -107,14 +108,13 @@ export class SearchService {
     const hits = (res.hits?.hits ?? []) as Array<{
       _id: string;
       _score: number | null;
-      _source?: CourseDocument;
+      _source?: CourseDocumentES;
     }>;
 
     const base = hits
       .filter((h) => Boolean(h._source))
       .map((h) => {
-        const src = h._source ?? ({} as CourseDocument);
-        return { ...src, _id: h._id, _score: h._score } as SearchResult;
+        return { ...h._source, _id: h._id, _score: h._score } as SearchResult;
       });
 
     // Add average rating from reviews
@@ -141,9 +141,10 @@ export class SearchService {
     }));
 
     let filteredResults = resultsWithRatings;
-    if (filters?.minRating) {
+    const minRating = filters?.minRating;
+    if (minRating) {
       filteredResults = resultsWithRatings.filter(
-        (course) => course.rating >= filters.minRating!,
+        (course) => course.rating >= minRating,
       );
     }
     return filteredResults.slice(0, size);
@@ -154,7 +155,7 @@ export class SearchService {
     courseCode: string,
   ): Promise<ElasticCourse | undefined> {
     // Fetching the basic course information from ES
-    const res = await this.es.search<CourseDocument>({
+    const res = await this.es.search<CourseDocumentES>({
       index: INDEX,
       size: 1,
       query: {

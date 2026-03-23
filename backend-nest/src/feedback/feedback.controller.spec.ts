@@ -1,9 +1,8 @@
-import { NotFoundException } from "@nestjs/common";
-import { Test, type TestingModule } from "@nestjs/testing";
-import { FeedbackController } from "./feedback.controller";
-import { FeedbackService } from "./feedback.service";
+import { Test, type TestingModule } from '@nestjs/testing';
+import { FeedbackController } from './feedback.controller';
+import { FeedbackService } from './feedback.service';
 
-describe("FeedbackController", () => {
+describe('FeedbackController', () => {
   let controller: FeedbackController;
   let feedbackService: FeedbackService;
 
@@ -12,9 +11,9 @@ describe("FeedbackController", () => {
   };
 
   const mockFeedbackData = {
-    name: "Sven",
-    email: "sven@kth.se",
-    message: "This is a test feedback message",
+    name: 'Sven',
+    email: 'sven@kth.se',
+    message: 'This is a test feedback message',
   };
 
   beforeEach(async () => {
@@ -36,13 +35,13 @@ describe("FeedbackController", () => {
     jest.clearAllMocks();
   });
 
-  it("should be defined", () => {
+  it('should be defined', () => {
     expect(controller).toBeDefined();
     expect(feedbackService).toBeDefined();
   });
 
-  describe("createFeedback", () => {
-    it("should successfully create feedback", async () => {
+  describe('createFeedback', () => {
+    it('should successfully create feedback', async () => {
       const expectedResult = { success: true };
       mockFeedbackService.submitFeedback.mockResolvedValue(expectedResult);
 
@@ -53,13 +52,13 @@ describe("FeedbackController", () => {
       );
       expect(result).toEqual(expectedResult);
     });
-    it("should handle service errors", async () => {
+    it('should handle service errors', async () => {
       mockFeedbackService.submitFeedback.mockRejectedValue(
-        new Error("Service error"),
+        new Error('Service error'),
       );
 
       await expect(controller.createFeedback(mockFeedbackData)).rejects.toThrow(
-        "Service error",
+        'Service error',
       );
     });
   });

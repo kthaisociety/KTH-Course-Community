@@ -5,8 +5,8 @@ import { type SearchResult, SearchService } from "./search.service";
 
 describe("SearchService", () => {
   let service: SearchService;
-  let mockEs: any;
-  let mockDb: any;
+  let mockEs: { search: jest.Mock };
+  let mockDb: { execute: jest.Mock };
 
   beforeEach(async () => {
     mockEs = {
@@ -50,23 +50,36 @@ describe("SearchService", () => {
             _id: "1",
             _score: 1.5,
             _source: {
-              course_name: "Calculus in One Variable",
+              course_name_swe: "Kalkyl i en variabel",
+              course_name_eng: "Calculus in One Variable",
               course_code: "SF1625",
               department: "SF (SCI/Matematik) ",
+              credits: 7.5,
+              subject: "Matematik",
+              periods: ["P3 (7.5 hp)"],
+              course_category: ["PROGRAMME COURSE"],
               goals: "Learn fundamentals of calculus",
               content: "Limits, derivatives, integrals",
-              rating: 4,
+              eligibility: "",
+              state: "ESTABLISHED",
             },
           },
           {
             _id: "2",
             _score: 1.2,
             _source: {
-              course_name: "Algebra and Geometry",
+              course_name_swe: "Algebra och geometri",
+              course_name_eng: "Algebra and Geometry",
               course_code: "SF1624",
               department: "SF (SCI/Matematik) ",
+              credits: 7.5,
+              subject: "Matematik",
+              periods: ["P1 (7.5 hp)"],
+              course_category: ["PROGRAMME COURSE"],
               goals: "Learn algebra and geometry concepts",
               content: "Equations, shapes, theorems",
+              eligibility: "",
+              state: "ESTABLISHED",
             },
           },
         ],
@@ -97,7 +110,7 @@ describe("SearchService", () => {
               {
                 multi_match: {
                   query: "algebra",
-                  fields: ["course_name^2"],
+                  fields: ["course_name_swe^2", "course_name_eng^2"],
                   type: "phrase_prefix",
                 },
               },
@@ -105,7 +118,8 @@ describe("SearchService", () => {
                 multi_match: {
                   query: "algebra",
                   fields: [
-                    "course_name^2",
+                    "course_name_swe^2",
+                    "course_name_eng^2",
                     "course_code^2",
                     "goals",
                     "content",
@@ -120,9 +134,11 @@ describe("SearchService", () => {
           },
         },
         _source: [
-          "course_name",
           "course_code",
+          "course_name_swe",
+          "course_name_eng",
           "department",
+          "credits",
           "goals",
           "content",
         ],
@@ -134,21 +150,35 @@ describe("SearchService", () => {
         {
           _id: "1",
           _score: 1.5,
-          course_name: "Calculus in One Variable",
+          course_name_swe: "Kalkyl i en variabel",
+          course_name_eng: "Calculus in One Variable",
           course_code: "SF1625",
           department: "SF (SCI/Matematik) ",
+          credits: 7.5,
+          subject: "Matematik",
+          periods: ["P3 (7.5 hp)"],
+          course_category: ["PROGRAMME COURSE"],
           goals: "Learn fundamentals of calculus",
           content: "Limits, derivatives, integrals",
+          eligibility: "",
+          state: "ESTABLISHED",
           rating: 4,
         },
         {
           _id: "2",
           _score: 1.2,
-          course_name: "Algebra and Geometry",
+          course_name_swe: "Algebra och geometri",
+          course_name_eng: "Algebra and Geometry",
           course_code: "SF1624",
           department: "SF (SCI/Matematik) ",
+          credits: 7.5,
+          subject: "Matematik",
+          periods: ["P1 (7.5 hp)"],
+          course_category: ["PROGRAMME COURSE"],
           goals: "Learn algebra and geometry concepts",
           content: "Equations, shapes, theorems",
+          eligibility: "",
+          state: "ESTABLISHED",
           rating: 5,
         },
       ];
@@ -164,15 +194,12 @@ describe("SearchService", () => {
         department: "SF (SCI/Matematik) ",
       });
 
-      expect(mockEs.search).toHaveBeenCalledWith(
-        expect.objectContaining({
-          query: expect.objectContaining({
-            bool: expect.objectContaining({
-              filter: [{ wildcard: { department: "*SCI*" } }],
-            }),
-          }),
-        }),
-      );
+      const callArg = mockEs.search.mock.calls[0]?.[0] as {
+        query: { bool: { filter: unknown[] } };
+      };
+      expect(callArg.query.bool.filter).toEqual([
+        { wildcard: { department: "*SCI*" } },
+      ]);
     });
 
     // failing test
@@ -181,7 +208,7 @@ describe("SearchService", () => {
       mockDb.execute.mockResolvedValue(mockDbRatingResponse);
 
       const result = await service.searchCourses("math", 10, { minRating: 4 });
-      expect(result.every((r) => r.rating! >= 4)).toBe(true);
+      expect(result.every((r) => (r.rating ?? 0) >= 4)).toBe(true);
     });
 
     it("should handle Elasticsearch errors", async () => {
@@ -207,11 +234,18 @@ describe("SearchService", () => {
   describe("getCourseByCode", () => {
     const mockCourseData = {
       _id: "SF1624",
-      course_name: "Linear Algebra",
+      course_name_swe: "Linjär algebra och geometri",
+      course_name_eng: "Linear Algebra and Geometry",
       course_code: "SF1624",
       department: "SF (SCI/Matematik) ",
+      credits: 7.5,
+      subject: "Matematik",
+      periods: ["P1 (7.5 hp)"],
+      course_category: ["PROGRAMME COURSE"],
       goals: "Learn linear algebra and geometry concepts",
       content: "Vectors, matrices, linear transformations",
+      eligibility: "",
+      state: "ESTABLISHED",
       rating: 4,
     };
 

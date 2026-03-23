@@ -1,8 +1,8 @@
-import type { Client as ESClient } from "@elastic/elasticsearch";
-import { Inject, Injectable, Logger } from "@nestjs/common";
-import { inArray, sql } from "drizzle-orm";
-import type { NeonHttpDatabase } from "drizzle-orm/neon-http";
-import type { z } from "zod";
+import type { Client as ESClient } from '@elastic/elasticsearch';
+import { Inject, Injectable, Logger } from '@nestjs/common';
+import { inArray, sql } from 'drizzle-orm';
+import type { NeonHttpDatabase } from 'drizzle-orm/neon-http';
+import type { z } from 'zod';
 import {
   courseExaminations as courseExaminationsTable,
   courseRounds as courseRoundsTable,
@@ -10,18 +10,18 @@ import {
   type InsertCourse,
   type InsertCourseExamination,
   type InsertCourseRound,
-} from "../../../types/database/schema";
+} from '../../../types/database/schema';
 import {
   CourseDetailSchema,
   CourseSchema,
   CoursesSchema,
-} from "../../../types/ingest/schemas";
-import type { CourseDocument } from "../../../types/search/elastic.mappings";
-import { DRIZZLE } from "../database/drizzle.module";
-import { ES } from "../search/search.constants.js";
-import { KoppsService } from "./kopps.service";
+} from '../../../types/ingest/schemas';
+import type { CourseDocumentES } from '../../../types/search/elastic.mappings';
+import { DRIZZLE } from '../database/drizzle.module';
+import { ES } from '../search/search.constants.js';
+import { KoppsService } from './kopps.service';
 
-const INDEX = "courses";
+const INDEX = 'courses';
 
 @Injectable()
 export class IngestService {
@@ -58,7 +58,7 @@ export class IngestService {
 
   // runs the ingestion pipeline --> inserts into SQL tables (Neon) and ElasticSearch.
   async runFullIngest() {
-    this.logger.log("Starting full ingest process...");
+    this.logger.log('Starting full ingest process...');
     await this.runNeonIngest();
     await this.runElasticIngest();
   }
@@ -68,12 +68,12 @@ export class IngestService {
     this.status.neon.running = true;
     this.status.neon.lastStarted = new Date();
     this.status.neon.lastError = null;
-    this.logger.log("Neon ingestion process started...");
+    this.logger.log('Neon ingestion process started...');
     try {
-      this.logger.log("Fetching courses from KTH API...");
+      this.logger.log('Fetching courses from KTH API...');
       const courses = await this.kopps.getCourses();
       const establishedCourses = courses.filter(
-        (course) => course.state === "ESTABLISHED",
+        (course) => course.state === 'ESTABLISHED',
       );
       this.logger.log(
         `Fetched ${courses.length} courses. Filtered to ${establishedCourses.length} established courses.`,
@@ -89,15 +89,15 @@ export class IngestService {
         `Converted ${converted.length} courses with ${rounds.length} rounds and ${examinations.length} examination components`,
       );
 
-      this.logger.log("Upserting courses to database...");
+      this.logger.log('Upserting courses to database...');
       await this.upsertCourses(converted);
       await this.upsertRounds(rounds);
       await this.upsertExaminations(examinations);
       this.status.neon.lastCompleted = new Date();
-      this.logger.log("Courses upserted successfully");
+      this.logger.log('Courses upserted successfully');
     } catch (error) {
       this.status.neon.lastError = String(error);
-      this.logger.error("Neon ingest process failed:", error);
+      this.logger.error('Neon ingest process failed:', error);
       throw error;
     } finally {
       this.status.neon.running = false;
@@ -109,24 +109,24 @@ export class IngestService {
     this.status.elastic.running = true;
     this.status.elastic.lastStarted = new Date();
     this.status.elastic.lastError = null;
-    this.logger.log("Elastic ingestion process started...");
+    this.logger.log('Elastic ingestion process started...');
     try {
-      this.logger.log("Fetching courses from KTH API...");
+      this.logger.log('Fetching courses from KTH API...');
       const courses = await this.kopps.getCourses();
       this.logger.log(`Fetched ${courses.length} courses`);
 
       // TODO: Need to convert API coursesed info to Elastic Document as well
-      this.logger.log("Getting bulk documents for Elasticsearch...");
+      this.logger.log('Getting bulk documents for Elasticsearch...');
       const docs = await this.getBulkDocs(courses);
       this.logger.log(`Prepared ${docs.length} documents for indexing`);
 
-      this.logger.log("Indexing documents to Elasticsearch...");
+      this.logger.log('Indexing documents to Elasticsearch...');
       await this.indexBulk(docs);
       this.status.elastic.lastCompleted = new Date();
-      this.logger.log("Elastic ingest process completed successfully");
+      this.logger.log('Elastic ingest process completed successfully');
     } catch (error) {
       this.status.elastic.lastError = String(error);
-      this.logger.error("Elastic ingest process failed:", error);
+      this.logger.error('Elastic ingest process failed:', error);
       throw error;
     } finally {
       this.status.elastic.running = false;
@@ -170,9 +170,9 @@ export class IngestService {
           department: courses.course.department.name,
           educationalLevelCode: courses.course.educationalLevelCode,
           gradeScaleCode: courses.course.gradeScaleCode,
-          goals: latest?.courseSyllabus.goals ?? "",
-          content: latest?.courseSyllabus.content ?? "",
-          eligibility: latest?.courseSyllabus.eligibility ?? "",
+          goals: latest?.courseSyllabus.goals ?? '',
+          content: latest?.courseSyllabus.content ?? '',
+          eligibility: latest?.courseSyllabus.eligibility ?? '',
         };
 
         const insertRounds: InsertCourseRound[] = courses.roundInfos.map(
@@ -292,16 +292,16 @@ export class IngestService {
   private toDocument(
     courses: z.infer<typeof CourseDetailSchema>,
     course: z.infer<typeof CourseSchema>,
-  ): CourseDocument {
+  ): CourseDocumentES {
     // pick the latest syllabus version by term
     const syllabus_latest = courses.publicSyllabusVersions.reduce(
       (a, b) => (b.validFromTerm.term > a.validFromTerm.term ? b : a),
       courses.publicSyllabusVersions[0],
     );
-    const course_categories = new Set<"OPEN COURSE" | "PROGRAMME COURSE">();
+    const course_categories = new Set<'OPEN COURSE' | 'PROGRAMME COURSE'>();
     for (const r of courses.roundInfos) {
-      if (r.round.isVU) course_categories.add("OPEN COURSE");
-      if (r.round.isPU) course_categories.add("PROGRAMME COURSE");
+      if (r.round.isVU) course_categories.add('OPEN COURSE');
+      if (r.round.isPU) course_categories.add('PROGRAMME COURSE');
     }
     return {
       course_code: course.code,
@@ -309,16 +309,16 @@ export class IngestService {
       course_name_eng: courses.course.titleOther,
       department: course.department,
       credits: courses.course.credits,
-      subject: courses.mainSubjects[0] ?? "",
+      subject: courses.mainSubjects[0] ?? '',
       // flatMap: courseRoundTerms is an array per round, so map would give string[][]
       periods: courses.roundInfos
         .flatMap((r) => r.round.courseRoundTerms ?? [])
-        .map((t) => t.formattedPeriodsAndCredits ?? "")
+        .map((t) => t.formattedPeriodsAndCredits ?? '')
         .filter(Boolean),
       course_category: [...course_categories],
-      goals: syllabus_latest?.courseSyllabus.goals ?? "",
-      content: syllabus_latest?.courseSyllabus.content ?? "",
-      eligibility: syllabus_latest?.courseSyllabus.eligibility ?? "",
+      goals: syllabus_latest?.courseSyllabus.goals ?? '',
+      content: syllabus_latest?.courseSyllabus.content ?? '',
+      eligibility: syllabus_latest?.courseSyllabus.eligibility ?? '',
       state: course.state,
     };
   }
@@ -330,26 +330,26 @@ export class IngestService {
         index: INDEX,
         settings: { number_of_shards: 1, number_of_replicas: 1 },
         mappings: {
-          dynamic: "strict",
+          dynamic: 'strict',
           properties: {
-            course_code: { type: "keyword" },
+            course_code: { type: 'keyword' },
             course_name_swe: {
-              type: "text",
-              fields: { keyword: { type: "keyword", ignore_above: 256 } },
+              type: 'text',
+              fields: { keyword: { type: 'keyword', ignore_above: 256 } },
             },
             course_name_eng: {
-              type: "text",
-              fields: { keyword: { type: "keyword", ignore_above: 256 } },
+              type: 'text',
+              fields: { keyword: { type: 'keyword', ignore_above: 256 } },
             },
-            department: { type: "keyword" },
-            credits: { type: "float" },
-            subject: { type: "keyword" },
-            periods: { type: "keyword" },
-            course_category: { type: "keyword" },
-            goals: { type: "text" },
-            content: { type: "text" },
-            eligibility: { type: "text" },
-            state: { type: "keyword" },
+            department: { type: 'keyword' },
+            credits: { type: 'float' },
+            subject: { type: 'keyword' },
+            periods: { type: 'keyword' },
+            course_category: { type: 'keyword' },
+            goals: { type: 'text' },
+            content: { type: 'text' },
+            eligibility: { type: 'text' },
+            state: { type: 'keyword' },
           },
         },
       });
@@ -360,7 +360,7 @@ export class IngestService {
       const err = e as EsError;
       const status = err.meta?.statusCode;
       const type = err.meta?.body?.error?.type;
-      if (status === 400 && type === "resource_already_exists_exception")
+      if (status === 400 && type === 'resource_already_exists_exception')
         return;
       if (status === 403) {
         this.logger.error(`403 creating index "${INDEX}". Check privileges.`);
@@ -369,9 +369,9 @@ export class IngestService {
     }
   }
 
-  private docsToBulkOperations(docs: CourseDocument[]) {
+  private docsToBulkOperations(docs: CourseDocumentES[]) {
     type IndexOp = { index: { _index: string; _id: string } };
-    const ops: Array<IndexOp | CourseDocument> = [];
+    const ops: Array<IndexOp | CourseDocumentES> = [];
     for (const d of docs) {
       ops.push({ index: { _index: INDEX, _id: d.course_code } });
       ops.push(d);
@@ -379,14 +379,14 @@ export class IngestService {
     return ops;
   }
 
-  private async indexBulk(docs: CourseDocument[]) {
+  private async indexBulk(docs: CourseDocumentES[]) {
     if (!docs.length) {
-      this.logger.warn("No course documents to index; skipping bulk request");
+      this.logger.warn('No course documents to index; skipping bulk request');
       return;
     }
     await this.ensureIndex();
     const operations = this.docsToBulkOperations(docs);
-    const res = await this.es.bulk({ refresh: "true", operations });
+    const res = await this.es.bulk({ refresh: 'true', operations });
 
     if (!res.errors) {
       this.logger.log(`Bulk OK: ${res.items.length} indexed`);
@@ -428,7 +428,7 @@ export class IngestService {
     const summary = failures
       .slice(0, 5)
       .map((f) => `[${f.status}] ${f.type}: ${f.reason} (id=${f.id})`)
-      .join("; ");
+      .join('; ');
     throw new Error(
       `Bulk indexing failed for ${failures.length}/${res.items.length} items: ${summary}`,
     );
@@ -436,9 +436,9 @@ export class IngestService {
 
   private async getBulkDocs(courses: z.infer<typeof CoursesSchema>) {
     let count = 0;
-    const docs: CourseDocument[] = [];
+    const docs: CourseDocumentES[] = [];
     for (const course of courses) {
-      if (course.state !== "ESTABLISHED") continue;
+      if (course.state !== 'ESTABLISHED') continue;
       count++;
       if (count % 10 === 0) {
         this.logger.log(`Processed ${count} courses so far`);
@@ -454,12 +454,12 @@ export class IngestService {
             course_name_eng: course.name,
             department: course.department,
             credits: 0,
-            subject: "",
+            subject: '',
             periods: [],
-            course_category: [] as CourseDocument["course_category"],
-            goals: "",
-            content: "",
-            eligibility: "",
+            course_category: [] as CourseDocumentES['course_category'],
+            goals: '',
+            content: '',
+            eligibility: '',
             state: course.state,
           };
       docs.push(doc);
@@ -469,11 +469,11 @@ export class IngestService {
 
   // runs a small test of the neon ingestion with the first 10 established courses
   async runNeonTest() {
-    this.logger.log("Starting Neon test process...");
+    this.logger.log('Starting Neon test process...');
     try {
       const courses = await this.kopps.getCourses();
       const sample = courses
-        .filter((c) => c.state === "ESTABLISHED")
+        .filter((c) => c.state === 'ESTABLISHED')
         .sort(() => Math.random() - 0.5)
         .slice(0, 10);
       this.logger.log(`Sampled ${sample.length} courses`);
@@ -490,32 +490,32 @@ export class IngestService {
       await this.upsertCourses(converted);
       await this.upsertRounds(rounds);
       await this.upsertExaminations(examinations);
-      this.logger.log("Neon test process completed successfully");
+      this.logger.log('Neon test process completed successfully');
     } catch (error) {
-      this.logger.error("Neon test process failed:", error);
+      this.logger.error('Neon test process failed:', error);
       throw error;
     }
   }
 
   // runs a test for the elastic ingestion
   async runElasticTest() {
-    this.logger.log("Starting elastic test process");
+    this.logger.log('Starting elastic test process');
     try {
-      this.logger.log("Fetching courses from KTH API...");
+      this.logger.log('Fetching courses from KTH API...');
       const courses = await this.kopps.getCourses();
       this.logger.log(`Fetched ${courses.length} courses`);
 
-      this.logger.log("Getting a single document for Elasticsearch...");
+      this.logger.log('Getting a single document for Elasticsearch...');
       const candidate =
-        courses.find((c) => c.state === "ESTABLISHED") ?? courses[0];
+        courses.find((c) => c.state === 'ESTABLISHED') ?? courses[0];
       const docs = await this.getBulkDocs(candidate ? [candidate] : []);
       this.logger.log(`Prepared ${docs.length} document for indexing`);
 
-      this.logger.log("Indexing documents to Elasticsearch...");
+      this.logger.log('Indexing documents to Elasticsearch...');
       await this.indexBulk(docs);
-      this.logger.log("Elastic test process completed successfully");
+      this.logger.log('Elastic test process completed successfully');
     } catch (error) {
-      this.logger.error("Elastic test process failed:", error);
+      this.logger.error('Elastic test process failed:', error);
       throw error;
     }
   }

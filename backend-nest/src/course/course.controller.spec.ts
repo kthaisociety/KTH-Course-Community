@@ -6,8 +6,6 @@ import { CourseService } from "./course.service";
 
 describe("CourseController", () => {
   let controller: CourseController;
-  let courseService: CourseService;
-  let searchService: SearchService;
 
   const mockCourseService = {
     getCourse: jest.fn(),
@@ -35,8 +33,6 @@ describe("CourseController", () => {
     }).compile();
 
     controller = module.get<CourseController>(CourseController);
-    courseService = module.get<CourseService>(CourseService);
-    searchService = module.get<SearchService>(SearchService);
   });
 
   afterEach(() => {
@@ -45,8 +41,6 @@ describe("CourseController", () => {
 
   it("should be defined", () => {
     expect(controller).toBeDefined();
-    expect(courseService).toBeDefined();
-    expect(searchService).toBeDefined();
   });
 
   describe("getNeonCourse", () => {
@@ -64,13 +58,12 @@ describe("CourseController", () => {
 
       const result = await controller.getNeonCourse("SF1625");
 
-      expect(courseService.getCourse).toHaveBeenCalledWith("SF1625");
+      expect(mockCourseService.getCourse).toHaveBeenCalledWith("SF1625");
       expect(result).toEqual({
         courseCode: "SF1625",
         department: "SF (SCI/Matematik) ",
         name: "Calculus in One Variable",
         currentStatus: "ESTABLISHED",
-        lastExaminationSemester: null,
         updatedAt: mockCourse.updatedAt,
       });
     });
@@ -84,31 +77,44 @@ describe("CourseController", () => {
         ),
       );
 
-      expect(courseService.getCourse).toHaveBeenCalledWith("ABCD1234");
+      expect(mockCourseService.getCourse).toHaveBeenCalledWith("ABCD1234");
     });
   });
 
   describe("getElasticCourse", () => {
     it("should return course document when found", async () => {
-      const mockCourseDocument = {
+      const mockCourseDocumentES = {
+        _id: "SF1625",
         course_code: "SF1625",
+        course_name_swe: "Kalkyl i en variabel",
+        course_name_eng: "Calculus in One Variable",
         department: "SF (SCI/Matematik) ",
-        course_name: "Calculus in One Variable",
+        credits: 7.5,
+        subject: "Matematik",
+        periods: ["P3 (7.5 hp)"],
+        course_category: ["PROGRAMME COURSE"],
         goals: "Fundamentals of calculus",
         content: "Limits, derivatives, integrals",
+        eligibility: "",
+        state: "ESTABLISHED",
+        rating: 4,
       };
 
-      mockSearchService.getCourseByCode.mockResolvedValue(mockCourseDocument);
+      mockSearchService.getCourseByCode.mockResolvedValue(mockCourseDocumentES);
 
       const result = await controller.getElasticCourse("SF1625");
 
-      expect(searchService.getCourseByCode).toHaveBeenCalledWith("SF1625");
+      expect(mockSearchService.getCourseByCode).toHaveBeenCalledWith("SF1625");
       expect(result).toEqual({
+        _id: "SF1625",
         courseCode: "SF1625",
+        nameSwe: "Kalkyl i en variabel",
+        nameEng: "Calculus in One Variable",
         department: "SF (SCI/Matematik) ",
-        name: "Calculus in One Variable",
+        credits: 7.5,
         goals: "Fundamentals of calculus",
         content: "Limits, derivatives, integrals",
+        rating: 4,
       });
     });
 
@@ -121,7 +127,7 @@ describe("CourseController", () => {
         ),
       );
 
-      expect(searchService.getCourseByCode).toHaveBeenCalledWith("ABCD1234");
+      expect(mockSearchService.getCourseByCode).toHaveBeenCalledWith("ABCD1234");
     });
   });
 
@@ -131,7 +137,7 @@ describe("CourseController", () => {
 
       const result = await controller.checkIfCourseCodeExists("SF1625");
 
-      expect(courseService.courseCodeExists).toHaveBeenCalledWith("SF1625");
+      expect(mockCourseService.courseCodeExists).toHaveBeenCalledWith("SF1625");
       expect(result).toEqual({ exists: true });
     });
 
@@ -140,7 +146,7 @@ describe("CourseController", () => {
 
       const result = await controller.checkIfCourseCodeExists("ABCD1234");
 
-      expect(courseService.courseCodeExists).toHaveBeenCalledWith("ABCD1234");
+      expect(mockCourseService.courseCodeExists).toHaveBeenCalledWith("ABCD1234");
       expect(result).toEqual({ exists: false });
     });
   });
@@ -151,7 +157,7 @@ describe("CourseController", () => {
 
       const result = await controller.getCourseCredits("SF1625");
 
-      expect(courseService.getCourseCredits).toHaveBeenCalledWith("SF1625");
+      expect(mockCourseService.getCourseCredits).toHaveBeenCalledWith("SF1625");
       expect(result).toEqual({ credits: 7.5 });
     });
 
@@ -160,7 +166,7 @@ describe("CourseController", () => {
 
       const result = await controller.getCourseCredits("SF1625");
 
-      expect(courseService.getCourseCredits).toHaveBeenCalledWith("SF1625");
+      expect(mockCourseService.getCourseCredits).toHaveBeenCalledWith("SF1625");
       expect(result).toEqual({ credits: null });
     });
   });

@@ -1,5 +1,5 @@
 import type { Course } from "@/models/CourseModel";
-import type { CourseDocument } from "../../types/search/elastic.mappings";
+import type { CourseDocumentES } from "../../types/search/elastic.mappings";
 
 export async function checkIfCourseCodeExists(
   courseCode: string,
@@ -24,7 +24,7 @@ export async function checkIfCourseCodeExists(
 // See ticket in Linear, needs refactoring.
 export async function getCourseInfo(
   courseCode: string,
-): Promise<CourseDocument> {
+): Promise<CourseDocumentES> {
   const backend = process.env.NEXT_PUBLIC_BACKEND_DOMAIN;
   if (!backend) throw new Error("NEXT_PUBLIC_BACKEND_DOMAIN is not set");
 
@@ -40,7 +40,7 @@ export async function getCourseInfo(
     throw new Error(`HTTP ${res.status}: ${res.statusText}`);
   }
 
-  const data = (await res.json()) as CourseDocument;
+  const data = (await res.json()) as CourseDocumentES;
 
   if (!data) {
     throw new Error(`Course ${courseCode} data is empty`);

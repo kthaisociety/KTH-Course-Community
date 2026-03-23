@@ -19,7 +19,11 @@ const DELAY_MS = 150;
 const sampleIdx = process.argv.indexOf("--sample");
 const sampleArg = sampleIdx !== -1 ? process.argv[sampleIdx + 1] : undefined;
 const SAMPLE: number | "all" =
-  sampleArg === "all" ? "all" : sampleArg ? Number.parseInt(sampleArg) : 300;
+  sampleArg === "all"
+    ? "all"
+    : sampleArg
+      ? Number.parseInt(sampleArg, 10)
+      : 300;
 
 const ACTIVE_ONLY = process.argv.includes("--active-only");
 const DEBUG = process.argv.includes("--debug");
@@ -73,7 +77,7 @@ function add(
   profile[key].set(v, (profile[key].get(v) ?? 0) + 1);
   const indexKey = `${key}=${v}`;
   if (!index.has(indexKey)) index.set(indexKey, new Set());
-  index.get(indexKey)!.add(courseCode);
+  index.get(indexKey)?.add(courseCode);
 }
 
 function profileDetail(

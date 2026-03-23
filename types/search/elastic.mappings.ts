@@ -1,4 +1,4 @@
-export type CourseDocument = {
+export type CourseDocumentES = {
   course_code: string;
   course_name_swe: string;
   course_name_eng: string;
