@@ -1,4 +1,5 @@
 import { Test, type TestingModule } from "@nestjs/testing";
+import { CourseService } from "../course/course.service";
 import { DRIZZLE } from "../database/drizzle.module";
 import { UserService, type UserWithFavorites } from "./user.service";
 
@@ -33,10 +34,13 @@ describe("UserService", () => {
       insert: jest.fn().mockReturnThis(),
       select: jest.fn().mockReturnThis(),
       delete: jest.fn().mockReturnThis(),
+      update: jest.fn().mockReturnThis(),
       values: jest.fn().mockReturnThis(),
+      set: jest.fn().mockReturnThis(),
       from: jest.fn().mockReturnThis(),
       where: jest.fn().mockReturnThis(),
-      limit: jest.fn(),
+      limit: jest.fn().mockReturnThis(),
+      onConflictDoNothing: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -45,6 +49,10 @@ describe("UserService", () => {
         {
           provide: DRIZZLE,
           useValue: mockDb,
+        },
+        {
+          provide: CourseService,
+          useValue: { courseCodeExists: jest.fn() },
         },
       ],
     }).compile();
@@ -63,7 +71,7 @@ describe("UserService", () => {
   describe("createNewUser", () => {
     it("should create a new user", async () => {
       mockDb.limit.mockResolvedValue([]);
-      mockDb.values.mockResolvedValue(undefined);
+      mockDb.onConflictDoNothing.mockResolvedValue(undefined);
 
       await userService.createNewUser("user-123", "Sven@kth.se", "Sven");
 
@@ -86,7 +94,7 @@ describe("UserService", () => {
 
       const result = await userService.getUserFavorites("user-123");
 
-      expect(result).toEqual(mockUserFavorites);
+      expect(result).toEqual(["SF1625", "SF1624"]);
     });
   });
 

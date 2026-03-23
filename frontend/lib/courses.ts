@@ -28,7 +28,7 @@ export async function getCourseInfo(
   const backend = process.env.NEXT_PUBLIC_BACKEND_DOMAIN;
   if (!backend) throw new Error("NEXT_PUBLIC_BACKEND_DOMAIN is not set");
 
-  const res = await fetch(`${backend}/search/${courseCode}`, {
+  const res = await fetch(`${backend}/course/${courseCode}`, {
     cache: "no-store",
   });
 

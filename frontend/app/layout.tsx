@@ -18,7 +18,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Course Compass",
+  title: "Course Community",
   description: "Navigates KTH courses",
   icons: {
     icon: "/compass.png",
