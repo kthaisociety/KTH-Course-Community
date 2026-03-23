@@ -279,7 +279,6 @@ export class IngestService {
       department: course.department,
       name: course.name,
       state: course.state,
-      lastExaminationSemester: course.last_examination_semester,
     })) as InsertCourse[];
   }
 
@@ -296,7 +295,6 @@ export class IngestService {
             department: sql`excluded.department`,
             name: sql`excluded.name`,
             state: sql`excluded.state`,
-            lastExaminationSemester: sql`excluded.last_examination_semester`,
             updatedAt: sql`now()`,
           },
         });

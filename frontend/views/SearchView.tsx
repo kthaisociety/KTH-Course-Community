@@ -6,7 +6,6 @@ import { CourseItemSkeleton } from "@/components/CourseItemSkeleton";
 import {
   getMockChartData,
   getMockCourseStats,
-  getMockHp,
   getMockKeywords,
   getMockPrerequisites,
   getMockSummary,
@@ -168,7 +167,7 @@ export default function SearchView({
                   }
                   courseCode={course.courseCode}
                   department={course.department}
-                  hp={getMockHp(course.courseCode)}
+                  hp={course.credits}
                   keywords={getMockKeywords(course.courseCode)}
                   prerequisites={getMockPrerequisites(course.courseCode)}
                   chartData={getMockChartData(course.courseCode)}

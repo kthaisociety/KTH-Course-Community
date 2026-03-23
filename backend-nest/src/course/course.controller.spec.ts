@@ -56,7 +56,6 @@ describe("CourseController", () => {
         department: "SF (SCI/Matematik) ",
         name: "Calculus in One Variable",
         state: "ESTABLISHED",
-        lastExaminationSemester: null,
         updatedAt: new Date("2023-01-01"),
       };
 

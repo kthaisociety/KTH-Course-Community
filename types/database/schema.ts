@@ -19,7 +19,6 @@ export const courses = pgTable("courses", {
   department: text("department").notNull(),
   name: text("name").notNull(),
   state: courseState("state").notNull(),
-  lastExaminationSemester: text("last_examination_semester"),
   credits: real("credits"),
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .defaultNow()

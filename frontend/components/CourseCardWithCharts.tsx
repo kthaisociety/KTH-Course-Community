@@ -39,7 +39,7 @@ export type CourseCardWithChartsProps = {
   courseCode: string;
   department: string;
   /** Högskolepoäng (credits), shown before course code on the subtitle line */
-  hp: number;
+  hp: number | null;
   keywords: string;
   prerequisites: string[];
   chartData: CourseCardChartData;
@@ -76,9 +76,13 @@ export function CourseCardWithCharts({
   const displayTitle = title?.trim() || getFallbackTitle(courseCode);
   const displayDepartment = department?.trim() || "—";
   const displayHp =
-    typeof hp === "number" && Number.isFinite(hp) ? hp : 7.5;
+    typeof hp === "number" && Number.isFinite(hp) ? hp : null;
   const displayHpText =
-    Number.isInteger(displayHp) ? String(displayHp) : displayHp.toFixed(1);
+    displayHp === null
+      ? "—"
+      : Number.isInteger(displayHp)
+        ? String(displayHp)
+        : displayHp.toFixed(1);
   const displayKeywords = keywords?.trim() || "—";
   const displayPrerequisites = Array.isArray(prerequisites) && prerequisites.length > 0 ? prerequisites : ["None"];
   const displayAverageRating = Math.min(

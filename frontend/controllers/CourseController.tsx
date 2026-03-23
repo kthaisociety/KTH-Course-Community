@@ -10,6 +10,7 @@ import type { PostProps } from "@/components/Post";
 import type { ReviewFormData } from "@/components/review";
 import { useSessionData } from "@/hooks/sessionHooks";
 import { getReviewsSocket } from "@/lib/realtime";
+import type { NeonCoursePayload } from "@/lib/courses";
 import { fetchCourseInfo } from "@/state/course/courseThunk";
 import {
   dislikeCourseReview,
@@ -20,6 +21,21 @@ import {
 import type { Dispatch, RootState } from "@/state/store";
 import CourseView from "@/views/CourseView";
 import SuspenseView from "@/views/SuspenseView";
+
+type MergedCourseInfo = {
+  credits: number | null;
+  course_name?: string;
+  course_code?: string;
+  name?: string;
+  courseCode?: string;
+  department: string;
+  goals: string;
+  content: string;
+  summary?: string;
+  rating?: number;
+  _id?: string;
+  neon?: NeonCoursePayload | null;
+};
 
 type Review = {
   id: string;
@@ -201,15 +217,20 @@ export default function CourseController() {
   let courseHeader: CourseHeaderProps | null = null;
   if (courseInfo && reviews !== null) {
     const posts = reviews as PostProps[];
-    const ci = courseInfo as Record<string, unknown>;
+    const ci = courseInfo as MergedCourseInfo;
+    const neon = (ci.neon ?? null) as NeonCoursePayload | null;
 
     const courseCode = String(
-      ci.courseCode ?? ci.course_code ?? params.courseCode ?? "",
+      neon?.courseCode ??
+        ci.courseCode ??
+        ci.course_code ??
+        params.courseCode ??
+        "",
     );
-    const courseName = String(ci.name ?? ci.course_name ?? "");
+    const courseName = String(neon?.name ?? ci.name ?? ci.course_name ?? "");
     const goals = String(ci.goals ?? "");
     const content = String(ci.content ?? "");
-    const department = String(ci.department ?? "");
+    const department = String(neon?.department ?? ci.department ?? "");
     const summary =
       typeof ci.summary === "string" && ci.summary.trim()
         ? ci.summary
@@ -262,13 +283,14 @@ export default function CourseController() {
     return <SuspenseView />;
   }
 
-  const ci = courseInfo as Record<string, unknown>;
-  const department = String(ci.department ?? "");
+  const ci = courseInfo as MergedCourseInfo;
+  const neon = (ci.neon ?? null) as NeonCoursePayload | null;
+  const department = String(neon?.department ?? ci.department ?? "");
   const goalsHtml = String(ci.goals ?? "");
   const contentHtml = String(ci.content ?? "");
   const summary =
     typeof ci.summary === "string" && ci.summary.trim() ? ci.summary : undefined;
-  const neon = courseInfo.neon ?? null;
+  const neonPayload = neon;
 
   return (
     <CourseView
@@ -292,7 +314,7 @@ export default function CourseController() {
       goalsHtml={goalsHtml}
       contentHtml={contentHtml}
       summary={summary}
-      neon={neon}
+      neon={neonPayload}
     />
   );
 }

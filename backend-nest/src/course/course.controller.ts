@@ -29,7 +29,9 @@ export class CourseController {
       department: course.department,
       name: course.name,
       currentStatus: course.state, // renaming here to status to avoid conflicting naming with "state"
-      lastExaminationSemester: course.lastExaminationSemester,
+      // `last_examination_semester` is not present in the current Neon `courses` table.
+      // Keep the field in the API contract by returning null.
+      lastExaminationSemester: null,
       updatedAt: course.updatedAt,
     };
   }
