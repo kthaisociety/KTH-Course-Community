@@ -1,8 +1,8 @@
 "use client";
 
-import { redirect, useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import profoundWords from "profane-words";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "sonner";
 import type { CourseHeaderProps } from "@/components/CourseHeader";
@@ -110,12 +110,14 @@ const getPercentageWouldRecommend = (posts: PostProps[]) => {
 export default function CourseController() {
   const params = useParams<{ courseCode: string }>();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const dispatch = useDispatch<Dispatch>();
   const { userId } = useSessionData();
-  const [isChecking, setIsChecking] = useState(true);
+  const openReview = searchParams.get("writeReview") === "1";
 
   // Select from Redux
   const courseInfo = useSelector((s: RootState) => s.course.courseInfo);
+  const courseLoading = useSelector((s: RootState) => s.course.loading);
   const reviews = useSelector((s: RootState) => s.reviews.reviews);
   const reviewsLoading = useSelector((s: RootState) => s.reviews.loading);
   const courseError = useSelector((s: RootState) => s.course.error);
@@ -128,10 +130,8 @@ export default function CourseController() {
   // Initial fetch
   useEffect(() => {
     if (!params?.courseCode) return;
-    setIsChecking(true);
     dispatch(fetchCourseInfo(params.courseCode));
     dispatch(fetchCourseReviews({ courseCode: params.courseCode, userId }));
-    setIsChecking(false);
   }, [params.courseCode, userId, dispatch]);
 
   // Websocket: Live update on review changes
@@ -199,15 +199,27 @@ export default function CourseController() {
 
   // Compose CourseHeaderProps (from pure utils + Redux state)
   let courseHeader: CourseHeaderProps | null = null;
-  if (courseInfo && reviews && reviews.length >= 0) {
+  if (courseInfo && reviews !== null) {
     const posts = reviews as PostProps[];
+    const ci = courseInfo as Record<string, unknown>;
 
-    // Using type assertion with proper fallback for courseInfo
+    const courseCode = String(
+      ci.courseCode ?? ci.course_code ?? params.courseCode ?? "",
+    );
+    const courseName = String(ci.name ?? ci.course_name ?? "");
+    const goals = String(ci.goals ?? "");
+    const content = String(ci.content ?? "");
+    const department = String(ci.department ?? "");
+    const summary =
+      typeof ci.summary === "string" && ci.summary.trim()
+        ? ci.summary
+        : undefined;
+
     courseHeader = {
-      courseCode: (courseInfo as any).course_code ?? "",
-      courseName: (courseInfo as any).course_name ?? "",
-      credits: (courseInfo as any).credits ?? null,
-      syllabus: `${(courseInfo as any).content || ""} \n\n ${(courseInfo as any).goals || ""}`,
+      courseCode,
+      courseName,
+      credits: courseInfo.credits ?? null,
+      syllabus: `${content}\n\n${goals}`,
       courseRating: posts.length > 0 ? getAverageRating(posts) : null,
       ratingDistribution: getRatingDistribution(posts),
       easyScoreDistribution: getEasyScoreDistribution(posts),
@@ -216,7 +228,7 @@ export default function CourseController() {
       percentageWouldRecommend: posts.length
         ? getPercentageWouldRecommend(posts)
         : null,
-      userId: userId,
+      userId: userId ?? "",
       onAddReview: handleAddReview,
     };
   }
@@ -224,9 +236,40 @@ export default function CourseController() {
     ? reviews.map((review) => ({ ...review, postId: review.id }))
     : [];
 
-  if (!params.courseCode || isChecking || reviewsLoading || !courseHeader) {
+  if (!params.courseCode) {
     return <SuspenseView />;
   }
+
+  if (courseError && !courseLoading) {
+    return (
+      <div className="mx-auto max-w-4xl px-4 py-16 text-center">
+        <p className="text-destructive text-lg font-medium">
+          Could not load this course.
+        </p>
+        <p className="mt-2 text-muted-foreground text-sm">{courseError}</p>
+        <button
+          type="button"
+          className="mt-6 text-primary text-sm underline"
+          onClick={() => router.push("/search")}
+        >
+          Back to explore
+        </button>
+      </div>
+    );
+  }
+
+  if (courseLoading || reviewsLoading || reviews === null || !courseHeader) {
+    return <SuspenseView />;
+  }
+
+  const ci = courseInfo as Record<string, unknown>;
+  const department = String(ci.department ?? "");
+  const goalsHtml = String(ci.goals ?? "");
+  const contentHtml = String(ci.content ?? "");
+  const summary =
+    typeof ci.summary === "string" && ci.summary.trim() ? ci.summary : undefined;
+  const neon = courseInfo.neon ?? null;
+
   return (
     <CourseView
       courseCode={courseHeader.courseCode}
@@ -239,11 +282,17 @@ export default function CourseController() {
       interestingScoreDistribution={courseHeader.interestingScoreDistribution}
       ratingDistribution={courseHeader.ratingDistribution}
       courseRating={courseHeader.courseRating}
-      userId={userId}
+      userId={userId ?? ""}
       onAddReview={courseHeader.onAddReview}
       posts={posts}
       onLikePost={handleLikePost}
       onDislikePost={handleDislikePost}
+      openReview={openReview}
+      department={department}
+      goalsHtml={goalsHtml}
+      contentHtml={contentHtml}
+      summary={summary}
+      neon={neon}
     />
   );
 }

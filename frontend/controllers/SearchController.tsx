@@ -119,7 +119,7 @@ export default function SearchController() {
 
   const onWriteReview = useCallback(
     (courseCode: string) => {
-      router.push(`/course/${courseCode}`);
+      router.push(`/course/${courseCode}?writeReview=1`);
     },
     [router],
   );

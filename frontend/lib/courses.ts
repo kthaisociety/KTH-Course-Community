@@ -1,6 +1,37 @@
 import type { Course } from "@/models/CourseModel";
 import type { CourseMapping } from "../../types/search/elastic.mappings";
 
+/** Course metadata stored in Neon (Postgres), from `GET /course/neon/:courseCode`. */
+export type NeonCoursePayload = {
+  courseCode: string;
+  department: string;
+  name: string;
+  currentStatus: string;
+  lastExaminationSemester: string | null;
+  updatedAt: string;
+};
+
+export async function getNeonCourse(
+  courseCode: string,
+): Promise<NeonCoursePayload> {
+  const backend = process.env.NEXT_PUBLIC_BACKEND_DOMAIN;
+  if (!backend) throw new Error("NEXT_PUBLIC_BACKEND_DOMAIN is not set");
+
+  const res = await fetch(`${backend}/course/neon/${courseCode}`, {
+    cache: "no-store",
+  });
+
+  if (res.status === 404) {
+    throw new Error(`Course ${courseCode} not found in Neon`);
+  }
+
+  if (!res.ok) {
+    throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+  }
+
+  return (await res.json()) as NeonCoursePayload;
+}
+
 export async function checkIfCourseCodeExists(
   courseCode: string,
 ): Promise<boolean> {
