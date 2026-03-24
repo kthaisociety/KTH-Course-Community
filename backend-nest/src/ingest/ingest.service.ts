@@ -113,16 +113,24 @@ export class IngestService {
     try {
       this.logger.log('Fetching courses from KTH API...');
       const courses = await this.kopps.getCourses();
-      this.logger.log(`Fetched ${courses.length} courses`);
+      const establishedCourses = courses.filter(
+        (course) => course.state === 'ESTABLISHED',
+      );
+      this.logger.log(
+        `Fetched ${courses.length} courses. Filtered to ${establishedCourses.length} established courses.`,
+      );
+      this.logger.log(
+        `Starting ingest of ${establishedCourses.length} courses (established only)...`,
+      );
 
-      // TODO: Need to convert API coursesed info to Elastic Document as well
       this.logger.log('Getting bulk documents for Elasticsearch...');
-      const docs = await this.getBulkDocs(courses);
-      this.logger.log(`Prepared ${docs.length} documents for indexing`);
+      const docs = await this.getBulkDocs(establishedCourses);
 
+      this.logger.log(`Prepared ${docs.length} documents for indexing`);
       this.logger.log('Indexing documents to Elasticsearch...');
       await this.indexBulk(docs);
       this.status.elastic.lastCompleted = new Date();
+
       this.logger.log('Elastic ingest process completed successfully');
     } catch (error) {
       this.status.elastic.lastError = String(error);
@@ -505,7 +513,7 @@ export class IngestService {
     }
   }
 
-  // runs a test for the elastic ingestion
+  // runs a test for the elastic ingestion with 10 courses
   async runElasticTest() {
     this.logger.log('Starting elastic test process');
     try {
@@ -513,10 +521,11 @@ export class IngestService {
       const courses = await this.kopps.getCourses();
       this.logger.log(`Fetched ${courses.length} courses`);
 
-      this.logger.log('Getting a single document for Elasticsearch...');
-      const candidate =
-        courses.find((c) => c.state === 'ESTABLISHED') ?? courses[0];
-      const docs = await this.getBulkDocs(candidate ? [candidate] : []);
+      this.logger.log('Getting 10 documents for Elasticsearch...');
+      const candidates = courses
+        .filter((c) => c.state === 'ESTABLISHED')
+        .slice(0, 10);
+      const docs = await this.getBulkDocs(candidates);
       this.logger.log(`Prepared ${docs.length} document for indexing`);
 
       this.logger.log('Indexing documents to Elasticsearch...');

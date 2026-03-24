@@ -56,7 +56,7 @@ export const CourseDetailSchema = z.object({
           examCode: z.string(),
           title: z.string().optional(),
           gradeScaleCode: z.string(),
-          credits: z.number(),
+          credits: z.number().optional(),
         }),
       ),
     }),
@@ -74,4 +74,3 @@ export const CourseDetailSchema = z.object({
   ),
   mainSubjects: z.array(z.string()),
 });
-

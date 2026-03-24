@@ -3,15 +3,15 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import type { z } from 'zod';
 import {
   CourseDetailSchema,
-  CourseSchema,
+  type CourseSchema,
 } from '../../../types/ingest/schemas';
 import type { CourseDocumentES } from '../../../types/search/elastic.mappings';
 import { DRIZZLE } from '../database/drizzle.module';
 import { ES } from '../search/search.constants';
-import { IngestService } from './ingest.service';
-import { KoppsService } from './kopps.service';
 import ag2411Raw from './fixtures/course-detail-AG2411.json';
 import dd2421Raw from './fixtures/course-detail-DD2421.json';
+import { IngestService } from './ingest.service';
+import { KoppsService } from './kopps.service';
 
 // Parse fixtures through Zod so they are correctly typed
 const dd2421 = CourseDetailSchema.parse(dd2421Raw);

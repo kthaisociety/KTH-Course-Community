@@ -36,6 +36,7 @@ export class IngestController {
     return this.ingest.getIngestStatus();
   }
 
+  // test endpoints for inserting a handful of courses, used to check ingestion pipelines
   @Post('test-neon')
   @HttpCode(200)
   async testNeon() {
