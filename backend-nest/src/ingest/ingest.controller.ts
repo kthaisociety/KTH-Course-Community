@@ -10,7 +10,7 @@ export class IngestController {
   @Post('courses')
   @HttpCode(202)
   async triggerFullIngest() {
-    await this.ingest.runFullIngest().catch((e) => console.error(e));
+    void this.ingest.runFullIngest().catch((e) => console.error(e));
     return { status: 'queued (in-process)', task: 'courses' };
   }
 
@@ -18,7 +18,7 @@ export class IngestController {
   @Post('courses/neon')
   @HttpCode(202)
   async triggerNeonIngest() {
-    await this.ingest.runNeonIngest().catch((e) => console.error(e));
+    void this.ingest.runNeonIngest().catch((e) => console.error(e));
     return { status: 'queued (in-process)', task: 'courses/neon' };
   }
 
@@ -26,7 +26,7 @@ export class IngestController {
   @Post('courses/elastic')
   @HttpCode(202)
   async triggerElasticIngest() {
-    await this.ingest.runElasticIngest().catch((e) => console.error(e));
+    void this.ingest.runElasticIngest().catch((e) => console.error(e));
     return { status: 'queued (in-process)', task: 'courses/elastic' };
   }
 

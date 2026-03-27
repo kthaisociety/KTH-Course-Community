@@ -56,22 +56,59 @@ export class IngestService {
     };
   }
 
+  private getKoppsConcurrency() {
+    const raw = process.env.KOPPS_CONCURRENCY;
+    const parsed = raw ? Number(raw) : 5;
+    if (!Number.isFinite(parsed) || parsed <= 0) return 5;
+    return Math.floor(parsed);
+  }
+
+  private async mapWithConcurrency<T, R>(
+    items: T[],
+    concurrency: number,
+    fn: (item: T, idx: number) => Promise<R>,
+  ): Promise<R[]> {
+    const results = new Array<R>(items.length);
+    let nextIndex = 0;
+
+    const worker = async () => {
+      while (true) {
+        const i = nextIndex;
+        nextIndex += 1;
+        if (i >= items.length) return;
+        results[i] = await fn(items[i], i);
+      }
+    };
+
+    const workers = Array.from(
+      { length: Math.min(concurrency, items.length) },
+      () => worker(),
+    );
+    await Promise.all(workers);
+    return results;
+  }
+
   // runs the ingestion pipeline --> inserts into SQL tables (Neon) and ElasticSearch.
   async runFullIngest() {
     this.logger.log('Starting full ingest process...');
-    await this.runNeonIngest();
-    await this.runElasticIngest();
+    this.logger.log('Fetching courses from KTH API (once for full ingest)...');
+    const courses = await this.kopps.getCourses();
+    await this.runNeonIngest(courses);
+    await this.runElasticIngest(courses);
   }
 
   // ingests courses into neon db
-  async runNeonIngest() {
+  async runNeonIngest(coursesInput?: z.infer<typeof CoursesSchema>) {
+    if (this.status.neon.running) {
+      this.logger.warn('Neon ingestion already running; skipping new request');
+      return;
+    }
     this.status.neon.running = true;
     this.status.neon.lastStarted = new Date();
     this.status.neon.lastError = null;
     this.logger.log('Neon ingestion process started...');
     try {
-      this.logger.log('Fetching courses from KTH API...');
-      const courses = await this.kopps.getCourses();
+      const courses = coursesInput ?? (await this.kopps.getCourses());
       const establishedCourses = courses.filter(
         (course) => course.state === 'ESTABLISHED',
       );
@@ -105,14 +142,19 @@ export class IngestService {
   }
 
   // ingests into elastic db
-  async runElasticIngest() {
+  async runElasticIngest(coursesInput?: z.infer<typeof CoursesSchema>) {
+    if (this.status.elastic.running) {
+      this.logger.warn(
+        'Elastic ingestion already running; skipping new request',
+      );
+      return;
+    }
     this.status.elastic.running = true;
     this.status.elastic.lastStarted = new Date();
     this.status.elastic.lastError = null;
     this.logger.log('Elastic ingestion process started...');
     try {
-      this.logger.log('Fetching courses from KTH API...');
-      const courses = await this.kopps.getCourses();
+      const courses = coursesInput ?? (await this.kopps.getCourses());
       const establishedCourses = courses.filter(
         (course) => course.state === 'ESTABLISHED',
       );
@@ -153,39 +195,50 @@ export class IngestService {
     rounds: InsertCourseRound[];
     examinations: InsertCourseExamination[];
   }> {
-    const results = await Promise.all(
-      courses.map(async (course) => {
-        const courses = await this.kopps
+    const concurrency = this.getKoppsConcurrency();
+    let processed = 0;
+    const results = await this.mapWithConcurrency(
+      courses,
+      concurrency,
+      async (course) => {
+        processed += 1;
+        if (processed % 25 === 0) {
+          this.logger.log(
+            `Neon convertCourses: processed ${processed}/${courses.length}`,
+          );
+        }
+
+        const detail = await this.kopps
           .getCourseInformation(course)
           .catch(() => null);
-        if (!courses) return null;
+        if (!detail) return null;
 
         // API returns all historic syllabuses in an array, this fetches just the latest
-        const latest = courses.publicSyllabusVersions.reduce(
+        const latest = detail.publicSyllabusVersions.reduce(
           (a, b) => (b.validFromTerm.term > a.validFromTerm.term ? b : a),
-          courses.publicSyllabusVersions[0],
+          detail.publicSyllabusVersions[0],
         );
 
         const insertCourse: InsertCourse = {
-          code: courses.course.courseCode,
-          name: courses.course.titleOther,
-          titleSwe: courses.course.title,
-          titleEng: courses.course.titleOther,
+          code: detail.course.courseCode,
+          name: detail.course.titleOther,
+          titleSwe: detail.course.title,
+          titleEng: detail.course.titleOther,
           state: course.state,
-          credits: courses.course.credits,
-          creditUnit: courses.course.creditUnitAbbr,
-          departmentCode: courses.course.departmentCode,
-          department: courses.course.department.name,
-          educationalLevelCode: courses.course.educationalLevelCode,
-          gradeScaleCode: courses.course.gradeScaleCode,
+          credits: detail.course.credits,
+          creditUnit: detail.course.creditUnitAbbr,
+          departmentCode: detail.course.departmentCode,
+          department: detail.course.department.name,
+          educationalLevelCode: detail.course.educationalLevelCode,
+          gradeScaleCode: detail.course.gradeScaleCode,
           goals: latest?.courseSyllabus.goals ?? '',
           content: latest?.courseSyllabus.content ?? '',
           eligibility: latest?.courseSyllabus.eligibility ?? '',
         };
 
-        const insertRounds: InsertCourseRound[] = courses.roundInfos.map(
+        const insertRounds: InsertCourseRound[] = detail.roundInfos.map(
           (r) => ({
-            courseCode: courses.course.courseCode,
+            courseCode: detail.course.courseCode,
             startTerm: r.round.startTerm.term,
             studyPace: r.round.studyPace ?? null,
             schemaUrl: r.schemaUrl ?? null,
@@ -200,13 +253,13 @@ export class IngestService {
         );
 
         // examinationSets are historical sets of examination. The latest one is the current set.
-        const latestExamSet = Object.entries(courses.examinationSets).sort(
+        const latestExamSet = Object.entries(detail.examinationSets).sort(
           ([a], [b]) => b.localeCompare(a),
         )[0]?.[1];
         const insertExaminations: InsertCourseExamination[] = (
           latestExamSet?.examinationRounds ?? []
         ).map((e) => ({
-          courseCode: courses.course.courseCode,
+          courseCode: detail.course.courseCode,
           examCode: e.examCode,
           title: e.title ?? null,
           credits: e.credits,
@@ -218,7 +271,7 @@ export class IngestService {
           rounds: insertRounds,
           examinations: insertExaminations,
         };
-      }),
+      },
     );
 
     const valid = results.filter((r) => r !== null);

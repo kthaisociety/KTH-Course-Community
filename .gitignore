@@ -125,3 +125,9 @@ node_modules/
 /elastic-start-local
 .DS_Store
 CLAUDE.md
+
+# =================================
+# INGEST PROFILING ARTIFACTS
+# =================================
+api-profile*.json
+scripts/api-profile*.json
