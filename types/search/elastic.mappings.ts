@@ -1,10 +1,14 @@
-export type CourseMapping = {
-  course_name: string;
+export type CourseDocumentES = {
   course_code: string;
+  course_name_swe: string;
+  course_name_eng: string;
   department: string;
+  credits: number;
+  subject: string;
+  periods: string[]; // e.g. ["P1", "P3"]
+  course_category: ("OPEN COURSE" | "PROGRAMME COURSE")[]; // can be both
   goals: string;
-  /** Full course description (e.g. course page). */
   content: string;
-  /** Short summary for cards / previews; optional until indexed in ES. */
-  summary?: string;
+  eligibility: string;
+  state: "CANCELLED" | "ESTABLISHED" | "DEACTIVATED";
 };
