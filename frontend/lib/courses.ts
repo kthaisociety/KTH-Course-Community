@@ -1,4 +1,4 @@
-import type { Course } from "@/models/CourseModel";
+import type { Course, CourseWithUserInfo } from "@/models/CourseModel";
 import type { CourseDocumentES } from "../../types/search/elastic.mappings";
 
 /** Course metadata stored in Neon (Postgres), from `GET /course/neon/:courseCode`. */
@@ -149,4 +149,35 @@ export async function getCourseCredits(
 
   const data = (await res.json()) as { credits: number | null };
   return data.credits;
+}
+
+/**
+ * Card row for saved courses: title and department prefer Neon; credits from Neon;
+ * goals/content/summary from Elasticsearch when available.
+ */
+export async function getFavoriteCourseForCard(
+  courseCode: string,
+): Promise<CourseWithUserInfo> {
+  const [neon, credits, full] = await Promise.all([
+    getNeonCourse(courseCode).catch(() => null),
+    getCourseCredits(courseCode).catch(() => null),
+    getFullCourseInfo(courseCode).catch(() => null),
+  ]);
+
+  if (!neon && !full) {
+    throw new Error(`Course ${courseCode} could not be loaded`);
+  }
+
+  return {
+    _id: full?._id ?? courseCode,
+    courseCode,
+    name: neon?.name ?? full?.name ?? courseCode,
+    department: neon?.department ?? full?.department ?? "",
+    credits: credits ?? full?.credits ?? null,
+    goals: full?.goals ?? "",
+    content: full?.content ?? "",
+    summary: full?.summary,
+    rating: full?.rating,
+    isUserFavorite: true,
+  };
 }

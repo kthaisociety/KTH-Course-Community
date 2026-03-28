@@ -19,8 +19,8 @@ import {
   submitReview,
 } from "@/state/reviews/reviewThunk";
 import type { Dispatch, RootState } from "@/state/store";
+import { CoursePageSkeleton } from "@/components/CoursePageSkeleton";
 import CourseView from "@/views/CourseView";
-import SuspenseView from "@/views/SuspenseView";
 
 type MergedCourseInfo = {
   credits: number | null;
@@ -130,6 +130,9 @@ export default function CourseController() {
   const dispatch = useDispatch<Dispatch>();
   const { userId } = useSessionData();
   const openReview = searchParams.get("writeReview") === "1";
+  const fromSaved = searchParams.get("from") === "saved";
+  const backHref = fromSaved ? "/favorites" : "/search";
+  const backLabel = fromSaved ? "Back to saved courses" : "Back to explore";
 
   // Select from Redux
   const courseInfo = useSelector((s: RootState) => s.course.courseInfo);
@@ -258,7 +261,9 @@ export default function CourseController() {
     : [];
 
   if (!params.courseCode) {
-    return <SuspenseView />;
+    return (
+      <CoursePageSkeleton backHref={backHref} backLabel={backLabel} />
+    );
   }
 
   if (courseError && !courseLoading) {
@@ -271,16 +276,47 @@ export default function CourseController() {
         <button
           type="button"
           className="mt-6 text-primary text-sm underline"
-          onClick={() => router.push("/search")}
+          onClick={() => router.push(backHref)}
         >
-          Back to explore
+          {backLabel}
         </button>
       </div>
     );
   }
 
-  if (courseLoading || reviewsLoading || reviews === null || !courseHeader) {
-    return <SuspenseView />;
+  const routeCode = params.courseCode?.toUpperCase() ?? "";
+  const loadedInfoCode = (() => {
+    if (!courseInfo) return null as string | null;
+    const ci = courseInfo as MergedCourseInfo;
+    const raw =
+      ci.course_code ?? ci.courseCode ?? ci.neon?.courseCode ?? "";
+    return raw ? String(raw).toUpperCase() : null;
+  })();
+  /** Avoid flashing previous course while Redux still holds last route’s data. */
+  const courseInfoStale =
+    Boolean(courseInfo) &&
+    Boolean(loadedInfoCode) &&
+    loadedInfoCode !== routeCode;
+  const reviewsStale =
+    Array.isArray(reviews) &&
+    reviews.length > 0 &&
+    reviews[0].courseCode?.toUpperCase() !== routeCode;
+
+  if (
+    courseLoading ||
+    reviewsLoading ||
+    reviews === null ||
+    !courseHeader ||
+    courseInfoStale ||
+    reviewsStale
+  ) {
+    return (
+      <CoursePageSkeleton
+        courseCode={params.courseCode}
+        backHref={backHref}
+        backLabel={backLabel}
+      />
+    );
   }
 
   const ci = courseInfo as MergedCourseInfo;
@@ -315,6 +351,8 @@ export default function CourseController() {
       contentHtml={contentHtml}
       summary={summary}
       neon={neonPayload}
+      backHref={backHref}
+      backLabel={backLabel}
     />
   );
 }

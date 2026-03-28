@@ -22,6 +22,9 @@ export type CourseViewProps = CourseHeaderProps & {
   neon: NeonCoursePayload | null;
   /** Precomputed; defaults to `kthCourseUrl(courseCode)` if omitted */
   kthCourseUrl?: string;
+  /** Top nav link; default explore */
+  backHref?: string;
+  backLabel?: string;
 };
 
 function formatDate(iso: string) {
@@ -53,6 +56,8 @@ function SectionTitle({
 }
 
 export default function CourseView(props: CourseViewProps) {
+  const backHref = props.backHref ?? "/search";
+  const backLabel = props.backLabel ?? "Back to explore";
   const kthUrl = props.kthCourseUrl ?? kthCoursePageUrl(props.courseCode);
   const hp =
     props.credits != null && Number.isFinite(props.credits)
@@ -64,11 +69,11 @@ export default function CourseView(props: CourseViewProps) {
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-4 pb-16 pt-6">
       <Link
-        href="/search"
+        href={backHref}
         className="inline-flex w-fit items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
       >
         <ArrowLeft className="h-4 w-4 shrink-0" aria-hidden />
-        Back to explore
+        {backLabel}
       </Link>
 
       {/* Hero — matches search course card shell */}
