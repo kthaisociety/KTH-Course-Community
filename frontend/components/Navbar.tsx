@@ -5,14 +5,8 @@ import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 import { DiCompass } from "react-icons/di";
 import { MdContactSupport, MdOutlineContactSupport } from "react-icons/md";
-import {
-  RiBookOpenFill,
-  RiBookOpenLine,
-  RiHeartFill,
-  RiHeartLine,
-  RiSearch2Fill,
-  RiSearch2Line,
-} from "react-icons/ri";
+import { Bookmark, Search } from "lucide-react";
+import { RiBookOpenFill, RiBookOpenLine } from "react-icons/ri";
 import { useDispatch, useSelector } from "react-redux";
 import { ModeToggle } from "@/components/mode-toggle";
 // UI imports
@@ -62,7 +56,7 @@ export default function Navbar() {
             variant="nav"
             className="w-full justify-start hover:bg-primary"
           >
-            <DiCompass className="text-white !w-12 !h-12" />
+            <DiCompass className="text-white !h-12 !w-12" />
             <h1 className="text-xl">Course Community</h1>
           </Button>
         </Link>
@@ -72,11 +66,11 @@ export default function Navbar() {
         <li>
           <Link href="/search">
             <Button variant="nav" className="w-full justify-start">
-              {pathname === "/search" ? (
-                <RiSearch2Fill className="text-white !w-4 !h-4" />
-              ) : (
-                <RiSearch2Line className="text-white !w-4 !h-4" />
-              )}
+              <Search
+                className="text-white !h-4 !w-4 shrink-0"
+                strokeWidth={pathname === "/search" ? 2.75 : 2}
+                aria-hidden
+              />
               <h1 className="text-md">Explore</h1>
             </Button>
           </Link>
@@ -84,11 +78,14 @@ export default function Navbar() {
         <li>
           <Link href="/favorites">
             <Button variant="nav" className="w-full justify-start">
-              {pathname === "/favorites" ? (
-                <RiHeartFill className="text-white !w-4 !h-4" />
-              ) : (
-                <RiHeartLine className="text-white !w-4 !h-4" />
-              )}
+              <Bookmark
+                className={
+                  pathname === "/favorites"
+                    ? "text-white !h-4 !w-4 shrink-0 fill-white"
+                    : "text-white !h-4 !w-4 shrink-0"
+                }
+                aria-hidden
+              />
               <h1 className="text-md">Saved courses</h1>
             </Button>
           </Link>
