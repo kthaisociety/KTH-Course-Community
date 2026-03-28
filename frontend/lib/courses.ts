@@ -71,13 +71,36 @@ export async function getCourseInfo(
     throw new Error(`HTTP ${res.status}: ${res.statusText}`);
   }
 
-  const data = (await res.json()) as CourseDocumentES;
+  const raw = (await res.json()) as {
+    _id?: string;
+    courseCode: string;
+    department: string;
+    nameSwe?: string;
+    nameEng?: string;
+    goals: string;
+    content: string;
+    credits?: number | null;
+    rating?: number;
+  };
 
-  if (!data) {
-    throw new Error(`Course ${courseCode} data is empty`);
-  }
+  if (!raw) throw new Error(`Course ${courseCode} data is empty`);
 
-  return data;
+  // Map backend payload to a stable shape that the rest of the frontend expects.
+  // (Backend currently returns `nameSwe`/`nameEng` for course titles.)
+  return {
+    course_code: raw.courseCode,
+    course_name_swe: raw.nameSwe ?? "",
+    course_name_eng: raw.nameEng ?? "",
+    department: raw.department,
+    credits: raw.credits ?? 0,
+    subject: "",
+    periods: [],
+    course_category: [],
+    goals: raw.goals ?? "",
+    content: raw.content ?? "",
+    eligibility: "",
+    state: "ESTABLISHED",
+  } satisfies CourseDocumentES;
 }
 
 // This one uses the get course from 'course.controller', which stitches the

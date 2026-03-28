@@ -83,7 +83,8 @@ export function getMockChartData(courseCode: string): CourseCardChartData {
 }
 
 export function getFallbackTitle(courseCode: string): string {
-  return `Course ${courseCode}`;
+  void courseCode;
+  return "Course title unavailable";
 }
 
 export function getFallbackContent(): string {
