@@ -49,7 +49,15 @@ function callToDocument(
 describe('IngestService', () => {
   let service: IngestService;
   let mockKopps: { getCourses: jest.Mock; getCourseInformation: jest.Mock };
-  let mockEs: { indices: { create: jest.Mock }; bulk: jest.Mock };
+  let mockEs: {
+    indices: {
+      create: jest.Mock;
+      exists: jest.Mock;
+      getMapping: jest.Mock;
+      delete: jest.Mock;
+    };
+    bulk: jest.Mock;
+  };
 
   beforeEach(async () => {
     mockKopps = {
@@ -57,7 +65,12 @@ describe('IngestService', () => {
       getCourseInformation: jest.fn(),
     };
     mockEs = {
-      indices: { create: jest.fn().mockResolvedValue({}) },
+      indices: {
+        create: jest.fn().mockResolvedValue({}),
+        exists: jest.fn().mockResolvedValue(false),
+        getMapping: jest.fn().mockResolvedValue({}),
+        delete: jest.fn().mockResolvedValue({}),
+      },
       bulk: jest.fn().mockResolvedValue({
         errors: false,
         items: [{ index: { _id: 'DD2421' } }],

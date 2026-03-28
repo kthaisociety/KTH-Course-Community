@@ -389,8 +389,29 @@ export class IngestService {
     };
   }
 
+  /** If the index exists with an older strict mapping, new fields are rejected. */
+  private async coursesIndexNeedsRecreate(): Promise<boolean> {
+    const exists = await this.es.indices.exists({ index: INDEX });
+    if (!exists) return false;
+    const mapping = await this.es.indices.getMapping({ index: INDEX });
+    const raw = mapping as Record<
+      string,
+      { mappings?: { properties?: Record<string, unknown> } }
+    >;
+    const entry = raw[INDEX] ?? Object.values(raw)[0];
+    const props = entry?.mappings?.properties;
+    if (props?.course_name_swe && props?.course_name_eng) return false;
+    this.logger.warn(
+      `Index "${INDEX}" mapping is outdated (missing bilingual name fields); it will be recreated.`,
+    );
+    return true;
+  }
+
   //
   private async ensureIndex() {
+    if (await this.coursesIndexNeedsRecreate()) {
+      await this.es.indices.delete({ index: INDEX });
+    }
     try {
       await this.es.indices.create({
         index: INDEX,
