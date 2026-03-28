@@ -117,14 +117,6 @@ export default function CourseView(props: CourseViewProps) {
             </div>
             <div>
               <dt className="text-muted-foreground text-xs">
-                Last examination semester
-              </dt>
-              <dd className="mt-0.5 font-medium text-sm">
-                {props.neon.lastExaminationSemester ?? "—"}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground text-xs">
                 Record last updated
               </dt>
               <dd className="mt-0.5 font-medium text-sm">

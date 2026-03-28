@@ -99,8 +99,6 @@ export type CourseCardStats = {
   reviewCount: number;
   recommendCount: number;
   studentsTaken: number;
-  /** Average course rating 0–5 (display e.g. 4.5/5). */
-  averageRating: number;
 };
 
 /** Explicit mock stats for known course codes. */
@@ -109,55 +107,46 @@ const STATS_BY_COURSE: Record<string, CourseCardStats> = {
     reviewCount: 42,
     recommendCount: 28,
     studentsTaken: 310,
-    averageRating: 4.2,
   },
   DD2440: {
     reviewCount: 18,
     recommendCount: 12,
     studentsTaken: 95,
-    averageRating: 4.8,
   },
   SF1671: {
     reviewCount: 124,
     recommendCount: 56,
     studentsTaken: 890,
-    averageRating: 3.9,
   },
   SF1901: {
     reviewCount: 67,
     recommendCount: 31,
     studentsTaken: 420,
-    averageRating: 3.5,
   },
   EK1020: {
     reviewCount: 33,
     recommendCount: 19,
     studentsTaken: 210,
-    averageRating: 4.0,
   },
   II1301: {
     reviewCount: 51,
     recommendCount: 22,
     studentsTaken: 180,
-    averageRating: 4.6,
   },
   ID1212: {
     reviewCount: 89,
     recommendCount: 41,
     studentsTaken: 340,
-    averageRating: 4.3,
   },
   DH2402: {
     reviewCount: 12,
     recommendCount: 8,
     studentsTaken: 75,
-    averageRating: 3.2,
   },
   DH2643: {
     reviewCount: 47,
     recommendCount: 17,
     studentsTaken: 173,
-    averageRating: 4.5,
   },
 };
 
@@ -170,14 +159,10 @@ export function getMockCourseStats(courseCode: string): CourseCardStats {
   const h = hash(courseCode);
   const h2 = hash(courseCode + "stats2");
   const h3 = hash(courseCode + "stats3");
-  const h4 = hash(courseCode + "avg");
-  const averageRating =
-    Math.round((2.5 + 2.5 * h4) * 10) / 10; // 2.5–5.0 in 0.1 steps
   return {
     reviewCount: Math.max(0, Math.round(3 + 47 * h)),
     recommendCount: Math.max(0, Math.round(1 + 24 * h2)),
     studentsTaken: Math.max(0, Math.round(10 + 240 * h3)),
-    averageRating: Math.min(5, Math.max(0, averageRating)),
   };
 }
 

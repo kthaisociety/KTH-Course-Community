@@ -171,16 +171,7 @@ export default function SearchView({
                   keywords={getMockKeywords(course.courseCode)}
                   prerequisites={getMockPrerequisites(course.courseCode)}
                   chartData={getMockChartData(course.courseCode)}
-                  stats={(() => {
-                    const base = getMockCourseStats(course.courseCode);
-                    if (
-                      typeof course.rating === "number" &&
-                      !Number.isNaN(course.rating)
-                    ) {
-                      return { ...base, averageRating: course.rating };
-                    }
-                    return base;
-                  })()}
+                  stats={getMockCourseStats(course.courseCode)}
                   isUserFavorite={course.isUserFavorite}
                   onSeeReviews={() => onSeeReviews(course.courseCode)}
                   onWriteReview={() => onWriteReview(course.courseCode)}

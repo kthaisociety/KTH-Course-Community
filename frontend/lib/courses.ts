@@ -7,7 +7,6 @@ export type NeonCoursePayload = {
   department: string;
   name: string;
   currentStatus: string;
-  lastExaminationSemester: string | null;
   updatedAt: string;
 };
 

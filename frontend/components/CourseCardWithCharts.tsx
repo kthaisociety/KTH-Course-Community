@@ -6,7 +6,6 @@ import {
   CheckCircle,
   Sparkles,
   Bookmark,
-  Star,
 } from "lucide-react";
 import {
   getFallbackSummary,
@@ -85,10 +84,6 @@ export function CourseCardWithCharts({
         : displayHp.toFixed(1);
   const displayKeywords = keywords?.trim() || "—";
   const displayPrerequisites = Array.isArray(prerequisites) && prerequisites.length > 0 ? prerequisites : ["None"];
-  const displayAverageRating = Math.min(
-    5,
-    Math.max(0, Number(stats.averageRating) || 0),
-  );
   const displaySummary = summary?.trim()
     ? truncate(stripHtml(summary), 180)
     : getFallbackSummary();
@@ -211,14 +206,10 @@ export function CourseCardWithCharts({
           <CourseCardCharts data={chartData} />
         </div>
         <div
-          className="flex shrink-0 flex-nowrap items-center justify-center gap-x-3.5 gap-y-0 text-muted-foreground text-xs leading-none cursor-default select-none"
+          className="flex w-full shrink-0 items-center justify-center gap-x-4 text-muted-foreground text-xs leading-none cursor-default select-none"
           role="status"
-          aria-label="Course stats: reviews, recommendations, students taken, average rating"
+          aria-label="Course stats: recommendations, students taken, reviews"
         >
-          <span className="flex shrink-0 items-center gap-0.5" title="Number of reviews">
-            <MessageSquare className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
-            <span>{stats.reviewCount}</span>
-          </span>
           <span
             className="flex shrink-0 items-center gap-0.5"
             title="Recommended by"
@@ -235,10 +226,10 @@ export function CourseCardWithCharts({
           </span>
           <span
             className="flex shrink-0 items-center gap-0.5"
-            title="Average rating"
+            title="Number of reviews"
           >
-            <Star className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
-            <span>{displayAverageRating.toFixed(1)}/5</span>
+            <MessageSquare className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+            <span>{stats.reviewCount}</span>
           </span>
         </div>
         <div className="flex shrink-0 justify-center">
