@@ -1,7 +1,6 @@
 import type { Course, CourseWithUserInfo } from "@/models/CourseModel";
 import type { CourseDocumentES } from "../../types/search/elastic.mappings";
 
-/** Course metadata stored in Neon (Postgres), from `GET /course/neon/:courseCode`. */
 export type NeonCoursePayload = {
   courseCode: string;
   department: string;
