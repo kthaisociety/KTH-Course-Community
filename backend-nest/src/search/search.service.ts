@@ -108,6 +108,7 @@ export class SearchService {
         "eligibility",
         "state",
       ],
+    });
     const hits = (res.hits?.hits ?? []) as Array<{
       _id: string;
       _score: number | null;
