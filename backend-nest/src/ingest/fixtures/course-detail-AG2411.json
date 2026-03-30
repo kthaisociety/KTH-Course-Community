@@ -1,0 +1,380 @@
+{
+  "course": {
+    "academicLevel": "C",
+    "courseCode": "AG2411",
+    "versionNumber": 2,
+    "departmentCode": "AGF",
+    "department": { "code": "AGF", "name": "ABE/Geoinformatik" },
+    "educationalLevelCode": "ADVANCED",
+    "educationalTypeId": 24,
+    "gradeScaleCode": "AF",
+    "supplInfoUrlName": "Kurshemsida",
+    "title": "GIS Architecture and Algorithms",
+    "titleOther": "GIS Architecture and Algorithms",
+    "cancelled": false,
+    "deactivated": false,
+    "credits": 7.5,
+    "creditUnitLabel": "Högskolepoäng",
+    "creditUnitAbbr": "hp",
+    "state": "ESTABLISHED",
+    "courseVersion": { "versionNumber": 2, "keywordsEn": [], "keywordsSv": [] }
+  },
+  "examiners": [
+    {
+      "kthid": "u1v99t3j",
+      "givenName": "Takeshi",
+      "lastName": "Shirabe",
+      "email": "shirabe@kth.se",
+      "username": "shirabe"
+    }
+  ],
+  "roundInfos": [
+    {
+      "lectureCount": 14,
+      "usage": [
+        {
+          "programmeCode": "TTGTM",
+          "progAdmissionTerm": { "term": 20252 },
+          "studyYear": 1,
+          "title": "Masterprogram, transport och geoinformatik",
+          "electiveCondition": {
+            "ordinal": 2,
+            "name": "VV",
+            "abbrLabel": "Villkorligt valfri"
+          }
+        }
+      ],
+      "timeslots": "",
+      "hasTimeslots": false,
+      "schemaUrl": "https://www.kth.se/social/course/AG2411/subgroup/ht-2025-263/calendar/",
+      "ldapResponsibles": [
+        {
+          "kthid": "u1v99t3j",
+          "givenName": "Takeshi",
+          "lastName": "Shirabe",
+          "email": "shirabe@kth.se",
+          "username": "shirabe"
+        }
+      ],
+      "ldapTeachers": [
+        {
+          "kthid": "u1v99t3j",
+          "givenName": "Takeshi",
+          "lastName": "Shirabe",
+          "email": "shirabe@kth.se",
+          "username": "shirabe"
+        }
+      ],
+      "round": {
+        "ladokRoundId": "1",
+        "ladokUID": "ecf081d5-b623-11ef-9bd4-11b99f1f4d85",
+        "state": "APPROVED",
+        "tutoringTimeOfDay": { "name": "DAG", "key": "tutoringtime.DAG" },
+        "municipalityCode": "KTHCAMPUS",
+        "tutoringForm": { "name": "NML", "key": "tutoringform.NML" },
+        "campus": { "name": "KTH Campus", "label": "KTH Campus" },
+        "selectionCriteriaSv": "\u003cp\u003e\u003c/p\u003e",
+        "selectionCriteriaEn": "\u003cp\u003e\u003c/p\u003e",
+        "language": "Engelska",
+        "targetGroup": "\u003cp\u003eTTGTM\u003c/p\u003e",
+        "draftCourseRoundType": {
+          "code": "ORD",
+          "name": "Programutbildning",
+          "active": true,
+          "category": "PU"
+        },
+        "courseRoundTerms": [
+          {
+            "formattedPeriodsAndCredits": "P2 (7,5 hp)",
+            "term": { "term": 20252 },
+            "startWeek": { "year": 2025, "week": 44 },
+            "endWeek": { "year": 2026, "week": 3 },
+            "creditsP2": 7.5
+          }
+        ],
+        "applicationCodes": [
+          {
+            "applicationCode": "50218",
+            "term": "20252",
+            "courseRoundType": {
+              "code": "ORD",
+              "name": "Programutbildning",
+              "active": true,
+              "category": "PU"
+            },
+            "avgFri": false,
+            "admissionRoundCode": "AKH25"
+          }
+        ],
+        "startTerm": { "term": 20252 },
+        "isPU": true,
+        "isVU": false,
+        "startWeek": { "year": 2025, "week": 44 },
+        "endWeek": { "year": 2026, "week": 3 },
+        "startDate": "Oct 27, 2025 12:00:00 AM",
+        "firstTuitionDate": "2025-10-27",
+        "lastTuitionDate": "2026-01-12",
+        "studyPace": 50
+      }
+    },
+    {
+      "lectureCount": 14,
+      "usage": [],
+      "timeslots": "",
+      "hasTimeslots": false,
+      "ldapResponsibles": [
+        {
+          "kthid": "u1v99t3j",
+          "givenName": "Takeshi",
+          "lastName": "Shirabe",
+          "email": "shirabe@kth.se",
+          "username": "shirabe"
+        }
+      ],
+      "ldapTeachers": [
+        {
+          "kthid": "u1v99t3j",
+          "givenName": "Takeshi",
+          "lastName": "Shirabe",
+          "email": "shirabe@kth.se",
+          "username": "shirabe"
+        }
+      ],
+      "round": {
+        "ladokRoundId": "2",
+        "ladokUID": "33bf20fc-edfc-11ef-a5d7-577d306f467c",
+        "state": "APPROVED",
+        "tutoringTimeOfDay": { "name": "DAG", "key": "tutoringtime.DAG" },
+        "municipalityCode": "KTHCAMPUS",
+        "tutoringForm": { "name": "NML", "key": "tutoringform.NML" },
+        "campus": { "name": "KTH Campus", "label": "KTH Campus" },
+        "selectionCriteriaSv": "\u003cp\u003e\u003c/p\u003e",
+        "selectionCriteriaEn": "\u003cp\u003e\u003c/p\u003e",
+        "language": "Engelska",
+        "targetGroup": "\u003cp\u003eEnbart f\u0026#246;r SAP-studenter.\u003c/p\u003e",
+        "draftCourseRoundType": {
+          "code": "SAP",
+          "name": "Study Abroad Programme (ej HST-HPR)",
+          "active": true,
+          "category": "VU"
+        },
+        "courseRoundTerms": [
+          {
+            "formattedPeriodsAndCredits": "P2 (7,5 hp)",
+            "term": { "term": 20252 },
+            "startWeek": { "year": 2025, "week": 44 },
+            "endWeek": { "year": 2026, "week": 3 },
+            "creditsP2": 7.5
+          }
+        ],
+        "applicationCodes": [
+          {
+            "applicationCode": "10025",
+            "term": "20252",
+            "courseRoundType": {
+              "code": "SAP",
+              "name": "Study Abroad Programme (ej HST-HPR)",
+              "active": true,
+              "category": "VU"
+            },
+            "avgFri": false,
+            "admissionRoundCode": "IKH25"
+          }
+        ],
+        "startTerm": { "term": 20252 },
+        "isPU": false,
+        "isVU": true,
+        "startWeek": { "year": 2025, "week": 44 },
+        "endWeek": { "year": 2026, "week": 3 },
+        "startDate": "Oct 27, 2025 12:00:00 AM",
+        "firstTuitionDate": "2025-10-27",
+        "lastTuitionDate": "2026-01-12",
+        "studyPace": 50
+      }
+    }
+  ],
+  "mainSubjects": ["Samhällsbyggnad"],
+  "examinationSets": {
+    "20072": {
+      "startingTerm": { "term": 20072 },
+      "examinationRounds": [
+        {
+          "examCode": "LAB1",
+          "title": "Laboratory Work",
+          "gradeScaleCode": "PF",
+          "credits": 4.5,
+          "creditUnitLabel": "Högskolepoäng",
+          "creditUnitAbbr": "hp",
+          "ladokUID": "2d61bbda-73d8-11e8-b4e0-063f9afb40e3"
+        },
+        {
+          "examCode": "TEN1",
+          "title": "Examination",
+          "gradeScaleCode": "AF",
+          "credits": 3.0,
+          "creditUnitLabel": "Högskolepoäng",
+          "creditUnitAbbr": "hp",
+          "ladokUID": "2d590943-73d8-11e8-b4e0-063f9afb40e3"
+        }
+      ]
+    },
+    "20112": {
+      "startingTerm": { "term": 20112 },
+      "examinationRounds": [
+        {
+          "examCode": "LAB2",
+          "title": "Laboration",
+          "gradeScaleCode": "PF",
+          "credits": 4.5,
+          "creditUnitLabel": "Högskolepoäng",
+          "creditUnitAbbr": "hp",
+          "ladokUID": "2d6c6a44-73d8-11e8-b4e0-063f9afb40e3"
+        },
+        {
+          "examCode": "PRO1",
+          "title": "Projekt",
+          "gradeScaleCode": "AF",
+          "credits": 3.0,
+          "creditUnitLabel": "Högskolepoäng",
+          "creditUnitAbbr": "hp",
+          "ladokUID": "2d67fd6d-73d8-11e8-b4e0-063f9afb40e3"
+        }
+      ]
+    }
+  },
+  "publicSyllabusVersions": [
+    {
+      "edition": 1,
+      "validFromTerm": { "term": 20212 },
+      "inStateApproved": true,
+      "courseSyllabus": {
+        "discontinuationText": "När kurs inte längre ges har student möjlighet att examineras under ytterligare två läsår.",
+        "goals": "\u003cp\u003eEfter kursen ska studenterna:\u003c/p\u003e\u003cul\u003e\u003cli\u003evara bekanta med arkitekturen i ett GIS-system\u003c/li\u003e\u003cli\u003eha kunskap om teorin bakom de vanligaste algoritmerna i geografisk informationsvetenskap\u003c/li\u003e\u003cli\u003eha kunskap om metoder f\u0026#246;r att hantera geometriska data i databaser\u003c/li\u003e\u003cli\u003eha f\u0026#246;rm\u0026#229;gan att utf\u0026#246;ra egen modellering av geografiska data med hj\u0026#228;lp av UML\u003c/li\u003e\u003cli\u003eha f\u0026#246;rm\u0026#229;gan att utveckla sina egna program f\u0026#246;r att implementera nya GIS-applikationer\u003c/li\u003e\u003cli\u003ek\u0026#228;nna till grundl\u0026#228;ggande normer i GIS\u003c/li\u003e\u003c/ul\u003e",
+        "content": "\u003cul\u003e\u003cli\u003eGrundl\u0026#228;ggande GIS algoritmer\u003c/li\u003e\u003c/ul\u003e\u003cul\u003e\u003cli\u003eModellering av system (UML)\u003c/li\u003e\u003c/ul\u003e\u003cul\u003e\u003cli\u003eVerktygsl\u0026#229;dor, bibliotek, etc.\u003c/li\u003e\u003c/ul\u003e",
+        "eligibility": "\u003cp\u003eKandidatexamen eller motsvarande inom samh\u0026#228;llsbyggnad, geografi, teknisk fysik, datavetenskap, statistik, ekonomi, eller matematik inklusiv minst 3hp inom vardera Programmering, Linj\u0026#228;r algebra, Envariabelanalys, Sannolikhetsteori och statistik samt Eng B.\u003c/p\u003e",
+        "examComments": "Examinator beslutar, baserat på rekommendation från KTH:s handläggare av stöd till studenter med funktionsnedsättning, om eventuell anpassad examination för studenter med dokumenterad, varaktig funktionsnedsättning. \u003cbr\u003e\u003cbr\u003eExaminator får medge annan examinationsform vid omexamination av enstaka studenter.",
+        "reqsForFinalGrade": "\u003cp\u003eGodk\u0026#228;nda laborationer (LAB1; 4.5 hp)\u003c/p\u003e\u003cp\u003eProjekt (PROJ; 3.0 hp), A/B/C/D/E/FX/F\u003c/p\u003e\u003cp\u003eDeltagande i slutseminarium\u003c/p\u003e",
+        "establishment": "\u003cp\u003eSkolchef vid ABE-skolan har 2021-04-13 beslutat att fastst\u0026#228;lla denna kursplan att g\u0026#228;lla fr\u0026#229;n och med HT2021, diarienummer: A-2021-0687\u003c/p\u003e",
+        "languageOfInstruction": "Undervisningsspråk anges i kurstillfällesinformationen i kurs- och programkatalogen.",
+        "ethicalApproach": "\u003cul\u003e\u003cli\u003eVid grupparbete har alla i gruppen ansvar för gruppens arbete.\u003c/li\u003e\u003cli\u003eVid examination ska varje student ärligt redovisa hjälp som erhållits och källor som använts.\u003c/li\u003e\u003cli\u003eVid muntlig examination ska varje student kunna redogöra för hela uppgiften och hela lösningen.\u003c/li\u003e\u003c/ul\u003e",
+        "courseSyllabusVersionValidFromTerm": { "term": 20212 }
+      }
+    },
+    {
+      "edition": 2,
+      "validFromTerm": { "term": 20192 },
+      "inStateApproved": true,
+      "courseSyllabus": {
+        "discontinuationText": "När kurs inte längre ges har student möjlighet att examineras under ytterligare två läsår.",
+        "goals": "\u003cp\u003eEfter kursen ska studenterna:\u003c/p\u003e\u003cul\u003e\u003cli\u003evara bekanta med arkitekturen i ett GIS-system\u003c/li\u003e\u003cli\u003eha kunskap om teorin bakom de vanligaste algoritmerna i geografisk informationsvetenskap\u003c/li\u003e\u003cli\u003eha kunskap om metoder f\u0026#246;r att hantera geometriska data i databaser\u003c/li\u003e\u003cli\u003eha f\u0026#246;rm\u0026#229;gan att utf\u0026#246;ra egen modellering av geografiska data med hj\u0026#228;lp av UML\u003c/li\u003e\u003cli\u003eha f\u0026#246;rm\u0026#229;gan att utveckla sina egna program f\u0026#246;r att implementera nya GIS-applikationer\u003c/li\u003e\u003cli\u003ek\u0026#228;nna till grundl\u0026#228;ggande normer i GIS\u003c/li\u003e\u003c/ul\u003e",
+        "content": "\u003cul\u003e\u003cli\u003eGrundl\u0026#228;ggande GIS algoritmer\u003c/li\u003e\u003c/ul\u003e\u003cul\u003e\u003cli\u003eModellering av system (UML)\u003c/li\u003e\u003c/ul\u003e\u003cul\u003e\u003cli\u003eVerktygsl\u0026#229;dor, bibliotek, etc.\u003c/li\u003e\u003c/ul\u003e",
+        "disposition": "\u003cp\u003eF\u0026#246;rel\u0026#228;sningar 20 h\u003cbr /\u003eLaborationer 32 h\u003cbr /\u003eProjekt 16 h\u003c/p\u003e",
+        "eligibility": "\u003cp\u003eF\u0026#246;r studenter antagna till civilingenj\u0026#246;rprogrammet Samh\u0026#228;llsbyggnad (CSAMH) eller masterprogrammet Transport och Geoinformatik:\u003c/p\u003e\u003cp\u003eAG2412 Geovisualisation eller motsvarande kurs.\u003c/p\u003e\u003cp\u003eF\u0026#246;r \u0026#246;vriga studenter:\u003c/p\u003e\u003cul\u003e\u003cli\u003eKandidatexamen eller motsvarande inom samh\u0026#228;llsbyggnad, geografi, teknisk fysik, datavetenskap, statistik, ekonomi, eller matematik inklusiv minst 6hp inom vardera Programmering, Linj\u0026#228;r algebra, Envariabelanalys, Sannolikhetsteori och statistik eller motsvarande\u003c/li\u003e\u003cli\u003eEngelska B\u003c/li\u003e\u003cli\u003eMinst en kurs i GIS eller relaterat \u0026#228;mne\u003c/li\u003e\u003c/ul\u003e",
+        "literature": "\u003cp\u003eWorboys, M. F., and M. Duckham, 2004. GIS: A Computing Perspective, 2nd edition. Taylor \u0026amp; Francis.\u003c/p\u003e\u003cp\u003eHarrie, L., 2009. Lecture notes in GIS Algorithms, Lund University.\u003c/p\u003e",
+        "examComments": "Examinator beslutar, baserat på rekommendation från KTH:s handläggare av stöd till studenter med funktionsnedsättning, om eventuell anpassad examination för studenter med dokumenterad, varaktig funktionsnedsättning. \u003cbr\u003e\u003cbr\u003eExaminator får medge annan examinationsform vid omexamination av enstaka studenter.",
+        "reqsForFinalGrade": "\u003cp\u003eGodk\u0026#228;nda laborationer (LAB1; 4.5 hp)\u003c/p\u003e\u003cp\u003eProjekt (PROJ; 3.0 hp), A/B/C/D/E/FX/F\u003c/p\u003e\u003cp\u003eDeltagande i slutseminarium\u003c/p\u003e",
+        "establishment": "Kursplan för AG2411 gäller från och med HT19",
+        "languageOfInstruction": "Undervisningsspråk anges i kurstillfällesinformationen i kurs- och programkatalogen.",
+        "ethicalApproach": "\u003cul\u003e\u003cli\u003eVid grupparbete har alla i gruppen ansvar för gruppens arbete.\u003c/li\u003e\u003cli\u003eVid examination ska varje student ärligt redovisa hjälp som erhållits och källor som använts.\u003c/li\u003e\u003cli\u003eVid muntlig examination ska varje student kunna redogöra för hela uppgiften och hela lösningen.\u003c/li\u003e\u003c/ul\u003e",
+        "courseSyllabusVersionValidFromTerm": { "term": 20192 }
+      }
+    },
+    {
+      "edition": 1,
+      "validFromTerm": { "term": 20142 },
+      "inStateApproved": true,
+      "courseSyllabus": {
+        "discontinuationText": "När kurs inte längre ges har student möjlighet att examineras under ytterligare två läsår.",
+        "goals": "\u003cp\u003eEfter kursen ska studenterna:\u003c/p\u003e\u003cul\u003e\u003cli\u003evara bekanta med arkitekturen i ett GIS-system\u003c/li\u003e\u003cli\u003eha kunskap om teorin bakom de vanligaste algoritmerna i geografisk informationsvetenskap\u003c/li\u003e\u003cli\u003eha kunskap om metoder f\u0026#246;r att hantera geometriska data i databaser\u003c/li\u003e\u003cli\u003eha f\u0026#246;rm\u0026#229;gan att utf\u0026#246;ra egen modellering av geografiska data med hj\u0026#228;lp av UML\u003c/li\u003e\u003cli\u003eha f\u0026#246;rm\u0026#229;gan att utveckla sina egna program f\u0026#246;r att implementera nya GIS-applikationer\u003c/li\u003e\u003cli\u003ek\u0026#228;nna till grundl\u0026#228;ggande normer i GIS\u003c/li\u003e\u003c/ul\u003e",
+        "content": "\u003cul\u003e\u003cli\u003eGrundl\u0026#228;ggande GIS algoritmer\u003c/li\u003e\u003c/ul\u003e\u003cul\u003e\u003cli\u003eModellering av system (UML)\u003c/li\u003e\u003c/ul\u003e\u003cul\u003e\u003cli\u003eVerktygsl\u0026#229;dor, bibliotek, etc.\u003c/li\u003e\u003c/ul\u003e",
+        "disposition": "\u003cp\u003eF\u0026#246;rel\u0026#228;sningar 20 h\u003cbr /\u003eLaborationer 32 h\u003cbr /\u003eProjekt 16 h\u003c/p\u003e",
+        "eligibility": "\u003cp\u003eF\u0026#246;r studenter antagna till civilingenj\u0026#246;rprogrammet Samh\u0026#228;llsbyggnad (CSAMH) eller masterprogrammet Transport och Geoinformatik:\u003c/p\u003e\u003cp\u003eAG2429 Geovisualisation (eller AG2412 Geovisualisation) eller motsvarande kurs.\u003c/p\u003e\u003cp\u003eF\u0026#246;r \u0026#246;vriga studenter:\u003c/p\u003e\u003cul\u003e\u003cli\u003eKandidatexamen eller motsvarande inom samh\u0026#228;llsbyggnad, geografi, teknisk fysik, datavetenskap, statistik, ekonomi, eller matematik inklusiv minst 6hp inom vardera Programmering, Linj\u0026#228;r algebra, Envariabelanalys, and Sannolikhetsteori och statistik eller deres motsvarande\u003c/li\u003e\u003cli\u003eEngelska B\u003c/li\u003e\u003cli\u003eMinst en kurs i GIS eller relaterat \u0026#228;mne\u003c/li\u003e\u003c/ul\u003e",
+        "literature": "\u003cp\u003eWorboys, M. F., and M. Duckham, 2004. GIS: A Computing Perspective, 2nd edition. Taylor \u0026amp; Francis.\u003c/p\u003e\u003cp\u003eHarrie, L., 2009. Lecture notes in GIS Algorithms, Lund University.\u003c/p\u003e",
+        "examComments": "Examinator beslutar, baserat på rekommendation från KTH:s handläggare av stöd till studenter med funktionsnedsättning, om eventuell anpassad examination för studenter med dokumenterad, varaktig funktionsnedsättning. \u003cbr\u003e\u003cbr\u003eExaminator får medge annan examinationsform vid omexamination av enstaka studenter.",
+        "reqsForFinalGrade": "\u003cp\u003eGodk\u0026#228;nda laborationer (LAB1; 4.5 hp)\u003c/p\u003e\u003cp\u003eProjekt (PROJ; 3.0 hp), A/B/C/D/E/FX/F\u003c/p\u003e",
+        "establishment": "Kursplan för AG2411 gäller från och med HT14",
+        "languageOfInstruction": "Undervisningsspråk anges i kurstillfällesinformationen i kurs- och programkatalogen.",
+        "ethicalApproach": "\u003cul\u003e\u003cli\u003eVid grupparbete har alla i gruppen ansvar för gruppens arbete.\u003c/li\u003e\u003cli\u003eVid examination ska varje student ärligt redovisa hjälp som erhållits och källor som använts.\u003c/li\u003e\u003cli\u003eVid muntlig examination ska varje student kunna redogöra för hela uppgiften och hela lösningen.\u003c/li\u003e\u003c/ul\u003e",
+        "courseSyllabusVersionValidFromTerm": { "term": 20142 }
+      }
+    },
+    {
+      "edition": 1,
+      "validFromTerm": { "term": 20132 },
+      "inStateApproved": true,
+      "courseSyllabus": {
+        "discontinuationText": "När kurs inte längre ges har student möjlighet att examineras under ytterligare två läsår.",
+        "goals": "\u003cp\u003eEfter kursen ska studenterna:\u003c/p\u003e\u003cul\u003e\u003cli\u003evara bekanta med arkitekturen i ett GIS-system\u003c/li\u003e\u003cli\u003eha kunskap om teorin bakom de vanligaste algoritmerna i geografisk informationsvetenskap\u003c/li\u003e\u003cli\u003eha kunskap om metoder f\u0026#246;r att hantera geometriska data i databaser\u003c/li\u003e\u003cli\u003eha f\u0026#246;rm\u0026#229;gan att utf\u0026#246;ra egen modellering av geografiska data med hj\u0026#228;lp av UML\u003c/li\u003e\u003cli\u003eha f\u0026#246;rm\u0026#229;gan att utveckla sina egna program f\u0026#246;r att implementera nya GIS-applikationer\u003c/li\u003e\u003cli\u003ek\u0026#228;nna till grundl\u0026#228;ggande normer i GIS\u003c/li\u003e\u003c/ul\u003e",
+        "content": "\u003cul\u003e\u003cli\u003eGrundl\u0026#228;ggande GIS algoritmer\u003c/li\u003e\u003c/ul\u003e\u003cul\u003e\u003cli\u003eModellering av system (UML)\u003c/li\u003e\u003c/ul\u003e\u003cul\u003e\u003cli\u003eVerktygsl\u0026#229;dor, bibliotek, etc.\u003c/li\u003e\u003c/ul\u003e",
+        "disposition": "\u003cp\u003eF\u0026#246;rel\u0026#228;sningar 20 h\u003cbr /\u003eLaborationer 32 h\u003cbr /\u003eProjekt 16 h\u003c/p\u003e",
+        "eligibility": "\u003cp\u003ea) Beh\u0026#246;righet till CSAMH-program\u003c/p\u003e\u003cp\u003eb) Beh\u0026#246;righet till TTGTM-program\u003c/p\u003e\u003cp\u003e\u0026#160;\u0026#160;\u0026#160;\u0026#160; AG2429 Geovisualisation (eller AG2412 Geovisualisation)\u003c/p\u003e\u003cp\u003e\u0026#160;\u0026#160;\u0026#160; F\u0026#246;r frist\u0026#229;ende studenter:\u003c/p\u003e\u003cp\u003e\u0026#160;\u0026#160;\u0026#160; En kurs om Geovisualisering\u003c/p\u003e",
+        "literature": "\u003cp\u003eWorboys, M. F., and M. Duckham, 2004. GIS: A Computing Perspective, 2nd edition. Taylor \u0026amp; Francis.\u003c/p\u003e\u003cp\u003eHarrie, L., 2009. Lecture notes in GIS Algorithms, Lund University.\u003c/p\u003e",
+        "examComments": "Examinator beslutar, baserat på rekommendation från KTH:s handläggare av stöd till studenter med funktionsnedsättning, om eventuell anpassad examination för studenter med dokumenterad, varaktig funktionsnedsättning. \u003cbr\u003e\u003cbr\u003eExaminator får medge annan examinationsform vid omexamination av enstaka studenter.",
+        "reqsForFinalGrade": "\u003cp\u003eGodk\u0026#228;nda laborationer (LAB1; 4.5 hp)\u003c/p\u003e\u003cp\u003eProjekt (PROJ; 3.0 hp), A/B/C/D/E/FX/F\u003c/p\u003e",
+        "establishment": "Kursplan för AG2411 gäller från och med HT13",
+        "languageOfInstruction": "Undervisningsspråk anges i kurstillfällesinformationen i kurs- och programkatalogen.",
+        "ethicalApproach": "\u003cul\u003e\u003cli\u003eVid grupparbete har alla i gruppen ansvar för gruppens arbete.\u003c/li\u003e\u003cli\u003eVid examination ska varje student ärligt redovisa hjälp som erhållits och källor som använts.\u003c/li\u003e\u003cli\u003eVid muntlig examination ska varje student kunna redogöra för hela uppgiften och hela lösningen.\u003c/li\u003e\u003c/ul\u003e",
+        "courseSyllabusVersionValidFromTerm": { "term": 20132 }
+      }
+    },
+    {
+      "edition": 1,
+      "validFromTerm": { "term": 20112 },
+      "inStateApproved": true,
+      "courseSyllabus": {
+        "discontinuationText": "När kurs inte längre ges har student möjlighet att examineras under ytterligare två läsår.",
+        "goals": "\u003cp\u003eEfter kursen ska studenterna:\u003c/p\u003e\u003cul\u003e\u003cli\u003evara bekanta med arkitekturen i ett GIS-system\u003c/li\u003e\u003cli\u003eha kunskap om teorin bakom de vanligaste algoritmerna i geografisk informationsvetenskap\u003c/li\u003e\u003cli\u003eha kunskap om metoder f\u0026#246;r att hantera geometriska data i databaser\u003c/li\u003e\u003cli\u003eha f\u0026#246;rm\u0026#229;gan att utf\u0026#246;ra egen modellering av geografiska data med hj\u0026#228;lp av UML\u003c/li\u003e\u003cli\u003eha f\u0026#246;rm\u0026#229;gan att utveckla sina egna program f\u0026#246;r att implementera nya GIS-applikationer\u003c/li\u003e\u003cli\u003ek\u0026#228;nna till grundl\u0026#228;ggande normer i GIS\u003c/li\u003e\u003c/ul\u003e",
+        "content": "\u003cul\u003e\u003cli\u003eGrundl\u0026#228;ggande GIS algoritmer\u003c/li\u003e\u003c/ul\u003e\u003cul\u003e\u003cli\u003eModellering av system (UML) \u003c/li\u003e\u003c/ul\u003e\u003cul\u003e\u003cli\u003eVerktygsl\u0026#229;dor, bibliotek, etc.\u003c/li\u003e\u003c/ul\u003e",
+        "disposition": "\u003cp\u003eF\u0026#246;rel\u0026#228;sningar 20 h\u003cbr /\u003eLaborationer 32 h\u003cbr /\u003eProjekt 16 h\u003c/p\u003e",
+        "eligibility": "\u003cp\u003eKandidatexamen i tekniskt lantm\u0026#228;teri (geoinformatik, GIS, kartografi, fotogrammetri, fj\u0026#228;rranalys, geodesi) eller i relevanta \u0026#228;mnen, till exempel: anl\u0026#228;ggningsteknik i den byggda milj\u0026#246;n eller motsvarande, stads-, transport-eller regional planering, milj\u0026#246;vetenskap, geografi etc. som inkluderar minst 30 hp inom omr\u0026#229;det geoinformatik, GIS, kartografi, fotogrammetri, fj\u0026#228;rranalys, geografi, urban, transport eller regional planering eller milj\u0026#246;vetenskap.\u003cbr /\u003eDessutom dokumenterade kunskaper i engelska B eller motsvarande (TOEFL, IELTS t.ex.).\u003c/p\u003e",
+        "literature": "\u003cp\u003eWorboys, M. F., and M. Duckham, 2004. GIS: A Computing Perspective, 2nd edition. Taylor \u0026amp; Francis.\u003c/p\u003e\u003cp\u003eHarrie, L., 2009. Lecture notes in GIS Algorithms, Lund University.\u003c/p\u003e",
+        "examComments": "Examinator beslutar, baserat på rekommendation från KTH:s handläggare av stöd till studenter med funktionsnedsättning, om eventuell anpassad examination för studenter med dokumenterad, varaktig funktionsnedsättning. \u003cbr\u003e\u003cbr\u003eExaminator får medge annan examinationsform vid omexamination av enstaka studenter.",
+        "reqsForFinalGrade": "\u003cp\u003eGodk\u0026#228;nda laborationer (LAB1; 4.5 hp)\u003c/p\u003e\u003cp\u003eProjekt (PROJ; 3.0 hp), A/B/C/D/E/FX/F\u003c/p\u003e",
+        "establishment": "Kursplan för AG2411 gäller från och med HT11",
+        "languageOfInstruction": "Undervisningsspråk anges i kurstillfällesinformationen i kurs- och programkatalogen.",
+        "ethicalApproach": "\u003cul\u003e\u003cli\u003eVid grupparbete har alla i gruppen ansvar för gruppens arbete.\u003c/li\u003e\u003cli\u003eVid examination ska varje student ärligt redovisa hjälp som erhållits och källor som använts.\u003c/li\u003e\u003cli\u003eVid muntlig examination ska varje student kunna redogöra för hela uppgiften och hela lösningen.\u003c/li\u003e\u003c/ul\u003e",
+        "courseSyllabusVersionValidFromTerm": { "term": 20112 }
+      }
+    },
+    {
+      "edition": 1,
+      "validFromTerm": { "term": 20102 },
+      "inStateApproved": true,
+      "courseSyllabus": {
+        "discontinuationText": "När kurs inte längre ges har student möjlighet att examineras under ytterligare två läsår.",
+        "goals": "\u003cp\u003eAfter completing the course the students should:\u003c/p\u003e\u003cul\u003e\u003cli\u003ebe familiar the architecture of a GIS systems,\u003c/li\u003e\u003cli\u003ehave knowledge about the theory behind the most common algorithms in geographic information science,\u003c/li\u003e\u003cli\u003ehave knowledge about methods to handle geometric data in databases,\u003c/li\u003e\u003cli\u003ehave the skill of performing own modelling of geographic data using UML,\u003c/li\u003e\u003cli\u003ehave the confidence and skill to develop their own programming to implement new GIS applications,\u003c/li\u003e\u003cli\u003eknow the basic standards in GIS.\u003c/li\u003e\u003c/ul\u003e",
+        "content": "\u003cp\u003e- Basic GIS algorithms\u003cbr /\u003e- Modelling of systems (UML)\u003cbr /\u003e- Toolkits, libraries, etc\u003c/p\u003e",
+        "disposition": "\u003cp\u003eLectures 24h\u003cbr /\u003eLaboration 48h\u003cbr /\u003eWritten exam\u003c/p\u003e",
+        "eligibility": "\u003cp\u003eA Bachelor\u0026#8217;s degree in surveying engineering (geoinformatics, GIS, cartography, photogrammetry, remote sensing, geodesy) or in relevant science and engineering fields, for example:\u0026#160; civil engineering in the built environment or equivalent, urban, transport or regional planning, environmental sciences, geography, etc. including courses corresponding to a minimum of 30 ECTS credits in the field of geoinformatics, GIS, cartography, photogrammetry, remote sensing, geography, urban, transport or regional planning or environmental sciences.\u003c/p\u003e\u003cp\u003eIn addition ** documented proficiency in English B or equivalent (TOEFL, IELTS e g).\u003c/p\u003e",
+        "literature": "\u003cp\u003eWorboys, M. F., and M. Duckham, 2004. GIS: A Computing Perspective, 2nd edition. Taylor \u0026amp; Francis.\u003c/p\u003e\u003cp\u003eHarrie, L., 2009. Lecture notes in GIS Algorithms, Lund University.\u003c/p\u003e",
+        "examComments": "Examinator beslutar, baserat på rekommendation från KTH:s handläggare av stöd till studenter med funktionsnedsättning, om eventuell anpassad examination för studenter med dokumenterad, varaktig funktionsnedsättning. \u003cbr\u003e\u003cbr\u003eExaminator får medge annan examinationsform vid omexamination av enstaka studenter.",
+        "reqsForFinalGrade": "\u003cp\u003eWritten exam (TEN1; 3 cr)\u003cbr /\u003eApproved laborations (LAB1; 4,5 cr)\u003c/p\u003e",
+        "establishment": "Kursplan för AG2411 gäller från och med HT10",
+        "languageOfInstruction": "Undervisningsspråk anges i kurstillfällesinformationen i kurs- och programkatalogen.",
+        "ethicalApproach": "\u003cul\u003e\u003cli\u003eVid grupparbete har alla i gruppen ansvar för gruppens arbete.\u003c/li\u003e\u003cli\u003eVid examination ska varje student ärligt redovisa hjälp som erhållits och källor som använts.\u003c/li\u003e\u003cli\u003eVid muntlig examination ska varje student kunna redogöra för hela uppgiften och hela lösningen.\u003c/li\u003e\u003c/ul\u003e",
+        "courseSyllabusVersionValidFromTerm": { "term": 20102 }
+      }
+    },
+    {
+      "edition": 1,
+      "validFromTerm": { "term": 20072 },
+      "inStateApproved": true,
+      "courseSyllabus": {
+        "discontinuationText": "När kurs inte längre ges har student möjlighet att examineras under ytterligare två läsår.",
+        "goals": "\u003cp\u003eThe student shall be able to specify and design komplex programsystems to handle Geographic Information\u003c/p\u003e",
+        "content": "\u003cul\u003e\u003cli\u003eExisting commercial and open source systems(GRASS; ArcInfo, etc)\u003c/li\u003e\u003cli\u003eOperating systems (Windows, Unix)\u003c/li\u003e\u003cli\u003eModelling of systems (UML)\u003c/li\u003e\u003cli\u003eToolkits\u003c/li\u003e\u003cli\u003eAlgorithms, libraries etc\u003c/li\u003e\u003c/ul\u003e",
+        "disposition": "\u003cp\u003eLectures 24h\u003cbr /\u003eLaboration 48h\u003c/p\u003e",
+        "eligibility": "\u003cp\u003eGIS for the Built Environment or equivalent\u003c/p\u003e",
+        "literature": "\u003cp\u003eHarrie, L. (2005). Lecture Notes in GIS Algorithms. Lund University.\u003c/p\u003e",
+        "examComments": "Examinator beslutar, baserat på rekommendation från KTH:s handläggare av stöd till studenter med funktionsnedsättning, om eventuell anpassad examination för studenter med dokumenterad, varaktig funktionsnedsättning. \u003cbr\u003e\u003cbr\u003eExaminator får medge annan examinationsform vid omexamination av enstaka studenter.",
+        "reqsForFinalGrade": "\u003cp\u003eWritten exam (TEN1; 43 cr)\u003cbr /\u003eApproved laborations (LAB1; 4,5 cr)\u003c/p\u003e",
+        "establishment": "Kursplan för AG2411 gäller från och med HT07",
+        "languageOfInstruction": "Undervisningsspråk anges i kurstillfällesinformationen i kurs- och programkatalogen.",
+        "ethicalApproach": "\u003cul\u003e\u003cli\u003eVid grupparbete har alla i gruppen ansvar för gruppens arbete.\u003c/li\u003e\u003cli\u003eVid examination ska varje student ärligt redovisa hjälp som erhållits och källor som använts.\u003c/li\u003e\u003cli\u003eVid muntlig examination ska varje student kunna redogöra för hela uppgiften och hela lösningen.\u003c/li\u003e\u003c/ul\u003e",
+        "courseSyllabusVersionValidFromTerm": { "term": 20072 }
+      }
+    }
+  ],
+  "socialCoursePageUrl": "https://www.kth.se/social/course/AG2411/",
+  "formattedGradeScales": { "AF": "A, B, C, D, E, FX, F", "PF": "P, F" }
+}

@@ -170,6 +170,8 @@ export type PostProps = {
   postId?: string;
   onPostLike?: (postId: string) => void;
   onPostDislike?: (postId: string) => void;
+  /** Merged onto the outer `Card` (e.g. full-width on course detail). */
+  className?: string;
 };
 
 export default function Post(props: Readonly<PostProps>) {
@@ -186,7 +188,7 @@ export default function Post(props: Readonly<PostProps>) {
       : `${truncateHtmlAtWord(content, MAX_COLLAPSED_CHARS)}…`;
 
   return (
-    <Card className={cn("w-[48rem] max-w-full")}>
+    <Card className={cn("w-[48rem] max-w-full", props.className)}>
       <CardContent className="flex flex-col gap-4">
         <div className="grid grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-4">
           <RatingPill name="Easy" rating={easy} />

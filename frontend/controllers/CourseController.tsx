@@ -1,8 +1,8 @@
 "use client";
 
-import { redirect, useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import profoundWords from "profane-words";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "sonner";
 import type { CourseHeaderProps } from "@/components/CourseHeader";
@@ -10,6 +10,7 @@ import type { PostProps } from "@/components/Post";
 import type { ReviewFormData } from "@/components/review";
 import { useSessionData } from "@/hooks/sessionHooks";
 import { getReviewsSocket } from "@/lib/realtime";
+import type { NeonCoursePayload } from "@/lib/courses";
 import { fetchCourseInfo } from "@/state/course/courseThunk";
 import {
   dislikeCourseReview,
@@ -18,8 +19,23 @@ import {
   submitReview,
 } from "@/state/reviews/reviewThunk";
 import type { Dispatch, RootState } from "@/state/store";
+import { CoursePageSkeleton } from "@/components/CoursePageSkeleton";
 import CourseView from "@/views/CourseView";
-import SuspenseView from "@/views/SuspenseView";
+
+type MergedCourseInfo = {
+  credits: number | null;
+  course_name?: string;
+  course_code?: string;
+  name?: string;
+  courseCode?: string;
+  department: string;
+  goals: string;
+  content: string;
+  summary?: string;
+  rating?: number;
+  _id?: string;
+  neon?: NeonCoursePayload | null;
+};
 
 type Review = {
   id: string;
@@ -110,12 +126,17 @@ const getPercentageWouldRecommend = (posts: PostProps[]) => {
 export default function CourseController() {
   const params = useParams<{ courseCode: string }>();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const dispatch = useDispatch<Dispatch>();
   const { userId } = useSessionData();
-  const [isChecking, setIsChecking] = useState(true);
+  const openReview = searchParams.get("writeReview") === "1";
+  const fromSaved = searchParams.get("from") === "saved";
+  const backHref = fromSaved ? "/favorites" : "/search";
+  const backLabel = fromSaved ? "Back to saved courses" : "Back to explore";
 
   // Select from Redux
   const courseInfo = useSelector((s: RootState) => s.course.courseInfo);
+  const courseLoading = useSelector((s: RootState) => s.course.loading);
   const reviews = useSelector((s: RootState) => s.reviews.reviews);
   const reviewsLoading = useSelector((s: RootState) => s.reviews.loading);
   const courseError = useSelector((s: RootState) => s.course.error);
@@ -128,10 +149,8 @@ export default function CourseController() {
   // Initial fetch
   useEffect(() => {
     if (!params?.courseCode) return;
-    setIsChecking(true);
     dispatch(fetchCourseInfo(params.courseCode));
     dispatch(fetchCourseReviews({ courseCode: params.courseCode, userId }));
-    setIsChecking(false);
   }, [params.courseCode, userId, dispatch]);
 
   // Websocket: Live update on review changes
@@ -199,15 +218,32 @@ export default function CourseController() {
 
   // Compose CourseHeaderProps (from pure utils + Redux state)
   let courseHeader: CourseHeaderProps | null = null;
-  if (courseInfo && reviews && reviews.length >= 0) {
+  if (courseInfo && reviews !== null) {
     const posts = reviews as PostProps[];
+    const ci = courseInfo as MergedCourseInfo;
+    const neon = (ci.neon ?? null) as NeonCoursePayload | null;
 
-    // Using type assertion with proper fallback for courseInfo
+    const courseCode = String(
+      neon?.courseCode ??
+        ci.courseCode ??
+        ci.course_code ??
+        params.courseCode ??
+        "",
+    );
+    const courseName = String(neon?.name ?? ci.name ?? ci.course_name ?? "");
+    const goals = String(ci.goals ?? "");
+    const content = String(ci.content ?? "");
+    const department = String(neon?.department ?? ci.department ?? "");
+    const summary =
+      typeof ci.summary === "string" && ci.summary.trim()
+        ? ci.summary
+        : undefined;
+
     courseHeader = {
-      courseCode: (courseInfo as any).course_code ?? "",
-      courseName: (courseInfo as any).course_name ?? "",
-      credits: (courseInfo as any).credits ?? null,
-      syllabus: `${(courseInfo as any).content || ""} \n\n ${(courseInfo as any).goals || ""}`,
+      courseCode,
+      courseName,
+      credits: courseInfo.credits ?? null,
+      syllabus: `${content}\n\n${goals}`,
       courseRating: posts.length > 0 ? getAverageRating(posts) : null,
       ratingDistribution: getRatingDistribution(posts),
       easyScoreDistribution: getEasyScoreDistribution(posts),
@@ -216,7 +252,7 @@ export default function CourseController() {
       percentageWouldRecommend: posts.length
         ? getPercentageWouldRecommend(posts)
         : null,
-      userId: userId,
+      userId: userId ?? "",
       onAddReview: handleAddReview,
     };
   }
@@ -224,9 +260,74 @@ export default function CourseController() {
     ? reviews.map((review) => ({ ...review, postId: review.id }))
     : [];
 
-  if (!params.courseCode || isChecking || reviewsLoading || !courseHeader) {
-    return <SuspenseView />;
+  if (!params.courseCode) {
+    return (
+      <CoursePageSkeleton backHref={backHref} backLabel={backLabel} />
+    );
   }
+
+  if (courseError && !courseLoading) {
+    return (
+      <div className="mx-auto max-w-4xl px-4 py-16 text-center">
+        <p className="text-destructive text-lg font-medium">
+          Could not load this course.
+        </p>
+        <p className="mt-2 text-muted-foreground text-sm">{courseError}</p>
+        <button
+          type="button"
+          className="mt-6 text-primary text-sm underline"
+          onClick={() => router.push(backHref)}
+        >
+          {backLabel}
+        </button>
+      </div>
+    );
+  }
+
+  const routeCode = params.courseCode?.toUpperCase() ?? "";
+  const loadedInfoCode = (() => {
+    if (!courseInfo) return null as string | null;
+    const ci = courseInfo as MergedCourseInfo;
+    const raw =
+      ci.course_code ?? ci.courseCode ?? ci.neon?.courseCode ?? "";
+    return raw ? String(raw).toUpperCase() : null;
+  })();
+  /** Avoid flashing previous course while Redux still holds last route’s data. */
+  const courseInfoStale =
+    Boolean(courseInfo) &&
+    Boolean(loadedInfoCode) &&
+    loadedInfoCode !== routeCode;
+  const reviewsStale =
+    Array.isArray(reviews) &&
+    reviews.length > 0 &&
+    reviews[0].courseCode?.toUpperCase() !== routeCode;
+
+  if (
+    courseLoading ||
+    reviewsLoading ||
+    reviews === null ||
+    !courseHeader ||
+    courseInfoStale ||
+    reviewsStale
+  ) {
+    return (
+      <CoursePageSkeleton
+        courseCode={params.courseCode}
+        backHref={backHref}
+        backLabel={backLabel}
+      />
+    );
+  }
+
+  const ci = courseInfo as MergedCourseInfo;
+  const neon = (ci.neon ?? null) as NeonCoursePayload | null;
+  const department = String(neon?.department ?? ci.department ?? "");
+  const goalsHtml = String(ci.goals ?? "");
+  const contentHtml = String(ci.content ?? "");
+  const summary =
+    typeof ci.summary === "string" && ci.summary.trim() ? ci.summary : undefined;
+  const neonPayload = neon;
+
   return (
     <CourseView
       courseCode={courseHeader.courseCode}
@@ -239,11 +340,19 @@ export default function CourseController() {
       interestingScoreDistribution={courseHeader.interestingScoreDistribution}
       ratingDistribution={courseHeader.ratingDistribution}
       courseRating={courseHeader.courseRating}
-      userId={userId}
+      userId={userId ?? ""}
       onAddReview={courseHeader.onAddReview}
       posts={posts}
       onLikePost={handleLikePost}
       onDislikePost={handleDislikePost}
+      openReview={openReview}
+      department={department}
+      goalsHtml={goalsHtml}
+      contentHtml={contentHtml}
+      summary={summary}
+      neon={neonPayload}
+      backHref={backHref}
+      backLabel={backLabel}
     />
   );
 }

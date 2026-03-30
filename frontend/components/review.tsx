@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Rating, RatingButton } from "@/components/ui/shadcn-io/rating";
 import { RichTextEditor } from "./RichEditor";
@@ -32,6 +32,8 @@ type ReviewProps = {
     userId: string,
     reviewForm: ReviewFormData,
   ) => Promise<boolean>;
+  /** If true, open the editor dialog on mount (used when clicking "Write a review"). */
+  openOnLoad?: boolean;
 };
 
 export function Review(props: Readonly<ReviewProps>) {
@@ -44,7 +46,7 @@ export function Review(props: Readonly<ReviewProps>) {
   });
 
   const [isSubmittingReviewForm, setIsSubmittingReviewForm] = useState(false);
-  const [dialogIsOpen, setDialogIsOpen] = useState(false);
+  const [dialogIsOpen, setDialogIsOpen] = useState(Boolean(props.openOnLoad));
 
   const isFormInvalid =
     !reviewForm.content ||
@@ -74,6 +76,11 @@ export function Review(props: Readonly<ReviewProps>) {
       setIsSubmittingReviewForm(false);
     }
   };
+
+  // If we navigated here with `?writeReview=1`, immediately open the editor.
+  useEffect(() => {
+    if (props.openOnLoad) setDialogIsOpen(true);
+  }, [props.openOnLoad]);
 
   return (
     <Dialog open={dialogIsOpen} onOpenChange={setDialogIsOpen}>
