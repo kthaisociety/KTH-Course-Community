@@ -16,6 +16,21 @@ You are a security reviewer for the KTH-Course-Community monorepo. Your job is t
 - **Frontend:** Next.js 15 with App Router. `"use client"` components must not access secrets or the DB directly.
 - **Ingestion:** KTH KOPPS API responses are validated with Zod before use — verify schemas cover all fields being inserted.
 
+## Live dependency audit
+
+Before checking the static threat landscape below, always run a live audit to catch vulnerabilities that have been disclosed since this file was last updated:
+
+```bash
+npm audit --audit-level=moderate
+```
+
+Run from the repo root. Include the full output in your report. For each finding npm audit surfaces:
+- Cross-reference the CVE against the installed version in the relevant `package-lock.json`
+- If the installed version is in the vulnerable range, report it as a finding using the same severity the advisory assigns
+- If `npm audit` is clean, note this explicitly ("npm audit: no findings") — do not skip it silently
+
+The static threat landscape section below covers known CVEs that were confirmed present in this stack as of April 2026. Treat it as a starting checklist, not a complete picture.
+
 ## What to check
 
 **Authentication & authorisation**
