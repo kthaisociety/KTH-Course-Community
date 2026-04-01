@@ -30,7 +30,7 @@ describe("UserController", () => {
   };
 
   // For testing profile image later when functionality fixed
-  const mockFile: Express.Multer.File = {
+  const _mockFile: Express.Multer.File = {
     fieldname: "file",
     originalname: "profile.jpg",
     encoding: "7bit",

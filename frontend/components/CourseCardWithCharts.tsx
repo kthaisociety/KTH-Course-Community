@@ -28,7 +28,7 @@ function stripHtml(html: string): string {
 function truncate(text: string, maxLength: number): string {
   const t = text.trim();
   if (t.length <= maxLength) return t;
-  return t.slice(0, maxLength) + "…";
+  return `${t.slice(0, maxLength)}…`;
 }
 
 export type CourseCardWithChartsProps = {
@@ -57,7 +57,7 @@ export type CourseCardWithChartsProps = {
 
 export function CourseCardWithCharts({
   title,
-  goals,
+  goals: _goals,
   content: _content,
   summary,
   courseCode,
