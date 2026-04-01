@@ -1,11 +1,11 @@
 "use client";
 
+import { Bookmark, Search } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 import { DiCompass } from "react-icons/di";
 import { MdContactSupport, MdOutlineContactSupport } from "react-icons/md";
-import { Bookmark, Search } from "lucide-react";
 import { RiBookOpenFill, RiBookOpenLine } from "react-icons/ri";
 import { useDispatch, useSelector } from "react-redux";
 import { ModeToggle } from "@/components/mode-toggle";
