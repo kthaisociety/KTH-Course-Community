@@ -1,11 +1,10 @@
 "use client";
 
-import type { ThunkDispatch } from "@reduxjs/toolkit";
 import { useRouter } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "sonner";
 import Session from "supertokens-auth-react/recipe/session";
-import type { RootState } from "@/state/store";
+import type { AppDispatch, RootState } from "@/state/store";
 import { setProfilePicture } from "@/state/user/userSlice";
 import {
   deleteAccount,
@@ -16,7 +15,7 @@ import ProfileView from "@/views/ProfileView";
 
 export default function ProfileController() {
   const router = useRouter();
-  const dispatch = useDispatch<ThunkDispatch<RootState, void, any>>();
+  const dispatch = useDispatch<AppDispatch>();
   const { name, email, profilePicture } = useSelector(
     (state: RootState) => state.user,
   );
@@ -34,14 +33,14 @@ export default function ProfileController() {
         url?: string;
         error?: string;
         message?: string;
-      } = await (dispatch as any)(uploadProfilePicture(file));
+      } = await dispatch(uploadProfilePicture(file));
       if (!result.success) {
         toast.error(result.error || result.message || "Image upload failed.");
         if (profilePicture) dispatch(setProfilePicture(profilePicture));
         URL.revokeObjectURL(localPreview);
         return;
       }
-      await (dispatch as any)(getUser());
+      await dispatch(getUser());
       URL.revokeObjectURL(localPreview);
     }
   };

@@ -37,22 +37,6 @@ type MergedCourseInfo = {
   neon?: NeonCoursePayload | null;
 };
 
-type Review = {
-  id: string;
-  userId: string;
-  courseCode: string;
-  easyScore: number;
-  usefulScore: number;
-  interestingScore: number;
-  wouldRecommend: boolean;
-  content: string;
-  createdAt: Date;
-  updatedAt: Date;
-  likeCount: number;
-  dislikeCount: number;
-  userVote: string | null;
-};
-
 const getAverageRating = (posts: PostProps[]) => {
   const totalScores = posts.reduce(
     (acc, post) => ({
@@ -233,8 +217,8 @@ export default function CourseController() {
     const courseName = String(neon?.name ?? ci.name ?? ci.course_name ?? "");
     const goals = String(ci.goals ?? "");
     const content = String(ci.content ?? "");
-    const department = String(neon?.department ?? ci.department ?? "");
-    const summary =
+    const _department = String(neon?.department ?? ci.department ?? "");
+    const _summary =
       typeof ci.summary === "string" && ci.summary.trim()
         ? ci.summary
         : undefined;

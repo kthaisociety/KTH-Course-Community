@@ -48,7 +48,7 @@ export function uploadProfilePicture(file: File) {
         try {
           const error = await res.json();
           errorMsg = error?.message || error?.error || errorMsg;
-        } catch (jsonErr) {
+        } catch (_jsonErr) {
           errorMsg = await res.text();
         }
         throw new Error(errorMsg);

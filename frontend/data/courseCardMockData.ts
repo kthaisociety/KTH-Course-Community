@@ -34,8 +34,8 @@ function hash(str: string): number {
 /** Returns mock chart data for a course code. Same code always gets same values. */
 export function getMockChartData(courseCode: string): CourseCardChartData {
   const h = hash(courseCode);
-  const h2 = hash(courseCode + "2");
-  const h3 = hash(courseCode + "3");
+  const h2 = hash(`${courseCode}2`);
+  const h3 = hash(`${courseCode}3`);
 
   // Three segments summing to 100 (examination methods): yellow, blue, green
   const rawA = 0.2 + 0.6 * h;
@@ -156,8 +156,8 @@ export function getMockCourseStats(courseCode: string): CourseCardStats {
     return STATS_BY_COURSE[normalized];
   }
   const h = hash(courseCode);
-  const h2 = hash(courseCode + "stats2");
-  const h3 = hash(courseCode + "stats3");
+  const h2 = hash(`${courseCode}stats2`);
+  const h3 = hash(`${courseCode}stats3`);
   return {
     reviewCount: Math.max(0, Math.round(3 + 47 * h)),
     recommendCount: Math.max(0, Math.round(1 + 24 * h2)),
@@ -193,12 +193,12 @@ const KEYWORD_POOL = [
 /** Mock keywords (comma-separated). Replace with API data when available. */
 export function getMockKeywords(courseCode: string): string {
   const h = hash(courseCode);
-  const h2 = hash(courseCode + "kw");
+  const h2 = hash(`${courseCode}kw`);
   const count = 2 + (Math.floor(h2 * 3) % 2); // 2 or 3 keywords
   const picks: string[] = [];
   for (let i = 0; i < count; i++) {
     const idx =
-      Math.floor(hash(courseCode + `k${i}`) * KEYWORD_POOL.length) %
+      Math.floor(hash(`${courseCode}k${i}`) * KEYWORD_POOL.length) %
       KEYWORD_POOL.length;
     const kw = KEYWORD_POOL[idx];
     if (kw && !picks.includes(kw)) picks.push(kw);
@@ -233,7 +233,7 @@ export function getMockSummary(courseCode: string): string {
     "Survey of methods and tools used in industry; guest lectures from practitioners.",
   ];
   const idx =
-    Math.floor(hash(courseCode + "sum") * snippets.length) % snippets.length;
+    Math.floor(hash(`${courseCode}sum`) * snippets.length) % snippets.length;
   return (
     snippets[idx] ?? "Course overview and learning outcomes will appear here."
   );
