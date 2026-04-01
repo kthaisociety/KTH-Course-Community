@@ -1,3 +1,4 @@
+import type { Readable } from "node:stream";
 import { Test, type TestingModule } from "@nestjs/testing";
 import type { SessionContainer } from "supertokens-node/recipe/session";
 import { UserController } from "./user.controller";
@@ -40,7 +41,7 @@ describe("UserController", () => {
     destination: "",
     filename: "",
     path: "",
-    stream: null as any,
+    stream: null as unknown as Readable,
   };
 
   beforeEach(async () => {
@@ -51,7 +52,7 @@ describe("UserController", () => {
 
     mockSession = {
       getUserId: jest.fn(),
-    } as any;
+    } as unknown as jest.Mocked<SessionContainer>;
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [UserController],
