@@ -26,7 +26,7 @@ interface ChatRequestBody {
  *     → POST /api/ai/chat       (Next.js proxy route)
  *     → POST /ai/chat           (this controller)
  *     → kthCourseAgent.stream() (ToolLoopAgent, Vercel AI Gateway)
- *     → openai/gpt-5-mini
+ *     → openai/gpt-5.4-mini
  *   ← pipeAgentUIStreamToResponse()
  *   ← UI message stream forwarded back to the browser
  *

@@ -162,7 +162,7 @@ Browser (/ai-demo, useChat + DefaultChatTransport)
   → NestJS AiController
   → kthCourseAgent (ToolLoopAgent)
     → retrieveKthCourses / getWeather
-    → AI Gateway → openai/gpt-5-mini
+    → AI Gateway → openai/gpt-5.4-mini
   ← UI message stream
 ```
 
@@ -173,7 +173,7 @@ The demo currently sends requests directly from the browser to the NestJS backen
 | File | Role |
 |---|---|
 | `backend-nest/src/ai/ai.controller.ts` | Exposes `POST /ai/chat`, validates `locale` and `preferredDifficulty`, then streams the agent response with `pipeAgentUIStreamToResponse` |
-| `backend-nest/src/ai/kth-course-agent.ts` | Defines the `ToolLoopAgent`, the model (`openai/gpt-5-mini`), base instructions, call options schema, and `prepareCall` logic |
+| `backend-nest/src/ai/kth-course-agent.ts` | Defines the `ToolLoopAgent`, the model (`openai/gpt-5.4-mini`), base instructions, call options schema, `prepareCall` logic, and first-step tool routing |
 | `backend-nest/src/ai/tools.ts` | Defines AI SDK `tool(...)` handlers for `retrieveKthCourses` and `getWeather` |
 | `backend-nest/src/ai/ai.service.ts` | Provides reusable AI SDK embedding helpers via `embed`, `embedMany`, and `cosineSimilarity` using `gateway.embeddingModel(...)` |
 
@@ -211,7 +211,7 @@ Edit the `model` field in `backend-nest/src/ai/kth-course-agent.ts`:
 
 ```ts
 export const kthCourseAgent = new ToolLoopAgent({
-  model: "openai/gpt-5-mini",
+  model: "openai/gpt-5.4-mini",
   // ...
 });
 ```

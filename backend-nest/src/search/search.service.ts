@@ -1,4 +1,4 @@
-import type { Client as ESClient } from "@elastic/elasticsearch";
+import type { Client as ESClient, estypes } from "@elastic/elasticsearch";
 import { Inject, Injectable } from "@nestjs/common";
 import { inArray, sql } from "drizzle-orm";
 import type { NeonHttpDatabase } from "drizzle-orm/neon-http";
@@ -35,28 +35,22 @@ export class SearchService {
     filters?: { department?: string; minRating?: number },
   ): Promise<SearchResult[]> {
     if (!query?.trim()) return [];
-    const searchFilters: Array<{
-      wildcard?: { department: string };
-      term?: { department: string };
-      range?: { averageRating: { gte: number } };
-    }> = [];
+    const searchFilters: estypes.QueryDslQueryContainer[] = [];
     if (filters?.department) {
       const dept = filters.department;
       // console.log("Filtering by department:", JSON.stringify(dept));
       const departments = ["EECS", "ABE", "CBH", "ITM", "SCI"];
       const matchingDepts = departments.find((abbr) => dept.includes(abbr));
       if (matchingDepts) {
-        const wildcardFilter = {
+        searchFilters.push({
           wildcard: {
             department: `*${matchingDepts}*`,
           },
-        };
-        searchFilters.push(wildcardFilter);
+        } as estypes.QueryDslQueryContainer);
       } else {
-        const termFilter = {
+        searchFilters.push({
           term: { department: dept },
-        };
-        searchFilters.push(termFilter);
+        } as estypes.QueryDslQueryContainer);
       }
     }
 

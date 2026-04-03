@@ -3,8 +3,8 @@
 import { useChat } from "@ai-sdk/react";
 import type { FileUIPart } from "ai";
 import { DefaultChatTransport } from "ai";
-import { BookOpenIcon, CheckIcon, GlobeIcon } from "lucide-react";
-import { useCallback, useMemo, useState } from "react";
+import { BookOpenIcon } from "lucide-react";
+import { useCallback, useState } from "react";
 import {
   Attachment,
   AttachmentPreview,
@@ -28,19 +28,6 @@ import {
   MessageContent,
   MessageResponse,
 } from "@/components/ai-elements/message";
-import {
-  ModelSelector,
-  ModelSelectorContent,
-  ModelSelectorEmpty,
-  ModelSelectorGroup,
-  ModelSelectorInput,
-  ModelSelectorItem,
-  ModelSelectorList,
-  ModelSelectorLogo,
-  ModelSelectorLogoGroup,
-  ModelSelectorName,
-  ModelSelectorTrigger,
-} from "@/components/ai-elements/model-selector";
 import type { PromptInputMessage } from "@/components/ai-elements/prompt-input";
 import {
   PromptInput,
@@ -49,7 +36,6 @@ import {
   PromptInputActionMenuContent,
   PromptInputActionMenuTrigger,
   PromptInputBody,
-  PromptInputButton,
   PromptInputFooter,
   PromptInputHeader,
   PromptInputSubmit,
@@ -57,7 +43,6 @@ import {
   PromptInputTools,
   usePromptInputAttachments,
 } from "@/components/ai-elements/prompt-input";
-import { SpeechInput } from "@/components/ai-elements/speech-input";
 import { Suggestion, Suggestions } from "@/components/ai-elements/suggestion";
 import {
   Tool,
@@ -75,11 +60,11 @@ import type { KthCourseAgentUIMessage } from "@/types/ai/kth-course-agent";
  * ai-elements component library for a polished UI:
  *
  *  Browser (useChat)
- *    → POST /api/ai/chat          (Next.js proxy route)
+ *
  *    → POST <backend>/ai/chat     (NestJS AiController)
  *    → kthCourseAgent.stream()    (ToolLoopAgent, multi-step tool loop)
  *      ↳ tools: retrieveKthCourses, getWeather
- *    → openai/gpt-5-mini          (via Vercel AI Gateway)
+ *    → openai/gpt-5.4-mini        (via Vercel AI Gateway)
  *
  * Route: /ai-demo
  */
@@ -91,39 +76,6 @@ const suggestions = [
   "Compare algorithms and data structures courses",
   "What is the weather in Stockholm?",
 ];
-
-const models = [
-  {
-    chef: "OpenAI",
-    chefSlug: "openai",
-    id: "gpt-4o",
-    name: "GPT-4o",
-    providers: ["openai", "azure"],
-  },
-  {
-    chef: "OpenAI",
-    chefSlug: "openai",
-    id: "gpt-4o-mini",
-    name: "GPT-4o Mini",
-    providers: ["openai", "azure"],
-  },
-  {
-    chef: "Anthropic",
-    chefSlug: "anthropic",
-    id: "claude-sonnet-4-20250514",
-    name: "Claude 4 Sonnet",
-    providers: ["anthropic", "azure", "amazon-bedrock"],
-  },
-  {
-    chef: "Google",
-    chefSlug: "google",
-    id: "gemini-2.0-flash-exp",
-    name: "Gemini 2.0 Flash",
-    providers: ["google"],
-  },
-];
-
-const chefs = [...new Set(models.map((m) => m.chef))];
 
 // ── Attachment helpers ────────────────────────────────────────────────────────
 
@@ -162,43 +114,10 @@ const PromptAttachmentsDisplay = () => {
   );
 };
 
-// ── Model selector item ───────────────────────────────────────────────────────
-
-const ModelItem = ({
-  m,
-  isSelected,
-  onSelect,
-}: {
-  m: (typeof models)[0];
-  isSelected: boolean;
-  onSelect: (id: string) => void;
-}) => {
-  const handleSelect = useCallback(() => onSelect(m.id), [onSelect, m.id]);
-  return (
-    <ModelSelectorItem onSelect={handleSelect} value={m.id}>
-      <ModelSelectorLogo provider={m.chefSlug} />
-      <ModelSelectorName>{m.name}</ModelSelectorName>
-      <ModelSelectorLogoGroup>
-        {m.providers.map((provider) => (
-          <ModelSelectorLogo key={provider} provider={provider} />
-        ))}
-      </ModelSelectorLogoGroup>
-      {isSelected ? (
-        <CheckIcon className="ml-auto size-4" />
-      ) : (
-        <div className="ml-auto size-4" />
-      )}
-    </ModelSelectorItem>
-  );
-};
-
 // ── Page ─────────────────────────────────────────────────────────────────────
 
 export default function AiDemoPage() {
   const [text, setText] = useState("");
-  const [model, setModel] = useState<string>(models[0].id);
-  const [modelSelectorOpen, setModelSelectorOpen] = useState(false);
-  const [useWebSearch, setUseWebSearch] = useState(false);
 
   const { messages, sendMessage, status } = useChat<KthCourseAgentUIMessage>({
     transport: new DefaultChatTransport({
@@ -207,11 +126,6 @@ export default function AiDemoPage() {
   });
 
   const isLoading = status === "submitted" || status === "streaming";
-
-  const selectedModelData = useMemo(
-    () => models.find((m) => m.id === model),
-    [model],
-  );
 
   const handleSubmit = useCallback(
     (message: PromptInputMessage) => {
@@ -229,23 +143,7 @@ export default function AiDemoPage() {
     [sendMessage],
   );
 
-  const handleTranscriptionChange = useCallback((transcript: string) => {
-    setText((prev) => (prev ? `${prev} ${transcript}` : transcript));
-  }, []);
-
-  const handleModelSelect = useCallback((modelId: string) => {
-    setModel(modelId);
-    setModelSelectorOpen(false);
-  }, []);
-
-  const toggleWebSearch = useCallback(() => {
-    setUseWebSearch((prev) => !prev);
-  }, []);
-
-  const isSubmitDisabled = useMemo(
-    () => !text.trim() || isLoading,
-    [text, isLoading],
-  );
+  const isSubmitDisabled = !text.trim() || isLoading;
 
   return (
     <div className="relative flex size-full flex-col divide-y overflow-hidden">
@@ -362,58 +260,6 @@ export default function AiDemoPage() {
                     <PromptInputActionAddAttachments />
                   </PromptInputActionMenuContent>
                 </PromptInputActionMenu>
-                <SpeechInput
-                  className="shrink-0"
-                  onTranscriptionChange={handleTranscriptionChange}
-                  size="icon"
-                  variant="ghost"
-                />
-                <PromptInputButton
-                  onClick={toggleWebSearch}
-                  variant={useWebSearch ? "default" : "ghost"}
-                >
-                  <GlobeIcon size={16} />
-                  <span>Search</span>
-                </PromptInputButton>
-                <ModelSelector
-                  onOpenChange={setModelSelectorOpen}
-                  open={modelSelectorOpen}
-                >
-                  <ModelSelectorTrigger asChild>
-                    <PromptInputButton>
-                      {selectedModelData?.chefSlug && (
-                        <ModelSelectorLogo
-                          provider={selectedModelData.chefSlug}
-                        />
-                      )}
-                      {selectedModelData?.name && (
-                        <ModelSelectorName>
-                          {selectedModelData.name}
-                        </ModelSelectorName>
-                      )}
-                    </PromptInputButton>
-                  </ModelSelectorTrigger>
-                  <ModelSelectorContent>
-                    <ModelSelectorInput placeholder="Search models…" />
-                    <ModelSelectorList>
-                      <ModelSelectorEmpty>No models found.</ModelSelectorEmpty>
-                      {chefs.map((chef) => (
-                        <ModelSelectorGroup heading={chef} key={chef}>
-                          {models
-                            .filter((m) => m.chef === chef)
-                            .map((m) => (
-                              <ModelItem
-                                isSelected={model === m.id}
-                                key={m.id}
-                                m={m}
-                                onSelect={handleModelSelect}
-                              />
-                            ))}
-                        </ModelSelectorGroup>
-                      ))}
-                    </ModelSelectorList>
-                  </ModelSelectorContent>
-                </ModelSelector>
               </PromptInputTools>
               <PromptInputSubmit disabled={isSubmitDisabled} status={status} />
             </PromptInputFooter>

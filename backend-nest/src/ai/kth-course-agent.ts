@@ -34,7 +34,7 @@ export type KthCourseAgentCallOptions = z.infer<
  * the agent's system instructions and active tool set at call time.
  */
 export const kthCourseAgent = new ToolLoopAgent({
-  model: "openai/gpt-5-mini",
+  model: "openai/gpt-5.4-mini",
   instructions:
     "You are a helpful KTH Course Community assistant. Help students find courses, understand curricula, and plan their studies at KTH Royal Institute of Technology.",
   tools: {
@@ -56,12 +56,6 @@ export const kthCourseAgent = new ToolLoopAgent({
           ? `\n- Preferred difficulty: ${options.preferredDifficulty} (highlight courses at this level when relevant)`
           : ""
       }`,
-    // Disable the weather tool when the query is clearly course-related by
-    // limiting activeTools.  Here we keep both tools active at all times as
-    // an example — swap this logic with real business rules as needed.
-    activeTools: ["retrieveKthCourses", "getWeather"] as Array<
-      "retrieveKthCourses" | "getWeather"
-    >,
   }),
 });
 

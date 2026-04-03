@@ -10,7 +10,7 @@ import { cosineSimilarity, embed, embedMany, gateway } from "ai";
  *
  * Model string format: "<provider>/<model-id>"
  * Examples:
- *   "openai/gpt-5-mini"
+ *   "openai/gpt-5.4-mini"
  *   "anthropic/claude-sonnet-4.5"
  *   "google/gemini-2.5-pro"
  */

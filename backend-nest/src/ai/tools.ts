@@ -25,10 +25,11 @@ export const retrieveKthCoursesTool = tool({
 });
 
 /**
- * Get the current weather for a location (demo tool).
+ * Get demo weather for a location.
  */
 export const getWeatherTool = tool({
-  description: "Get the current weather for a given city.",
+  description:
+    "Get simulated demo weather for a given city. Use this for weather questions, but do not present the result as live real-world weather.",
   inputSchema: z.object({
     city: z.string().describe("The city to get the weather for"),
   }),
