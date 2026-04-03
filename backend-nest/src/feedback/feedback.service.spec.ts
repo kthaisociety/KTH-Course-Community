@@ -2,9 +2,14 @@ import { Test, type TestingModule } from "@nestjs/testing";
 import { DRIZZLE } from "../database/drizzle.module";
 import { FeedbackService } from "./feedback.service";
 
+type FeedbackDbMock = {
+  insert: jest.Mock;
+  values: jest.Mock;
+};
+
 describe("FeedbackService", () => {
   let feedbackService: FeedbackService;
-  let mockDb: any;
+  let mockDb: FeedbackDbMock;
 
   const mockFeedbackData = {
     name: "Sven",

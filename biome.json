@@ -62,6 +62,15 @@
   "overrides": [
     {
       "includes": [
+        "frontend/components/ai-elements/**",
+        "frontend/components/ui/**"
+      ],
+      "linter": {
+        "enabled": false
+      }
+    },
+    {
+      "includes": [
         "backend-nest/src/**/*.service.ts",
         "backend-nest/src/**/*.controller.ts",
         "backend-nest/src/**/*.module.ts"

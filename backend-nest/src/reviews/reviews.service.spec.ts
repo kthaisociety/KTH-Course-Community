@@ -3,9 +3,24 @@ import { DRIZZLE } from "../database/drizzle.module";
 import { ReviewsGateway } from "./reviews.gateway";
 import { ReviewsService } from "./reviews.service";
 
+type ReviewsDbMock = {
+  insert: jest.Mock;
+  select: jest.Mock;
+  update: jest.Mock;
+  delete: jest.Mock;
+  values: jest.Mock;
+  from: jest.Mock;
+  where: jest.Mock;
+  limit: jest.Mock;
+  set: jest.Mock;
+  leftJoin: jest.Mock;
+  orderBy: jest.Mock;
+  returning: jest.Mock;
+};
+
 describe("ReviewsService", () => {
   let reviewsService: ReviewsService;
-  let mockDb: any;
+  let mockDb: ReviewsDbMock;
 
   const mockReviewData = {
     easyScore: 4,

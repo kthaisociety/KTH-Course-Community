@@ -71,9 +71,7 @@ export default function UserCoursesView({
                   onSeeReviews={() => onSeeReviews(course.courseCode)}
                   onWriteReview={() => onWriteReview(course.courseCode)}
                   onToggleFavorite={() => onToggleFavorite(course.courseCode)}
-                  onAddToComparison={() =>
-                    onAddToComparison(course.courseCode)
-                  }
+                  onAddToComparison={() => onAddToComparison(course.courseCode)}
                 />
               </li>
             ))}
@@ -82,8 +80,8 @@ export default function UserCoursesView({
 
         {!isListLoading && userFavoriteCourses.length === 0 && (
           <p className="rounded-lg border border-dashed border-border bg-muted/20 px-6 py-12 text-center text-muted-foreground text-sm">
-            You have no saved courses yet. Save courses from explore to see
-            them here.
+            You have no saved courses yet. Save courses from explore to see them
+            here.
           </p>
         )}
       </div>

@@ -1,5 +1,4 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
-import type { SelectUserFavorites } from "../../../types/database/schema";
 import { clearSession, getSession } from "../session/sessionSlice";
 
 export interface UserState {

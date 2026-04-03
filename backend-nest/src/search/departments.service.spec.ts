@@ -4,7 +4,9 @@ import { DepartmentsService } from "./departments.service";
 
 describe("DepartmentsService", () => {
   let service: DepartmentsService;
-  let mockDb: any;
+  let mockDb: {
+    execute: jest.Mock;
+  };
 
   beforeEach(async () => {
     mockDb = {

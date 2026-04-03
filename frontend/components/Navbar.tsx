@@ -1,14 +1,15 @@
 "use client";
 
+import { Bookmark, Search } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 import { DiCompass } from "react-icons/di";
 import { MdContactSupport, MdOutlineContactSupport } from "react-icons/md";
-import { Bookmark, Search } from "lucide-react";
 import { RiBookOpenFill, RiBookOpenLine } from "react-icons/ri";
 import { useDispatch, useSelector } from "react-redux";
 import { ModeToggle } from "@/components/mode-toggle";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 // UI imports
 import { Button } from "@/components/ui/button";
 import {
@@ -137,19 +138,18 @@ export default function Navbar() {
       {/* PROFILE CARD */}
       <DropdownMenu>
         <DropdownMenuTrigger className="w-full mb-10 h-auto rounded-md text-sm font-medium transition-all gap-2 py-2 pl-2 pr-2 justify-start whitespace-normal cursor-pointer flex items-center group hover:bg-primary-light">
-          {user.profilePicture ? (
-            <img
-              src={user.profilePicture}
-              alt="Profile"
-              width={40}
-              height={40}
-              className="rounded-full object-cover"
-            />
-          ) : (
-            <div className="w-10 h-10 rounded-full bg-primary-light flex items-center justify-center text-white font-semibold">
+          <Avatar className="w-10 h-10">
+            {user.profilePicture ? (
+              <AvatarImage
+                src={user.profilePicture}
+                alt="Profile"
+                className="rounded-full object-cover"
+              />
+            ) : null}
+            <AvatarFallback className="bg-primary-light text-white font-semibold">
               {getInitials(user.name, user.email)}
-            </div>
-          )}
+            </AvatarFallback>
+          </Avatar>
           <span className="transition-all group-hover:font-bold">
             {user.name?.trim() ||
               user.email?.split("@")[0] ||

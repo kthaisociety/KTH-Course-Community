@@ -54,7 +54,7 @@ export default function ProfileView({
             <div className="flex items-center gap-6">
               <Avatar className="w-24 h-24 border-4 border-primary/10">
                 {preview ? (
-                  <img
+                  <AvatarImage
                     src={preview}
                     alt={name}
                     className="w-full h-full object-cover"
