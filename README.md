@@ -135,6 +135,58 @@ docker build -t your-dockerhub-username/course-compass-frontend:latest -f Docker
 docker build -t your-dockerhub-username/course-compass-backend:latest -f Dockerfile.backend .
 ```
 
+## AI Integration
+
+This project uses the [Vercel AI SDK](https://ai-sdk.dev) with the [AI Gateway](https://vercel.com/ai-gateway) as the model provider, giving access to models from OpenAI, Anthropic, Google, and others via a single API key.
+
+### Setup
+
+Add `AI_GATEWAY_API_KEY` to `backend-nest/.env.local`:
+
+```env
+AI_GATEWAY_API_KEY=your_key_here
+```
+
+Get a key at [vercel.com/dashboard → AI Gateway → API Keys](https://vercel.com/dashboard/ai-gateway/api-keys).
+
+### Architecture
+
+```
+Browser (useChat hook)
+  → POST /api/ai/chat          Next.js proxy route
+  → POST localhost:8080/ai/chat  NestJS AiController
+  → streamText(...)            AI SDK core
+  → AI Gateway → openai/gpt-5.4
+```
+
+| File | Role |
+|---|---|
+| `backend-nest/src/ai/ai.controller.ts` | NestJS endpoint, calls `streamText`, pipes stream to response |
+| `backend-nest/src/ai/ai.service.ts` | Converts `UIMessage[]` to model messages |
+| `frontend/app/api/ai/chat/route.ts` | Next.js proxy — forwards request to backend, streams response back |
+| `frontend/app/(public)/ai-demo/page.tsx` | Demo chat UI using `useChat` |
+
+### Changing the model
+
+Edit the `model` string in `backend-nest/src/ai/ai.controller.ts`:
+
+```ts
+const result = streamText({
+  model: "openai/gpt-5.4", // e.g. "anthropic/claude-sonnet-4.5"
+  messages: modelMessages,
+});
+```
+
+List all available models:
+
+```bash
+curl -s https://ai-gateway.vercel.sh/v1/models | jq -r '.data[].id'
+```
+
+### Demo
+
+With both servers running, open [http://localhost:3000/ai-demo](http://localhost:3000/ai-demo).
+
 ## Available Scripts
 
 The following scripts are available to be run from the root directory:
