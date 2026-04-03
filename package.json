@@ -37,6 +37,9 @@
     "url": "https://github.com/Tegelstenen/course-compass/issues"
   },
   "homepage": "https://github.com/Tegelstenen/course-compass#readme",
+  "overrides": {
+    "lodash": "^4.18.1"
+  },
   "devDependencies": {
     "@arkweid/lefthook": "^0.7.7",
     "@biomejs/biome": "2.2.6",
@@ -48,6 +51,7 @@
     "zod": "^3.23.8"
   },
   "dependencies": {
+    "drizzle-orm": "^0.45.2",
     "lightningcss": "^1.30.2"
   }
 }
