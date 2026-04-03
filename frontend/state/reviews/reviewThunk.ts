@@ -1,4 +1,5 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
+import type { ReviewFormData } from "@/components/review";
 import {
   createReview,
   dislikeReview,
@@ -16,7 +17,11 @@ export const fetchCourseReviews = createAsyncThunk(
 
 export const submitReview = createAsyncThunk(
   "reviews/submitReview",
-  async (payload: { courseCode: string; userId: string; reviewForm: any }) => {
+  async (payload: {
+    courseCode: string;
+    userId: string;
+    reviewForm: ReviewFormData;
+  }) => {
     await createReview(payload.courseCode, payload.userId, payload.reviewForm);
     return true;
   },

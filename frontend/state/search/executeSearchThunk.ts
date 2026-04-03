@@ -69,7 +69,9 @@ export function executeSearch() {
         _id: result._id || "",
         courseCode: result.course_code,
         name:
-          result.course_name_swe || result.course_name_eng || "Course title unavailable",
+          result.course_name_swe ||
+          result.course_name_eng ||
+          "Course title unavailable",
         content: result.content,
         summary: result.summary,
         goals: result.goals,

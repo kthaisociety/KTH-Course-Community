@@ -5,6 +5,19 @@
 node_modules/
 /node_modules
 
+# OS
+.DS_Store
+
+# TypeScript build artifacts (all packages)
+*.tsbuildinfo
+*.js.map
+
+# Next.js auto-generated type file
+next-env.d.ts
+
+# Compiled declaration files from the types/ shared package
+types/**/*.d.ts
+
 # =================================
 # FRONTEND (Next.js)
 # =================================
@@ -44,12 +57,7 @@ node_modules/
 # Vercel
 /frontend/.vercel
 
-# TypeScript
-/frontend/next-env.d.ts
-/frontend/*.tsbuildinfo
-
 # misc
-/frontend/.DS_Store
 /frontend/*.pem
 /frontend/.temp
 /frontend/.tmp
@@ -65,6 +73,7 @@ node_modules/
 /backend-nest/dist
 /backend-nest/node_modules
 /backend-nest/build
+/backend-nest/**/*.d.ts
 
 # logs
 /backend-nest/logs
@@ -78,9 +87,6 @@ node_modules/
 # testing
 /backend-nest/coverage
 /backend-nest/.nyc_output
-
-# OS
-/backend-nest/.DS_Store
 
 # IDEs and editors
 /backend-nest/.idea
@@ -118,13 +124,10 @@ node_modules/
 # diagnostic reports
 /backend-nest/report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
-/node_modules
+/elastic-start-local
+CLAUDE.md
 
 .env
-
-/elastic-start-local
-.DS_Store
-CLAUDE.md
 
 # =================================
 # INGEST PROFILING ARTIFACTS

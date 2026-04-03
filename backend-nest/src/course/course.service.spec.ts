@@ -2,9 +2,16 @@ import { Test, type TestingModule } from "@nestjs/testing";
 import { DRIZZLE } from "../database/drizzle.module";
 import { CourseService } from "./course.service";
 
+type MockDb = {
+  select: jest.Mock;
+  from: jest.Mock;
+  where: jest.Mock;
+  limit: jest.Mock;
+};
+
 describe("CourseService", () => {
   let courseService: CourseService;
-  let mockDb: any;
+  let mockDb: MockDb;
 
   const mockCourse = {
     code: "SF1625",

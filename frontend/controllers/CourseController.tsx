@@ -6,11 +6,12 @@ import { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "sonner";
 import type { CourseHeaderProps } from "@/components/CourseHeader";
+import { CoursePageSkeleton } from "@/components/CoursePageSkeleton";
 import type { PostProps } from "@/components/Post";
 import type { ReviewFormData } from "@/components/review";
 import { useSessionData } from "@/hooks/sessionHooks";
-import { getReviewsSocket } from "@/lib/realtime";
 import type { NeonCoursePayload } from "@/lib/courses";
+import { getReviewsSocket } from "@/lib/realtime";
 import { fetchCourseInfo } from "@/state/course/courseThunk";
 import {
   dislikeCourseReview,
@@ -19,7 +20,6 @@ import {
   submitReview,
 } from "@/state/reviews/reviewThunk";
 import type { Dispatch, RootState } from "@/state/store";
-import { CoursePageSkeleton } from "@/components/CoursePageSkeleton";
 import CourseView from "@/views/CourseView";
 
 type MergedCourseInfo = {
@@ -35,22 +35,6 @@ type MergedCourseInfo = {
   rating?: number;
   _id?: string;
   neon?: NeonCoursePayload | null;
-};
-
-type Review = {
-  id: string;
-  userId: string;
-  courseCode: string;
-  easyScore: number;
-  usefulScore: number;
-  interestingScore: number;
-  wouldRecommend: boolean;
-  content: string;
-  createdAt: Date;
-  updatedAt: Date;
-  likeCount: number;
-  dislikeCount: number;
-  userVote: string | null;
 };
 
 const getAverageRating = (posts: PostProps[]) => {
@@ -233,8 +217,8 @@ export default function CourseController() {
     const courseName = String(neon?.name ?? ci.name ?? ci.course_name ?? "");
     const goals = String(ci.goals ?? "");
     const content = String(ci.content ?? "");
-    const department = String(neon?.department ?? ci.department ?? "");
-    const summary =
+    const _department = String(neon?.department ?? ci.department ?? "");
+    const _summary =
       typeof ci.summary === "string" && ci.summary.trim()
         ? ci.summary
         : undefined;
@@ -261,9 +245,7 @@ export default function CourseController() {
     : [];
 
   if (!params.courseCode) {
-    return (
-      <CoursePageSkeleton backHref={backHref} backLabel={backLabel} />
-    );
+    return <CoursePageSkeleton backHref={backHref} backLabel={backLabel} />;
   }
 
   if (courseError && !courseLoading) {
@@ -288,8 +270,7 @@ export default function CourseController() {
   const loadedInfoCode = (() => {
     if (!courseInfo) return null as string | null;
     const ci = courseInfo as MergedCourseInfo;
-    const raw =
-      ci.course_code ?? ci.courseCode ?? ci.neon?.courseCode ?? "";
+    const raw = ci.course_code ?? ci.courseCode ?? ci.neon?.courseCode ?? "";
     return raw ? String(raw).toUpperCase() : null;
   })();
   /** Avoid flashing previous course while Redux still holds last route’s data. */
@@ -325,7 +306,9 @@ export default function CourseController() {
   const goalsHtml = String(ci.goals ?? "");
   const contentHtml = String(ci.content ?? "");
   const summary =
-    typeof ci.summary === "string" && ci.summary.trim() ? ci.summary : undefined;
+    typeof ci.summary === "string" && ci.summary.trim()
+      ? ci.summary
+      : undefined;
   const neonPayload = neon;
 
   return (

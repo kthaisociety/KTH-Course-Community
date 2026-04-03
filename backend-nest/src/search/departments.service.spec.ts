@@ -2,9 +2,13 @@ import { Test, type TestingModule } from "@nestjs/testing";
 import { DRIZZLE } from "../database/drizzle.module";
 import { DepartmentsService } from "./departments.service";
 
+type MockDb = {
+  execute: jest.Mock;
+};
+
 describe("DepartmentsService", () => {
   let service: DepartmentsService;
-  let mockDb: any;
+  let mockDb: MockDb;
 
   beforeEach(async () => {
     mockDb = {

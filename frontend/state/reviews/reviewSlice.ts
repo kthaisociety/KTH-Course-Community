@@ -58,10 +58,10 @@ const reviewSlice = createSlice({
         state.loading = false;
         state.error = action.error.message ?? null;
       })
-      .addCase(likeCourseReview.fulfilled, (state, action) => {
+      .addCase(likeCourseReview.fulfilled, (_state, _action) => {
         // Optionally handle update logic directly here or refetch reviews
       })
-      .addCase(dislikeCourseReview.fulfilled, (state, action) => {
+      .addCase(dislikeCourseReview.fulfilled, (_state, _action) => {
         // Optionally handle update logic directly here or refetch reviews
       });
   },
