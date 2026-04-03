@@ -60,13 +60,7 @@ function TheoreticalVsAppliedBar({ data }: { data: TheoreticalVsApplied }) {
 }
 
 /** Gauge 1–10: calm grey fill (muted), track stays light grey. */
-function GaugeBar({
-  value,
-  label,
-}: {
-  value: number;
-  label: string;
-}) {
+function GaugeBar({ value, label }: { value: number; label: string }) {
   const pct = Math.max(0, Math.min(10, value)) * 10;
   return (
     <div className="space-y-0.5">

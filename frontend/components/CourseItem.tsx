@@ -38,7 +38,11 @@ export function CourseItem({
             className="hover:bg-transparent hover:cursor-pointer"
           >
             <Bookmark
-              className={Boolean(isUserFavorite) ? "h-6 w-6 fill-primary text-primary" : "h-6 w-6 text-muted-foreground"}
+              className={
+                isUserFavorite
+                  ? "h-6 w-6 fill-primary text-primary"
+                  : "h-6 w-6 text-muted-foreground"
+              }
             />
           </Button>
         </div>

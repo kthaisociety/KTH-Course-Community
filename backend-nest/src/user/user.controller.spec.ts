@@ -1,12 +1,15 @@
+import { Readable } from "node:stream";
 import { Test, type TestingModule } from "@nestjs/testing";
 import type { SessionContainer } from "supertokens-node/recipe/session";
 import { UserController } from "./user.controller";
 import { UserService, type UserWithFavorites } from "./user.service";
 
+type MockSession = Pick<SessionContainer, "getUserId">;
+
 describe("UserController", () => {
   let userController: UserController;
   let userService: UserService;
-  let mockSession: jest.Mocked<SessionContainer>;
+  let mockSession: jest.Mocked<MockSession>;
 
   const mockUser: UserWithFavorites = {
     id: "user-123",
@@ -30,7 +33,7 @@ describe("UserController", () => {
   };
 
   // For testing profile image later when functionality fixed
-  const mockFile: Express.Multer.File = {
+  const _mockFile: Express.Multer.File = {
     fieldname: "file",
     originalname: "profile.jpg",
     encoding: "7bit",
@@ -40,7 +43,7 @@ describe("UserController", () => {
     destination: "",
     filename: "",
     path: "",
-    stream: null as any,
+    stream: Readable.from(Buffer.from("mock file content")),
   };
 
   beforeEach(async () => {
@@ -51,7 +54,7 @@ describe("UserController", () => {
 
     mockSession = {
       getUserId: jest.fn(),
-    } as any;
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [UserController],
@@ -80,7 +83,9 @@ describe("UserController", () => {
       mockSession.getUserId.mockReturnValue("user-123");
       jest.spyOn(userService, "getUser").mockResolvedValue(mockUser);
 
-      const result = await userController.getMe(mockSession);
+      const result = await userController.getMe(
+        mockSession as SessionContainer,
+      );
 
       expect(userService.getUser).toHaveBeenCalledWith("user-123");
       expect(result).toEqual({
@@ -98,7 +103,9 @@ describe("UserController", () => {
       mockSession.getUserId.mockReturnValue("user-123");
       jest.spyOn(userService, "deleteUser").mockResolvedValue(undefined);
 
-      const result = await userController.deleteAccount(mockSession);
+      const result = await userController.deleteAccount(
+        mockSession as SessionContainer,
+      );
 
       expect(userService.deleteUser).toHaveBeenCalledWith("user-123");
       expect(result).toEqual({ success: true });

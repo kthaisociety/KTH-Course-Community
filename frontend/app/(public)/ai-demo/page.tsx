@@ -1,27 +1,206 @@
 "use client";
 
 import { useChat } from "@ai-sdk/react";
+import type { FileUIPart } from "ai";
 import { DefaultChatTransport } from "ai";
-import { useState } from "react";
+import { BookOpenIcon, CheckIcon, GlobeIcon } from "lucide-react";
+import { useCallback, useMemo, useState } from "react";
+import {
+  Attachment,
+  AttachmentPreview,
+  AttachmentRemove,
+  Attachments,
+} from "@/components/ai-elements/attachments";
+import {
+  Conversation,
+  ConversationContent,
+  ConversationEmptyState,
+  ConversationScrollButton,
+} from "@/components/ai-elements/conversation";
+import {
+  Message,
+  MessageBranch,
+  MessageBranchContent,
+  MessageBranchNext,
+  MessageBranchPage,
+  MessageBranchPrevious,
+  MessageBranchSelector,
+  MessageContent,
+  MessageResponse,
+} from "@/components/ai-elements/message";
+import {
+  ModelSelector,
+  ModelSelectorContent,
+  ModelSelectorEmpty,
+  ModelSelectorGroup,
+  ModelSelectorInput,
+  ModelSelectorItem,
+  ModelSelectorList,
+  ModelSelectorLogo,
+  ModelSelectorLogoGroup,
+  ModelSelectorName,
+  ModelSelectorTrigger,
+} from "@/components/ai-elements/model-selector";
+import type { PromptInputMessage } from "@/components/ai-elements/prompt-input";
+import {
+  PromptInput,
+  PromptInputActionAddAttachments,
+  PromptInputActionMenu,
+  PromptInputActionMenuContent,
+  PromptInputActionMenuTrigger,
+  PromptInputBody,
+  PromptInputButton,
+  PromptInputFooter,
+  PromptInputHeader,
+  PromptInputSubmit,
+  PromptInputTextarea,
+  PromptInputTools,
+  usePromptInputAttachments,
+} from "@/components/ai-elements/prompt-input";
+import { SpeechInput } from "@/components/ai-elements/speech-input";
+import { Suggestion, Suggestions } from "@/components/ai-elements/suggestion";
+import {
+  Tool,
+  ToolContent,
+  ToolHeader,
+  ToolInput,
+  ToolOutput,
+} from "@/components/ai-elements/tool";
+import type { KthCourseAgentUIMessage } from "@/types/ai/kth-course-agent";
 
 /**
- * AI Chat Demo
+ * AI Chat Demo — KTH Course Community
  *
- * Demonstrates end-to-end AI SDK usage in this fullstack project:
+ * Demonstrates end-to-end AI SDK usage with tool calling, using the
+ * ai-elements component library for a polished UI:
  *
  *  Browser (useChat)
  *    → POST /api/ai/chat          (Next.js proxy route)
  *    → POST <backend>/ai/chat     (NestJS AiController)
- *    → streamText(...)            (AI SDK core, Vercel AI Gateway)
- *    → openai/gpt-5.4
+ *    → kthCourseAgent.stream()    (ToolLoopAgent, multi-step tool loop)
+ *      ↳ tools: retrieveKthCourses, getWeather
+ *    → openai/gpt-5-mini          (via Vercel AI Gateway)
  *
  * Route: /ai-demo
  */
-export default function AiDemoPage() {
-  const [input, setInput] = useState("");
 
-  // useChat sends POST /api/ai/chat (via DefaultChatTransport) — matches our proxy route.
-  const { messages, sendMessage, status } = useChat({
+const suggestions = [
+  "What ML courses does KTH offer?",
+  "Show me beginner programming courses",
+  "What are the best distributed systems courses?",
+  "Compare algorithms and data structures courses",
+  "What is the weather in Stockholm?",
+];
+
+const models = [
+  {
+    chef: "OpenAI",
+    chefSlug: "openai",
+    id: "gpt-4o",
+    name: "GPT-4o",
+    providers: ["openai", "azure"],
+  },
+  {
+    chef: "OpenAI",
+    chefSlug: "openai",
+    id: "gpt-4o-mini",
+    name: "GPT-4o Mini",
+    providers: ["openai", "azure"],
+  },
+  {
+    chef: "Anthropic",
+    chefSlug: "anthropic",
+    id: "claude-sonnet-4-20250514",
+    name: "Claude 4 Sonnet",
+    providers: ["anthropic", "azure", "amazon-bedrock"],
+  },
+  {
+    chef: "Google",
+    chefSlug: "google",
+    id: "gemini-2.0-flash-exp",
+    name: "Gemini 2.0 Flash",
+    providers: ["google"],
+  },
+];
+
+const chefs = [...new Set(models.map((m) => m.chef))];
+
+// ── Attachment helpers ────────────────────────────────────────────────────────
+
+const AttachmentItem = ({
+  attachment,
+  onRemove,
+}: {
+  attachment: FileUIPart & { id: string };
+  onRemove: (id: string) => void;
+}) => {
+  const handleRemove = useCallback(
+    () => onRemove(attachment.id),
+    [onRemove, attachment.id],
+  );
+  return (
+    <Attachment data={attachment} onRemove={handleRemove}>
+      <AttachmentPreview />
+      <AttachmentRemove />
+    </Attachment>
+  );
+};
+
+const PromptAttachmentsDisplay = () => {
+  const attachments = usePromptInputAttachments();
+  const handleRemove = useCallback(
+    (id: string) => attachments.remove(id),
+    [attachments],
+  );
+  if (attachments.files.length === 0) return null;
+  return (
+    <Attachments variant="inline">
+      {attachments.files.map((a) => (
+        <AttachmentItem attachment={a} key={a.id} onRemove={handleRemove} />
+      ))}
+    </Attachments>
+  );
+};
+
+// ── Model selector item ───────────────────────────────────────────────────────
+
+const ModelItem = ({
+  m,
+  isSelected,
+  onSelect,
+}: {
+  m: (typeof models)[0];
+  isSelected: boolean;
+  onSelect: (id: string) => void;
+}) => {
+  const handleSelect = useCallback(() => onSelect(m.id), [onSelect, m.id]);
+  return (
+    <ModelSelectorItem onSelect={handleSelect} value={m.id}>
+      <ModelSelectorLogo provider={m.chefSlug} />
+      <ModelSelectorName>{m.name}</ModelSelectorName>
+      <ModelSelectorLogoGroup>
+        {m.providers.map((provider) => (
+          <ModelSelectorLogo key={provider} provider={provider} />
+        ))}
+      </ModelSelectorLogoGroup>
+      {isSelected ? (
+        <CheckIcon className="ml-auto size-4" />
+      ) : (
+        <div className="ml-auto size-4" />
+      )}
+    </ModelSelectorItem>
+  );
+};
+
+// ── Page ─────────────────────────────────────────────────────────────────────
+
+export default function AiDemoPage() {
+  const [text, setText] = useState("");
+  const [model, setModel] = useState<string>(models[0].id);
+  const [modelSelectorOpen, setModelSelectorOpen] = useState(false);
+  const [useWebSearch, setUseWebSearch] = useState(false);
+
+  const { messages, sendMessage, status } = useChat<KthCourseAgentUIMessage>({
     transport: new DefaultChatTransport({
       api: `${process.env.NEXT_PUBLIC_BACKEND_DOMAIN}/ai/chat`,
     }),
@@ -29,88 +208,218 @@ export default function AiDemoPage() {
 
   const isLoading = status === "submitted" || status === "streaming";
 
+  const selectedModelData = useMemo(
+    () => models.find((m) => m.id === model),
+    [model],
+  );
+
+  const handleSubmit = useCallback(
+    (message: PromptInputMessage) => {
+      if (!message.text.trim() && !message.files?.length) return;
+      sendMessage({ text: message.text });
+      setText("");
+    },
+    [sendMessage],
+  );
+
+  const handleSuggestion = useCallback(
+    (suggestion: string) => {
+      sendMessage({ text: suggestion });
+    },
+    [sendMessage],
+  );
+
+  const handleTranscriptionChange = useCallback((transcript: string) => {
+    setText((prev) => (prev ? `${prev} ${transcript}` : transcript));
+  }, []);
+
+  const handleModelSelect = useCallback((modelId: string) => {
+    setModel(modelId);
+    setModelSelectorOpen(false);
+  }, []);
+
+  const toggleWebSearch = useCallback(() => {
+    setUseWebSearch((prev) => !prev);
+  }, []);
+
+  const isSubmitDisabled = useMemo(
+    () => !text.trim() || isLoading,
+    [text, isLoading],
+  );
+
   return (
-    <main className="mx-auto flex max-w-2xl flex-col gap-6 p-8">
-      <header>
-        <h1 className="text-2xl font-bold">AI Chat Demo</h1>
-        <p className="mt-1 text-sm text-zinc-500">
-          Powered by Vercel AI SDK + AI Gateway →{" "}
-          <code className="rounded bg-zinc-100 px-1 py-0.5 text-xs dark:bg-zinc-800">
-            openai/gpt-5.4
-          </code>
-        </p>
-      </header>
+    <div className="relative flex size-full flex-col divide-y overflow-hidden">
+      {/* ── Message thread ── */}
+      <Conversation>
+        <ConversationContent>
+          {messages.length === 0 && (
+            <ConversationEmptyState
+              description="Ask about KTH courses, study programmes, or anything else."
+              icon={<BookOpenIcon className="size-8" />}
+              title="KTH Course Community AI"
+            />
+          )}
 
-      {/* Message thread */}
-      <section className="flex flex-col gap-4">
-        {messages.length === 0 && (
-          <p className="text-sm text-zinc-400">
-            Send a message to start the conversation.
-          </p>
-        )}
+          {messages.map((message) => (
+            <MessageBranch defaultBranch={0} key={message.id}>
+              <MessageBranchContent>
+                <Message from={message.role}>
+                  <MessageContent>
+                    {message.parts.map((part, i) => {
+                      const key = `${message.id}-${i}`;
 
-        {messages.map((message) => (
-          <div
-            key={message.id}
-            className={`rounded-lg px-4 py-3 text-sm ${
-              message.role === "user"
-                ? "ml-auto max-w-sm bg-blue-600 text-white"
-                : "mr-auto max-w-xl bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100"
-            }`}
-          >
-            <span className="mb-1 block text-xs font-semibold opacity-60">
-              {message.role === "user" ? "You" : "AI"}
-            </span>
-            {message.parts.map((part, i) => {
-              switch (part.type) {
-                case "text":
-                  return (
-                    <p
-                      key={`${message.id}-${i}`}
-                      className="whitespace-pre-wrap"
-                    >
-                      {part.text}
-                    </p>
-                  );
-                default:
-                  return null;
-              }
-            })}
-          </div>
-        ))}
+                      switch (part.type) {
+                        case "text":
+                          return (
+                            <MessageResponse isAnimating={isLoading} key={key}>
+                              {part.text}
+                            </MessageResponse>
+                          );
 
-        {isLoading && (
-          <div className="mr-auto rounded-lg bg-zinc-100 px-4 py-3 text-sm text-zinc-500 dark:bg-zinc-800">
-            Thinking…
-          </div>
-        )}
-      </section>
+                        case "tool-retrieveKthCourses":
+                          return (
+                            <Tool key={key}>
+                              <ToolHeader
+                                state={part.state}
+                                title="Retrieve KTH Courses"
+                                type={part.type}
+                              />
+                              <ToolContent>
+                                <ToolInput input={part.input} />
+                                {part.state === "output-available" && (
+                                  <ToolOutput
+                                    errorText={undefined}
+                                    output={part.output}
+                                  />
+                                )}
+                              </ToolContent>
+                            </Tool>
+                          );
 
-      {/* Input */}
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          if (!input.trim()) return;
-          sendMessage({ text: input });
-          setInput("");
-        }}
-        className="flex gap-2"
-      >
-        <input
-          className="flex-1 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-          value={input}
-          placeholder="Ask something…"
-          onChange={(e) => setInput(e.currentTarget.value)}
-          disabled={isLoading}
-        />
-        <button
-          type="submit"
-          disabled={isLoading || !input.trim()}
-          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-        >
-          Send
-        </button>
-      </form>
-    </main>
+                        case "tool-getWeather":
+                          return (
+                            <Tool key={key}>
+                              <ToolHeader
+                                state={part.state}
+                                title="Get Weather"
+                                type={part.type}
+                              />
+                              <ToolContent>
+                                <ToolInput input={part.input} />
+                                {part.state === "output-available" && (
+                                  <ToolOutput
+                                    errorText={undefined}
+                                    output={part.output}
+                                  />
+                                )}
+                              </ToolContent>
+                            </Tool>
+                          );
+
+                        default:
+                          return null;
+                      }
+                    })}
+                  </MessageContent>
+                </Message>
+              </MessageBranchContent>
+              <MessageBranchSelector>
+                <MessageBranchPrevious />
+                <MessageBranchPage />
+                <MessageBranchNext />
+              </MessageBranchSelector>
+            </MessageBranch>
+          ))}
+        </ConversationContent>
+        <ConversationScrollButton />
+      </Conversation>
+
+      {/* ── Input area ── */}
+      <div className="grid shrink-0 gap-4 pt-4">
+        <Suggestions className="px-4">
+          {suggestions.map((s) => (
+            <Suggestion key={s} onClick={handleSuggestion} suggestion={s} />
+          ))}
+        </Suggestions>
+
+        <div className="w-full px-4 pb-4">
+          <PromptInput globalDrop multiple onSubmit={handleSubmit}>
+            <PromptInputHeader>
+              <PromptAttachmentsDisplay />
+            </PromptInputHeader>
+            <PromptInputBody>
+              <PromptInputTextarea
+                onChange={(e) => setText(e.target.value)}
+                placeholder="Ask about KTH courses…"
+                value={text}
+              />
+            </PromptInputBody>
+            <PromptInputFooter>
+              <PromptInputTools>
+                <PromptInputActionMenu>
+                  <PromptInputActionMenuTrigger />
+                  <PromptInputActionMenuContent>
+                    <PromptInputActionAddAttachments />
+                  </PromptInputActionMenuContent>
+                </PromptInputActionMenu>
+                <SpeechInput
+                  className="shrink-0"
+                  onTranscriptionChange={handleTranscriptionChange}
+                  size="icon"
+                  variant="ghost"
+                />
+                <PromptInputButton
+                  onClick={toggleWebSearch}
+                  variant={useWebSearch ? "default" : "ghost"}
+                >
+                  <GlobeIcon size={16} />
+                  <span>Search</span>
+                </PromptInputButton>
+                <ModelSelector
+                  onOpenChange={setModelSelectorOpen}
+                  open={modelSelectorOpen}
+                >
+                  <ModelSelectorTrigger asChild>
+                    <PromptInputButton>
+                      {selectedModelData?.chefSlug && (
+                        <ModelSelectorLogo
+                          provider={selectedModelData.chefSlug}
+                        />
+                      )}
+                      {selectedModelData?.name && (
+                        <ModelSelectorName>
+                          {selectedModelData.name}
+                        </ModelSelectorName>
+                      )}
+                    </PromptInputButton>
+                  </ModelSelectorTrigger>
+                  <ModelSelectorContent>
+                    <ModelSelectorInput placeholder="Search models…" />
+                    <ModelSelectorList>
+                      <ModelSelectorEmpty>No models found.</ModelSelectorEmpty>
+                      {chefs.map((chef) => (
+                        <ModelSelectorGroup heading={chef} key={chef}>
+                          {models
+                            .filter((m) => m.chef === chef)
+                            .map((m) => (
+                              <ModelItem
+                                isSelected={model === m.id}
+                                key={m.id}
+                                m={m}
+                                onSelect={handleModelSelect}
+                              />
+                            ))}
+                        </ModelSelectorGroup>
+                      ))}
+                    </ModelSelectorList>
+                  </ModelSelectorContent>
+                </ModelSelector>
+              </PromptInputTools>
+              <PromptInputSubmit disabled={isSubmitDisabled} status={status} />
+            </PromptInputFooter>
+          </PromptInput>
+        </div>
+      </div>
+    </div>
   );
 }

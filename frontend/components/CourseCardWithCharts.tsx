@@ -1,31 +1,34 @@
 "use client";
 
 import {
-  MessageSquare,
-  Heart,
-  CheckCircle,
-  Sparkles,
   Bookmark,
+  CheckCircle,
+  Heart,
+  MessageSquare,
+  Sparkles,
 } from "lucide-react";
-import {
-  getFallbackSummary,
-  getFallbackTitle,
-} from "@/data/courseCardMockData";
+import { CourseCardCharts } from "@/components/CourseCardCharts";
+import { Button } from "@/components/ui/button";
 import type {
   CourseCardChartData,
   CourseCardStats,
 } from "@/data/courseCardMockData";
-import { Button } from "@/components/ui/button";
-import { CourseCardCharts } from "@/components/CourseCardCharts";
+import {
+  getFallbackSummary,
+  getFallbackTitle,
+} from "@/data/courseCardMockData";
 
 function stripHtml(html: string): string {
-  return html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+  return html
+    .replace(/<[^>]*>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function truncate(text: string, maxLength: number): string {
   const t = text.trim();
   if (t.length <= maxLength) return t;
-  return t.slice(0, maxLength) + "…";
+  return `${t.slice(0, maxLength)}…`;
 }
 
 export type CourseCardWithChartsProps = {
@@ -54,7 +57,7 @@ export type CourseCardWithChartsProps = {
 
 export function CourseCardWithCharts({
   title,
-  goals,
+  goals: _goals,
   content: _content,
   summary,
   courseCode,
@@ -74,8 +77,7 @@ export function CourseCardWithCharts({
 }: CourseCardWithChartsProps) {
   const displayTitle = title?.trim() || getFallbackTitle(courseCode);
   const displayDepartment = department?.trim() || "—";
-  const displayHp =
-    typeof hp === "number" && Number.isFinite(hp) ? hp : null;
+  const displayHp = typeof hp === "number" && Number.isFinite(hp) ? hp : null;
   const displayHpText =
     displayHp === null
       ? "—"
@@ -83,7 +85,10 @@ export function CourseCardWithCharts({
         ? String(displayHp)
         : displayHp.toFixed(1);
   const displayKeywords = keywords?.trim() || "—";
-  const displayPrerequisites = Array.isArray(prerequisites) && prerequisites.length > 0 ? prerequisites : ["None"];
+  const displayPrerequisites =
+    Array.isArray(prerequisites) && prerequisites.length > 0
+      ? prerequisites
+      : ["None"];
   const displaySummary = summary?.trim()
     ? truncate(stripHtml(summary), 180)
     : getFallbackSummary();
@@ -102,7 +107,7 @@ export function CourseCardWithCharts({
               {displayDepartment !== "—" && ` · ${displayDepartment}`}
             </p>
           </div>
-          <div className="flex shrink-0 items-center gap-0.5" role="group" aria-label="Course actions">
+          <div className="flex shrink-0 items-center gap-0.5">
             <Button
               variant="ghost"
               size="icon"
@@ -132,7 +137,7 @@ export function CourseCardWithCharts({
               title={isUserFavorite ? "Remove from saved" : "Save course"}
             >
               <Bookmark
-                className={`h-6 w-6 shrink-0 ${Boolean(isUserFavorite) ? "fill-primary text-primary" : "text-muted-foreground"}`}
+                className={`h-6 w-6 shrink-0 ${isUserFavorite ? "fill-primary text-primary" : "text-muted-foreground"}`}
               />
             </Button>
           </div>
@@ -145,11 +150,14 @@ export function CourseCardWithCharts({
               Keywords
             </p>
             <p className="flex flex-wrap items-center gap-x-2 gap-y-0 text-muted-foreground text-sm leading-snug">
-              {displayKeywords.split(/,\s*/).filter(Boolean).map((kw) => (
-                <span key={kw} className="shrink-0" title={kw.trim()}>
-                  {kw.trim()}
-                </span>
-              ))}
+              {displayKeywords
+                .split(/,\s*/)
+                .filter(Boolean)
+                .map((kw) => (
+                  <span key={kw} className="shrink-0" title={kw.trim()}>
+                    {kw.trim()}
+                  </span>
+                ))}
             </p>
           </div>
           <div className="flex min-w-0 flex-1 flex-col border-l border-border/60 pl-3">
@@ -205,30 +213,35 @@ export function CourseCardWithCharts({
         <div className="shrink-0">
           <CourseCardCharts data={chartData} />
         </div>
-        <div
-          className="flex w-full shrink-0 items-center justify-center gap-x-4 text-muted-foreground text-xs leading-none cursor-default select-none"
-          role="status"
-          aria-label="Course stats: recommendations, students taken, reviews"
-        >
+        <div className="flex w-full shrink-0 items-center justify-center gap-x-4 text-muted-foreground text-xs leading-none cursor-default select-none">
           <span
             className="flex shrink-0 items-center gap-0.5"
             title="Recommended by"
           >
-            <Heart className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+            <Heart
+              className="h-4 w-4 shrink-0 text-muted-foreground"
+              aria-hidden
+            />
             <span>{stats.recommendCount}</span>
           </span>
           <span
             className="flex shrink-0 items-center gap-0.5"
             title="Students taken"
           >
-            <CheckCircle className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+            <CheckCircle
+              className="h-4 w-4 shrink-0 text-muted-foreground"
+              aria-hidden
+            />
             <span>{stats.studentsTaken}</span>
           </span>
           <span
             className="flex shrink-0 items-center gap-0.5"
             title="Number of reviews"
           >
-            <MessageSquare className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+            <MessageSquare
+              className="h-4 w-4 shrink-0 text-muted-foreground"
+              aria-hidden
+            />
             <span>{stats.reviewCount}</span>
           </span>
         </div>
@@ -239,7 +252,10 @@ export function CourseCardWithCharts({
             onClick={onAddToComparison}
             className="h-9 gap-1.5 text-sm"
           >
-            <Sparkles className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+            <Sparkles
+              className="h-4 w-4 shrink-0 text-muted-foreground"
+              aria-hidden
+            />
             Compare
           </Button>
         </div>

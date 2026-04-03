@@ -1,42 +1,60 @@
 import { Body, Controller, HttpCode, Post, Res } from "@nestjs/common";
-import { streamText, type UIMessage } from "ai";
+import { pipeAgentUIStreamToResponse, type UIMessage } from "ai";
 import type { Response } from "express";
-import { AiService } from "./ai.service";
+import {
+  kthCourseAgent,
+  kthCourseAgentCallOptionsSchema,
+} from "./kth-course-agent";
 
 interface ChatRequestBody {
   messages: UIMessage[];
+  /** Optional call options validated by kthCourseAgentCallOptionsSchema */
+  locale?: string;
+  preferredDifficulty?: "beginner" | "intermediate" | "advanced";
 }
 
 /**
- * Example AI chat endpoint demonstrating Vercel AI SDK + AI Gateway usage.
+ * AI chat endpoint for the KTH Course Community.
  *
  * POST /ai/chat
- * Body: { messages: UIMessage[] }
+ * Body: { messages: UIMessage[], locale?: string, preferredDifficulty?: string }
  *
  * Returns a UI message stream compatible with the AI SDK's `useChat` hook.
- * The frontend can point useChat at the Next.js proxy route /api/ai/chat
- * which forwards here.
  *
- * streamText is called directly in the controller to avoid TS4053:
- * its return type contains an un-nameable Output generic from the ai package
- * that cannot appear on public methods of exported NestJS service classes.
+ * Architecture:
+ *   Browser (useChat)
+ *     → POST /api/ai/chat       (Next.js proxy route)
+ *     → POST /ai/chat           (this controller)
+ *     → kthCourseAgent.stream() (ToolLoopAgent, Vercel AI Gateway)
+ *     → openai/gpt-5-mini
+ *   ← pipeAgentUIStreamToResponse()
+ *   ← UI message stream forwarded back to the browser
+ *
+ * The agent runs a multi-step tool loop: the model may call
+ * `retrieveKthCourses` and/or `getWeather` multiple times before
+ * producing its final answer.
+ *
+ * `pipeAgentUIStreamToResponse` is used instead of raw `streamText` because
+ * it handles the ToolLoopAgent loop, tool execution, and stream piping in one
+ * call — no manual `convertToModelMessages` needed.
  */
 @Controller("ai")
 export class AiController {
-  constructor(private readonly aiService: AiService) {}
-
   @Post("chat")
   @HttpCode(200)
   async chat(@Body() body: ChatRequestBody, @Res() res: Response) {
-    const modelMessages = await this.aiService.toModelMessages(
-      body.messages ?? [],
-    );
-
-    const result = streamText({
-      model: "openai/gpt-5.4-mini",
-      messages: modelMessages,
+    // Parse and validate call options from the request body.
+    // Unknown keys are stripped; missing optionals receive their defaults.
+    const callOptions = kthCourseAgentCallOptionsSchema.parse({
+      locale: body.locale,
+      preferredDifficulty: body.preferredDifficulty,
     });
 
-    result.pipeUIMessageStreamToResponse(res);
+    await pipeAgentUIStreamToResponse({
+      response: res,
+      agent: kthCourseAgent,
+      uiMessages: body.messages ?? [],
+      options: callOptions,
+    });
   }
 }

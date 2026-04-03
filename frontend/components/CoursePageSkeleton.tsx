@@ -26,12 +26,10 @@ export function CoursePageSkeleton({
   backHref = "/search",
   backLabel = "Back to explore",
 }: CoursePageSkeletonProps) {
-  const label = courseCode
-    ? `Loading course ${courseCode}`
-    : "Loading course";
+  const label = courseCode ? `Loading course ${courseCode}` : "Loading course";
 
   return (
-    <div
+    <section
       className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-4 pb-16 pt-6"
       aria-busy="true"
       aria-label={label}
@@ -143,6 +141,6 @@ export function CoursePageSkeleton({
           ))}
         </div>
       </section>
-    </div>
+    </section>
   );
 }
