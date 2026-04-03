@@ -52,11 +52,14 @@ export function executeSearch() {
         results: Array<{
           _id?: string;
           course_code: string;
-          course_name: string;
+          course_name_swe?: string;
+          course_name_eng?: string;
           content: string;
+          summary?: string;
           goals: string;
           department: string;
           rating?: number;
+          credits?: number;
         }>;
         total: number;
       };
@@ -65,12 +68,14 @@ export function executeSearch() {
       const transformedResults: Course[] = raw.results.map((result) => ({
         _id: result._id || "",
         courseCode: result.course_code,
-        name: result.course_name,
+        name:
+          result.course_name_swe || result.course_name_eng || "Course title unavailable",
         content: result.content,
+        summary: result.summary,
         goals: result.goals,
         department: result.department,
         rating: result.rating,
-        credits: null, // Will be fetched separately
+        credits: result.credits ?? null, // backend now provides this, fallback to Neon fetch
       }));
 
       dispatch(
@@ -82,7 +87,11 @@ export function executeSearch() {
         }),
       );
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Search failed";
+      const rawMessage = err instanceof Error ? err.message : "Search failed";
+      const message =
+        rawMessage === "Failed to fetch"
+          ? "Could not reach the server. Check that the backend is running and NEXT_PUBLIC_BACKEND_DOMAIN is correct."
+          : rawMessage;
       dispatch(searchFailed(message));
     }
   };

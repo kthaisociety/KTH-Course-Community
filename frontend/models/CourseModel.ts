@@ -2,7 +2,10 @@ export interface Course {
   _id: string;
   courseCode: string;
   name: string;
+  /** Full course description (detail views). */
   content: string;
+  /** Short summary for cards / previews. */
+  summary?: string;
   goals: string;
   department: string;
   rating?: number;

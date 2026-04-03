@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+// schema for each course from /api/kopps/v2/courses?l=en
 export const CourseState = z.enum(["CANCELLED", "ESTABLISHED", "DEACTIVATED"]);
 export const CourseSchema = z.object({
   department: z.string(),
@@ -8,86 +9,68 @@ export const CourseSchema = z.object({
   state: CourseState,
   last_examination_semester: z.string().optional(),
 });
+// validates an array of CoruseSchemas
 export const CoursesSchema = z.array(CourseSchema);
 
-/** lang + html helpers */
-const Lang = z.union([z.enum(["sv", "en"]), z.string()]);
-
-/** "#text" can be missing, null, or non-string; coerce to string ("" by default) */
-const CoercedText = z.preprocess((v) => {
-  if (v == null) return "";
-  if (typeof v === "string") return v;
-  if (typeof v === "number" || typeof v === "boolean") return String(v);
-  return ""; // avoid "[object Object]"
-}, z.string());
-
-/** Allow extra props just in case (passthrough), and make attrs optional */
-const HtmlBlockLoose = z
-  .object({
-    "#text": CoercedText, // <- tolerant
-    "@_xml:lang": Lang.optional(),
-    "@_xmlns": z.string().optional(),
-  })
-  .catchall(z.unknown());
-
-/** Accept object | object[] | string | null/undefined → normalize to HtmlBlockLoose[] */
-const oneOrManyLoose = z
-  .union([
-    z.array(HtmlBlockLoose),
-    HtmlBlockLoose,
-    z.string(),
-    z.null(),
-    z.undefined(),
-  ])
-  .transform((v) => {
-    if (Array.isArray(v)) return v;
-    if (v == null) return [];
-    if (typeof v === "string") return [{ "#text": v }];
-    return [v];
-  });
-
-/** tiny text nodes (allow missing @, keep date check for lastChanged) */
-const TextNode = z
-  .object({
-    "#text": z.string(),
-    "@_xmlns": z.string().optional(),
-  })
-  .catchall(z.unknown());
-
-export const CoursePlanSchema = z.object({
-  "?xml": z.object({
-    "@_version": z.number(),
-    "@_encoding": z.string(),
+// schema for /api/kopps/v2/course/:code/detailedinformation
+export const CourseDetailSchema = z.object({
+  // First part of the data is general course information.
+  course: z.object({
+    courseCode: z.string(),
+    departmentCode: z.string(),
+    department: z.object({ name: z.string() }),
+    educationalLevelCode: z.string(),
+    gradeScaleCode: z.string(),
+    title: z.string(), // swedish title
+    titleOther: z.string(), // english title
+    credits: z.number(),
+    creditUnitAbbr: z.string(),
+    state: z.string(),
   }),
-  coursePlan: z.object({
-    goals: oneOrManyLoose,
-    content: oneOrManyLoose,
-    examinationComments: oneOrManyLoose,
-
-    lastChanged: TextNode.extend({
-      "#text": z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "YYYY-MM-DD date"),
+  // Second part of data from API is rounds, e.g. if course runs multiple offerings each year.
+  roundInfos: z.array(
+    z.object({
+      schemaUrl: z.string().optional(),
+      round: z.object({
+        startTerm: z.object({ term: z.number() }),
+        isPU: z.boolean(),
+        isVU: z.boolean(),
+        studyPace: z.number().optional(),
+        tutoringTimeOfDay: z.object({ name: z.string() }).optional(),
+        tutoringForm: z.object({ name: z.string() }).optional(),
+        language: z.string().optional(),
+        courseRoundTerms: z
+          .array(
+            z.object({ formattedPeriodsAndCredits: z.string().optional() }),
+          )
+          .optional(),
+      }),
     }),
-    lastChangedBy: TextNode,
-
-    "@_courseCode": z.string(),
-    "@_validFromTerm": z.number().int(),
-    "@_edition": z.number().int(),
-    "@_xmlns": z.string().optional(),
-  }),
+  ),
+  // Third part of the course data from API is examinations, e.g. "TEN1".
+  examinationSets: z.record(
+    z.string(),
+    z.object({
+      examinationRounds: z.array(
+        z.object({
+          examCode: z.string(),
+          title: z.string().optional(),
+          gradeScaleCode: z.string(),
+          credits: z.number().optional(),
+        }),
+      ),
+    }),
+  ),
+  // Fourth part of API data is the syllabus and course content
+  publicSyllabusVersions: z.array(
+    z.object({
+      validFromTerm: z.object({ term: z.number() }),
+      courseSyllabus: z.object({
+        goals: z.string().default(""),
+        content: z.string().default(""),
+        eligibility: z.string().default(""), // NOTE: Will be used in later ingestions.
+      }),
+    }),
+  ),
+  mainSubjects: z.array(z.string()),
 });
-
-export type Document = {
-  course_name: string;
-  course_code: string;
-  department: string;
-  state: "CANCELLED" | "ESTABLISHED" | "DEACTIVATED";
-  goals: string;
-  content: string;
-};
-
-export type InsertRequest = {
-  index: {
-    _index: string;
-  };
-  document: Document;
-};

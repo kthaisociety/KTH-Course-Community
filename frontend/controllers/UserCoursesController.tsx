@@ -1,32 +1,47 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
 import { useSessionData } from "@/hooks/sessionHooks";
 import { useUser } from "@/hooks/userHooks";
-import { getFullCourseInfo } from "@/lib/courses";
+import { getFavoriteCourseForCard } from "@/lib/courses";
 import { toggleUserFavorite } from "@/lib/user";
-import type { Course, CourseWithUserInfo } from "@/models/CourseModel";
+import type { CourseWithUserInfo } from "@/models/CourseModel";
 import type { Dispatch } from "@/state/store";
 import { toggleFavoriteSuccess } from "@/state/user/userSlice";
-import SuspenseView from "@/views/SuspenseView";
 import UserCoursesView from "@/views/UserCoursesView";
 
-export default function UserpageController() {
-  const { isLoading } = useSessionData();
-  const userData = useUser(); // userData instead of userFavorites to check user state as well
+export default function UserCoursesController() {
+  const { isLoading: isSessionLoading } = useSessionData();
+  const userData = useUser();
   const [userFavoriteCourses, setUserFavoriteCourses] = useState<
     CourseWithUserInfo[]
-  >([]); // the full course objects sent down to the view
-  const [isLoadingCourse, setIsLoadingCourse] = useState(false);
+  >([]);
+  const [isLoadingFavorites, setIsLoadingFavorites] = useState(true);
 
   const router = useRouter();
-  const dispatch = useDispatch<Dispatch>(); // connect between redux and the component
+  const dispatch = useDispatch<Dispatch>();
 
-  const onSeeReviews = (courseCode: string) => {
-    router.push(`/course/${courseCode}`);
-  };
+  const isListLoading = isSessionLoading || isLoadingFavorites;
+
+  const onSeeReviews = useCallback(
+    (courseCode: string) => {
+      router.push(`/course/${courseCode}?from=saved`);
+    },
+    [router],
+  );
+
+  const onWriteReview = useCallback(
+    (courseCode: string) => {
+      router.push(`/course/${courseCode}?writeReview=1&from=saved`);
+    },
+    [router],
+  );
+
+  const onAddToComparison = useCallback((_courseCode: string) => {
+    // TODO: comparison state / API (same as search)
+  }, []);
 
   async function onToggleFavorite(courseCode: string) {
     try {
@@ -35,19 +50,16 @@ export default function UserpageController() {
       dispatch(
         toggleFavoriteSuccess({
           courseCode: courseCode,
-          action: res.action, // will be "added" or "removed"
+          action: res.action,
         }),
       );
 
       if (res.action === "added") {
-        const course = await getFullCourseInfo(courseCode);
+        const course = await getFavoriteCourseForCard(courseCode);
         setUserFavoriteCourses((prev) => {
-          // If the course is already in the array, return a copy of the *existing* array
-          // to ensure a new reference is always returned, even if no content changed.
           if (prev.some((c) => c.courseCode === courseCode)) {
-            return [...prev]; // FIX: Return a new array reference (shallow copy)
+            return [...prev];
           }
-          // Otherwise, add the new course
           return [...prev, { ...course, isUserFavorite: true }];
         });
       } else if (res.action === "removed") {
@@ -60,35 +72,43 @@ export default function UserpageController() {
     }
   }
 
-  // Maps the course codes in to full Course objects
   useEffect(() => {
-    if (!userData) return;
-    async function fetchCourses() {
-      setIsLoadingCourse(true);
-      const courses = await Promise.all(
-        (userData.userFavorites ?? []).map(
-          async (courseCode) => {
-            const course: Course = await getFullCourseInfo(courseCode);
-            return { ...course, isUserFavorite: true };
-          }, // perhaps rename this property to be ID instead of favoriteCourse?
-        ),
-      );
-      setUserFavoriteCourses(courses);
-      setIsLoadingCourse(false);
-    }
-    fetchCourses();
-  }, [userData]);
+    if (isSessionLoading) return;
 
-  // Returns suspense view but could be improved to always render skeleton on all updates
-  if (!userData || isLoading || !userFavoriteCourses) {
-    return <SuspenseView />;
-  }
+    let cancelled = false;
+
+    async function fetchCourses() {
+      setIsLoadingFavorites(true);
+      try {
+        const codes = userData.userFavorites ?? [];
+        const courses = await Promise.all(
+          codes.map((courseCode) => getFavoriteCourseForCard(courseCode)),
+        );
+        if (!cancelled) {
+          setUserFavoriteCourses(courses);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoadingFavorites(false);
+        }
+      }
+    }
+
+    void fetchCourses();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [userData, isSessionLoading]);
+
   return (
     <UserCoursesView
-      userFavoriteCourses={userFavoriteCourses} // array of CourseWithUserInfo object
-      isLoadingCourse={isLoadingCourse}
+      userFavoriteCourses={userFavoriteCourses}
+      isListLoading={isListLoading}
       onSeeReviews={onSeeReviews}
+      onWriteReview={onWriteReview}
       onToggleFavorite={onToggleFavorite}
+      onAddToComparison={onAddToComparison}
     />
   );
 }

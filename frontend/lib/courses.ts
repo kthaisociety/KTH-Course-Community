@@ -1,5 +1,34 @@
-import type { Course } from "@/models/CourseModel";
-import type { CourseMapping } from "../../types/search/elastic.mappings";
+import type { Course, CourseWithUserInfo } from "@/models/CourseModel";
+import type { CourseDocumentES } from "../../types/search/elastic.mappings";
+
+export type NeonCoursePayload = {
+  courseCode: string;
+  department: string;
+  name: string;
+  currentStatus: string;
+  updatedAt: string;
+};
+
+export async function getNeonCourse(
+  courseCode: string,
+): Promise<NeonCoursePayload> {
+  const backend = process.env.NEXT_PUBLIC_BACKEND_DOMAIN;
+  if (!backend) throw new Error("NEXT_PUBLIC_BACKEND_DOMAIN is not set");
+
+  const res = await fetch(`${backend}/course/neon/${courseCode}`, {
+    cache: "no-store",
+  });
+
+  if (res.status === 404) {
+    throw new Error(`Course ${courseCode} not found in Neon`);
+  }
+
+  if (!res.ok) {
+    throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+  }
+
+  return (await res.json()) as NeonCoursePayload;
+}
 
 export async function checkIfCourseCodeExists(
   courseCode: string,
@@ -24,7 +53,7 @@ export async function checkIfCourseCodeExists(
 // See ticket in Linear, needs refactoring.
 export async function getCourseInfo(
   courseCode: string,
-): Promise<CourseMapping> {
+): Promise<CourseDocumentES> {
   const backend = process.env.NEXT_PUBLIC_BACKEND_DOMAIN;
   if (!backend) throw new Error("NEXT_PUBLIC_BACKEND_DOMAIN is not set");
 
@@ -40,13 +69,36 @@ export async function getCourseInfo(
     throw new Error(`HTTP ${res.status}: ${res.statusText}`);
   }
 
-  const data = (await res.json()) as CourseMapping;
+  const raw = (await res.json()) as {
+    _id?: string;
+    courseCode: string;
+    department: string;
+    nameSwe?: string;
+    nameEng?: string;
+    goals: string;
+    content: string;
+    credits?: number | null;
+    rating?: number;
+  };
 
-  if (!data) {
-    throw new Error(`Course ${courseCode} data is empty`);
-  }
+  if (!raw) throw new Error(`Course ${courseCode} data is empty`);
 
-  return data;
+  // Map backend payload to a stable shape that the rest of the frontend expects.
+  // (Backend currently returns `nameSwe`/`nameEng` for course titles.)
+  return {
+    course_code: raw.courseCode,
+    course_name_swe: raw.nameSwe ?? "",
+    course_name_eng: raw.nameEng ?? "",
+    department: raw.department,
+    credits: raw.credits ?? 0,
+    subject: "",
+    periods: [],
+    course_category: [],
+    goals: raw.goals ?? "",
+    content: raw.content ?? "",
+    eligibility: "",
+    state: "ESTABLISHED",
+  } satisfies CourseDocumentES;
 }
 
 // This one uses the get course from 'course.controller', which stitches the
@@ -96,4 +148,35 @@ export async function getCourseCredits(
 
   const data = (await res.json()) as { credits: number | null };
   return data.credits;
+}
+
+/**
+ * Card row for saved courses: title and department prefer Neon; credits from Neon;
+ * goals/content/summary from Elasticsearch when available.
+ */
+export async function getFavoriteCourseForCard(
+  courseCode: string,
+): Promise<CourseWithUserInfo> {
+  const [neon, credits, full] = await Promise.all([
+    getNeonCourse(courseCode).catch(() => null),
+    getCourseCredits(courseCode).catch(() => null),
+    getFullCourseInfo(courseCode).catch(() => null),
+  ]);
+
+  if (!neon && !full) {
+    throw new Error(`Course ${courseCode} could not be loaded`);
+  }
+
+  return {
+    _id: full?._id ?? courseCode,
+    courseCode,
+    name: neon?.name ?? full?.name ?? courseCode,
+    department: neon?.department ?? full?.department ?? "",
+    credits: credits ?? full?.credits ?? null,
+    goals: full?.goals ?? "",
+    content: full?.content ?? "",
+    summary: full?.summary,
+    rating: full?.rating,
+    isUserFavorite: true,
+  };
 }

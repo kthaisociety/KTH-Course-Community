@@ -29,7 +29,6 @@ export class CourseController {
       department: course.department,
       name: course.name,
       currentStatus: course.state, // renaming here to status to avoid conflicting naming with "state"
-      lastExaminationSemester: course.lastExaminationSemester,
       updatedAt: course.updatedAt,
     };
   }
@@ -67,11 +66,12 @@ export class CourseController {
       _id: courseDocument._id,
       courseCode: courseDocument.course_code,
       department: courseDocument.department,
-      name: courseDocument.course_name,
+      nameSwe: courseDocument.course_name_swe,
+      nameEng: courseDocument.course_name_eng,
       goals: courseDocument.goals,
       content: courseDocument.content,
+      credits: courseDocument.credits,
       rating: courseDocument.rating,
-      // credits: eventually after indexed
     };
   }
 }
