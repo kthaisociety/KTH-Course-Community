@@ -3,7 +3,7 @@ import { DRIZZLE } from "../database/drizzle.module";
 import { ReviewsGateway } from "./reviews.gateway";
 import { ReviewsService } from "./reviews.service";
 
-type ReviewsDbMock = {
+type MockDb = {
   insert: jest.Mock;
   select: jest.Mock;
   update: jest.Mock;
@@ -20,7 +20,7 @@ type ReviewsDbMock = {
 
 describe("ReviewsService", () => {
   let reviewsService: ReviewsService;
-  let mockDb: ReviewsDbMock;
+  let mockDb: MockDb;
 
   const mockReviewData = {
     easyScore: 4,

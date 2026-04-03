@@ -41,7 +41,7 @@ type SearchViewProps = {
 const skeletonKeys = Array.from({ length: 5 }, () => crypto.randomUUID());
 
 export default function SearchView({
-  localQuery,
+  localQuery: _localQuery,
   setLocalQuery,
   onSubmit,
   isLoading,

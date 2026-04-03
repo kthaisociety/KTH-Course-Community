@@ -3,7 +3,7 @@ import { CourseService } from "../course/course.service";
 import { DRIZZLE } from "../database/drizzle.module";
 import { UserService, type UserWithFavorites } from "./user.service";
 
-type UserDbMock = {
+type MockDb = {
   insert: jest.Mock;
   select: jest.Mock;
   delete: jest.Mock;
@@ -18,7 +18,7 @@ type UserDbMock = {
 
 describe("UserService", () => {
   let userService: UserService;
-  let mockDb: UserDbMock;
+  let mockDb: MockDb;
 
   const mockUser = {
     id: "user-123",

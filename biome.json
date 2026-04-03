@@ -82,6 +82,16 @@
           }
         }
       }
+    },
+    {
+      "includes": ["frontend/views/ProfileView.tsx"],
+      "linter": {
+        "rules": {
+          "performance": {
+            "noImgElement": "off"
+          }
+        }
+      }
     }
   ]
 }
