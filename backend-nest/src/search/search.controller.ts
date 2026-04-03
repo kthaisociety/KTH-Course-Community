@@ -1,11 +1,4 @@
-import {
-  Controller,
-  Get,
-  NotFoundException,
-  Param,
-  Query,
-} from "@nestjs/common";
-import { CourseMapping } from "../../../types/search/elastic.mappings";
+import { Controller, Get, Query } from "@nestjs/common";
 import { type SearchResult, SearchService } from "./search.service";
 
 @Controller("search")
@@ -13,7 +6,7 @@ export class SearchController {
   constructor(private readonly searchService: SearchService) {}
 
   @Get()
-  //   Extend with more filters when needed, start simple now
+  // Extend with more filters when needed, start simple now
   async search(
     @Query("q") q?: string,
     @Query("size") size?: string,

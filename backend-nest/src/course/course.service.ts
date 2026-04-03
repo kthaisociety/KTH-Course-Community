@@ -32,11 +32,12 @@ export class CourseService {
   }
 
   async getCourseCredits(courseCode: string): Promise<number | null> {
+    // Select only credits to avoid querying columns that may not exist.
     const courseObject = await this.db
-      .select()
+      .select({ credits: courses.credits })
       .from(courses)
       .where(eq(courses.code, courseCode))
       .limit(1);
-    return courseObject[0].credits;
+    return courseObject[0]?.credits ?? null;
   }
 }

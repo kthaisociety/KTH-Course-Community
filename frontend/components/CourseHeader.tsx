@@ -3,6 +3,7 @@ import RatingDistributionChart from "@/components/RatingDistributionChart";
 import { Review, type ReviewFormData } from "@/components/review";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
@@ -29,6 +30,10 @@ export type CourseHeaderProps = {
     userId: string,
     reviewForm: ReviewFormData,
   ) => Promise<boolean>;
+  /** Optional class on the outer card (layout on course detail page). */
+  className?: string;
+  /** When true, opens the review editor dialog immediately. */
+  openReview?: boolean;
 };
 
 export default function CourseHeader(props: Readonly<CourseHeaderProps>) {
@@ -36,7 +41,8 @@ export default function CourseHeader(props: Readonly<CourseHeaderProps>) {
     ? Math.min(5, Math.max(0, props.courseRating))
     : null;
   const ratingLabel = `Avg: ${rating ? rating.toFixed(1) : "__ "}/5.0`;
-  const creditsLabel = `${props.credits} credits`;
+  const creditsLabel =
+    props.credits == null ? "— credits" : `${props.credits} credits`;
   const recommendPct = props.percentageWouldRecommend
     ? Math.min(100, Math.max(0, props.percentageWouldRecommend))
     : null;
@@ -48,7 +54,12 @@ export default function CourseHeader(props: Readonly<CourseHeaderProps>) {
   };
 
   return (
-    <Card className="w-full p-4 md:p-6 grid gap-4 md:grid-cols-2 md:gap-x-40 md:gap-y-4">
+    <Card
+      className={cn(
+        "w-full grid gap-4 border-border bg-card p-4 shadow-sm md:grid-cols-2 md:gap-x-40 md:gap-y-4 md:p-6",
+        props.className,
+      )}
+    >
       {/* Left */}
       <div className="flex flex-col gap-4">
         <div className="flex items-start justify-between gap-4">
@@ -75,6 +86,7 @@ export default function CourseHeader(props: Readonly<CourseHeaderProps>) {
             courseCode={props.courseCode}
             userId={props.userId}
             onAddReview={props.onAddReview}
+            openOnLoad={props.openReview}
           />
           <Dialog>
             <DialogTrigger asChild>
@@ -119,6 +131,7 @@ export default function CourseHeader(props: Readonly<CourseHeaderProps>) {
         <Card className="p-1 flex items-center justify-center">
           <RatingDistributionChart
             distribution={props.usefulScoreDistribution || [0, 0, 0, 0, 0]}
+            title="Useful score distribution"
           />
         </Card>
         <Card className="p-1 flex items-center justify-center">

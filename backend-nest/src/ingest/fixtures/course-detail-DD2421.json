@@ -1,0 +1,810 @@
+{
+  "course": {
+    "academicLevel": " ",
+    "courseCode": "DD2421",
+    "versionNumber": 2,
+    "departmentCode": "JR",
+    "department": { "code": "JR", "name": "EECS/Intelligenta system" },
+    "educationalLevelCode": "ADVANCED",
+    "educationalTypeId": 24,
+    "gradeScaleCode": "AF",
+    "title": "Maskininlärning",
+    "titleOther": "Machine Learning",
+    "cancelled": false,
+    "deactivated": false,
+    "credits": 7.5,
+    "creditUnitLabel": "Högskolepoäng",
+    "creditUnitAbbr": "hp",
+    "state": "ESTABLISHED",
+    "courseVersion": { "versionNumber": 2, "keywordsEn": [], "keywordsSv": [] }
+  },
+  "examiners": [
+    {
+      "kthid": "u1elx760",
+      "givenName": "Atsuto",
+      "lastName": "Maki",
+      "email": "atsuto@kth.se",
+      "username": "atsuto"
+    }
+  ],
+  "roundInfos": [
+    {
+      "lectureCount": 12,
+      "usage": [
+        {
+          "programmeCode": "CTFYS",
+          "progAdmissionTerm": { "term": 20232 },
+          "studyYear": 3,
+          "title": "Civilingenjörsutbildning i teknisk fysik",
+          "electiveCondition": {
+            "ordinal": 4,
+            "name": "V",
+            "abbrLabel": "Valfri"
+          }
+        },
+        {
+          "programmeCode": "CTMAT",
+          "progAdmissionTerm": { "term": 20232 },
+          "studyYear": 3,
+          "title": "Civilingenjörsutbildning i teknisk matematik",
+          "electiveCondition": {
+            "ordinal": 4,
+            "name": "V",
+            "abbrLabel": "Valfri"
+          }
+        },
+        {
+          "specCode": "DPU2",
+          "programmeCode": "TIDAB",
+          "progAdmissionTerm": { "term": 20232 },
+          "studyYear": 3,
+          "title": "Högskoleingenjörsutbildning i datateknik",
+          "electiveCondition": {
+            "ordinal": 3,
+            "name": "R",
+            "abbrLabel": "Rekommenderad"
+          }
+        },
+        {
+          "specCode": "SAIN",
+          "programmeCode": "TIDAB",
+          "progAdmissionTerm": { "term": 20232 },
+          "studyYear": 3,
+          "title": "Högskoleingenjörsutbildning i datateknik",
+          "electiveCondition": {
+            "ordinal": 3,
+            "name": "R",
+            "abbrLabel": "Rekommenderad"
+          }
+        },
+        {
+          "specCode": "HCID",
+          "programmeCode": "TIVNM",
+          "progAdmissionTerm": { "term": 20252 },
+          "studyYear": 1,
+          "title": "Masterprogram, ICT Innovation",
+          "electiveCondition": {
+            "ordinal": 3,
+            "name": "R",
+            "abbrLabel": "Rekommenderad"
+          }
+        },
+        {
+          "specCode": "HCIN",
+          "programmeCode": "TIVNM",
+          "progAdmissionTerm": { "term": 20252 },
+          "studyYear": 1,
+          "title": "Masterprogram, ICT Innovation",
+          "electiveCondition": {
+            "ordinal": 3,
+            "name": "R",
+            "abbrLabel": "Rekommenderad"
+          }
+        },
+        {
+          "programmeCode": "TBDVM",
+          "progAdmissionTerm": { "term": 20242 },
+          "studyYear": 2,
+          "title": "Masterprogram, biostatistik och datavetenskap",
+          "electiveCondition": {
+            "ordinal": 2,
+            "name": "VV",
+            "abbrLabel": "Villkorligt valfri"
+          }
+        },
+        {
+          "programmeCode": "TCYSM",
+          "progAdmissionTerm": { "term": 20252 },
+          "studyYear": 1,
+          "title": "Masterprogram, cybersäkerhet",
+          "electiveCondition": {
+            "ordinal": 3,
+            "name": "R",
+            "abbrLabel": "Rekommenderad"
+          }
+        },
+        {
+          "programmeCode": "TCYSM",
+          "progAdmissionTerm": { "term": 20242 },
+          "studyYear": 2,
+          "title": "Masterprogram, cybersäkerhet",
+          "electiveCondition": {
+            "ordinal": 3,
+            "name": "R",
+            "abbrLabel": "Rekommenderad"
+          }
+        },
+        {
+          "specCode": "CSCS",
+          "programmeCode": "TCSCM",
+          "progAdmissionTerm": { "term": 20252 },
+          "studyYear": 1,
+          "title": "Masterprogram, datalogi",
+          "electiveCondition": {
+            "ordinal": 1,
+            "name": "O",
+            "abbrLabel": "Obligatorisk"
+          }
+        },
+        {
+          "specCode": "CSDA",
+          "programmeCode": "TCSCM",
+          "progAdmissionTerm": { "term": 20252 },
+          "studyYear": 1,
+          "title": "Masterprogram, datalogi",
+          "electiveCondition": {
+            "ordinal": 1,
+            "name": "O",
+            "abbrLabel": "Obligatorisk"
+          }
+        },
+        {
+          "specCode": "CSSC",
+          "programmeCode": "TCSCM",
+          "progAdmissionTerm": { "term": 20252 },
+          "studyYear": 1,
+          "title": "Masterprogram, datalogi",
+          "electiveCondition": {
+            "ordinal": 3,
+            "name": "R",
+            "abbrLabel": "Rekommenderad"
+          }
+        },
+        {
+          "specCode": "CSST",
+          "programmeCode": "TCSCM",
+          "progAdmissionTerm": { "term": 20252 },
+          "studyYear": 1,
+          "title": "Masterprogram, datalogi",
+          "electiveCondition": {
+            "ordinal": 3,
+            "name": "R",
+            "abbrLabel": "Rekommenderad"
+          }
+        },
+        {
+          "specCode": "CSSC",
+          "programmeCode": "TCSCM",
+          "progAdmissionTerm": { "term": 20242 },
+          "studyYear": 2,
+          "title": "Masterprogram, datalogi",
+          "electiveCondition": {
+            "ordinal": 3,
+            "name": "R",
+            "abbrLabel": "Rekommenderad"
+          }
+        },
+        {
+          "specCode": "CSST",
+          "programmeCode": "TCSCM",
+          "progAdmissionTerm": { "term": 20252 },
+          "studyYear": 2,
+          "title": "Masterprogram, datalogi",
+          "electiveCondition": {
+            "ordinal": 3,
+            "name": "R",
+            "abbrLabel": "Rekommenderad"
+          }
+        },
+        {
+          "programmeCode": "TELPM",
+          "progAdmissionTerm": { "term": 20252 },
+          "studyYear": 1,
+          "title": "Masterprogram, elkraftteknik",
+          "electiveCondition": {
+            "ordinal": 3,
+            "name": "R",
+            "abbrLabel": "Rekommenderad"
+          }
+        },
+        {
+          "programmeCode": "TELPM",
+          "progAdmissionTerm": { "term": 20242 },
+          "studyYear": 2,
+          "title": "Masterprogram, elkraftteknik",
+          "electiveCondition": {
+            "ordinal": 3,
+            "name": "R",
+            "abbrLabel": "Rekommenderad"
+          }
+        },
+        {
+          "specCode": "INMV",
+          "programmeCode": "TEBSM",
+          "progAdmissionTerm": { "term": 20252 },
+          "studyYear": 1,
+          "title": "Masterprogram, inbyggda system",
+          "electiveCondition": {
+            "ordinal": 3,
+            "name": "R",
+            "abbrLabel": "Rekommenderad"
+          }
+        },
+        {
+          "specCode": "INPF",
+          "programmeCode": "TEBSM",
+          "progAdmissionTerm": { "term": 20252 },
+          "studyYear": 1,
+          "title": "Masterprogram, inbyggda system",
+          "electiveCondition": {
+            "ordinal": 3,
+            "name": "R",
+            "abbrLabel": "Rekommenderad"
+          }
+        },
+        {
+          "specCode": "ITE",
+          "programmeCode": "TCOMM",
+          "progAdmissionTerm": { "term": 20252 },
+          "studyYear": 1,
+          "title": "Masterprogram, kommunikationssystem",
+          "electiveCondition": {
+            "ordinal": 3,
+            "name": "R",
+            "abbrLabel": "Rekommenderad"
+          }
+        },
+        {
+          "specCode": "SMK",
+          "programmeCode": "TCOMM",
+          "progAdmissionTerm": { "term": 20252 },
+          "studyYear": 1,
+          "title": "Masterprogram, kommunikationssystem",
+          "electiveCondition": {
+            "ordinal": 3,
+            "name": "R",
+            "abbrLabel": "Rekommenderad"
+          }
+        },
+        {
+          "specCode": "TRN",
+          "programmeCode": "TCOMM",
+          "progAdmissionTerm": { "term": 20252 },
+          "studyYear": 1,
+          "title": "Masterprogram, kommunikationssystem",
+          "electiveCondition": {
+            "ordinal": 3,
+            "name": "R",
+            "abbrLabel": "Rekommenderad"
+          }
+        },
+        {
+          "programmeCode": "TMSKM",
+          "progAdmissionTerm": { "term": 20252 },
+          "studyYear": 1,
+          "title": "Masterprogram, maskinkonstruktion",
+          "electiveCondition": {
+            "ordinal": 2,
+            "name": "VV",
+            "abbrLabel": "Villkorligt valfri"
+          }
+        },
+        {
+          "specCode": "LDCS",
+          "programmeCode": "TSCRM",
+          "progAdmissionTerm": { "term": 20252 },
+          "studyYear": 1,
+          "title": "Masterprogram, systemteknik och robotik",
+          "electiveCondition": {
+            "ordinal": 2,
+            "name": "VV",
+            "abbrLabel": "Villkorligt valfri"
+          }
+        },
+        {
+          "specCode": "RASM",
+          "programmeCode": "TSCRM",
+          "progAdmissionTerm": { "term": 20252 },
+          "studyYear": 1,
+          "title": "Masterprogram, systemteknik och robotik",
+          "electiveCondition": {
+            "ordinal": 2,
+            "name": "VV",
+            "abbrLabel": "Villkorligt valfri"
+          }
+        },
+        {
+          "specCode": "LDCS",
+          "programmeCode": "TSCRM",
+          "progAdmissionTerm": { "term": 20242 },
+          "studyYear": 2,
+          "title": "Masterprogram, systemteknik och robotik",
+          "electiveCondition": {
+            "ordinal": 2,
+            "name": "VV",
+            "abbrLabel": "Villkorligt valfri"
+          }
+        },
+        {
+          "specCode": "RASM",
+          "programmeCode": "TSCRM",
+          "progAdmissionTerm": { "term": 20252 },
+          "studyYear": 2,
+          "title": "Masterprogram, systemteknik och robotik",
+          "electiveCondition": {
+            "ordinal": 2,
+            "name": "VV",
+            "abbrLabel": "Villkorligt valfri"
+          }
+        },
+        {
+          "programmeCode": "TTMAM",
+          "progAdmissionTerm": { "term": 20252 },
+          "studyYear": 1,
+          "title": "Masterprogram, tillämpad matematik och beräkningsmatematik",
+          "electiveCondition": {
+            "ordinal": 4,
+            "name": "V",
+            "abbrLabel": "Valfri"
+          }
+        },
+        {
+          "programmeCode": "TTMAM",
+          "progAdmissionTerm": { "term": 20242 },
+          "studyYear": 2,
+          "title": "Masterprogram, tillämpad matematik och beräkningsmatematik",
+          "electiveCondition": {
+            "ordinal": 4,
+            "name": "V",
+            "abbrLabel": "Valfri"
+          }
+        }
+      ],
+      "timeslots": "",
+      "hasTimeslots": false,
+      "schemaUrl": "https://www.kth.se/social/course/DD2421/subgroup/vt-2026-mlvt26/calendar/",
+      "ldapResponsibles": [
+        {
+          "kthid": "u1elx760",
+          "givenName": "Atsuto",
+          "lastName": "Maki",
+          "email": "atsuto@kth.se",
+          "username": "atsuto"
+        }
+      ],
+      "ldapTeachers": [
+        {
+          "kthid": "u1w41vp7",
+          "givenName": "Jörg",
+          "lastName": "Conradt",
+          "email": "conr@kth.se",
+          "username": "conr"
+        }
+      ],
+      "round": {
+        "ladokRoundId": "1",
+        "ladokUID": "09f8e39b-ab3f-11ef-a240-57578bd7405a",
+        "state": "APPROVED",
+        "tutoringTimeOfDay": { "name": "DAG", "key": "tutoringtime.DAG" },
+        "municipalityCode": "KTHCAMPUS",
+        "tutoringForm": { "name": "NML", "key": "tutoringform.NML" },
+        "shortName": "MLVT26",
+        "campus": { "name": "KTH Campus", "label": "KTH Campus" },
+        "maxSeats": 400,
+        "selectionCriteriaSv": "\u003cp\u003e1. Sökande från program där DD2421 Maskininlärning är obligatorisk kurs har förtur.\u003c/p\u003e\u003cp\u003e2. För sökande som inte läser ett program där DD2421 Maskinlärning är obligatorisk kurs kommer ett urval att ske.\u003c/p\u003e\u003cp\u003e3. Urvalet kommer att ske utifrån betyg i de matematikkurser som möter de särskilda behörighetskraven för DD2421 Maskinlärning.\u003c/p\u003e",
+        "selectionCriteriaEn": "\u003cp\u003e1. Applicants from programmes that have DD2421 Machine Learning as a mandatory course have priority.\u003c/p\u003e\u003cp\u003e2. For applicants from programmes not having DD2421 Machine Learning as a mandatory course a selection will be made.\u003c/p\u003e\u003cp\u003e3. The selection will be based on grades in the math courses used to meet the prerequisite requirements for DD2421 Machine Learning.\u003c/p\u003e",
+        "language": "Engelska",
+        "targetGroup": "\u003cp\u003eS\u0026#246;kbar f\u0026#246;r alla program fr\u0026#229;n \u0026#229;rskurs 3 och f\u0026#246;r studenter antagna p\u0026#229; ett masterprogram,\u0026#160;under f\u0026#246;ruts\u0026#228;ttning att kursen kan ing\u0026#229; i programmet.\u003c/p\u003e",
+        "draftCourseRoundType": {
+          "code": "ORD",
+          "name": "Programutbildning",
+          "active": true,
+          "category": "PU"
+        },
+        "courseRoundTerms": [
+          {
+            "formattedPeriodsAndCredits": "P3 (7,5 hp)",
+            "term": { "term": 20261 },
+            "startWeek": { "year": 2026, "week": 3 },
+            "endWeek": { "year": 2026, "week": 11 },
+            "creditsP3": 7.5
+          }
+        ],
+        "applicationCodes": [
+          {
+            "applicationCode": "60242",
+            "term": "20261",
+            "courseRoundType": {
+              "code": "ORD",
+              "name": "Programutbildning",
+              "active": true,
+              "category": "PU"
+            },
+            "avgFri": false
+          }
+        ],
+        "startTerm": { "term": 20261 },
+        "isPU": true,
+        "isVU": false,
+        "startWeek": { "year": 2026, "week": 3 },
+        "endWeek": { "year": 2026, "week": 11 },
+        "startDate": "Jan 13, 2026 12:00:00 AM",
+        "firstTuitionDate": "2026-01-13",
+        "lastTuitionDate": "2026-03-13",
+        "studyPace": 50
+      }
+    },
+    {
+      "lectureCount": 12,
+      "usage": [
+        {
+          "specCode": "TEDA",
+          "programmeCode": "CLGYM",
+          "progAdmissionTerm": { "term": 20222 },
+          "studyYear": 4,
+          "title": "Civilingenjör och lärare",
+          "electiveCondition": {
+            "ordinal": 2,
+            "name": "VV",
+            "abbrLabel": "Villkorligt valfri"
+          }
+        },
+        {
+          "specCode": "TEDA",
+          "programmeCode": "CLGYM",
+          "progAdmissionTerm": { "term": 20212 },
+          "studyYear": 5,
+          "title": "Civilingenjör och lärare",
+          "electiveCondition": {
+            "ordinal": 2,
+            "name": "VV",
+            "abbrLabel": "Villkorligt valfri"
+          }
+        },
+        {
+          "specCode": "AUSM",
+          "programmeCode": "TIVNM",
+          "progAdmissionTerm": { "term": 20252 },
+          "studyYear": 1,
+          "title": "Masterprogram, ICT Innovation",
+          "electiveCondition": {
+            "ordinal": 1,
+            "name": "O",
+            "abbrLabel": "Obligatorisk"
+          }
+        },
+        {
+          "specCode": "AUSY",
+          "programmeCode": "TIVNM",
+          "progAdmissionTerm": { "term": 20252 },
+          "studyYear": 1,
+          "title": "Masterprogram, ICT Innovation",
+          "electiveCondition": {
+            "ordinal": 1,
+            "name": "O",
+            "abbrLabel": "Obligatorisk"
+          }
+        },
+        {
+          "specCode": "DASC",
+          "programmeCode": "TIVNM",
+          "progAdmissionTerm": { "term": 20252 },
+          "studyYear": 1,
+          "title": "Masterprogram, ICT Innovation",
+          "electiveCondition": {
+            "ordinal": 1,
+            "name": "O",
+            "abbrLabel": "Obligatorisk"
+          }
+        },
+        {
+          "specCode": "DASE",
+          "programmeCode": "TIVNM",
+          "progAdmissionTerm": { "term": 20252 },
+          "studyYear": 1,
+          "title": "Masterprogram, ICT Innovation",
+          "electiveCondition": {
+            "ordinal": 1,
+            "name": "O",
+            "abbrLabel": "Obligatorisk"
+          }
+        },
+        {
+          "specCode": "VCCN",
+          "programmeCode": "TIVNM",
+          "progAdmissionTerm": { "term": 20252 },
+          "studyYear": 1,
+          "title": "Masterprogram, ICT Innovation",
+          "electiveCondition": {
+            "ordinal": 3,
+            "name": "R",
+            "abbrLabel": "Rekommenderad"
+          }
+        },
+        {
+          "programmeCode": "TDTNM",
+          "progAdmissionTerm": { "term": 20242 },
+          "studyYear": 2,
+          "title": "Masterprogram, datorsimuleringar inom teknik och naturvetenskap",
+          "electiveCondition": {
+            "ordinal": 2,
+            "name": "VV",
+            "abbrLabel": "Villkorligt valfri"
+          }
+        },
+        {
+          "specCode": "MAIG",
+          "programmeCode": "TIEMM",
+          "progAdmissionTerm": { "term": 20252 },
+          "studyYear": 1,
+          "title": "Masterprogram, industriell ekonomi",
+          "electiveCondition": {
+            "ordinal": 1,
+            "name": "O",
+            "abbrLabel": "Obligatorisk"
+          }
+        },
+        {
+          "programmeCode": "TMEKM",
+          "progAdmissionTerm": { "term": 20252 },
+          "studyYear": 1,
+          "title": "Masterprogram, mekatronik",
+          "electiveCondition": {
+            "ordinal": 2,
+            "name": "VV",
+            "abbrLabel": "Villkorligt valfri"
+          }
+        }
+      ],
+      "timeslots": "",
+      "hasTimeslots": false,
+      "schemaUrl": "https://www.kth.se/social/course/DD2421/subgroup/ht-2025-mlht25/calendar/",
+      "ldapResponsibles": [
+        {
+          "kthid": "u1elx760",
+          "givenName": "Atsuto",
+          "lastName": "Maki",
+          "email": "atsuto@kth.se",
+          "username": "atsuto"
+        }
+      ],
+      "ldapTeachers": [
+        {
+          "kthid": "u1elx760",
+          "givenName": "Atsuto",
+          "lastName": "Maki",
+          "email": "atsuto@kth.se",
+          "username": "atsuto"
+        },
+        {
+          "kthid": "u1w41vp7",
+          "givenName": "Jörg",
+          "lastName": "Conradt",
+          "email": "conr@kth.se",
+          "username": "conr"
+        },
+        {
+          "kthid": "u1vgz5ma",
+          "givenName": "Olov",
+          "lastName": "Andersson",
+          "email": "olovand@kth.se",
+          "username": "olovand"
+        }
+      ],
+      "round": {
+        "ladokRoundId": "1",
+        "ladokUID": "95ad718a-ab2b-11ef-a240-57578bd7405a",
+        "state": "APPROVED",
+        "tutoringTimeOfDay": { "name": "DAG", "key": "tutoringtime.DAG" },
+        "municipalityCode": "KTHCAMPUS",
+        "tutoringForm": { "name": "NML", "key": "tutoringform.NML" },
+        "shortName": "MLHT25",
+        "campus": { "name": "KTH Campus", "label": "KTH Campus" },
+        "maxSeats": 400,
+        "selectionCriteriaSv": "\u003cp\u003e1. Sökande från program där DD2421 Maskininlärning är obligatorisk kurs har förtur.\u003c/p\u003e\u003cp\u003e2. För sökande som inte läser ett program där DD2421 Maskinlärning är obligatorisk kurs kommer ett urval att ske.\u003c/p\u003e\u003cp\u003e3. Urvalet kommer att ske utifrån betyg i de matematikkurser som möter de särskilda behörighetskraven för DD2421 Maskinlärning.\u003c/p\u003e",
+        "selectionCriteriaEn": "\u003cp\u003e1. Applicants from programmes that have DD2421 Machine Learning as a mandatory course have priority.\u003c/p\u003e\u003cp\u003e2. For applicants from programmes not having DD2421 Machine Learning as a mandatory course a selection will be made.\u003c/p\u003e\u003cp\u003e3. The selection will be based on grades in the math courses used to meet the prerequisite requirements for DD2421 Machine Learning.\u003c/p\u003e",
+        "language": "Engelska",
+        "targetGroup": "\u003cp\u003eS\u0026#246;kbar f\u0026#246;r alla program fr\u0026#229;n \u0026#229;rskurs 3 och f\u0026#246;r studenter antagna p\u0026#229; ett masterprogram, under f\u0026#246;ruts\u0026#228;ttning att kursen kan ing\u0026#229; i programmet.\u003c/p\u003e",
+        "draftCourseRoundType": {
+          "code": "ORD",
+          "name": "Programutbildning",
+          "active": true,
+          "category": "PU"
+        },
+        "courseRoundTerms": [
+          {
+            "formattedPeriodsAndCredits": "P1 (7,5 hp)",
+            "term": { "term": 20252 },
+            "startWeek": { "year": 2025, "week": 35 },
+            "endWeek": { "year": 2025, "week": 43 },
+            "creditsP1": 7.5
+          }
+        ],
+        "applicationCodes": [
+          {
+            "applicationCode": "50508",
+            "term": "20252",
+            "courseRoundType": {
+              "code": "ORD",
+              "name": "Programutbildning",
+              "active": true,
+              "category": "PU"
+            },
+            "avgFri": false,
+            "admissionRoundCode": "AKH25"
+          }
+        ],
+        "startTerm": { "term": 20252 },
+        "isPU": true,
+        "isVU": false,
+        "startWeek": { "year": 2025, "week": 35 },
+        "endWeek": { "year": 2025, "week": 43 },
+        "startDate": "Aug 25, 2025 12:00:00 AM",
+        "firstTuitionDate": "2025-08-25",
+        "lastTuitionDate": "2025-10-24",
+        "studyPace": 50
+      }
+    }
+  ],
+  "mainSubjects": ["Datalogi och datateknik"],
+  "examinationSets": {
+    "20172": {
+      "startingTerm": { "term": 20172 },
+      "examinationRounds": [
+        {
+          "examCode": "LAB1",
+          "title": "Laborationer",
+          "gradeScaleCode": "PF",
+          "credits": 3.5,
+          "creditUnitLabel": "Högskolepoäng",
+          "creditUnitAbbr": "hp",
+          "ladokUID": "39f07440-73d8-11e8-b4e0-063f9afb40e3"
+        },
+        {
+          "examCode": "TEN1",
+          "title": "Tentamen",
+          "gradeScaleCode": "AF",
+          "credits": 4.0,
+          "creditUnitLabel": "Högskolepoäng",
+          "creditUnitAbbr": "hp",
+          "ladokUID": "39ea80c8-73d8-11e8-b4e0-063f9afb40e3"
+        }
+      ]
+    },
+    "20191": {
+      "startingTerm": { "term": 20191 },
+      "examinationRounds": [
+        {
+          "examCode": "LAB1",
+          "title": "Laborationer",
+          "gradeScaleCode": "PF",
+          "credits": 3.5,
+          "creditUnitLabel": "Högskolepoäng",
+          "creditUnitAbbr": "hp",
+          "ladokUID": "39f07440-73d8-11e8-b4e0-063f9afb40e3"
+        },
+        {
+          "examCode": "TEN1",
+          "title": "Tentamen",
+          "gradeScaleCode": "AF",
+          "credits": 4.0,
+          "creditUnitLabel": "Högskolepoäng",
+          "creditUnitAbbr": "hp",
+          "ladokUID": "39ea80c8-73d8-11e8-b4e0-063f9afb40e3"
+        }
+      ]
+    }
+  },
+  "publicSyllabusVersions": [
+    {
+      "edition": 1,
+      "validFromTerm": { "term": 20242 },
+      "inStateApproved": true,
+      "courseSyllabus": {
+        "discontinuationText": "När kurs inte längre ges har student möjlighet att examineras under ytterligare två läsår.",
+        "goals": "\u003cp\u003eEfter godk\u0026#228;nd kurs ska studenten kunna\u003c/p\u003e\u003cul\u003e\u003cli\u003ebeskriva de viktigaste algoritmerna och teorin som utg\u0026#246;r grunden f\u0026#246;r maskininl\u0026#228;rning och ber\u0026#228;kningsintelligens\u003c/li\u003e\u003cli\u003ef\u0026#246;rklara principen f\u0026#246;r maskininl\u0026#228;rning och hur algoritmerna och metoderna kan anv\u0026#228;ndas\u003c/li\u003e\u003cli\u003ediskutera f\u0026#246;rdelar med och begr\u0026#228;nsningar hos maskininl\u0026#228;rning f\u0026#246;r olika till\u0026#228;mpningar\u003c/li\u003e\u003c/ul\u003e\u003cp\u003ei syfte att kunna identifiera och till\u0026#228;mpa l\u0026#228;mplig maskininl\u0026#228;rningsteknik f\u0026#246;r klassificering, m\u0026#246;nsterigenk\u0026#228;nning, regression och beslutsproblem.\u003c/p\u003e",
+        "content": "\u003cp\u003eKursen v\u0026#228;nder sig till studenter p\u0026#229; avancerad- och forskarniv\u0026#229; i datalogi och liknande fack som ingenj\u0026#246;rsvetenskap och statistik. Kursen behandlar fr\u0026#229;gan hur datorn kan l\u0026#228;ra sig fr\u0026#229;n tidigare erfarenheter. Den ger en \u0026#246;versikt \u0026#246;ver maskininl\u0026#228;rningsomr\u0026#229;det och beskriver ett antal inl\u0026#228;rningsparadigm, algoritmer, teoretiska resultat och till\u0026#228;mpningar. Kursen behandlar de grundl\u0026#228;ggande begreppen i statistik, artificiell intelligens, informationsteori och sannolikhetsl\u0026#228;ra som \u0026#228;r relevanta f\u0026#246;r maskininl\u0026#228;rning.\u003c/p\u003e\u003cp\u003eF\u0026#246;ljande \u0026#228;mnen behandlas i detalj:\u003c/p\u003e\u003cul\u003e\u003cli\u003en\u0026#228;rmaste-granne klassificerare\u003c/li\u003e\u003cli\u003ebeslutstr\u0026#228;d\u003c/li\u003e\u003cli\u003ebias och varians trade-off\u003c/li\u003e\u003cli\u003eregression\u003c/li\u003e\u003cli\u003eprobabilistiska metoder\u003c/li\u003e\u003cli\u003eBayesiansk inl\u0026#228;rning\u003c/li\u003e\u003cli\u003esupport-vektor maskiner\u003c/li\u003e\u003cli\u003eartificiella neuronn\u0026#228;t\u003c/li\u003e\u003cli\u003eensemble metoder\u003c/li\u003e\u003cli\u003edimensionalitetsreduktion\u003c/li\u003e\u003cli\u003eunderrumsmetoder.\u003c/li\u003e\u003c/ul\u003e",
+        "eligibility": "\u003cp\u003eKunskaper och f\u0026#228;rdigheter i programmering, 6 hp, motsvarande slutf\u0026#246;rd kurs DD1337/DD1310-DD1319/DD1321/DD1331/DD100N/ID1018.\u003c/p\u003e\u003cp\u003eKunskaper i linj\u0026#228;r algebra, 7,5 hp, motsvarande slutf\u0026#246;rd kurs SF1624/SF1672/SF1684.\u003c/p\u003e\u003cp\u003eKunskaper i flervariabelanalys, 7,5 hp, motsvarande slutf\u0026#246;rd kurs SF1626/SF1674.\u003c/p\u003e\u003cp\u003eKunskaper i sannolikhetsl\u0026#228;ra och statistik, 6 hp, motsvarande slutf\u0026#246;rd kurs SF1910-SF1924/SF1935.\u003c/p\u003e",
+        "examComments": "Examinator beslutar, baserat på rekommendation från KTH:s handläggare av stöd till studenter med funktionsnedsättning, om eventuell anpassad examination för studenter med dokumenterad, varaktig funktionsnedsättning. \u003cbr\u003e\u003cbr\u003eExaminator får medge annan examinationsform vid omexamination av enstaka studenter.\u003cp\u003eTentamen \u0026#228;r skriftlig.\u003c/p\u003e",
+        "establishment": "\u003cp\u003eKursplanen g\u0026#228;ller fr\u0026#229;n och med HT 2024 enligt grundutbildningsansvarigs beslut: J-2024-1035.\u003c/p\u003e\u003cp\u003eBeslutsdatum: 2024-04-05\u003c/p\u003e",
+        "languageOfInstruction": "Undervisningsspråk anges i kurstillfällesinformationen i kurs- och programkatalogen.",
+        "ethicalApproach": "\u003cul\u003e\u003cli\u003eVid grupparbete har alla i gruppen ansvar för gruppens arbete.\u003c/li\u003e\u003cli\u003eVid examination ska varje student ärligt redovisa hjälp som erhållits och källor som använts.\u003c/li\u003e\u003cli\u003eVid muntlig examination ska varje student kunna redogöra för hela uppgiften och hela lösningen.\u003c/li\u003e\u003c/ul\u003e",
+        "courseSyllabusVersionValidFromTerm": { "term": 20242 }
+      }
+    },
+    {
+      "edition": 1,
+      "validFromTerm": { "term": 20241 },
+      "inStateApproved": true,
+      "courseSyllabus": {
+        "discontinuationText": "När kurs inte längre ges har student möjlighet att examineras under ytterligare två läsår.",
+        "goals": "\u003cp\u003eEfter godk\u0026#228;nd kurs ska studenten kunna\u003c/p\u003e\u003cul\u003e\u003cli\u003ebeskriva de viktigaste algoritmerna och teorin som utg\u0026#246;r grunden f\u0026#246;r maskininl\u0026#228;rning och ber\u0026#228;kningsintelligens\u003c/li\u003e\u003cli\u003ef\u0026#246;rklara principen f\u0026#246;r maskininl\u0026#228;rning och hur algoritmerna och metoderna kan anv\u0026#228;ndas\u003c/li\u003e\u003cli\u003ediskutera f\u0026#246;rdelar med och begr\u0026#228;nsningar hos maskininl\u0026#228;rning f\u0026#246;r olika till\u0026#228;mpningar\u003c/li\u003e\u003c/ul\u003e\u003cp\u003ei syfte att kunna identifiera och till\u0026#228;mpa l\u0026#228;mplig maskininl\u0026#228;rningsteknik f\u0026#246;r klassificering, m\u0026#246;nsterigenk\u0026#228;nning, regression och beslutsproblem.\u003c/p\u003e",
+        "content": "\u003cp\u003eKursen v\u0026#228;nder sig till studenter p\u0026#229; avancerad- och forskarniv\u0026#229; i datalogi och liknande fack som ingenj\u0026#246;rsvetenskap och statistik. Kursen behandlar fr\u0026#229;gan hur datorn kan l\u0026#228;ra sig fr\u0026#229;n tidigare erfarenheter. Den ger en \u0026#246;versikt \u0026#246;ver maskininl\u0026#228;rningsomr\u0026#229;det och beskriver ett antal inl\u0026#228;rningsparadigm, algoritmer, teoretiska resultat och till\u0026#228;mpningar. Kursen behandlar de grundl\u0026#228;ggande begreppen i statistik, artificiell intelligens, informationsteori och sannolikhetsl\u0026#228;ra som \u0026#228;r relevanta f\u0026#246;r maskininl\u0026#228;rning.\u003c/p\u003e\u003cp\u003eF\u0026#246;ljande \u0026#228;mnen behandlas i detalj:\u003c/p\u003e\u003cul\u003e\u003cli\u003en\u0026#228;rmaste-granne klassificerare\u003c/li\u003e\u003cli\u003ebeslutstr\u0026#228;d\u003c/li\u003e\u003cli\u003ebias och varians trade-off\u003c/li\u003e\u003cli\u003eregression\u003c/li\u003e\u003cli\u003eprobabilistiska metoder\u003c/li\u003e\u003cli\u003eBayesiansk inl\u0026#228;rning\u003c/li\u003e\u003cli\u003esupport-vektor maskiner\u003c/li\u003e\u003cli\u003eartificiella neuronn\u0026#228;t\u003c/li\u003e\u003cli\u003eensemble metoder\u003c/li\u003e\u003cli\u003edimensionalitetsreduktion\u003c/li\u003e\u003cli\u003eunderrumsmetoder.\u003c/li\u003e\u003c/ul\u003e",
+        "eligibility": "\u003cp\u003eKunskaper och f\u0026#228;rdigheter i programmering, 6 hp, motsvarande slutf\u0026#246;rd kurs DD1337/DD1310-DD1319/DD1321/DD1331/DD100N/ID1018.\u003c/p\u003e\u003cp\u003eKunskaper i linj\u0026#228;r algebra, 7,5 hp, motsvarande slutf\u0026#246;rd kurs SF1624/SF1672/SF1684.\u003c/p\u003e\u003cp\u003eKunskaper i flervariabelanalys, 7,5 hp, motsvarande slutf\u0026#246;rd kurs SF1626/SF1674.\u003c/p\u003e\u003cp\u003eKunskaper i sannolikhetsl\u0026#228;ra och statistik, 7,5 hp, motsvarande slutf\u0026#246;rd kurs SF1910-SF1924/SF1935.\u003c/p\u003e",
+        "examComments": "Examinator beslutar, baserat på rekommendation från KTH:s handläggare av stöd till studenter med funktionsnedsättning, om eventuell anpassad examination för studenter med dokumenterad, varaktig funktionsnedsättning. \u003cbr\u003e\u003cbr\u003eExaminator får medge annan examinationsform vid omexamination av enstaka studenter.\u003cp\u003eTentamen \u0026#228;r skriftlig.\u003c/p\u003e",
+        "establishment": "\u003cp\u003eKursplanen g\u0026#228;ller fr\u0026#229;n och med VT 2024 enligt skolchefsbeslut: J-2023-2658.\u003c/p\u003e\u003cp\u003eBeslutsdatum: 2023-10-10\u003c/p\u003e",
+        "languageOfInstruction": "Undervisningsspråk anges i kurstillfällesinformationen i kurs- och programkatalogen.",
+        "ethicalApproach": "\u003cul\u003e\u003cli\u003eVid grupparbete har alla i gruppen ansvar för gruppens arbete.\u003c/li\u003e\u003cli\u003eVid examination ska varje student ärligt redovisa hjälp som erhållits och källor som använts.\u003c/li\u003e\u003cli\u003eVid muntlig examination ska varje student kunna redogöra för hela uppgiften och hela lösningen.\u003c/li\u003e\u003c/ul\u003e",
+        "courseSyllabusVersionValidFromTerm": { "term": 20241 }
+      }
+    },
+    {
+      "edition": 2,
+      "validFromTerm": { "term": 20211 },
+      "inStateApproved": true,
+      "courseSyllabus": {
+        "discontinuationText": "När kurs inte längre ges har student möjlighet att examineras under ytterligare två läsår.",
+        "goals": "\u003cp\u003eEfter godk\u0026#228;nd kurs ska studenten kunna\u003c/p\u003e\u003cul\u003e\u003cli\u003ebeskriva de viktigaste algoritmerna och teorin som utg\u0026#246;r grunden f\u0026#246;r maskininl\u0026#228;rning och ber\u0026#228;kningsintelligens\u003c/li\u003e\u003cli\u003ef\u0026#246;rklara principen f\u0026#246;r maskininl\u0026#228;rning och hur algoritmerna och metoderna kan anv\u0026#228;ndas\u003c/li\u003e\u003cli\u003ediskutera f\u0026#246;rdelar med och begr\u0026#228;nsningar hos maskininl\u0026#228;rning f\u0026#246;r olika till\u0026#228;mpningar\u003c/li\u003e\u003c/ul\u003e\u003cp\u003ei syfte att kunna identifiera och till\u0026#228;mpa l\u0026#228;mplig maskininl\u0026#228;rningsteknik f\u0026#246;r klassificering, m\u0026#246;nsterigenk\u0026#228;nning, regression och beslutsproblem.\u003c/p\u003e",
+        "content": "\u003cp\u003eKursen v\u0026#228;nder sig till studenter p\u0026#229; avancerad- och forskarniv\u0026#229; i datalogi och liknande fack som ingenj\u0026#246;rsvetenskap och statistik. Kursen behandlar fr\u0026#229;gan hur datorn kan l\u0026#228;ra sig fr\u0026#229;n tidigare erfarenheter. Den ger en \u0026#246;versikt \u0026#246;ver maskininl\u0026#228;rningsomr\u0026#229;det och beskriver ett antal inl\u0026#228;rningsparadigm, algoritmer, teoretiska resultat och till\u0026#228;mpningar. Kursen behandlar de grundl\u0026#228;ggande begreppen i statistik, artificiell intelligens, informationsteori och sannolikhetsl\u0026#228;ra som \u0026#228;r relevanta f\u0026#246;r maskininl\u0026#228;rning.\u003c/p\u003e\u003cp\u003eF\u0026#246;ljande \u0026#228;mnen behandlas i detalj:\u003c/p\u003e\u003cul\u003e\u003cli\u003en\u0026#228;rmaste-granne klassificerare\u003c/li\u003e\u003cli\u003ebeslutstr\u0026#228;d\u003c/li\u003e\u003cli\u003ebias och varians trade-off\u003c/li\u003e\u003cli\u003eregression\u003c/li\u003e\u003cli\u003eprobabilistiska metoder\u003c/li\u003e\u003cli\u003eBayesiansk inl\u0026#228;rning\u003c/li\u003e\u003cli\u003esupport-vektor maskiner\u003c/li\u003e\u003cli\u003eartificiella neuronn\u0026#228;t\u003c/li\u003e\u003cli\u003eensemble metoder\u003c/li\u003e\u003cli\u003edimensionalitetsreduktion\u003c/li\u003e\u003cli\u003eunderrumsmetoder.\u003c/li\u003e\u003c/ul\u003e",
+        "eligibility": "\u003cp\u003eSlutf\u0026#246;rda kurser i samtliga f\u0026#246;ljande \u0026#228;mnen:\u003c/p\u003e\u003cul\u003e\u003cli\u003eflervariabelanalys motsvarande SF1626\u003c/li\u003e\u003cli\u003esannolikhetsl\u0026#228;ra och statistik motsvarande SF1912/SF1914/SF1915/SF1916/SF1920/SF1921/SF1922/SF1923/SF1924\u003c/li\u003e\u003cli\u003eprogrammering motsvarande DD1337/DD1310/DD1312\u003c/li\u003e\u003cli\u003ealgoritmer och datastrukturer motsvarande DD1338/DD1320/DD1321/DD1325.\u003c/li\u003e\u003c/ul\u003e\u003cp\u003eDen som uppfyller s\u0026#228;rskilda beh\u0026#246;righetskraven till masterprogrammet i maskininl\u0026#228;rning anses uppfylla ovanst\u0026#229;ende krav.\u003c/p\u003e\u003cp\u003eAktivt deltagande i kursomg\u0026#229;ng vars slutexamination \u0026#228;nnu inte \u0026#228;r Ladokrapporterad j\u0026#228;mst\u0026#228;lls med slutf\u0026#246;rd kurs.\u0026#160;\u003c/p\u003e\u003cp\u003eDen som \u0026#228;r registrerad anses vara aktivt deltagande.\u003c/p\u003e\u003cp\u003eMed slutexamination avses b\u0026#229;de ordinarie examination och det f\u0026#246;rsta omexaminationstillf\u0026#228;llet.\u003c/p\u003e",
+        "examComments": "Examinator beslutar, baserat på rekommendation från KTH:s handläggare av stöd till studenter med funktionsnedsättning, om eventuell anpassad examination för studenter med dokumenterad, varaktig funktionsnedsättning. \u003cbr\u003e\u003cbr\u003eExaminator får medge annan examinationsform vid omexamination av enstaka studenter.\u003cp\u003eTentamen \u0026#228;r skriftlig.\u003c/p\u003e",
+        "establishment": "\u003cp\u003eSkolchef vid EECS-skolan har 2020-10-13 beslutat att fastst\u0026#228;lla denna kursplan att g\u0026#228;lla fr\u0026#229;n och med VT 2021 (diarienummer J-2020-2220).\u003c/p\u003e",
+        "languageOfInstruction": "Undervisningsspråk anges i kurstillfällesinformationen i kurs- och programkatalogen.",
+        "ethicalApproach": "\u003cul\u003e\u003cli\u003eVid grupparbete har alla i gruppen ansvar för gruppens arbete.\u003c/li\u003e\u003cli\u003eVid examination ska varje student ärligt redovisa hjälp som erhållits och källor som använts.\u003c/li\u003e\u003cli\u003eVid muntlig examination ska varje student kunna redogöra för hela uppgiften och hela lösningen.\u003c/li\u003e\u003c/ul\u003e",
+        "courseSyllabusVersionValidFromTerm": { "term": 20211 }
+      }
+    },
+    {
+      "edition": 2,
+      "validFromTerm": { "term": 20202 },
+      "inStateApproved": true,
+      "courseSyllabus": {
+        "discontinuationText": "När kurs inte längre ges har student möjlighet att examineras under ytterligare två läsår.",
+        "goals": "\u003cp\u003eEfter godk\u0026#228;nd kurs ska studenten kunna\u003c/p\u003e\u003cul\u003e\u003cli\u003ebeskriva de viktigaste algoritmerna och teorin som utg\u0026#246;r grunden f\u0026#246;r maskininl\u0026#228;rning och ber\u0026#228;kningsintelligens\u003c/li\u003e\u003cli\u003ef\u0026#246;rklara principen f\u0026#246;r maskininl\u0026#228;rning och hur algoritmerna och metoderna kan anv\u0026#228;ndas\u003c/li\u003e\u003cli\u003ediskutera f\u0026#246;rdelar med och begr\u0026#228;nsningar hos maskininl\u0026#228;rning f\u0026#246;r olika till\u0026#228;mpningar\u003c/li\u003e\u003c/ul\u003e\u003cp\u003ei syfte att kunna identifiera och till\u0026#228;mpa l\u0026#228;mplig maskininl\u0026#228;rningsteknik f\u0026#246;r klassificering, m\u0026#246;nsterigenk\u0026#228;nning, regression och beslutsproblem.\u003c/p\u003e",
+        "content": "\u003cp\u003eKursen v\u0026#228;nder sig till studenter p\u0026#229; avancerad- och forskarniv\u0026#229; i datalogi och liknande fack som ingenj\u0026#246;rsvetenskap och statistik. Kursen behandlar fr\u0026#229;gan hur datorn kan l\u0026#228;ra sig fr\u0026#229;n tidigare erfarenheter. Den ger en \u0026#246;versikt \u0026#246;ver maskininl\u0026#228;rningsomr\u0026#229;det och beskriver ett antal inl\u0026#228;rningsparadigm, algoritmer, teoretiska resultat och till\u0026#228;mpningar. Kursen behandlar de grundl\u0026#228;ggande begreppen i statistik, artificiell intelligens, informationsteori och sannolikhetsl\u0026#228;ra som \u0026#228;r relevanta f\u0026#246;r maskininl\u0026#228;rning.\u003c/p\u003e\u003cp\u003eF\u0026#246;ljande \u0026#228;mnen behandlas i detalj:\u003c/p\u003e\u003cul\u003e\u003cli\u003en\u0026#228;rmaste-granne klassificerare\u003c/li\u003e\u003cli\u003ebeslutstr\u0026#228;d\u003c/li\u003e\u003cli\u003ebias och varians trade-off\u003c/li\u003e\u003cli\u003eregression\u003c/li\u003e\u003cli\u003eprobabilistiska metoder\u003c/li\u003e\u003cli\u003eBayesiansk inl\u0026#228;rning\u003c/li\u003e\u003cli\u003esupport-vektor maskiner\u003c/li\u003e\u003cli\u003eartificiella neuronn\u0026#228;t\u003c/li\u003e\u003cli\u003eensemble metoder\u003c/li\u003e\u003cli\u003edimensionalitetsreduktion\u003c/li\u003e\u003cli\u003eunderrumsmetoder.\u003c/li\u003e\u003c/ul\u003e",
+        "eligibility": "\u003cp\u003eSlutf\u0026#246;rda kurser i samtliga f\u0026#246;ljande \u0026#228;mnen:\u003c/p\u003e\u003cul\u003e\u003cli\u003eflervariabelanalys motsvarande SF1626\u003c/li\u003e\u003cli\u003esannolikhetsl\u0026#228;ra och statistik motsvarande SF1912/SF1914/SF1915/SF1916/SF1920/SF1921/SF1922/SF1923/SF1924\u003c/li\u003e\u003cli\u003eprogrammering motsvarande DD1337/DD1310/DD1312\u003c/li\u003e\u003cli\u003ealgoritmer och datastrukturer motsvarande DD1338/DD1320/DD1321/DD1325.\u003c/li\u003e\u003c/ul\u003e\u003cp\u003eDen som uppfyller s\u0026#228;rskilda beh\u0026#246;righetskraven till masterprogrammet i maskininl\u0026#228;rning anses uppfylla ovanst\u0026#229;ende krav.\u003c/p\u003e\u003cp\u003eAktivt deltagande i kursomg\u0026#229;ng vars slutexamination \u0026#228;nnu inte \u0026#228;r Ladokrapporterad j\u0026#228;mst\u0026#228;lls med slutf\u0026#246;rd kurs. Detta g\u0026#228;ller endast f\u0026#246;r student som \u0026#228;r f\u0026#246;rstag\u0026#229;ngsregistrerad p\u0026#229; den beh\u0026#246;righetsgivande kursomg\u0026#229;ngen eller har b\u0026#229;de denna och den s\u0026#246;kta kursomg\u0026#229;ngen i sin individuella studieplan.\u003c/p\u003e",
+        "examComments": "Examinator beslutar, baserat på rekommendation från KTH:s handläggare av stöd till studenter med funktionsnedsättning, om eventuell anpassad examination för studenter med dokumenterad, varaktig funktionsnedsättning. \u003cbr\u003e\u003cbr\u003eExaminator får medge annan examinationsform vid omexamination av enstaka studenter.\u003cp\u003eTentamen \u0026#228;r skriftlig.\u003c/p\u003e",
+        "establishment": "\u003cp\u003eSkolchef vid EECS-skolan har 2020-04-21 beslutat att fastst\u0026#228;lla denna kursplan att g\u0026#228;lla fr\u0026#229;n och med HT 2020, diarienummer: J-2020-0642.\u003c/p\u003e",
+        "languageOfInstruction": "Undervisningsspråk anges i kurstillfällesinformationen i kurs- och programkatalogen.",
+        "ethicalApproach": "\u003cul\u003e\u003cli\u003eVid grupparbete har alla i gruppen ansvar för gruppens arbete.\u003c/li\u003e\u003cli\u003eVid examination ska varje student ärligt redovisa hjälp som erhållits och källor som använts.\u003c/li\u003e\u003cli\u003eVid muntlig examination ska varje student kunna redogöra för hela uppgiften och hela lösningen.\u003c/li\u003e\u003c/ul\u003e",
+        "courseSyllabusVersionValidFromTerm": { "term": 20202 }
+      }
+    },
+    {
+      "edition": 1,
+      "validFromTerm": { "term": 20191 },
+      "inStateApproved": true,
+      "courseSyllabus": {
+        "discontinuationText": "När kurs inte längre ges har student möjlighet att examineras under ytterligare två läsår.",
+        "goals": "\u003cp\u003eSyftet med kursen \u0026#228;r att ge studenterna\u003c/p\u003e\u003cul\u003e\u003cli\u003egrundl\u0026#228;ggande kunskaper om de viktigaste algoritmer och teori som utg\u0026#246;r grunden f\u0026#246;r maskininl\u0026#228;rning och ber\u0026#228;kningsintelligens\u003c/li\u003e\u003cli\u003een praktisk kunskap om maskininl\u0026#228;rning algoritmer och metoder\u003c/li\u003e\u003c/ul\u003e\u003cp\u003es\u0026#229; att de kommer att kunna\u003c/p\u003e\u003cul\u003e\u003cli\u003ef\u0026#246;rklara principer, f\u0026#246;rdelar, begr\u0026#228;nsningar s\u0026#229;som \u0026#246;veranpassning och m\u0026#246;jliga till\u0026#228;mpningar av maskininl\u0026#228;rning\u003c/li\u003e\u003cli\u003eidentifiera och till\u0026#228;mpa l\u0026#228;mplig maskininl\u0026#228;rningsteknik f\u0026#246;r klassificering, m\u0026#246;nsterigenk\u0026#228;nning, optimering och beslutsproblem.\u003c/li\u003e\u003c/ul\u003e",
+        "content": "\u003cp\u003eKursen v\u0026#228;nder sig till studenter p\u0026#229; avancerad- och forskarniv\u0026#229; i datalogi och liknande fack som ingenj\u0026#246;rsvetenskap och statistik. Kursen behandlar fr\u0026#229;gan hur datorn kan l\u0026#228;ra sig fr\u0026#229;n tidigare erfarenheter. Den ger en \u0026#246;versikt \u0026#246;ver maskininl\u0026#228;rningsomr\u0026#229;det och beskriver ett antal inl\u0026#228;rningsparadigm, algoritmer, teoretiska resultat och till\u0026#228;mpningar.\u003cbr /\u003eKursen behandlar de grundl\u0026#228;ggande begreppen i statistik, artificiell intelligens, informationsteori och sannolikhetsl\u0026#228;ra som \u0026#228;r relevanta f\u0026#246;r maskininl\u0026#228;rning.\u003cbr /\u003eF\u0026#246;ljande \u0026#228;mnen behandlas i detalj:\u003cbr /\u003e-n\u0026#228;rmaste-granne klassificerare\u003cbr /\u003e-beslutstr\u0026#228;d\u003cbr /\u003e-bias och varians trade-off\u003cbr /\u003e-regression\u003cbr /\u003e-probabilistiska metoder\u003cbr /\u003e-Bayesiansk inl\u0026#228;rning\u003cbr /\u003e-support-vektor maskiner\u003cbr /\u003e-artificiella neuronn\u0026#228;t\u003cbr /\u003e-ensemble metoder\u003cbr /\u003e-dimensionalitetsreduktion\u003cbr /\u003e-underrumsmetoder.\u003c/p\u003e",
+        "eligibility": "\u003cp\u003eF\u0026#246;r frist\u0026#229;ende kursstuderande kr\u0026#228;vs 90 h\u0026#246;gskolepo\u0026#228;ng varav 45 h\u0026#246;gskolepo\u0026#228;ng inom matematik och/eller informationsteknik, SF1604 Linj\u0026#228;r algebra, samt kurserna SF1625 Envariabelanalys, SF1626 Flervariabelanalys, SF1901 Sannolikhetsteori och statistik, DD1337 Programmering och DD1338 Algoritmer och Datastrukturer eller motsvarande.\u003c/p\u003e",
+        "literatureComment": "\u003cp\u003eMeddelas p\u0026#229; kursens hemsida f\u0026#246;re kursstart.\u003c/p\u003e",
+        "examComments": "Examinator beslutar, baserat på rekommendation från KTH:s handläggare av stöd till studenter med funktionsnedsättning, om eventuell anpassad examination för studenter med dokumenterad, varaktig funktionsnedsättning. \u003cbr\u003e\u003cbr\u003eExaminator får medge annan examinationsform vid omexamination av enstaka studenter.",
+        "establishment": "Kursplan för DD2421 gäller från och med VT19",
+        "languageOfInstruction": "Undervisningsspråk anges i kurstillfällesinformationen i kurs- och programkatalogen.",
+        "ethicalApproach": "\u003cul\u003e\u003cli\u003eVid grupparbete har alla i gruppen ansvar för gruppens arbete.\u003c/li\u003e\u003cli\u003eVid examination ska varje student ärligt redovisa hjälp som erhållits och källor som använts.\u003c/li\u003e\u003cli\u003eVid muntlig examination ska varje student kunna redogöra för hela uppgiften och hela lösningen.\u003c/li\u003e\u003c/ul\u003e",
+        "courseSyllabusVersionValidFromTerm": { "term": 20191 }
+      }
+    },
+    {
+      "edition": 1,
+      "validFromTerm": { "term": 20172 },
+      "inStateApproved": true,
+      "courseSyllabus": {
+        "discontinuationText": "När kurs inte längre ges har student möjlighet att examineras under ytterligare två läsår.",
+        "goals": "\u003cp\u003eSyftet med kursen \u0026#228;r att ge studenterna\u003c/p\u003e\u003cul\u003e\u003cli\u003egrundl\u0026#228;ggande kunskaper om de viktigaste algoritmer och teori som utg\u0026#246;r grunden f\u0026#246;r maskininl\u0026#228;rning och ber\u0026#228;kningsintelligens\u003c/li\u003e\u003cli\u003een praktisk kunskap om maskininl\u0026#228;rning algoritmer och metoder\u003c/li\u003e\u003c/ul\u003e\u003cp\u003es\u0026#229; att de kommer att kunna\u003c/p\u003e\u003cul\u003e\u003cli\u003ef\u0026#246;rklara principer, f\u0026#246;rdelar, begr\u0026#228;nsningar s\u0026#229;som \u0026#246;veranpassning och m\u0026#246;jliga till\u0026#228;mpningar av maskininl\u0026#228;rning\u003c/li\u003e\u003cli\u003eidentifiera och till\u0026#228;mpa l\u0026#228;mplig maskininl\u0026#228;rningsteknik f\u0026#246;r klassificering, m\u0026#246;nsterigenk\u0026#228;nning, optimering och beslutsproblem.\u003c/li\u003e\u003c/ul\u003e",
+        "content": "\u003cp\u003eKursen v\u0026#228;nder sig till studenter p\u0026#229; avancerad- och forskarniv\u0026#229; i datalogi och liknande fack som ingenj\u0026#246;rsvetenskap och statistik. Kursen behandlar fr\u0026#229;gan hur datorn kan l\u0026#228;ra sig fr\u0026#229;n tidigare erfarenheter. Den ger en \u0026#246;versikt \u0026#246;ver maskininl\u0026#228;rningsomr\u0026#229;det och beskriver ett antal inl\u0026#228;rningsparadigm, algoritmer, teoretiska resultat och till\u0026#228;mpningar.\u003cbr /\u003eKursen behandlar de grundl\u0026#228;ggande begreppen i statistik, artificiell intelligens, informationsteori och sannolikhetsl\u0026#228;ra som \u0026#228;r relevanta f\u0026#246;r maskininl\u0026#228;rning.\u003cbr /\u003eF\u0026#246;ljande \u0026#228;mnen behandlas i detalj:\u003cbr /\u003e-n\u0026#228;rmaste-granne klassificerare\u003cbr /\u003e-beslutstr\u0026#228;d\u003cbr /\u003e-bias och varians trade-off\u003cbr /\u003e-regression\u003cbr /\u003e-probabilistiska metoder\u003cbr /\u003e-Bayesiansk inl\u0026#228;rning\u003cbr /\u003e-support-vektor maskiner\u003cbr /\u003e-artificiella neuronn\u0026#228;t\u003cbr /\u003e-ensemble metoder\u003cbr /\u003e-dimensionalitetsreduktion\u003cbr /\u003e-underrumsmetoder.\u003c/p\u003e",
+        "eligibility": "\u003cp\u003eF\u0026#246;r frist\u0026#229;ende kursstuderande kr\u0026#228;vs 90 h\u0026#246;gskolepo\u0026#228;ng varav 45 h\u0026#246;gskolepo\u0026#228;ng inom matematik och/eller informationsteknik, SF1604 Linj\u0026#228;r algebra, samt kurserna SF1625 Envariabelanalys, SF1626 Flervariabelanalys, SF1901 Sannolikhetsteori och statistik, DD1337 Programmering och DD1338 Algoritmer och Datastrukturer eller motsvarande.\u003c/p\u003e",
+        "literatureComment": "\u003cp\u003eMeddelas p\u0026#229; kursens hemsida f\u0026#246;re kursstart.\u003c/p\u003e",
+        "examComments": "Examinator beslutar, baserat på rekommendation från KTH:s handläggare av stöd till studenter med funktionsnedsättning, om eventuell anpassad examination för studenter med dokumenterad, varaktig funktionsnedsättning. \u003cbr\u003e\u003cbr\u003eExaminator får medge annan examinationsform vid omexamination av enstaka studenter.",
+        "establishment": "Kursplan för DD2421 gäller från och med HT17",
+        "languageOfInstruction": "Undervisningsspråk anges i kurstillfällesinformationen i kurs- och programkatalogen.",
+        "ethicalApproach": "\u003cul\u003e\u003cli\u003eVid grupparbete har alla i gruppen ansvar för gruppens arbete.\u003c/li\u003e\u003cli\u003eVid examination ska varje student ärligt redovisa hjälp som erhållits och källor som använts.\u003c/li\u003e\u003cli\u003eVid muntlig examination ska varje student kunna redogöra för hela uppgiften och hela lösningen.\u003c/li\u003e\u003c/ul\u003e",
+        "courseSyllabusVersionValidFromTerm": { "term": 20172 }
+      }
+    }
+  ],
+  "socialCoursePageUrl": "https://www.kth.se/social/course/DD2421/",
+  "formattedGradeScales": { "AF": "A, B, C, D, E, FX, F", "PF": "P, F" }
+}

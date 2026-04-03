@@ -1,8 +1,15 @@
 "use client";
 
 import { SearchIcon } from "lucide-react";
-import { CourseItem } from "@/components/CourseItem";
+import { CourseCardWithCharts } from "@/components/CourseCardWithCharts";
 import { CourseItemSkeleton } from "@/components/CourseItemSkeleton";
+import {
+  getMockChartData,
+  getMockCourseStats,
+  getMockKeywords,
+  getMockPrerequisites,
+  getMockSummary,
+} from "@/data/courseCardMockData";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -25,7 +32,9 @@ type SearchViewProps = {
   filters: Record<string, string | string[]>;
   onFiltersChange: (filters: Record<string, string | string[]>) => void;
   onSeeReviews: (courseCode: string) => void;
+  onWriteReview: (courseCode: string) => void;
   onToggleFavorite: (courseCode: string) => void;
+  onAddToComparison: (courseCode: string) => void;
 };
 
 // Necessary for static arrays? Can't we just use the map index?
@@ -41,7 +50,9 @@ export default function SearchView({
   filters,
   onFiltersChange,
   onSeeReviews,
+  onWriteReview,
   onToggleFavorite,
+  onAddToComparison,
 }: SearchViewProps) {
   return (
     <div>
@@ -62,9 +73,9 @@ export default function SearchView({
             {isLoading ? <Spinner variant="ring" /> : <SearchIcon />}
           </Button>
         </form>
-        {error && <p style={{ color: "red" }}>Error: {error}</p>}
+        {error && <p className="text-red-600">Error: {error}</p>}
 
-        <div className="w-full max-w-3xl">
+        <div className="w-full max-w-4xl">
           <div className="flex items-center gap-4 mb-6">
             <Select
               value={(filters.department as string) || ""}
@@ -133,7 +144,7 @@ export default function SearchView({
             )}
           </div>
           {isLoading && (
-            <ul className="flex flex-col gap-6">
+            <ul className="flex flex-col gap-4">
               {skeletonKeys.map((key) => (
                 <li key={key}>
                   <CourseItemSkeleton />
@@ -142,18 +153,30 @@ export default function SearchView({
             </ul>
           )}
 
-          <ul className="flex flex-col gap-6">
+          <ul className="flex flex-col gap-4">
             {results.map((course) => (
               <li key={course._id}>
-                <CourseItem
-                  courseName={course.name}
+                <CourseCardWithCharts
+                  title={course.name}
+                  goals={course.goals}
+                  content={course.content}
+                  summary={
+                    course.summary?.trim()
+                      ? course.summary
+                      : getMockSummary(course.courseCode)
+                  }
                   courseCode={course.courseCode}
-                  rating={Math.max(0, Math.min(5, Number(course.rating ?? 0)))}
-                  // semester={"P1"}
-                  ects={course.credits}
+                  department={course.department}
+                  hp={course.credits}
+                  keywords={getMockKeywords(course.courseCode)}
+                  prerequisites={getMockPrerequisites(course.courseCode)}
+                  chartData={getMockChartData(course.courseCode)}
+                  stats={getMockCourseStats(course.courseCode)}
                   isUserFavorite={course.isUserFavorite}
                   onSeeReviews={() => onSeeReviews(course.courseCode)}
+                  onWriteReview={() => onWriteReview(course.courseCode)}
                   onToggleFavorite={() => onToggleFavorite(course.courseCode)}
+                  onAddToComparison={() => onAddToComparison(course.courseCode)}
                 />
               </li>
             ))}

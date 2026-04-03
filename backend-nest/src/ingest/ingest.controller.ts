@@ -1,41 +1,53 @@
 // src/ingest/ingest.controller.ts
-import { Controller, Get, HttpCode, Post } from "@nestjs/common";
-import { IngestService } from "./ingest.service";
+import { Controller, Get, HttpCode, Post } from '@nestjs/common';
+import { IngestService } from './ingest.service';
 
-@Controller("ingest")
+@Controller('ingest')
 export class IngestController {
   constructor(private readonly ingest: IngestService) {}
 
-  @Post("courses")
+  // ingests courses to BOTH elastic and Neon
+  @Post('courses')
   @HttpCode(202)
-  async trigger() {
-    this.ingest.runFullIngest().catch((e) => console.error(e));
-    return { status: "queued (in-process)", task: "courses" };
+  async triggerFullIngest() {
+    void this.ingest.runFullIngest().catch((e) => console.error(e));
+    return { status: 'queued (in-process)', task: 'courses' };
   }
 
-  @Post("credits")
+  // ingests courses to Neon only
+  @Post('courses/neon')
   @HttpCode(202)
-  async ingestCredits() {
-    this.ingest.ingestCredits().catch((e) => {
-      console.error("Credits ingestion failed:", e);
-      // In a production environment, you might want to send this to a monitoring service
-    });
-    return { status: "queued (in-process)", task: "credits" };
+  async triggerNeonIngest() {
+    void this.ingest.runNeonIngest().catch((e) => console.error(e));
+    return { status: 'queued (in-process)', task: 'courses/neon' };
   }
 
-  @Post("test-elastic")
+  // ingests courses to ElasticSearch only
+  @Post('courses/elastic')
+  @HttpCode(202)
+  async triggerElasticIngest() {
+    void this.ingest.runElasticIngest().catch((e) => console.error(e));
+    return { status: 'queued (in-process)', task: 'courses/elastic' };
+  }
+
+  // returns the current status of the ingestion pipeline
+  @Get('status')
+  getIngestStatus() {
+    return this.ingest.getIngestStatus();
+  }
+
+  // test endpoints for inserting a handful of courses, used to check ingestion pipelines
+  @Post('test-neon')
+  @HttpCode(200)
+  async testNeon() {
+    await this.ingest.runNeonTest();
+    return { status: 'ok', task: 'test-neon' };
+  }
+
+  @Post('test-elastic')
   @HttpCode(200)
   async testElastic() {
     await this.ingest.runElasticTest();
-    return { status: "queued", task: "test-elastic" };
-  }
-
-  @Get("credits/status")
-  async getCreditsStatus() {
-    const status = await this.ingest.getCreditsIngestionStatus();
-    return {
-      status: "success",
-      data: status,
-    };
+    return { status: 'queued', task: 'test-elastic' };
   }
 }
