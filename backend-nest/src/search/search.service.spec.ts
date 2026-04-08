@@ -141,6 +141,11 @@ describe("SearchService", () => {
           "credits",
           "goals",
           "content",
+          "subject",
+          "periods",
+          "course_category",
+          "eligibility",
+          "state",
         ],
       });
 
