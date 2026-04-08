@@ -133,3 +133,8 @@ types/**/*.d.ts
 # =================================
 api-profile*.json
 scripts/api-profile*.json
+
+# =================================
+# LOCAL AUDIT REPORTS
+# =================================
+AUDIT_REPORT.md

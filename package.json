@@ -38,20 +38,21 @@
   },
   "homepage": "https://github.com/Tegelstenen/course-compass#readme",
   "overrides": {
-    "lodash": "^4.18.1"
+    "lodash": "^4.18.1",
+    "@angular-devkit/core": {
+      "picomatch": "^4.0.4"
+    },
+    "@esbuild-kit/core-utils": {
+      "esbuild": ">=0.25.0"
+    }
   },
   "devDependencies": {
-    "@arkweid/lefthook": "^0.7.7",
     "@biomejs/biome": "2.2.6",
-    "@types/express": "^5.0.3",
-    "@types/multer": "^2.0.0",
     "dotenv-cli": "^10.0.0",
-    "drizzle-kit": "^0.30.0",
     "lefthook": "^2.0.0",
     "zod": "^3.23.8"
   },
   "dependencies": {
-    "drizzle-orm": "^0.45.2",
-    "lightningcss": "^1.30.2"
+    "drizzle-orm": "0.45.2"
   }
 }
