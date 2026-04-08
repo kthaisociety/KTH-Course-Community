@@ -3,13 +3,6 @@
 import { SearchIcon } from "lucide-react";
 import { CourseCardWithCharts } from "@/components/CourseCardWithCharts";
 import { CourseItemSkeleton } from "@/components/CourseItemSkeleton";
-import {
-  getMockChartData,
-  getMockCourseStats,
-  getMockKeywords,
-  getMockPrerequisites,
-  getMockSummary,
-} from "@/data/courseCardMockData";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -20,6 +13,13 @@ import {
 } from "@/components/ui/select";
 import { Rating, RatingButton } from "@/components/ui/shadcn-io/rating";
 import { Spinner } from "@/components/ui/shadcn-io/spinner";
+import {
+  getMockChartData,
+  getMockCourseStats,
+  getMockKeywords,
+  getMockPrerequisites,
+  getMockSummary,
+} from "@/data/courseCardMockData";
 import type { CourseWithUserInfo } from "@/models/CourseModel";
 
 type SearchViewProps = {
@@ -41,7 +41,7 @@ type SearchViewProps = {
 const skeletonKeys = Array.from({ length: 5 }, () => crypto.randomUUID());
 
 export default function SearchView({
-  localQuery,
+  localQuery: _localQuery,
   setLocalQuery,
   onSubmit,
   isLoading,
@@ -62,6 +62,7 @@ export default function SearchView({
           <input
             className="rounded-md outline p-2 w-64 text-center"
             type="text"
+            value={localQuery}
             onChange={(e) => setLocalQuery(e.target.value)}
             placeholder="Search course..."
           />

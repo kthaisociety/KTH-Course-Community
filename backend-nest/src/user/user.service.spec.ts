@@ -3,9 +3,22 @@ import { CourseService } from "../course/course.service";
 import { DRIZZLE } from "../database/drizzle.module";
 import { UserService, type UserWithFavorites } from "./user.service";
 
+type MockDb = {
+  insert: jest.Mock;
+  select: jest.Mock;
+  delete: jest.Mock;
+  update: jest.Mock;
+  values: jest.Mock;
+  set: jest.Mock;
+  from: jest.Mock;
+  where: jest.Mock;
+  limit: jest.Mock;
+  onConflictDoNothing: jest.Mock;
+};
+
 describe("UserService", () => {
   let userService: UserService;
-  let mockDb: any;
+  let mockDb: MockDb;
 
   const mockUser = {
     id: "user-123",

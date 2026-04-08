@@ -1,8 +1,8 @@
 "use client";
 
-import type { ReactNode } from "react";
 import { ArrowLeft, ExternalLink } from "lucide-react";
 import Link from "next/link";
+import type { ReactNode } from "react";
 import CourseHeader, {
   type CourseHeaderProps,
 } from "@/components/CourseHeader";
@@ -38,13 +38,7 @@ function formatDate(iso: string) {
   }
 }
 
-function SectionTitle({
-  children,
-  id,
-}: {
-  children: ReactNode;
-  id?: string;
-}) {
+function SectionTitle({ children, id }: { children: ReactNode; id?: string }) {
   return (
     <h2
       id={id}
@@ -129,9 +123,7 @@ export default function CourseView(props: CourseViewProps) {
               </dd>
             </div>
             <div>
-              <dt className="text-muted-foreground text-xs">
-                Name (database)
-              </dt>
+              <dt className="text-muted-foreground text-xs">Name (database)</dt>
               <dd className="mt-0.5 font-medium text-sm">{props.neon.name}</dd>
             </div>
             <div>

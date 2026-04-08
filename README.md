@@ -135,6 +135,110 @@ docker build -t your-dockerhub-username/course-compass-frontend:latest -f Docker
 docker build -t your-dockerhub-username/course-compass-backend:latest -f Dockerfile.backend .
 ```
 
+## AI Integration
+
+This app uses the Vercel AI SDK in both workspaces:
+
+- `backend-nest` uses `ai` for the agent, tool calling, streaming responses, and embeddings.
+- `frontend` uses `@ai-sdk/react` and `ai` for chat transport, typed UI messages, and rendering tool results.
+
+### Setup
+
+Add `AI_GATEWAY_API_KEY` to `backend-nest/.env.local`:
+
+```env
+AI_GATEWAY_API_KEY=your_key_here
+```
+
+Get a key at [vercel.com/dashboard → AI Gateway → API Keys](https://vercel.com/dashboard/ai-gateway/api-keys).
+
+The frontend does not need a model provider key. It only needs `NEXT_PUBLIC_BACKEND_DOMAIN`, which is already part of the frontend setup above.
+
+### End-to-End Flow
+
+```
+Browser (/ai-demo, useChat + DefaultChatTransport)
+  → POST <NEXT_PUBLIC_BACKEND_DOMAIN>/ai/chat
+  → NestJS AiController
+  → kthCourseAgent (ToolLoopAgent)
+    → retrieveKthCourses / getWeather
+    → AI Gateway → openai/gpt-5.4-mini
+  ← UI message stream
+```
+
+The demo currently sends requests directly from the browser to the NestJS backend. A Next.js proxy route also exists at `frontend/app/api/ai/chat/route.ts` if you want to switch to a same-origin `/api/ai/chat` path later.
+
+### Backend Usage
+
+| File | Role |
+|---|---|
+| `backend-nest/src/ai/ai.controller.ts` | Exposes `POST /ai/chat`, validates `locale` and `preferredDifficulty`, then streams the agent response with `pipeAgentUIStreamToResponse` |
+| `backend-nest/src/ai/kth-course-agent.ts` | Defines the `ToolLoopAgent`, the model (`openai/gpt-5.4-mini`), base instructions, call options schema, `prepareCall` logic, and first-step tool routing |
+| `backend-nest/src/ai/tools.ts` | Defines AI SDK `tool(...)` handlers for `retrieveKthCourses` and `getWeather` |
+| `backend-nest/src/ai/ai.service.ts` | Provides reusable AI SDK embedding helpers via `embed`, `embedMany`, and `cosineSimilarity` using `gateway.embeddingModel(...)` |
+
+The backend is where the actual model call happens. The current chat request body is:
+
+```json
+{
+  "messages": [],
+  "locale": "en",
+  "preferredDifficulty": "beginner"
+}
+```
+
+`locale` and `preferredDifficulty` are optional. They are parsed by `kthCourseAgentCallOptionsSchema` and injected into the agent instructions in `prepareCall(...)`.
+
+### Frontend Usage
+
+| File | Role |
+|---|---|
+| `frontend/app/(public)/ai-demo/page.tsx` | Demo chat page at `/ai-demo`, uses `useChat<KthCourseAgentUIMessage>()` with `DefaultChatTransport` |
+| `frontend/types/ai/kth-course-agent.ts` | Mirrors the backend tool input/output types so tool parts are strongly typed in the UI |
+| `frontend/app/api/ai/chat/route.ts` | Optional proxy route that forwards the request to the backend and preserves the AI SDK data stream headers |
+
+The demo page renders AI SDK message parts directly:
+
+- `text` parts become normal assistant messages.
+- `tool-retrieveKthCourses` parts render tool input/output cards.
+- `tool-getWeather` parts render tool input/output cards.
+
+The frontend currently does not choose the model. The active model is fixed on the backend in `backend-nest/src/ai/kth-course-agent.ts`.
+
+### Changing the model
+
+Edit the `model` field in `backend-nest/src/ai/kth-course-agent.ts`:
+
+```ts
+export const kthCourseAgent = new ToolLoopAgent({
+  model: "openai/gpt-5.4-mini",
+  // ...
+});
+```
+
+List all available models:
+
+```bash
+curl -s https://ai-gateway.vercel.sh/v1/models | jq -r '.data[].id'
+```
+
+### Demo
+
+With both servers running, open [http://localhost:3000/ai-demo](http://localhost:3000/ai-demo).
+
+## Agent Files
+
+This repo also includes short root-level agent instruction files:
+
+- `AGENTS.md` for Codex/OpenAI-style agents
+- `CLAUDE.md` for Claude-oriented workflows
+
+Both files are intentionally concise and point agents to the same core project facts: workspace layout, common commands, and where the AI SDK integration lives.
+
+Repo-local agent skills live under `.agents/skills/`. Right now the repo includes:
+
+- `.agents/skills/ai-sdk/SKILL.md` for AI SDK-specific guidance used in this codebase
+
 ## Available Scripts
 
 The following scripts are available to be run from the root directory:

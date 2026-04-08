@@ -4,37 +4,31 @@ import SuperTokens from "supertokens-auth-react";
 import Session from "supertokens-auth-react/recipe/session";
 import ThirdParty, { Google } from "supertokens-auth-react/recipe/thirdparty";
 
-const NEXT_PUBLIC_BACKEND_DOMAIN = process.env.NEXT_PUBLIC_BACKEND_DOMAIN;
-const NEXT_PUBLIC_WEBSITE_DOMAIN = process.env.NEXT_PUBLIC_WEBSITE_DOMAIN;
-
-if (
-  typeof NEXT_PUBLIC_BACKEND_DOMAIN !== "string" ||
-  !NEXT_PUBLIC_BACKEND_DOMAIN
-) {
-  throw new Error("NEXT_PUBLIC_BACKEND_DOMAIN is not set");
-}
-if (
-  typeof NEXT_PUBLIC_WEBSITE_DOMAIN !== "string" ||
-  !NEXT_PUBLIC_WEBSITE_DOMAIN
-) {
-  throw new Error("NEXT_PUBLIC_WEBSITE_DOMAIN is not set");
-}
-
 let inited = false;
 
 export function initST() {
-  // ⛔️ Don’t init on the server
+  // ⛔️ Don't init on the server
   if (typeof window === "undefined") return;
 
   if (inited) return;
   inited = true;
 
+  const backendDomain = process.env.NEXT_PUBLIC_BACKEND_DOMAIN;
+  const websiteDomain = process.env.NEXT_PUBLIC_WEBSITE_DOMAIN;
+
+  if (typeof backendDomain !== "string" || !backendDomain) {
+    throw new Error("NEXT_PUBLIC_BACKEND_DOMAIN is not set");
+  }
+  if (typeof websiteDomain !== "string" || !websiteDomain) {
+    throw new Error("NEXT_PUBLIC_WEBSITE_DOMAIN is not set");
+  }
+
   SuperTokens.init({
     appInfo: {
       appName: "CourseCompass",
-      apiDomain: process.env.NEXT_PUBLIC_BACKEND_DOMAIN as string,
+      apiDomain: backendDomain,
       apiBasePath: "/auth",
-      websiteDomain: process.env.NEXT_PUBLIC_WEBSITE_DOMAIN as string,
+      websiteDomain: websiteDomain,
       websiteBasePath: "/auth",
     },
     recipeList: [
