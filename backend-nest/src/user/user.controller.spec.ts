@@ -18,18 +18,7 @@ describe("UserController", () => {
     profilePicture: null,
     createdAt: new Date("2023-10-15"),
     updatedAt: new Date("2023-10-15"),
-    userFavorites: [
-      {
-        userId: "user-123",
-        favoriteCourse: "SF1625",
-        createdAt: new Date("2023-10-15"),
-      },
-      {
-        userId: "user-123",
-        favoriteCourse: "SF1624",
-        createdAt: new Date("2023-10-15"),
-      },
-    ],
+    userFavorites: ["SF1625", "SF1624"],
   };
 
   // For testing profile image later when functionality fixed
@@ -84,7 +73,7 @@ describe("UserController", () => {
       jest.spyOn(userService, "getUser").mockResolvedValue(mockUser);
 
       const result = await userController.getMe(
-        mockSession as SessionContainer,
+        mockSession as unknown as SessionContainer,
       );
 
       expect(userService.getUser).toHaveBeenCalledWith("user-123");
@@ -104,7 +93,7 @@ describe("UserController", () => {
       jest.spyOn(userService, "deleteUser").mockResolvedValue(undefined);
 
       const result = await userController.deleteAccount(
-        mockSession as SessionContainer,
+        mockSession as unknown as SessionContainer,
       );
 
       expect(userService.deleteUser).toHaveBeenCalledWith("user-123");

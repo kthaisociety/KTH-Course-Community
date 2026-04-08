@@ -116,11 +116,11 @@ describe("UserService", () => {
       mockDb.limit.mockResolvedValue([mockUser]);
       jest
         .spyOn(userService, "getUserFavorites")
-        .mockResolvedValue(mockUserFavorites);
+        .mockResolvedValue(["SF1625", "SF1624"]);
 
       const expected: UserWithFavorites = {
         ...mockUser,
-        userFavorites: mockUserFavorites,
+        userFavorites: ["SF1625", "SF1624"],
       };
 
       const result = await userService.getUser("user-123");

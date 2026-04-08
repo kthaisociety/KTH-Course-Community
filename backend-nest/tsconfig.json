@@ -23,7 +23,8 @@
     "forceConsistentCasingInFileNames": true,
     "noImplicitAny": false,
     "strictBindCallApply": false,
-    "noFallthroughCasesInSwitch": false
+    "noFallthroughCasesInSwitch": false,
+    "types": ["node", "jest", "express", "multer", "supertest"]
   },
   "exclude": ["node_modules", "dist", "test", "**/*spec.ts"]
 }
