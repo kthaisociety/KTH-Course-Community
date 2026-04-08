@@ -29,7 +29,7 @@ Run from the repo root. Include the full output in your report. For each finding
 - If the installed version is in the vulnerable range, report it as a finding using the same severity the advisory assigns
 - If `npm audit` is clean, note this explicitly ("npm audit: no findings") — do not skip it silently
 
-The static threat landscape section below covers known CVEs that were confirmed present in this stack as of April 2026. Treat it as a starting checklist, not a complete picture.
+Always run `npm audit` first to get current vulnerability data — the threat landscape below may be outdated. Treat it as a starting checklist, not a complete picture.
 
 ## What to check
 
@@ -75,26 +75,6 @@ Only report findings with a realistic attack scenario. Do not report theoretical
 ## Current Threat Landscape
 
 Researched April 2026. Check each item against the installed package versions before concluding a review.
-
----
-
-### CRITICAL — React2Shell: RCE in Next.js App Router (CVE-2025-55182 / CVE-2025-66478)
-
-**CVSS:** 10.0. Actively exploited in the wild from December 2025 onward by state-nexus threat groups and coin-miner operators.
-
-**What it is:** Insecure deserialization in the React Flight (RSC) protocol. An unauthenticated attacker sends a crafted POST to any Server Function endpoint; the payload exploits prototype pollution during deserialization (`__proto__` / `constructor` keys), escalating to RCE on the server. No auth required. Near-100% exploit reliability on default `create-next-app` builds.
-
-**Affected:** Next.js 15.x (App Router) with React 19.0.0, 19.1.0, 19.1.1, or 19.2.0. This project uses Next.js 15 App Router — it is in the affected range unless already patched.
-
-**Fixed versions:** React >= 19.0.1 / 19.1.2 / 19.2.1. Next.js >= 15.0.5, 15.1.9, 15.2.6, 15.3.6, 15.4.8, 15.5.7 (depending on minor line). There is no workaround — upgrade is mandatory.
-
-**Check:**
-1. `cat frontend/package.json | grep '"next"'` — must be a patched version for the installed minor line.
-2. `cat frontend/package.json | grep '"react"'` — must be >= 19.0.1 / 19.1.2 / 19.2.1.
-3. `cat frontend/package-lock.json | grep -A2 '"react-server"'` — verify the resolved version is patched.
-4. If unpatched: block POST requests with `content-type: text/x-component` at the reverse proxy as a temporary stopgap only.
-
-**References:** [Next.js advisory (CVE-2025-66478)](https://nextjs.org/blog/CVE-2025-66478), [React blog](https://react.dev/blog/2025/12/03/critical-security-vulnerability-in-react-server-components), [Akamai technical analysis](https://www.akamai.com/blog/security-research/cve-2025-55182-react-nextjs-server-functions-deserialization-rce)
 
 ---
 

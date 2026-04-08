@@ -2,6 +2,7 @@ name: Code quality
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened]
 
 jobs:
   quality:

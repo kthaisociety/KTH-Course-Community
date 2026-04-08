@@ -63,7 +63,7 @@ For each finding:
 
 ## Comments and documentation
 
-Add comments and JSDoc to every function, class, method, and non-obvious block you touch. Use plain, direct language — write for a developer reading the code for the first time.
+Add comments only where the logic is genuinely non-obvious. Use plain, direct language — write for a developer reading the code for the first time.
 
 **Functions and methods** — add a JSDoc block above the signature:
 ```ts
