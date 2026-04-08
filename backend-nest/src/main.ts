@@ -27,7 +27,10 @@ async function bootstrap() {
     credentials: true,
   });
 
-  app.useGlobalFilters(new AllExceptionsFilter(), new SuperTokensExceptionFilter());
+  app.useGlobalFilters(
+    new AllExceptionsFilter(),
+    new SuperTokensExceptionFilter(),
+  );
 
   const port = configService.get<number>("PORT") ?? 8080;
   await app.listen(port, "0.0.0.0");

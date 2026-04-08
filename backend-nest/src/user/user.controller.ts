@@ -1,6 +1,5 @@
 // src/app.controller.ts
 
-import { fromBuffer } from "file-type";
 import {
   BadRequestException,
   Body,
@@ -15,6 +14,7 @@ import {
 } from "@nestjs/common";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { put } from "@vercel/blob";
+import { fromBuffer } from "file-type";
 import {
   Session,
   SuperTokensAuthGuard,
@@ -87,7 +87,9 @@ export class UserController {
   // Upload and save a new profile picture
   @Post("/profile-picture")
   @VerifySession()
-  @UseInterceptors(FileInterceptor("file", { limits: { fileSize: 2 * 1024 * 1024 } }))
+  @UseInterceptors(
+    FileInterceptor("file", { limits: { fileSize: 2 * 1024 * 1024 } }),
+  )
   async uploadProfilePicture(
     @Session() session: SessionContainer,
     @UploadedFile() file: Express.Multer.File,

@@ -1,4 +1,5 @@
 "use client";
+import parse from "html-react-parser";
 import DOMPurify from "isomorphic-dompurify";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -201,8 +202,7 @@ export default function Post(props: Readonly<PostProps>) {
         <div className="h-px bg-border/60" />
 
         <div className="prose prose-sm md:prose-base max-w-none">
-          {/** biome-ignore lint/security/noDangerouslySetInnerHtml: sanitized with DOMPurify */}
-          <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(displayContent) }} />
+          <div>{parse(DOMPurify.sanitize(displayContent))}</div>
           {isLong && (
             <Button
               variant="link"

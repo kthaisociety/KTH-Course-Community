@@ -182,10 +182,7 @@ describe("ReviewsController", () => {
 
       const result = await controller.removeVote(reviewId, { userId });
 
-      expect(reviewsService.removeVote).toHaveBeenCalledWith(
-        reviewId,
-        userId,
-      );
+      expect(reviewsService.removeVote).toHaveBeenCalledWith(reviewId, userId);
       expect(result).toEqual(removeVoteResult);
     });
   });
