@@ -1,5 +1,6 @@
 // src/app.controller.ts
 
+import { fromBuffer } from "file-type";
 import {
   BadRequestException,
   Body,
@@ -49,6 +50,7 @@ export class UserController {
 
   // Get user favorite courses
   @Get("/favorites")
+  @VerifySession()
   async getFavorites(@Session() session: SessionContainer) {
     const userId = session.getUserId();
     // Can be empty but we accept an empty array of favorite courses
@@ -85,7 +87,7 @@ export class UserController {
   // Upload and save a new profile picture
   @Post("/profile-picture")
   @VerifySession()
-  @UseInterceptors(FileInterceptor("file"))
+  @UseInterceptors(FileInterceptor("file", { limits: { fileSize: 2 * 1024 * 1024 } }))
   async uploadProfilePicture(
     @Session() session: SessionContainer,
     @UploadedFile() file: Express.Multer.File,
@@ -95,8 +97,9 @@ export class UserController {
     if (!file) {
       throw new BadRequestException("No file provided");
     }
-    // Validation: type
-    if (!file.mimetype.startsWith("image/")) {
+    // Validation: type (check actual file bytes, not client-supplied Content-Type)
+    const fileType = await fromBuffer(file.buffer);
+    if (!fileType || !fileType.mime.startsWith("image/")) {
       throw new BadRequestException("File must be an image");
     }
     // Validation: 2MB size limit

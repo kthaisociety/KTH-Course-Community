@@ -91,7 +91,7 @@ export class ReviewsService {
 
     if (courseCode) query.where(eq(schema.reviews.courseCode, courseCode));
     query.orderBy(sql`created_at DESC`);
-    return query;
+    return await query;
   }
 
   // fetch a single review by id
@@ -204,6 +204,20 @@ export class ReviewsService {
     const review = await this.getReview(reviewId);
     if (review) this.reviewsGateway.emitCourseChanged(review.courseCode);
     return { action: "added", voteType };
+  }
+
+  async removeVote(reviewId: string, userId: string) {
+    await this.db
+      .delete(schema.reviewLikes)
+      .where(
+        and(
+          eq(schema.reviewLikes.reviewId, reviewId),
+          eq(schema.reviewLikes.userId, userId),
+        ),
+      );
+    const review = await this.getReview(reviewId);
+    if (review) this.reviewsGateway.emitCourseChanged(review.courseCode);
+    return { action: "removed", voteType: null };
   }
 
   private async getReview(reviewId: string) {

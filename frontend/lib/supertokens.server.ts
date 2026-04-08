@@ -9,18 +9,29 @@ export function ensureSuperTokensInit() {
     return;
   }
   inited = true;
+
+  const apiDomain = process.env.NEXT_PUBLIC_BACKEND_DOMAIN;
+  const websiteDomain = process.env.NEXT_PUBLIC_WEBSITE_DOMAIN;
+  const connectionURI = process.env.ST_CONNECTION_URI;
+  const apiKey = process.env.ST_API_KEY;
+
+  if (!apiDomain || !websiteDomain || !connectionURI || !apiKey) {
+    throw new Error(
+      "Missing SuperTokens env vars: NEXT_PUBLIC_BACKEND_DOMAIN, NEXT_PUBLIC_WEBSITE_DOMAIN, ST_CONNECTION_URI, and ST_API_KEY must all be set",
+    );
+  }
+
   SuperTokens.init({
     appInfo: {
       appName: "CourseCompass",
-      apiDomain: process.env.NEXT_PUBLIC_BACKEND_DOMAIN as string,
+      apiDomain,
       apiBasePath: "/auth",
-      websiteDomain: process.env.NEXT_PUBLIC_WEBSITE_DOMAIN as string,
+      websiteDomain,
       websiteBasePath: "/auth",
     },
     supertokens: {
-      // These are obtained from the SuperTokens dashboard
-      connectionURI: process.env.ST_CONNECTION_URI as string,
-      apiKey: process.env.ST_API_KEY as string,
+      connectionURI,
+      apiKey,
     },
     recipeList: [ThirdParty.init({}), Session.init()],
   });

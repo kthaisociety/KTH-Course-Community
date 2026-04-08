@@ -9,6 +9,7 @@ export async function sendFeedback(data: {
 
   const res = await fetch(`${backend}/feedback`, {
     method: "POST",
+    credentials: "include",
     headers: {
       "Content-Type": "application/json",
     },

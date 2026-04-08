@@ -77,6 +77,6 @@ export class ReviewsController {
 
   @Delete(":id/vote")
   removeVote(@Param("id") reviewId: string, @Body() body: { userId: string }) {
-    return this.reviewsService.toggleVote(reviewId, body.userId, "like"); // this will toggle off if exists
+    return this.reviewsService.removeVote(reviewId, body.userId);
   }
 }

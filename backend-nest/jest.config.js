@@ -17,6 +17,7 @@ module.exports = {
   moduleNameMapper: {
     "^(\\.{1,2}/.*)\\.js$": "$1",
     "^src/(.*)$": "<rootDir>/src/$1",
+    "^file-type$": "<rootDir>/node_modules/file-type",
   },
   setupFilesAfterEnv: ["<rootDir>/jest.setup.js"],
   testTimeout: 10000,
