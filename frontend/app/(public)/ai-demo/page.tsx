@@ -51,7 +51,7 @@ import {
   ToolInput,
   ToolOutput,
 } from "@/components/ai-elements/tool";
-import type { KthCourseAgentUIMessage } from "@/types/ai/kth-course-agent";
+import type { KthCourseAgentUIMessage } from "@shared/types";
 
 /**
  * AI Chat Demo — KTH Course Community

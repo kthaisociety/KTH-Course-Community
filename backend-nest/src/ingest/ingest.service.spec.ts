@@ -4,9 +4,9 @@ import type { z } from "zod";
 import {
   CourseDetailSchema,
   type CourseSchema,
-} from "../../../types/ingest/schemas";
-import type { CourseDocumentES } from "../../../types/search/elastic.mappings";
-import { DRIZZLE } from "../database/drizzle.module";
+} from "./schemas";
+import type { CourseDocumentES } from "../search/elastic.mappings";
+import { DRIZZLE } from "../db/drizzle.module";
 import { ES } from "../search/search.constants";
 import ag2411Raw from "./fixtures/course-detail-AG2411.json";
 import dd2421Raw from "./fixtures/course-detail-DD2421.json";

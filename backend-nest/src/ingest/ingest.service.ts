@@ -10,14 +10,14 @@ import {
   type InsertCourse,
   type InsertCourseExamination,
   type InsertCourseRound,
-} from "../../../types/database/schema";
+} from "../db/schema";
 import {
   CourseDetailSchema,
   CourseSchema,
   CoursesSchema,
-} from "../../../types/ingest/schemas";
-import type { CourseDocumentES } from "../../../types/search/elastic.mappings";
-import { DRIZZLE } from "../database/drizzle.module";
+} from "./schemas";
+import type { CourseDocumentES } from "../search/elastic.mappings";
+import { DRIZZLE } from "../db/drizzle.module";
 import { ES } from "../search/search.constants.js";
 import { KoppsService } from "./kopps.service";
 

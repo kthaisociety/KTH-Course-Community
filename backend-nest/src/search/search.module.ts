@@ -1,7 +1,9 @@
 import { Client } from "@elastic/elasticsearch";
 import { Module } from "@nestjs/common";
 import { ConfigModule, ConfigService } from "@nestjs/config";
-import { DrizzleModule } from "../database/drizzle.module.js";
+import { DrizzleModule } from "../db/drizzle.module.js";
+import { DepartmentsController } from "./departments.controller.js";
+import { DepartmentsService } from "./departments.service.js";
 import { ES } from "./search.constants.js";
 import { SearchController } from "./search.controller.js";
 import { SearchService } from "./search.service.js";
@@ -33,8 +35,9 @@ import { SearchService } from "./search.service.js";
       },
     },
     SearchService,
+    DepartmentsService,
   ],
-  controllers: [SearchController],
+  controllers: [SearchController, DepartmentsController],
   exports: [ES, SearchService],
 })
 export class ElasticSearchModule {}

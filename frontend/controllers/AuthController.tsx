@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import ThirdParty from "supertokens-auth-react/recipe/thirdparty";
-import type { OauthProvider } from "../../types/auth/auth.types";
+import type { OauthProvider } from "@shared/types";
 import { initST } from "../lib/supertokens.client";
 import AuthView from "../views/AuthView";
 

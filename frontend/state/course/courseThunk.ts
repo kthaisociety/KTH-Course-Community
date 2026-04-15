@@ -1,5 +1,9 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
-import { getCourseCredits, getCourseInfo, getCourseSummary } from "@/lib/courses";
+import {
+  getCourseCredits,
+  getCourseInfo,
+  getCourseSummary,
+} from "@/lib/courses";
 
 // Thunk: Elasticsearch course document + Neon metadata + credits
 export const fetchCourseInfo = createAsyncThunk(

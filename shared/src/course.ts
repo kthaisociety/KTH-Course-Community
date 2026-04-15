@@ -1,4 +1,3 @@
-
 /** Full course description (detail views). */
 export interface CourseDetails {
   courseCode: string;
@@ -6,8 +5,8 @@ export interface CourseDetails {
   department: string;
   content: string;
   goals: string;
-  summary?: string; // an LLM generated summary (not implemented yet).  
-  rating?: number;  // TODO: will have to revise this, since we no longer have ratings. 
+  summary?: string;
+  rating?: number;
   credits: number | null;
 }
 
@@ -22,7 +21,6 @@ export interface CourseSummary {
 
 /** Course search types. */
 export interface SearchParams {
-  // ensure this matches the backend in the future
   query: string;
   page: number;
   pageSize: number;
@@ -31,10 +29,9 @@ export interface SearchParams {
 }
 
 export interface SearchResponse {
-  results: CourseSummary[]; // ensures the results are course objects (but this has to be updated to match backend logic)
+  results: CourseSummary[];
   total: number;
   page: number;
   pageSize: number;
   timings?: { tookMs: number };
-  // could also include facets, i.e. filters ("get all courses over a certain rating")
 }

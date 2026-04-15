@@ -1,7 +1,6 @@
-
 const backend = process.env.NEXT_PUBLIC_BACKEND_DOMAIN;
 
-// Fetches a list of user favorite courses (courseCodes). 
+// Fetches a list of user favorite courses (courseCodes).
 export async function getUserFavorites(): Promise<string[]> {
   if (!backend) throw new Error("NEXT_PUBLIC_BACKEND_DOMAIN is not set");
 
@@ -15,8 +14,7 @@ export async function getUserFavorites(): Promise<string[]> {
   return data.favorites;
 }
 
-
-// Adds / removes a course to user favorite courses. 
+// Adds / removes a course to user favorite courses.
 export async function toggleUserFavorite(
   courseCode: string,
 ): Promise<{ action: "added" | "removed" }> {
@@ -37,6 +35,6 @@ export async function toggleUserFavorite(
   return data;
 }
 
-// TODO: Implement user liked courses and a toggle for that. 
+// TODO: Implement user liked courses and a toggle for that.
 
-// TODO: Implement other user data fetches here. 
+// TODO: Implement other user data fetches here.

@@ -4,7 +4,7 @@ import { Inject, Injectable } from "@nestjs/common";
 import { sql } from "drizzle-orm";
 import type { NeonHttpDatabase } from "drizzle-orm/neon-http";
 import { firstValueFrom } from "rxjs";
-import { DRIZZLE } from "../database/drizzle.module";
+import { DRIZZLE } from "../db/drizzle.module";
 import { ES } from "../search/search.constants.js";
 
 @Injectable()

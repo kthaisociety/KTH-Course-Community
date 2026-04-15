@@ -7,7 +7,7 @@ import { useSessionData } from "@/hooks/sessionHooks";
 import { useUser } from "@/hooks/userHooks";
 import { getFavoriteCourseForCard } from "@/lib/courses";
 import { toggleUserFavorite } from "@/lib/user";
-import type { CourseWithUserInfo } from "@/models/CourseModel";
+import type { CourseWithUserInfo } from "@shared/types";
 import type { Dispatch } from "@/state/store";
 import { toggleFavoriteSuccess } from "@/state/user/userSlice";
 import UserCoursesView from "@/views/UserCoursesView";

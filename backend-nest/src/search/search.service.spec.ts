@@ -1,5 +1,5 @@
 import { Test, type TestingModule } from "@nestjs/testing";
-import { DRIZZLE } from "../database/drizzle.module";
+import { DRIZZLE } from "../db/drizzle.module";
 import { ES } from "./search.constants";
 import { type SearchResult, SearchService } from "./search.service";
 
@@ -293,7 +293,7 @@ describe("SearchService", () => {
   });
 });
 
-jest.mock("../../../types/database/schema", () => ({
+jest.mock("../db/schema", () => ({
   reviews: {
     courseCode: "mocked_course_code_column",
   },

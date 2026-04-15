@@ -6,7 +6,7 @@ import {
   CourseDetailSchema,
   CourseSchema,
   CoursesSchema,
-} from "../../../types/ingest/schemas";
+} from "./schemas";
 
 /*
 Service fetches data from the KOPPS API.

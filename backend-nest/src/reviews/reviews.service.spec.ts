@@ -1,5 +1,5 @@
 import { Test, type TestingModule } from "@nestjs/testing";
-import { DRIZZLE } from "../database/drizzle.module";
+import { DRIZZLE } from "../db/drizzle.module";
 import { ReviewsGateway } from "./reviews.gateway";
 import { ReviewsService } from "./reviews.service";
 
@@ -194,7 +194,7 @@ describe("ReviewsService", () => {
   });
 });
 
-jest.mock("../../../types/database/schema", () => ({
+jest.mock("../db/schema", () => ({
   reviews: {
     id: "reviews.id",
     userId: "reviews.userId",

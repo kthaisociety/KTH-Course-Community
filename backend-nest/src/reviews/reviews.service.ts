@@ -2,8 +2,8 @@ import { Inject, Injectable, NotFoundException } from "@nestjs/common";
 import { and, eq, sql } from "drizzle-orm";
 import type { NeonHttpDatabase } from "drizzle-orm/neon-http";
 import { nanoid } from "nanoid"; // for generating unique review ids
-import { DRIZZLE } from "src/database/drizzle.module";
-import * as schema from "../../../types/database/schema";
+import { DRIZZLE } from "src/db/drizzle.module";
+import * as schema from "../db/schema";
 import { ReviewsGateway } from "./reviews.gateway";
 
 @Injectable()

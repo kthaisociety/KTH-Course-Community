@@ -20,7 +20,7 @@ import {
   getMockPrerequisites,
   getMockSummary,
 } from "@/data/courseCardMockData";
-import type { CourseWithUserInfo } from "@/models/CourseModel";
+import type { CourseWithUserInfo } from "@shared/types";
 
 type SearchViewProps = {
   localQuery: string;

@@ -1,5 +1,5 @@
 import type { ReviewFormData } from "@/components/review";
-import type { SelectReview } from "../../types/database/schema";
+import type { Review } from "@shared/types";
 
 export async function createReview(
   courseCode: string,
@@ -24,7 +24,7 @@ export async function createReview(
 export async function findAllReviews(
   courseCode: string,
   userId?: string,
-): Promise<SelectReview[] | null> {
+): Promise<Review[] | null> {
   const backend = process.env.NEXT_PUBLIC_BACKEND_DOMAIN;
   if (!backend) throw new Error("NEXT_PUBLIC_BACKEND_DOMAIN is not set");
 

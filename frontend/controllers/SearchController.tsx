@@ -15,7 +15,7 @@ import {
 import type { Dispatch, RootState } from "@/state/store";
 import { toggleFavoriteSuccess } from "@/state/user/userSlice";
 import SearchView from "@/views/SearchView";
-import type { CourseWithUserInfo } from "../models/CourseModel";
+import type { CourseWithUserInfo } from "@shared/types";
 
 export default function SearchController() {
   // Access state

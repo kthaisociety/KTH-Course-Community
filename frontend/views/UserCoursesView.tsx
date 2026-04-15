@@ -9,7 +9,7 @@ import {
   getMockPrerequisites,
   getMockSummary,
 } from "@/data/courseCardMockData";
-import type { CourseWithUserInfo } from "@/models/CourseModel";
+import type { CourseWithUserInfo } from "@shared/types";
 
 const SKELETON_KEYS = ["f0", "f1", "f2", "f3", "f4"] as const;
 

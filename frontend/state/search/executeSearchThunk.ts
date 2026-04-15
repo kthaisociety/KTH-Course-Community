@@ -1,6 +1,6 @@
 // frontend/state/search/executeSearch.ts
 
-import type { Course } from "@/models/CourseModel";
+import type { Course } from "@shared/types";
 import type { Dispatch, RootState } from "@/state/store";
 import { searchFailed, searchRequested, searchSucceeded } from "./searchSlice";
 

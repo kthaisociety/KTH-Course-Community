@@ -1,6 +1,6 @@
 import { Test, type TestingModule } from "@nestjs/testing";
 import { CourseService } from "../course/course.service";
-import { DRIZZLE } from "../database/drizzle.module";
+import { DRIZZLE } from "../db/drizzle.module";
 import { UserService, type UserWithFavorites } from "./user.service";
 
 type MockDb = {
@@ -141,7 +141,7 @@ describe("UserService", () => {
   });
 });
 
-jest.mock("../../../types/database/schema", () => ({
+jest.mock("../db/schema", () => ({
   users: {
     id: "mocked-users-id",
   },

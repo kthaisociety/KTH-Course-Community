@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/shadcn-io/spinner";
 import { cn } from "@/lib/utils";
-import type { OauthProvider } from "../../types/auth/auth.types";
+import type { OauthProvider } from "@shared/types";
 
 type AuthViewProps = {
   onSubmit: (provider: OauthProvider) => void;

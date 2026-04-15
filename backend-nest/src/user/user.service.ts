@@ -2,9 +2,9 @@ import { Inject, Injectable } from "@nestjs/common";
 import { and, eq } from "drizzle-orm";
 import type { NeonHttpDatabase } from "drizzle-orm/neon-http";
 import { CourseService } from "src/course/course.service";
-import * as schema from "../../../types/database/schema";
-import { SelectUser } from "../../../types/database/schema";
-import { DRIZZLE } from "../database/drizzle.module";
+import * as schema from "../db/schema";
+import { SelectUser } from "../db/schema";
+import { DRIZZLE } from "../db/drizzle.module";
 
 // Since we can't change the schema to have the userFAvorites, we need to define a new type,
 // that includes the userFavorites property.

@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@ai-sdk/react": "^3.0.147",
+    "@shared/types": "*",
     "@lexical/code": "^0.36.2",
     "@lexical/link": "^0.36.2",
     "@lexical/list": "^0.36.2",
