@@ -1,23 +1,26 @@
-export interface Course {
-  _id: string;
+
+/** Full course description (detail views). */
+export interface CourseDetails {
   courseCode: string;
   name: string;
-  /** Full course description (detail views). */
-  content: string;
-  /** Short summary for cards / previews. */
-  summary?: string;
-  goals: string;
   department: string;
-  rating?: number;
+  content: string;
+  goals: string;
+  summary?: string; // an LLM generated summary (not implemented yet).  
+  rating?: number;  // TODO: will have to revise this, since we no longer have ratings. 
   credits: number | null;
 }
 
-// New type that is based on Course, but contains user data as well
-// (for now just if the course is part of userFavorites or not)
-export interface CourseWithUserInfo extends Course {
-  isUserFavorite: boolean;
+/** Short summary for cards / previews. */
+export interface CourseSummary {
+  courseCode: string;
+  department: string;
+  name: string;
+  currentStatus: string;
+  updatedAt: string;
 }
 
+/** Course search types. */
 export interface SearchParams {
   // ensure this matches the backend in the future
   query: string;
@@ -28,7 +31,7 @@ export interface SearchParams {
 }
 
 export interface SearchResponse {
-  results: Course[]; // ensures the results are course objects (but this has to be updated to match backend logic)
+  results: CourseSummary[]; // ensures the results are course objects (but this has to be updated to match backend logic)
   total: number;
   page: number;
   pageSize: number;

@@ -10,7 +10,7 @@ import { CoursePageSkeleton } from "@/components/CoursePageSkeleton";
 import type { PostProps } from "@/components/Post";
 import type { ReviewFormData } from "@/components/review";
 import { useSessionData } from "@/hooks/sessionHooks";
-import type { NeonCoursePayload } from "@/lib/courses";
+import type { CourseSummaryPayload } from "@/lib/courses";
 import { getReviewsSocket } from "@/lib/realtime";
 import { fetchCourseInfo } from "@/state/course/courseThunk";
 import {
@@ -34,7 +34,7 @@ type MergedCourseInfo = {
   summary?: string;
   rating?: number;
   _id?: string;
-  neon?: NeonCoursePayload | null;
+  neon?: CourseSummaryPayload | null;
 };
 
 const getAverageRating = (posts: PostProps[]) => {
@@ -205,7 +205,7 @@ export default function CourseController() {
   if (courseInfo && reviews !== null) {
     const posts = reviews as PostProps[];
     const ci = courseInfo as MergedCourseInfo;
-    const neon = (ci.neon ?? null) as NeonCoursePayload | null;
+    const neon = (ci.neon ?? null) as CourseSummaryPayload | null;
 
     const courseCode = String(
       neon?.courseCode ??
@@ -296,7 +296,7 @@ export default function CourseController() {
   }
 
   const ci = courseInfo as MergedCourseInfo;
-  const neon = (ci.neon ?? null) as NeonCoursePayload | null;
+  const neon = (ci.neon ?? null) as CourseSummaryPayload | null;
   const department = String(neon?.department ?? ci.department ?? "");
   const goalsHtml = String(ci.goals ?? "");
   const contentHtml = String(ci.content ?? "");

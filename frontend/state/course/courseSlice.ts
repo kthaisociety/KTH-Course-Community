@@ -1,5 +1,5 @@
 import { createSlice } from "@reduxjs/toolkit";
-import type { NeonCoursePayload } from "@/lib/courses";
+import type { CourseSummaryPayload } from "@/lib/courses";
 import { fetchCourseInfo } from "./courseThunk";
 
 /** Merged ES + Neon + credits from `fetchCourseInfo`. */
@@ -17,7 +17,7 @@ interface CourseInfo {
   summary?: string;
   rating?: number;
   _id?: string;
-  neon?: NeonCoursePayload | null;
+  neon?: CourseSummaryPayload | null;
 }
 
 interface CourseState {

@@ -8,7 +8,7 @@ import CourseHeader, {
 } from "@/components/CourseHeader";
 import Post, { type PostProps } from "@/components/Post";
 import { Button } from "@/components/ui/button";
-import type { NeonCoursePayload } from "@/lib/courses";
+import type { CourseSummaryPayload } from "@/lib/courses";
 import { kthCourseUrl as kthCoursePageUrl } from "@/lib/kth";
 
 export type CourseViewProps = CourseHeaderProps & {
@@ -19,7 +19,7 @@ export type CourseViewProps = CourseHeaderProps & {
   goalsHtml: string;
   contentHtml: string;
   summary?: string;
-  neon: NeonCoursePayload | null;
+  neon: CourseSummaryPayload | null;
   /** Precomputed; defaults to `kthCourseUrl(courseCode)` if omitted */
   kthCourseUrl?: string;
   /** Top nav link; default explore */
