@@ -1,4 +1,6 @@
 "use client";
+import parse from "html-react-parser";
+import DOMPurify from "isomorphic-dompurify";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import PostActionBar from "./PostActionBar";
@@ -200,8 +202,7 @@ export default function Post(props: Readonly<PostProps>) {
         <div className="h-px bg-border/60" />
 
         <div className="prose prose-sm md:prose-base max-w-none">
-          {/** biome-ignore lint/security/noDangerouslySetInnerHtml: not dangerous, just comments */}
-          <div dangerouslySetInnerHTML={{ __html: displayContent }} />
+          <div>{parse(DOMPurify.sanitize(displayContent))}</div>
           {isLong && (
             <Button
               variant="link"

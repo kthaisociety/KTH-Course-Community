@@ -4,6 +4,7 @@ import { ConfigService } from "@nestjs/config";
 import { NestFactory } from "@nestjs/core";
 import { SuperTokensExceptionFilter } from "supertokens-nestjs";
 import supertokens from "supertokens-node";
+import { AllExceptionsFilter } from "./all-exceptions.filter";
 import { AppModule } from "./app.module";
 
 async function bootstrap() {
@@ -26,7 +27,10 @@ async function bootstrap() {
     credentials: true,
   });
 
-  app.useGlobalFilters(new SuperTokensExceptionFilter());
+  app.useGlobalFilters(
+    new AllExceptionsFilter(),
+    new SuperTokensExceptionFilter(),
+  );
 
   const port = configService.get<number>("PORT") ?? 8080;
   await app.listen(port, "0.0.0.0");

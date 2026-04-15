@@ -141,6 +141,7 @@ export async function getCourseCredits(
     `${backend}/course/neon/courseCredits/${courseCode}`,
     {
       cache: "no-store",
+      credentials: "include",
     },
   );
 

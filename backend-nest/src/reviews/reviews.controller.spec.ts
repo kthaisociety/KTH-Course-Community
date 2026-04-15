@@ -13,6 +13,7 @@ describe("ReviewsController", () => {
     update: jest.fn(),
     remove: jest.fn(),
     toggleVote: jest.fn(),
+    removeVote: jest.fn(),
   };
 
   const mockReview = {
@@ -176,16 +177,12 @@ describe("ReviewsController", () => {
     it("should remove vote from review", async () => {
       const reviewId = "123e4567-e89b-12d3-a456-426614174000";
       const userId = "user-123";
-      const removeVoteResult = { success: true, action: "vote_removed" };
-      mockReviewsService.toggleVote.mockResolvedValue(removeVoteResult);
+      const removeVoteResult = { action: "removed", voteType: null };
+      mockReviewsService.removeVote.mockResolvedValue(removeVoteResult);
 
       const result = await controller.removeVote(reviewId, { userId });
 
-      expect(reviewsService.toggleVote).toHaveBeenCalledWith(
-        reviewId,
-        userId,
-        "like",
-      );
+      expect(reviewsService.removeVote).toHaveBeenCalledWith(reviewId, userId);
       expect(result).toEqual(removeVoteResult);
     });
   });

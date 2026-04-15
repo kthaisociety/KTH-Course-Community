@@ -11,6 +11,7 @@ export async function createReview(
 
   const res = await fetch(`${backend}/reviews`, {
     cache: "no-store",
+    credentials: "include",
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -35,6 +36,7 @@ export async function findAllReviews(
 
   const res = await fetch(url.toString(), {
     cache: "no-store",
+    credentials: "include",
     method: "GET",
     headers: {
       "Content-Type": "application/json",
@@ -53,6 +55,7 @@ export async function likeReview(
 
   const res = await fetch(`${backend}/reviews/${reviewId}/like`, {
     cache: "no-store",
+    credentials: "include",
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -71,6 +74,7 @@ export async function dislikeReview(
 
   const res = await fetch(`${backend}/reviews/${reviewId}/dislike`, {
     cache: "no-store",
+    credentials: "include",
     method: "POST",
     headers: {
       "Content-Type": "application/json",

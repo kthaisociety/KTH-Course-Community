@@ -6,6 +6,7 @@ export async function toggleUserFavorite(
 
   const res = await fetch(`${backend}/user/toggle-favorite`, {
     cache: "no-store",
+    credentials: "include",
     method: "POST",
     headers: {
       "Content-Type": "application/json",

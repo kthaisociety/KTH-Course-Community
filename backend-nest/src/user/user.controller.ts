@@ -49,6 +49,7 @@ export class UserController {
 
   // Get user favorite courses
   @Get("/favorites")
+  @VerifySession()
   async getFavorites(@Session() session: SessionContainer) {
     const userId = session.getUserId();
     // Can be empty but we accept an empty array of favorite courses
@@ -85,32 +86,29 @@ export class UserController {
   // Upload and save a new profile picture
   @Post("/profile-picture")
   @VerifySession()
-  @UseInterceptors(FileInterceptor("file"))
+  @UseInterceptors(
+    FileInterceptor("file", {
+      limits: { fileSize: 2 * 1024 * 1024 },
+      fileFilter: (_req, file, cb) => {
+        const allowed = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+        cb(null, allowed.includes(file.mimetype));
+      },
+    }),
+  )
   async uploadProfilePicture(
     @Session() session: SessionContainer,
     @UploadedFile() file: Express.Multer.File,
   ) {
     const userId = session.getUserId();
-    // Validation: file presence
     if (!file) {
-      throw new BadRequestException("No file provided");
-    }
-    // Validation: type
-    if (!file.mimetype.startsWith("image/")) {
-      throw new BadRequestException("File must be an image");
-    }
-    // Validation: 2MB size limit
-    if (file.size > 2 * 1024 * 1024) {
-      throw new BadRequestException("Image must be less than 2MB");
+      throw new BadRequestException("No file provided or invalid image type");
     }
 
-    // Upload to Vercel Blob
     const blob = await put(file.originalname, file.buffer, {
       access: "public",
       addRandomSuffix: true,
     });
 
-    // Save the URL in the database
     await this.userService.updateProfilePicture(userId, blob.url);
     return { url: blob.url };
   }

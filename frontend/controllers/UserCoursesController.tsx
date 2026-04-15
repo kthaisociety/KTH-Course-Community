@@ -81,9 +81,12 @@ export default function UserCoursesController() {
       setIsLoadingFavorites(true);
       try {
         const codes = userData.userFavorites ?? [];
-        const courses = await Promise.all(
+        const results = await Promise.allSettled(
           codes.map((courseCode) => getFavoriteCourseForCard(courseCode)),
         );
+        const courses = results
+          .filter((r) => r.status === "fulfilled")
+          .map((r) => r.value);
         if (!cancelled) {
           setUserFavoriteCourses(courses);
         }
