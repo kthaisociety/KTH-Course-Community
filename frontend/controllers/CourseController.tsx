@@ -21,8 +21,7 @@ import {
 import type { Dispatch, RootState } from "@/state/store";
 import CourseView from "@/views/CourseView";
 
-
-// TODO: Remove raing logic, since we don't want that. 
+// TODO: Remove raing logic, since we don't want that.
 /** --- REMOVE THESE -------------- */
 const getAverageRating = (posts: PostProps[]) => {
   const totalScores = posts.reduce(
