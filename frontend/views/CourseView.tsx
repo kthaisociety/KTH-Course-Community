@@ -4,22 +4,20 @@ import type { CourseRoundSummary, ExamRoundSummary } from "@shared/types";
 import { ArrowLeft, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
-import CourseHeader, {
-  type CourseHeaderProps,
-} from "@/components/CourseHeader";
 import Post, { type PostProps } from "@/components/Post";
 import { Button } from "@/components/ui/button";
 import { kthCourseUrl as kthCoursePageUrl } from "@/lib/kth";
 
-export type CourseViewProps = CourseHeaderProps & {
-  posts: (PostProps & { postId: string })[];
-  onLikePost: (postId: string) => void;
-  onDislikePost: (postId: string) => void;
+export type CourseViewProps = {
+  courseCode: string;
+  courseTitle: string;
+  credits: number | null;
   department: string;
   goalsHtml: string;
   contentHtml: string;
   rounds: CourseRoundSummary[];
   examinations: ExamRoundSummary[];
+  posts: (PostProps & { postId: string })[];
   /** Precomputed; defaults to `kthCourseUrl(courseCode)` if omitted */
   kthCourseUrl?: string;
   /** Top nav link; default explore */
@@ -199,6 +197,7 @@ export default function CourseView(props: CourseViewProps) {
               <Post
                 key={post.postId}
                 className="w-full max-w-full border border-border bg-card shadow-sm"
+                courseCode={props.courseCode}
                 wouldRecommend={post.wouldRecommend}
                 content={post.content}
                 easyScore={post.easyScore}
@@ -208,8 +207,6 @@ export default function CourseView(props: CourseViewProps) {
                 dislikeCount={post.dislikeCount}
                 userVote={post.userVote}
                 postId={post.postId}
-                onPostLike={props.onLikePost}
-                onPostDislike={props.onDislikePost}
               />
             ))
           ) : (

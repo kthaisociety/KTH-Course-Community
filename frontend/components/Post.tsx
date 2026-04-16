@@ -2,6 +2,7 @@
 import parse from "html-react-parser";
 import DOMPurify from "isomorphic-dompurify";
 import { useState } from "react";
+import { useReviewVotes } from "@/hooks/useReviewVotes";
 import { cn } from "@/lib/utils";
 import PostActionBar from "./PostActionBar";
 import { Button } from "./ui/button";
@@ -161,6 +162,7 @@ function RecommendChip(props: Readonly<RecommendChipProps>) {
 }
 
 export type PostProps = {
+  courseCode: string;
   easyScore: number;
   usefulScore: number;
   interestingScore: number;
@@ -170,8 +172,6 @@ export type PostProps = {
   dislikeCount?: number;
   userVote?: "like" | "dislike" | null;
   postId?: string;
-  onPostLike?: (postId: string) => void;
-  onPostDislike?: (postId: string) => void;
   /** Merged onto the outer `Card` (e.g. full-width on course detail). */
   className?: string;
 };
@@ -180,6 +180,7 @@ export default function Post(props: Readonly<PostProps>) {
   const easy = normalizeRating(props.easyScore);
   const useful = normalizeRating(props.usefulScore);
   const interesting = normalizeRating(props.interestingScore);
+  const { like, dislike } = useReviewVotes(props.courseCode);
 
   const [expanded, setExpanded] = useState(false);
   const content = props.content ?? "";
@@ -215,14 +216,14 @@ export default function Post(props: Readonly<PostProps>) {
           )}
         </div>
 
-        {props.postId && props.onPostLike && props.onPostDislike && (
+        {props.postId && (
           <PostActionBar
             postId={props.postId}
             likeCount={props.likeCount || 0}
             dislikeCount={props.dislikeCount || 0}
             userVote={props.userVote || null}
-            onPostLike={props.onPostLike}
-            onPostDislike={props.onPostDislike}
+            onPostLike={like}
+            onPostDislike={dislike}
           />
         )}
       </CardContent>
