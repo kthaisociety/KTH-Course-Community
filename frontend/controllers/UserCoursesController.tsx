@@ -6,7 +6,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
 import { useSessionData } from "@/hooks/sessionHooks";
 import { useUser } from "@/hooks/userHooks";
-import { getFavoriteCourseForCard } from "@/lib/courses";
+import { getCourseSummary } from "@/lib/courses";
 import { toggleUserFavorite } from "@/lib/user";
 import type { Dispatch } from "@/state/store";
 import { toggleFavoriteSuccess } from "@/state/user/userSlice";
@@ -55,7 +55,7 @@ export default function UserCoursesController() {
       );
 
       if (res.action === "added") {
-        const course = await getFavoriteCourseForCard(courseCode);
+        const course = await getCourseSummary(courseCode);
         setUserFavoriteCourses((prev) => {
           if (prev.some((c) => c.courseCode === courseCode)) {
             return [...prev];
@@ -82,11 +82,11 @@ export default function UserCoursesController() {
       try {
         const codes = userData.userFavorites ?? [];
         const results = await Promise.allSettled(
-          codes.map((courseCode) => getFavoriteCourseForCard(courseCode)),
+          codes.map((courseCode) => getCourseSummary(courseCode)),
         );
         const courses = results
           .filter((r) => r.status === "fulfilled")
-          .map((r) => r.value);
+          .map((r) => ({ ...r.value, isUserFavorite: true }));
         if (!cancelled) {
           setUserFavoriteCourses(courses);
         }

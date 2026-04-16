@@ -1,9 +1,9 @@
 "use client";
 
+import type { CourseRoundSummary, ExamRoundSummary } from "@shared/types";
 import { ArrowLeft, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
-import type { CourseRoundSummary, ExamRoundSummary } from "@shared/types";
 import CourseHeader, {
   type CourseHeaderProps,
 } from "@/components/CourseHeader";

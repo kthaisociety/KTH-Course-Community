@@ -1,6 +1,7 @@
 import { Client } from "@elastic/elasticsearch";
 import { Module } from "@nestjs/common";
 import { ConfigModule, ConfigService } from "@nestjs/config";
+import { CourseModule } from "../course/course.module.js";
 import { DrizzleModule } from "../db/drizzle.module.js";
 import { DepartmentsController } from "./departments.controller.js";
 import { DepartmentsService } from "./departments.service.js";
@@ -9,7 +10,11 @@ import { SearchController } from "./search.controller.js";
 import { SearchService } from "./search.service.js";
 
 @Module({
-  imports: [ConfigModule.forRoot({ isGlobal: true }), DrizzleModule],
+  imports: [
+    ConfigModule.forRoot({ isGlobal: true }),
+    DrizzleModule,
+    CourseModule,
+  ],
   providers: [
     {
       provide: ES,

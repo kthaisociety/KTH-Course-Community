@@ -74,6 +74,8 @@ types/**/*.d.ts
 /backend-nest/node_modules
 /backend-nest/build
 /backend-nest/**/*.d.ts
+/shared/dist
+/shared/node_modules
 
 # logs
 /backend-nest/logs

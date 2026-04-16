@@ -53,6 +53,11 @@ export interface ExamRoundSummary {
   gradeScaleCode: string | null; // "AF" or "PF"
 }
 
+/** Card-facing shape: summary plus per-user info derived client-side. */
+export type CourseWithUserInfo = CourseSummary & {
+  isUserFavorite: boolean;
+};
+
 /** Course search types. */
 export interface SearchParams {
   query: string;

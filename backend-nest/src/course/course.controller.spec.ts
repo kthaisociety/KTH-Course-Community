@@ -1,6 +1,5 @@
 import { NotFoundException } from "@nestjs/common";
 import { Test, type TestingModule } from "@nestjs/testing";
-import { SearchService } from "../search/search.service";
 import { CourseController } from "./course.controller";
 import { CourseService } from "./course.service";
 
@@ -12,17 +11,10 @@ describe("CourseController", () => {
     getDetails: jest.fn(),
   };
 
-  const mockSearchService = {
-    getCourseByCode: jest.fn(),
-  };
-
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [CourseController],
-      providers: [
-        { provide: CourseService, useValue: mockCourseService },
-        { provide: SearchService, useValue: mockSearchService },
-      ],
+      providers: [{ provide: CourseService, useValue: mockCourseService }],
     }).compile();
 
     controller = module.get<CourseController>(CourseController);
@@ -113,42 +105,6 @@ describe("CourseController", () => {
     it("throws NotFoundException when absent", async () => {
       mockCourseService.getDetails.mockResolvedValue(null);
       await expect(controller.getCourseDetails("ABCD1234")).rejects.toThrow(
-        NotFoundException,
-      );
-    });
-  });
-
-  describe("getElasticCourse", () => {
-    it("returns the mapped document when found", async () => {
-      const doc = {
-        _id: "SF1625",
-        course_code: "SF1625",
-        course_name_swe: "Kalkyl",
-        course_name_eng: "Calculus",
-        department: "SF",
-        credits: 7.5,
-        goals: "g",
-        content: "c",
-        rating: 4,
-      };
-      mockSearchService.getCourseByCode.mockResolvedValue(doc);
-
-      await expect(controller.getElasticCourse("SF1625")).resolves.toEqual({
-        _id: "SF1625",
-        courseCode: "SF1625",
-        nameSwe: "Kalkyl",
-        nameEng: "Calculus",
-        department: "SF",
-        credits: 7.5,
-        goals: "g",
-        content: "c",
-        rating: 4,
-      });
-    });
-
-    it("throws NotFoundException when document not found", async () => {
-      mockSearchService.getCourseByCode.mockResolvedValue(null);
-      await expect(controller.getElasticCourse("ABCD1234")).rejects.toThrow(
         NotFoundException,
       );
     });

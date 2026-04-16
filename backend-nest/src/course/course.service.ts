@@ -5,7 +5,7 @@ import type {
   CourseSummary,
   ExamRoundSummary,
 } from "@shared/types";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import type { NeonHttpDatabase } from "drizzle-orm/neon-http";
 import { DRIZZLE } from "../db/drizzle.module";
 import * as schema from "../db/schema";
@@ -71,6 +71,78 @@ export class CourseService {
       languages,
       updatedAt: course.updatedAt.toISOString(),
     };
+  }
+
+  // batched version of getSummary, used for search results.
+  async getSummariesByCodes(codes: string[]): Promise<CourseSummary[]> {
+    if (codes.length === 0) return [];
+
+    const [courseRows, roundRows, examRows] = await Promise.all([
+      this.db.select().from(courses).where(inArray(courses.code, codes)),
+      this.db
+        .select({
+          courseCode: courseRounds.courseCode,
+          startTerm: courseRounds.startTerm,
+          language: courseRounds.language,
+        })
+        .from(courseRounds)
+        .where(inArray(courseRounds.courseCode, codes)),
+      this.db
+        .select({
+          courseCode: courseExaminations.courseCode,
+          examCode: courseExaminations.examCode,
+        })
+        .from(courseExaminations)
+        .where(inArray(courseExaminations.courseCode, codes)),
+    ]);
+
+    const roundsByCode = new Map<string, typeof roundRows>();
+    for (const r of roundRows) {
+      const bucket = roundsByCode.get(r.courseCode) ?? [];
+      bucket.push(r);
+      roundsByCode.set(r.courseCode, bucket);
+    }
+
+    const examsByCode = new Map<string, typeof examRows>();
+    for (const e of examRows) {
+      const bucket = examsByCode.get(e.courseCode) ?? [];
+      bucket.push(e);
+      examsByCode.set(e.courseCode, bucket);
+    }
+
+    const byCode = new Map(courseRows.map((c) => [c.code, c]));
+
+    return codes.flatMap((code) => {
+      const course = byCode.get(code);
+      if (!course) return [];
+
+      const rounds = roundsByCode.get(code) ?? [];
+      const exams = examsByCode.get(code) ?? [];
+      const startTerms = [...new Set(rounds.map((r) => r.startTerm))].sort(
+        (a, b) => a - b,
+      );
+      const languages = [
+        ...new Set(
+          rounds.map((r) => r.language).filter((l): l is string => !!l),
+        ),
+      ].sort();
+      const examTypes = [...new Set(exams.map((e) => e.examCode))].sort();
+
+      return [
+        {
+          courseCode: course.code,
+          titleEng: course.titleEng,
+          currentStatus: course.state,
+          credits: course.credits,
+          creditUnit: course.creditUnit,
+          department: course.department,
+          startTerms,
+          examTypes,
+          languages,
+          updatedAt: course.updatedAt.toISOString(),
+        },
+      ];
+    });
   }
 
   // constructs the details course object by stitching from different tables
