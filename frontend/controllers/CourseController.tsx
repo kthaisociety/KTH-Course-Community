@@ -11,7 +11,7 @@ import type { PostProps } from "@/components/Post";
 import type { ReviewFormData } from "@/components/review";
 import { useSessionData } from "@/hooks/sessionHooks";
 import { getReviewsSocket } from "@/lib/realtime";
-import { fetchCourseInfo } from "@/state/course/courseThunk";
+import { fetchCourseDetails } from "@/state/course/courseThunk";
 import {
   dislikeCourseReview,
   fetchCourseReviews,
@@ -21,6 +21,9 @@ import {
 import type { Dispatch, RootState } from "@/state/store";
 import CourseView from "@/views/CourseView";
 
+
+// TODO: Remove raing logic, since we don't want that. 
+/** --- REMOVE THESE -------------- */
 const getAverageRating = (posts: PostProps[]) => {
   const totalScores = posts.reduce(
     (acc, post) => ({
@@ -30,7 +33,6 @@ const getAverageRating = (posts: PostProps[]) => {
     }),
     { easyScore: 0, usefulScore: 0, interestingScore: 0 },
   );
-
   const numberOfPosts = posts.length;
   const averageEasyScore = totalScores.easyScore / numberOfPosts;
   const averageUsefulScore = totalScores.usefulScore / numberOfPosts;
@@ -40,7 +42,6 @@ const getAverageRating = (posts: PostProps[]) => {
     (averageEasyScore + averageUsefulScore + averageInterestingScore) / 3,
   );
 };
-
 const getEasyScoreDistribution = (posts: PostProps[]) => {
   const counts = [0, 0, 0, 0, 0];
   posts.forEach((post) => {
@@ -50,7 +51,6 @@ const getEasyScoreDistribution = (posts: PostProps[]) => {
   });
   return counts;
 };
-
 const getUsefulScoreDistribution = (posts: PostProps[]) => {
   const counts = [0, 0, 0, 0, 0];
   posts.forEach((post) => {
@@ -60,7 +60,6 @@ const getUsefulScoreDistribution = (posts: PostProps[]) => {
   });
   return counts;
 };
-
 const getInterestingScoreDistribution = (posts: PostProps[]) => {
   const counts = [0, 0, 0, 0, 0];
   posts.forEach((post) => {
@@ -70,7 +69,6 @@ const getInterestingScoreDistribution = (posts: PostProps[]) => {
   });
   return counts;
 };
-
 // Average rating distribution (1-5 stars)
 const getRatingDistribution = (posts: PostProps[]) => {
   const counts = [0, 0, 0, 0, 0];
@@ -84,7 +82,10 @@ const getRatingDistribution = (posts: PostProps[]) => {
   });
   return counts;
 };
+// TODO: Remove the rating logic / rework
+/** --- REMOVE THESE ABOVE -------------- */
 
+// TODO: Re-work to be like / favorite course
 const getPercentageWouldRecommend = (posts: PostProps[]) => {
   return (
     (posts.filter((post) => post.wouldRecommend).length / posts.length) * 100
@@ -103,7 +104,7 @@ export default function CourseController() {
   const backLabel = fromSaved ? "Back to saved courses" : "Back to explore";
 
   // Select from Redux
-  const courseInfo = useSelector((s: RootState) => s.course.courseInfo);
+  const courseDetails = useSelector((s: RootState) => s.course.courseDetails);
   const courseLoading = useSelector((s: RootState) => s.course.loading);
   const reviews = useSelector((s: RootState) => s.reviews.reviews);
   const reviewsLoading = useSelector((s: RootState) => s.reviews.loading);
@@ -117,7 +118,7 @@ export default function CourseController() {
   // Initial fetch
   useEffect(() => {
     if (!params?.courseCode) return;
-    dispatch(fetchCourseInfo(params.courseCode));
+    dispatch(fetchCourseDetails(params.courseCode));
     dispatch(fetchCourseReviews({ courseCode: params.courseCode, userId }));
   }, [params.courseCode, userId, dispatch]);
 
@@ -185,15 +186,15 @@ export default function CourseController() {
 
   // Compose CourseHeaderProps from CourseDetails + reviews
   let courseHeader: CourseHeaderProps | null = null;
-  if (courseInfo && reviews !== null) {
+  if (courseDetails && reviews !== null) {
     const posts = reviews as PostProps[];
-    const goals = courseInfo.goals ?? "";
-    const content = courseInfo.content ?? "";
+    const goals = courseDetails.goals ?? "";
+    const content = courseDetails.content ?? "";
 
     courseHeader = {
-      courseCode: courseInfo.courseCode,
-      courseName: courseInfo.titleEng,
-      credits: courseInfo.credits,
+      courseCode: courseDetails.courseCode,
+      courseTitle: courseDetails.titleEng,
+      credits: courseDetails.credits,
       syllabus: `${content}\n\n${goals}`,
       courseRating: posts.length > 0 ? getAverageRating(posts) : null,
       ratingDistribution: getRatingDistribution(posts),
@@ -234,10 +235,10 @@ export default function CourseController() {
   }
 
   const routeCode = params.courseCode?.toUpperCase() ?? "";
-  const loadedInfoCode = courseInfo?.courseCode.toUpperCase() ?? null;
+  const loadedInfoCode = courseDetails?.courseCode.toUpperCase() ?? null;
   /** Avoid flashing previous course while Redux still holds last route's data. */
   const courseInfoStale =
-    Boolean(courseInfo) &&
+    Boolean(courseDetails) &&
     Boolean(loadedInfoCode) &&
     loadedInfoCode !== routeCode;
   const reviewsStale =
@@ -250,7 +251,7 @@ export default function CourseController() {
     reviewsLoading ||
     reviews === null ||
     !courseHeader ||
-    !courseInfo ||
+    !courseDetails ||
     courseInfoStale ||
     reviewsStale
   ) {
@@ -266,7 +267,7 @@ export default function CourseController() {
   return (
     <CourseView
       courseCode={courseHeader.courseCode}
-      courseName={courseHeader.courseName}
+      courseTitle={courseHeader.courseTitle}
       credits={courseHeader.credits}
       syllabus={courseHeader.syllabus}
       percentageWouldRecommend={courseHeader.percentageWouldRecommend}
@@ -281,11 +282,11 @@ export default function CourseController() {
       onLikePost={handleLikePost}
       onDislikePost={handleDislikePost}
       openReview={openReview}
-      department={courseInfo.department}
-      goalsHtml={courseInfo.goals ?? ""}
-      contentHtml={courseInfo.content ?? ""}
-      rounds={courseInfo.rounds}
-      examinations={courseInfo.examinations}
+      department={courseDetails.department}
+      goalsHtml={courseDetails.goals ?? ""}
+      contentHtml={courseDetails.content ?? ""}
+      rounds={courseDetails.rounds}
+      examinations={courseDetails.examinations}
       backHref={backHref}
       backLabel={backLabel}
     />

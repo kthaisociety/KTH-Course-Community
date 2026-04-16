@@ -1,15 +1,15 @@
 import { createSlice } from "@reduxjs/toolkit";
 import type { CourseDetails } from "@shared/types";
-import { fetchCourseInfo } from "./courseThunk";
+import { fetchCourseDetails } from "./courseThunk";
 
 interface CourseState {
-  courseInfo: CourseDetails | null;
+  courseDetails: CourseDetails | null;
   loading: boolean;
   error: string | null;
 }
 
 const initialState: CourseState = {
-  courseInfo: null,
+  courseDetails: null,
   loading: false,
   error: null,
 };
@@ -20,15 +20,15 @@ const courseSlice = createSlice({
   reducers: {},
   extraReducers: (builder) => {
     builder
-      .addCase(fetchCourseInfo.pending, (state) => {
+      .addCase(fetchCourseDetails.pending, (state) => {
         state.loading = true;
         state.error = null;
       })
-      .addCase(fetchCourseInfo.fulfilled, (state, action) => {
-        state.courseInfo = action.payload;
+      .addCase(fetchCourseDetails.fulfilled, (state, action) => {
+        state.courseDetails = action.payload;
         state.loading = false;
       })
-      .addCase(fetchCourseInfo.rejected, (state, action) => {
+      .addCase(fetchCourseDetails.rejected, (state, action) => {
         state.loading = false;
         state.error = action.error.message ?? null;
       });
