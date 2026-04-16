@@ -25,8 +25,8 @@
     "rm:fe": "npm -C frontend un",
     "rm:be": "npm -C backend-nest un",
     "docker:start:prod": "cd backend-nest && node dist/main.js",
-    "docker:fe:build": "npm run build --workspace=frontend",
-    "docker:be:build": "npm run build --workspace=backend-nest"
+    "docker:fe:build": "npm run build:shared && npm run build --workspace=frontend",
+    "docker:be:build": "npm run build:shared && npm run build --workspace=backend-nest"
   },
   "repository": {
     "type": "git",
