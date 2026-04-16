@@ -1,11 +1,11 @@
 // frontend/controllers/AuthController.tsx
 "use client";
 
+import type { OauthProvider } from "@shared/types";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import ThirdParty from "supertokens-auth-react/recipe/thirdparty";
-import type { OauthProvider } from "@shared/types";
 import { initST } from "../lib/supertokens.client";
 import AuthView from "../views/AuthView";
 

@@ -1,11 +1,11 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { eq } from "drizzle-orm";
 import type { NeonHttpDatabase } from "drizzle-orm/neon-http";
+// Drizzle imports
+import { DRIZZLE } from "../db/drizzle.module";
 // Schema imports
 import * as schema from "../db/schema";
 import { courses, SelectCourse } from "../db/schema";
-// Drizzle imports
-import { DRIZZLE } from "../db/drizzle.module";
 
 @Injectable()
 export class CourseService {

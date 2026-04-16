@@ -1,5 +1,6 @@
 "use client";
 
+import type { CourseWithUserInfo } from "@shared/types";
 import { SearchIcon } from "lucide-react";
 import { CourseCardWithCharts } from "@/components/CourseCardWithCharts";
 import { CourseItemSkeleton } from "@/components/CourseItemSkeleton";
@@ -20,7 +21,6 @@ import {
   getMockPrerequisites,
   getMockSummary,
 } from "@/data/courseCardMockData";
-import type { CourseWithUserInfo } from "@shared/types";
 
 type SearchViewProps = {
   localQuery: string;

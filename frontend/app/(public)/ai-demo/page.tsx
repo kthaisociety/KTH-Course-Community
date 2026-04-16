@@ -1,6 +1,7 @@
 "use client";
 
 import { useChat } from "@ai-sdk/react";
+import type { KthCourseAgentUIMessage } from "@shared/types";
 import type { FileUIPart } from "ai";
 import { DefaultChatTransport } from "ai";
 import { BookOpenIcon } from "lucide-react";
@@ -51,7 +52,6 @@ import {
   ToolInput,
   ToolOutput,
 } from "@/components/ai-elements/tool";
-import type { KthCourseAgentUIMessage } from "@shared/types";
 
 /**
  * AI Chat Demo — KTH Course Community

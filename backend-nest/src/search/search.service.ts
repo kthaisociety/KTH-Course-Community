@@ -2,9 +2,9 @@ import type { Client as ESClient, estypes } from "@elastic/elasticsearch";
 import { Inject, Injectable } from "@nestjs/common";
 import { inArray, sql } from "drizzle-orm";
 import type { NeonHttpDatabase } from "drizzle-orm/neon-http";
+import { DRIZZLE } from "../db/drizzle.module";
 import * as schema from "../db/schema";
 import type { CourseDocumentES } from "./elastic.mappings";
-import { DRIZZLE } from "../db/drizzle.module";
 import { ES } from "./search.constants";
 
 const INDEX = "courses";

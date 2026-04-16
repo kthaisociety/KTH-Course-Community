@@ -1,5 +1,6 @@
 "use client";
 
+import type { CourseWithUserInfo } from "@shared/types";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
@@ -15,7 +16,6 @@ import {
 import type { Dispatch, RootState } from "@/state/store";
 import { toggleFavoriteSuccess } from "@/state/user/userSlice";
 import SearchView from "@/views/SearchView";
-import type { CourseWithUserInfo } from "@shared/types";
 
 export default function SearchController() {
   // Access state

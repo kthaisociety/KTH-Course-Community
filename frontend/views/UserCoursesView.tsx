@@ -1,5 +1,6 @@
 "use client";
 
+import type { CourseWithUserInfo } from "@shared/types";
 import { CourseCardWithCharts } from "@/components/CourseCardWithCharts";
 import { CourseItemSkeleton } from "@/components/CourseItemSkeleton";
 import {
@@ -9,7 +10,6 @@ import {
   getMockPrerequisites,
   getMockSummary,
 } from "@/data/courseCardMockData";
-import type { CourseWithUserInfo } from "@shared/types";
 
 const SKELETON_KEYS = ["f0", "f1", "f2", "f3", "f4"] as const;
 

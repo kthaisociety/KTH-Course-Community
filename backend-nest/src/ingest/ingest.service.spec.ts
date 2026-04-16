@@ -1,17 +1,14 @@
 import { Logger } from "@nestjs/common";
 import { Test, type TestingModule } from "@nestjs/testing";
 import type { z } from "zod";
-import {
-  CourseDetailSchema,
-  type CourseSchema,
-} from "./schemas";
-import type { CourseDocumentES } from "../search/elastic.mappings";
 import { DRIZZLE } from "../db/drizzle.module";
+import type { CourseDocumentES } from "../search/elastic.mappings";
 import { ES } from "../search/search.constants";
 import ag2411Raw from "./fixtures/course-detail-AG2411.json";
 import dd2421Raw from "./fixtures/course-detail-DD2421.json";
 import { IngestService } from "./ingest.service";
 import { KoppsService } from "./kopps.service";
+import { CourseDetailSchema, type CourseSchema } from "./schemas";
 
 // Parse fixtures through Zod so they are correctly typed
 const dd2421 = CourseDetailSchema.parse(dd2421Raw);
