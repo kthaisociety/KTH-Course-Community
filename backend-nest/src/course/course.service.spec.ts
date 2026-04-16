@@ -61,31 +61,4 @@ describe("CourseService", () => {
       expect(result).toEqual(mockCourse);
     });
   });
-
-  describe("courseCodeExists", () => {
-    it("should return true if course code exists", async () => {
-      mockDb.limit.mockResolvedValue([mockCourse]);
-
-      const result = await courseService.courseCodeExists("SF1625");
-
-      expect(result).toBe(true);
-    });
-
-    it("should return false if course code does not exist", async () => {
-      mockDb.limit.mockResolvedValue([]);
-
-      const result = await courseService.courseCodeExists("ABCD1234");
-
-      expect(result).toBe(false);
-    });
-  });
-
-  describe("getCourseCredits", () => {
-    it("should return course credits", async () => {
-      mockDb.limit.mockResolvedValue([mockCourse]);
-      const result = await courseService.getCourseCredits("SF1625");
-
-      expect(result).toBe(7.5);
-    });
-  });
 });

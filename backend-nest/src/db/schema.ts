@@ -21,7 +21,7 @@ const courseState = pgEnum("course_state", [
 // more information is stored in courseRounds table
 export const courses = pgTable("courses", {
   code: text("code").primaryKey(),
-  name: text("name").notNull(),   // TODO: remove this, redudant info
+  name: text("name").notNull(), // TODO: remove this, redudant info
   titleSwe: text("name_swedish").notNull(),
   titleEng: text("name_english").notNull(),
   state: courseState("state").notNull(),
@@ -86,7 +86,6 @@ export const courseExaminations = pgTable(
 export type InsertCourseExamination = typeof courseExaminations.$inferInsert;
 export type SelectCourseExamination = typeof courseExaminations.$inferSelect;
 
-
 // --- USER DATA TABLES ----------------
 export const users = pgTable("users", {
   // TODO: Add new user-data to expand user table
@@ -120,7 +119,6 @@ export const user_favorites = pgTable(
     primaryKey: primaryKey({ columns: [table.userId, table.favoriteCourse] }),
   }),
 );
-
 
 // --- REVIEW / FORUM TABLES ----------------
 // table for reviews that references users (posters) and courses (reviewed)
