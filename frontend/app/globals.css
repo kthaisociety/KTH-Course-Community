@@ -111,3 +111,24 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Thin, muted scrollbar for internal scroll panes (e.g. search list, sidebar). */
+@utility scrollbar-subtle {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  &::-webkit-scrollbar-thumb {
+    background-color: color-mix(in oklab, var(--border) 70%, transparent);
+    border-radius: 9999px;
+  }
+  &::-webkit-scrollbar-thumb:hover {
+    background-color: var(--border);
+  }
+}

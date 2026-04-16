@@ -125,9 +125,9 @@ export default function CourseView(props: CourseViewProps) {
         <section className="rounded-lg border border-border bg-card p-5 shadow-sm">
           <SectionTitle>Course offerings</SectionTitle>
           <ul className="mt-3 flex flex-col gap-2 text-sm">
-            {props.rounds.map((r) => (
+            {props.rounds.map((r, idx) => (
               <li
-                key={`${r.startTerm}-${r.formattedPeriodsAndCredits ?? ""}`}
+                key={`${r.startTerm}-${r.formattedPeriodsAndCredits ?? ""}-${idx}`}
                 className="flex flex-wrap items-center gap-2 text-foreground"
               >
                 <span className="font-medium">{formatTerm(r.startTerm)}</span>

@@ -7,6 +7,7 @@ import {
   MessageSquare,
   Sparkles,
 } from "lucide-react";
+import type { MouseEvent } from "react";
 import { CourseCardCharts } from "@/components/CourseCardCharts";
 import { Button } from "@/components/ui/button";
 import type {
@@ -47,13 +48,22 @@ export type CourseCardWithChartsProps = {
   chartData: CourseCardChartData;
   stats: CourseCardStats;
   isUserFavorite: boolean;
-  onSeeReviews: () => void;
+  isSelected?: boolean;
+  onCardClick: () => void;
   onWriteReview: () => void;
   onToggleFavorite: () => void;
   onAddToComparison: () => void;
   onRecommend?: () => void;
   onMarkAsTaken?: () => void;
 };
+
+/** Keep action buttons' clicks from bubbling up to the card's onClick. */
+function stop<T>(handler: () => T) {
+  return (e: MouseEvent) => {
+    e.stopPropagation();
+    handler();
+  };
+}
 
 export function CourseCardWithCharts({
   title,
@@ -68,7 +78,8 @@ export function CourseCardWithCharts({
   chartData,
   stats,
   isUserFavorite,
-  onSeeReviews,
+  isSelected = false,
+  onCardClick,
   onToggleFavorite,
   onAddToComparison,
   onWriteReview,
@@ -94,8 +105,23 @@ export function CourseCardWithCharts({
     : getFallbackSummary();
 
   return (
-    <div className="flex h-[280px] min-h-[280px] overflow-hidden rounded-lg border border-border bg-card shadow-sm">
-      {/* Left: title, keywords+prerequisites area, summary, see details */}
+    // biome-ignore lint/a11y/useSemanticElements: card contains nested <button>s, so wrapping it in a real <button> is invalid HTML
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={onCardClick}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onCardClick();
+        }
+      }}
+      aria-pressed={isSelected}
+      className={`flex h-[280px] min-h-[280px] overflow-hidden rounded-lg border bg-card shadow-sm cursor-pointer transition-colors hover:bg-muted/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+        isSelected ? "border-primary ring-1 ring-primary" : "border-border"
+      }`}
+    >
+      {/* Left: title, keywords+prerequisites area, summary */}
       <div className="flex flex-1 min-w-0 flex-col gap-4 p-5">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
@@ -111,7 +137,7 @@ export function CourseCardWithCharts({
             <Button
               variant="ghost"
               size="icon"
-              onClick={onRecommend}
+              onClick={onRecommend ? stop(onRecommend) : undefined}
               className="h-9 w-9 shrink-0 rounded-md transition-transform hover:scale-110 hover:bg-muted/70 hover:cursor-pointer"
               aria-label="Recommend this course"
               title="Recommend this course"
@@ -121,7 +147,7 @@ export function CourseCardWithCharts({
             <Button
               variant="ghost"
               size="icon"
-              onClick={onMarkAsTaken}
+              onClick={onMarkAsTaken ? stop(onMarkAsTaken) : undefined}
               className="h-9 w-9 shrink-0 rounded-md transition-transform hover:scale-110 hover:bg-muted/70 hover:cursor-pointer"
               aria-label="Mark as taken"
               title="Mark as taken"
@@ -131,7 +157,7 @@ export function CourseCardWithCharts({
             <Button
               variant="ghost"
               size="icon"
-              onClick={onToggleFavorite}
+              onClick={stop(onToggleFavorite)}
               className="h-9 w-9 shrink-0 rounded-md transition-transform hover:scale-110 hover:bg-muted/70 hover:cursor-pointer"
               aria-label={isUserFavorite ? "Remove from saved" : "Save course"}
               title={isUserFavorite ? "Remove from saved" : "Save course"}
@@ -192,18 +218,10 @@ export function CourseCardWithCharts({
           <Button
             size="sm"
             className="h-9 w-fit gap-1.5 text-sm bg-primary text-primary-foreground hover:bg-primary/90"
-            onClick={onWriteReview}
+            onClick={stop(onWriteReview)}
           >
             <MessageSquare className="h-4 w-4 shrink-0" aria-hidden />
             Write a review
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-9 w-fit text-sm"
-            onClick={onSeeReviews}
-          >
-            See Course Details
           </Button>
         </div>
       </div>
@@ -249,7 +267,7 @@ export function CourseCardWithCharts({
           <Button
             variant="outline"
             size="sm"
-            onClick={onAddToComparison}
+            onClick={stop(onAddToComparison)}
             className="h-9 gap-1.5 text-sm"
           >
             <Sparkles
