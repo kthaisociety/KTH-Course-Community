@@ -1,5 +1,4 @@
 import { Test, type TestingModule } from "@nestjs/testing";
-import { CourseService } from "../course/course.service";
 import { DRIZZLE } from "../db/drizzle.module";
 import { UserService, type UserWithFavorites } from "./user.service";
 
@@ -62,10 +61,6 @@ describe("UserService", () => {
         {
           provide: DRIZZLE,
           useValue: mockDb,
-        },
-        {
-          provide: CourseService,
-          useValue: { courseCodeExists: jest.fn() },
         },
       ],
     }).compile();
