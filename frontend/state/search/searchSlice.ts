@@ -1,9 +1,9 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
-import type { Course, SearchResponse } from "@/models/CourseModel";
+import type { CourseSummary, SearchResponse } from "@shared/types";
 
 interface SearchState {
   query: string;
-  results: Course[]; // search results are course objects
+  results: CourseSummary[]; // search results are course objects
   total: number;
   page: number; // current page
   pageSize: number; // number of results per page

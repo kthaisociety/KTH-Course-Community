@@ -10,17 +10,18 @@ import {
   timestamp,
 } from "drizzle-orm/pg-core";
 
-export const courseState = pgEnum("course_state", [
+const courseState = pgEnum("course_state", [
   "CANCELLED",
   "ESTABLISHED",
   "DEACTIVATED",
 ]);
 
+// --- COURSE TABLES ----------------
 // courses table contains core course data.
 // more information is stored in courseRounds table
 export const courses = pgTable("courses", {
   code: text("code").primaryKey(),
-  name: text("name").notNull(),
+  name: text("name").notNull(), // TODO: remove this, redudant info
   titleSwe: text("name_swedish").notNull(),
   titleEng: text("name_english").notNull(),
   state: courseState("state").notNull(),
@@ -85,7 +86,7 @@ export const courseExaminations = pgTable(
 export type InsertCourseExamination = typeof courseExaminations.$inferInsert;
 export type SelectCourseExamination = typeof courseExaminations.$inferSelect;
 
-// users contain all user data
+// --- USER DATA TABLES ----------------
 export const users = pgTable("users", {
   // TODO: Add new user-data to expand user table
   id: text("id").primaryKey(), // This will be the SuperTokens user ID
@@ -99,7 +100,6 @@ export const users = pgTable("users", {
     .defaultNow()
     .notNull(),
 });
-
 // TODO: This should be removed and replaced with new table
 // junction table for mapping users to favorite courses
 export const user_favorites = pgTable(
@@ -120,6 +120,7 @@ export const user_favorites = pgTable(
   }),
 );
 
+// --- REVIEW / FORUM TABLES ----------------
 // table for reviews that references users (posters) and courses (reviewed)
 export const reviews = pgTable("reviews", {
   id: text("id").primaryKey(), // review id
@@ -167,6 +168,7 @@ export const reviewLikes = pgTable(
   (table) => [primaryKey({ columns: [table.userId, table.reviewId] })],
 );
 
+// --- FEEDBACK / FORM TABLES ----------------
 export const feedback_form = pgTable("feedback_form", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),

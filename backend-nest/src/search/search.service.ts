@@ -1,25 +1,18 @@
 import type { Client as ESClient, estypes } from "@elastic/elasticsearch";
 import { Inject, Injectable } from "@nestjs/common";
+import type { CourseSummary } from "@shared/types";
 import { inArray, sql } from "drizzle-orm";
 import type { NeonHttpDatabase } from "drizzle-orm/neon-http";
-import * as schema from "../../../types/database/schema";
-import type { CourseDocumentES } from "../../../types/search/elastic.mappings.js";
-import { DRIZZLE } from "../database/drizzle.module";
+import { CourseService } from "../course/course.service";
+import { DRIZZLE } from "../db/drizzle.module";
+import * as schema from "../db/schema";
 import { ES } from "./search.constants";
 
 const INDEX = "courses";
 
-// TODO: Migth want to only use one type here, as they are very similar.
-// The ElasticCourse is used as a single course return point, which might not be used in the future either
-export interface SearchResult extends CourseDocumentES {
-  _id: string;
-  _score: number | null;
-  rating?: number;
-}
-// This simulates the 'Course' type defined in the frontend 'course_model'
-export interface ElasticCourse extends CourseDocumentES {
-  _id: string;
-  rating?: number;
+export interface SearchHit {
+  courseCode: string;
+  score: number | null;
 }
 
 @Injectable()
@@ -27,25 +20,25 @@ export class SearchService {
   constructor(
     @Inject(ES) private readonly es: ESClient,
     @Inject(DRIZZLE) private readonly db: NeonHttpDatabase<typeof schema>,
+    private readonly courseService: CourseService,
   ) {}
 
   async searchCourses(
     query: string,
     size = 10,
     filters?: { department?: string; minRating?: number },
-  ): Promise<SearchResult[]> {
+  ): Promise<CourseSummary[]> {
     if (!query?.trim()) return [];
+
+    // constructs the filter
     const searchFilters: estypes.QueryDslQueryContainer[] = [];
     if (filters?.department) {
       const dept = filters.department;
-      // console.log("Filtering by department:", JSON.stringify(dept));
-      const departments = ["EECS", "ABE", "CBH", "ITM", "SCI"];
+      const departments = ["EECS", "ABE", "CBH", "ITM", "SCI"]; // TODO: Why hardcoded?
       const matchingDepts = departments.find((abbr) => dept.includes(abbr));
       if (matchingDepts) {
         searchFilters.push({
-          wildcard: {
-            department: `*${matchingDepts}*`,
-          },
+          wildcard: { department: `*${matchingDepts}*` },
         } as estypes.QueryDslQueryContainer);
       } else {
         searchFilters.push({
@@ -54,19 +47,21 @@ export class SearchService {
       }
     }
 
-    const res = await this.es.search<unknown, CourseDocumentES>({
+    // search results for the user query
+    const res = await this.es.search<unknown>({
       index: INDEX,
-      size: filters?.minRating ? size * 5 : size, // get more results for rating filter
+      // over-fetch when rating filter is active so we can filter client-side
+      size: filters?.minRating ? size * 5 : size,
       query: {
         bool: {
           should: [
-            { prefix: { course_code: query.toUpperCase() } }, // partial match for course code
-            { wildcard: { course_code: `*${query.toUpperCase()}*` } }, // fallback
+            { prefix: { course_code: query.toUpperCase() } },
+            { wildcard: { course_code: `*${query.toUpperCase()}*` } },
             {
               multi_match: {
                 query,
                 fields: ["course_name_swe^2", "course_name_eng^2"],
-                type: "phrase_prefix", // partial words in names
+                type: "phrase_prefix",
               },
             },
             {
@@ -76,11 +71,19 @@ export class SearchService {
                   "course_name_swe^2",
                   "course_name_eng^2",
                   "course_code^2",
+                  "department",
+                  "subject",
+                  "periods",
+                  "course_category",
+                  "state",
+                  "credits",
                   "goals",
                   "content",
+                  "eligibility",
                 ],
                 fuzziness: "AUTO",
                 type: "best_fields",
+                lenient: true,
               },
             },
           ],
@@ -88,99 +91,47 @@ export class SearchService {
           filter: searchFilters,
         },
       },
-      _source: [
-        "course_code",
-        "course_name_swe",
-        "course_name_eng",
-        "department",
-        "credits",
-        "goals",
-        "content",
-        "subject",
-        "periods",
-        "course_category",
-        "eligibility",
-        "state",
-      ],
+      _source: ["course_code"],
     });
+
+    //
     const hits = (res.hits?.hits ?? []) as Array<{
-      _id: string;
       _score: number | null;
-      _source?: CourseDocumentES;
+      _source?: { course_code?: string };
     }>;
+    const ranked: SearchHit[] = hits
+      .map((h) => ({
+        courseCode: h._source?.course_code ?? "",
+        score: h._score,
+      }))
+      .filter((h) => h.courseCode.length > 0);
 
-    const base = hits
-      .filter((h) => Boolean(h._source))
-      .map((h) => {
-        return { ...h._source, _id: h._id, _score: h._score } as SearchResult;
-      });
+    if (ranked.length === 0) return [];
 
-    // Add average rating from reviews
-    const codes = base.map((c) => c.course_code);
-    if (codes.length === 0) return base;
+    let codes = ranked.map((h) => h.courseCode);
 
-    const result = await this.db.execute(
-      sql`SELECT course_code,
-          ROUND((AVG(easy_score) + AVG(useful_score) + AVG(interesting_score))/3) AS rating
-          FROM ${schema.reviews}
-          WHERE ${inArray(schema.reviews.courseCode, codes)}
-          GROUP BY course_code`,
-    );
-
-    const rows = result.rows as Array<{ course_code: string; rating: number }>;
-    const codeToRating = new Map<string, number>();
-    for (const r of rows) {
-      codeToRating.set(r.course_code, Number(r.rating) || 0);
-    }
-
-    const resultsWithRatings = base.map((c) => ({
-      ...c,
-      rating: codeToRating.get(c.course_code) ?? 0,
-    }));
-
-    let filteredResults = resultsWithRatings;
     const minRating = filters?.minRating;
     if (minRating) {
-      filteredResults = resultsWithRatings.filter(
-        (course) => course.rating >= minRating,
+      const ratingRows = await this.db.execute(
+        sql`SELECT course_code,
+            ROUND((AVG(easy_score) + AVG(useful_score) + AVG(interesting_score))/3) AS rating
+            FROM ${schema.reviews}
+            WHERE ${inArray(schema.reviews.courseCode, codes)}
+            GROUP BY course_code`,
       );
+      const rows = ratingRows.rows as Array<{
+        course_code: string;
+        rating: number;
+      }>;
+      const ratingByCode = new Map(
+        rows.map((r) => [r.course_code, Number(r.rating) || 0]),
+      );
+      codes = codes.filter((c) => (ratingByCode.get(c) ?? 0) >= minRating);
     }
-    return filteredResults.slice(0, size);
-  }
 
-  // Fetches a single course by code
-  async getCourseByCode(
-    courseCode: string,
-  ): Promise<ElasticCourse | undefined> {
-    // Fetching the basic course information from ES
-    const res = await this.es.search<CourseDocumentES>({
-      index: INDEX,
-      size: 1,
-      query: {
-        term: {
-          // makes a direct match to the course code
-          course_code: courseCode,
-        },
-      },
-    });
-    const hits = res.hits?.hits ?? []; // fallback on [] which triggers a return of "undefined"
-    // Fetching rating from NEON
-    const ratingResult = await this.db.execute(
-      sql`SELECT course_code,
-          ROUND((AVG(easy_score) + AVG(useful_score) + AVG(interesting_score))/3) AS rating
-          FROM ${schema.reviews}
-          WHERE ${schema.reviews.courseCode} = ${courseCode}
-          GROUP BY course_code`,
-    );
-    const rating = ratingResult.rows[0]?.rating;
+    codes = codes.slice(0, size);
 
-    if (hits.length > 0) {
-      return {
-        ...hits[0]._source,
-        _id: hits[0]._id,
-        rating: rating,
-      } as ElasticCourse;
-    }
-    return undefined;
+    // final step is to call the course service, to turn the courses into CoruseSummary objects
+    return this.courseService.getSummariesByCodes(codes);
   }
 }

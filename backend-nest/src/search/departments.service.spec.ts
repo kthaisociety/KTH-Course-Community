@@ -1,5 +1,5 @@
 import { Test, type TestingModule } from "@nestjs/testing";
-import { DRIZZLE } from "../database/drizzle.module";
+import { DRIZZLE } from "../db/drizzle.module";
 import { DepartmentsService } from "./departments.service";
 
 type MockDb = {

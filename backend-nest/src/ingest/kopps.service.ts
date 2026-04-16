@@ -2,11 +2,7 @@ import { HttpService } from "@nestjs/axios";
 import { Injectable } from "@nestjs/common";
 import { firstValueFrom } from "rxjs";
 import type { z } from "zod";
-import {
-  CourseDetailSchema,
-  CourseSchema,
-  CoursesSchema,
-} from "../../../types/ingest/schemas";
+import { CourseDetailSchema, CourseSchema, CoursesSchema } from "./schemas";
 
 /*
 Service fetches data from the KOPPS API.

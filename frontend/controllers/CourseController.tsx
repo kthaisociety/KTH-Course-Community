@@ -10,7 +10,6 @@ import { CoursePageSkeleton } from "@/components/CoursePageSkeleton";
 import type { PostProps } from "@/components/Post";
 import type { ReviewFormData } from "@/components/review";
 import { useSessionData } from "@/hooks/sessionHooks";
-import type { NeonCoursePayload } from "@/lib/courses";
 import { getReviewsSocket } from "@/lib/realtime";
 import { fetchCourseInfo } from "@/state/course/courseThunk";
 import {
@@ -21,21 +20,6 @@ import {
 } from "@/state/reviews/reviewThunk";
 import type { Dispatch, RootState } from "@/state/store";
 import CourseView from "@/views/CourseView";
-
-type MergedCourseInfo = {
-  credits: number | null;
-  course_name?: string;
-  course_code?: string;
-  name?: string;
-  courseCode?: string;
-  department: string;
-  goals: string;
-  content: string;
-  summary?: string;
-  rating?: number;
-  _id?: string;
-  neon?: NeonCoursePayload | null;
-};
 
 const getAverageRating = (posts: PostProps[]) => {
   const totalScores = posts.reduce(
@@ -179,7 +163,6 @@ export default function CourseController() {
     try {
       await dispatch(submitReview({ courseCode, userId, reviewForm })).unwrap();
       toast.success("Review added successfully!");
-      // Refresh reviews
       dispatch(fetchCourseReviews({ courseCode, userId }));
       return true;
     } catch {
@@ -200,28 +183,17 @@ export default function CourseController() {
     dispatch(fetchCourseReviews({ courseCode: params.courseCode, userId }));
   };
 
-  // Compose CourseHeaderProps (from pure utils + Redux state)
+  // Compose CourseHeaderProps from CourseDetails + reviews
   let courseHeader: CourseHeaderProps | null = null;
   if (courseInfo && reviews !== null) {
     const posts = reviews as PostProps[];
-    const ci = courseInfo as MergedCourseInfo;
-    const neon = (ci.neon ?? null) as NeonCoursePayload | null;
-
-    const courseCode = String(
-      neon?.courseCode ??
-        ci.courseCode ??
-        ci.course_code ??
-        params.courseCode ??
-        "",
-    );
-    const courseName = String(neon?.name ?? ci.name ?? ci.course_name ?? "");
-    const goals = String(ci.goals ?? "");
-    const content = String(ci.content ?? "");
+    const goals = courseInfo.goals ?? "";
+    const content = courseInfo.content ?? "";
 
     courseHeader = {
-      courseCode,
-      courseName,
-      credits: courseInfo.credits ?? null,
+      courseCode: courseInfo.courseCode,
+      courseName: courseInfo.titleEng,
+      credits: courseInfo.credits,
       syllabus: `${content}\n\n${goals}`,
       courseRating: posts.length > 0 ? getAverageRating(posts) : null,
       ratingDistribution: getRatingDistribution(posts),
@@ -262,13 +234,8 @@ export default function CourseController() {
   }
 
   const routeCode = params.courseCode?.toUpperCase() ?? "";
-  const loadedInfoCode = (() => {
-    if (!courseInfo) return null as string | null;
-    const ci = courseInfo as MergedCourseInfo;
-    const raw = ci.course_code ?? ci.courseCode ?? ci.neon?.courseCode ?? "";
-    return raw ? String(raw).toUpperCase() : null;
-  })();
-  /** Avoid flashing previous course while Redux still holds last route’s data. */
+  const loadedInfoCode = courseInfo?.courseCode.toUpperCase() ?? null;
+  /** Avoid flashing previous course while Redux still holds last route's data. */
   const courseInfoStale =
     Boolean(courseInfo) &&
     Boolean(loadedInfoCode) &&
@@ -283,6 +250,7 @@ export default function CourseController() {
     reviewsLoading ||
     reviews === null ||
     !courseHeader ||
+    !courseInfo ||
     courseInfoStale ||
     reviewsStale
   ) {
@@ -294,17 +262,6 @@ export default function CourseController() {
       />
     );
   }
-
-  const ci = courseInfo as MergedCourseInfo;
-  const neon = (ci.neon ?? null) as NeonCoursePayload | null;
-  const department = String(neon?.department ?? ci.department ?? "");
-  const goalsHtml = String(ci.goals ?? "");
-  const contentHtml = String(ci.content ?? "");
-  const summary =
-    typeof ci.summary === "string" && ci.summary.trim()
-      ? ci.summary
-      : undefined;
-  const neonPayload = neon;
 
   return (
     <CourseView
@@ -324,11 +281,11 @@ export default function CourseController() {
       onLikePost={handleLikePost}
       onDislikePost={handleDislikePost}
       openReview={openReview}
-      department={department}
-      goalsHtml={goalsHtml}
-      contentHtml={contentHtml}
-      summary={summary}
-      neon={neonPayload}
+      department={courseInfo.department}
+      goalsHtml={courseInfo.goals ?? ""}
+      contentHtml={courseInfo.content ?? ""}
+      rounds={courseInfo.rounds}
+      examinations={courseInfo.examinations}
       backHref={backHref}
       backLabel={backLabel}
     />

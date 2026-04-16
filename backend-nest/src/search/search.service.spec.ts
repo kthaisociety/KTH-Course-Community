@@ -1,33 +1,63 @@
 import { Test, type TestingModule } from "@nestjs/testing";
-import { DRIZZLE } from "../database/drizzle.module";
+import type { CourseSummary } from "@shared/types";
+import { CourseService } from "../course/course.service";
+import { DRIZZLE } from "../db/drizzle.module";
 import { ES } from "./search.constants";
-import { type SearchResult, SearchService } from "./search.service";
+import { SearchService } from "./search.service";
 
 describe("SearchService", () => {
   let service: SearchService;
   let mockEs: { search: jest.Mock };
   let mockDb: { execute: jest.Mock };
+  let mockCourseService: { getSummariesByCodes: jest.Mock };
+
+  const mockSummaries: CourseSummary[] = [
+    {
+      courseCode: "SF1625",
+      titleEng: "Calculus in One Variable",
+      currentStatus: "ESTABLISHED",
+      credits: 7.5,
+      creditUnit: "hp",
+      department: "SF (SCI/Matematik) ",
+      startTerms: [20252],
+      examTypes: ["TEN1"],
+      languages: ["english"],
+      updatedAt: "2023-01-01T00:00:00.000Z",
+    },
+    {
+      courseCode: "SF1624",
+      titleEng: "Algebra and Geometry",
+      currentStatus: "ESTABLISHED",
+      credits: 7.5,
+      creditUnit: "hp",
+      department: "SF (SCI/Matematik) ",
+      startTerms: [20251],
+      examTypes: ["TEN1"],
+      languages: ["english"],
+      updatedAt: "2023-01-01T00:00:00.000Z",
+    },
+  ];
+
+  const mockEsResponse = {
+    hits: {
+      hits: [
+        { _id: "1", _score: 1.5, _source: { course_code: "SF1625" } },
+        { _id: "2", _score: 1.2, _source: { course_code: "SF1624" } },
+      ],
+    },
+  };
 
   beforeEach(async () => {
-    mockEs = {
-      search: jest.fn(),
-    };
-
-    mockDb = {
-      execute: jest.fn(),
-    };
+    mockEs = { search: jest.fn() };
+    mockDb = { execute: jest.fn() };
+    mockCourseService = { getSummariesByCodes: jest.fn() };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         SearchService,
-        {
-          provide: ES,
-          useValue: mockEs,
-        },
-        {
-          provide: DRIZZLE,
-          useValue: mockDb,
-        },
+        { provide: ES, useValue: mockEs },
+        { provide: DRIZZLE, useValue: mockDb },
+        { provide: CourseService, useValue: mockCourseService },
       ],
     }).compile();
 
@@ -43,261 +73,83 @@ describe("SearchService", () => {
   });
 
   describe("searchCourses", () => {
-    const mockEsResponse = {
-      hits: {
-        hits: [
-          {
-            _id: "1",
-            _score: 1.5,
-            _source: {
-              course_name_swe: "Kalkyl i en variabel",
-              course_name_eng: "Calculus in One Variable",
-              course_code: "SF1625",
-              department: "SF (SCI/Matematik) ",
-              credits: 7.5,
-              subject: "Matematik",
-              periods: ["P3 (7.5 hp)"],
-              course_category: ["PROGRAMME COURSE"],
-              goals: "Learn fundamentals of calculus",
-              content: "Limits, derivatives, integrals",
-              eligibility: "",
-              state: "ESTABLISHED",
-            },
-          },
-          {
-            _id: "2",
-            _score: 1.2,
-            _source: {
-              course_name_swe: "Algebra och geometri",
-              course_name_eng: "Algebra and Geometry",
-              course_code: "SF1624",
-              department: "SF (SCI/Matematik) ",
-              credits: 7.5,
-              subject: "Matematik",
-              periods: ["P1 (7.5 hp)"],
-              course_category: ["PROGRAMME COURSE"],
-              goals: "Learn algebra and geometry concepts",
-              content: "Equations, shapes, theorems",
-              eligibility: "",
-              state: "ESTABLISHED",
-            },
-          },
-        ],
-      },
-    };
+    it("returns empty array for empty query without hitting ES", async () => {
+      const result = await service.searchCourses("", 10);
+      expect(result).toEqual([]);
+      expect(mockEs.search).not.toHaveBeenCalled();
+    });
 
-    const mockDbRatingResponse = {
-      rows: [
-        { course_code: "SF1625", rating: 4 },
-        { course_code: "SF1624", rating: 5 },
-      ],
-    };
-
-    it("should search courses and return results", async () => {
+    it("fetches codes from ES then hydrates via CourseService", async () => {
       mockEs.search.mockResolvedValue(mockEsResponse);
-      mockDb.execute.mockResolvedValue(mockDbRatingResponse);
+      mockCourseService.getSummariesByCodes.mockResolvedValue(mockSummaries);
 
       const result = await service.searchCourses("algebra", 10);
 
-      expect(mockEs.search).toHaveBeenCalledWith({
-        index: "courses",
-        size: 10,
-        query: {
-          bool: {
-            should: [
-              { prefix: { course_code: "ALGEBRA" } },
-              { wildcard: { course_code: "*ALGEBRA*" } },
-              {
-                multi_match: {
-                  query: "algebra",
-                  fields: ["course_name_swe^2", "course_name_eng^2"],
-                  type: "phrase_prefix",
-                },
-              },
-              {
-                multi_match: {
-                  query: "algebra",
-                  fields: [
-                    "course_name_swe^2",
-                    "course_name_eng^2",
-                    "course_code^2",
-                    "goals",
-                    "content",
-                  ],
-                  fuzziness: "AUTO",
-                  type: "best_fields",
-                },
-              },
-            ],
-            minimum_should_match: 1,
-            filter: [],
-          },
-        },
-        _source: [
-          "course_code",
-          "course_name_swe",
-          "course_name_eng",
-          "department",
-          "credits",
-          "goals",
-          "content",
-          "subject",
-          "periods",
-          "course_category",
-          "eligibility",
-          "state",
-        ],
-      });
-
-      expect(mockDb.execute).toHaveBeenCalled();
-
-      const expectedResult: SearchResult[] = [
-        {
-          _id: "1",
-          _score: 1.5,
-          course_name_swe: "Kalkyl i en variabel",
-          course_name_eng: "Calculus in One Variable",
-          course_code: "SF1625",
-          department: "SF (SCI/Matematik) ",
-          credits: 7.5,
-          subject: "Matematik",
-          periods: ["P3 (7.5 hp)"],
-          course_category: ["PROGRAMME COURSE"],
-          goals: "Learn fundamentals of calculus",
-          content: "Limits, derivatives, integrals",
-          eligibility: "",
-          state: "ESTABLISHED",
-          rating: 4,
-        },
-        {
-          _id: "2",
-          _score: 1.2,
-          course_name_swe: "Algebra och geometri",
-          course_name_eng: "Algebra and Geometry",
-          course_code: "SF1624",
-          department: "SF (SCI/Matematik) ",
-          credits: 7.5,
-          subject: "Matematik",
-          periods: ["P1 (7.5 hp)"],
-          course_category: ["PROGRAMME COURSE"],
-          goals: "Learn algebra and geometry concepts",
-          content: "Equations, shapes, theorems",
-          eligibility: "",
-          state: "ESTABLISHED",
-          rating: 5,
-        },
-      ];
-
-      expect(result).toEqual(expectedResult);
+      expect(mockCourseService.getSummariesByCodes).toHaveBeenCalledWith([
+        "SF1625",
+        "SF1624",
+      ]);
+      expect(result).toEqual(mockSummaries);
     });
 
-    it("should handle department filter", async () => {
-      mockEs.search.mockResolvedValue(mockEsResponse);
-      mockDb.execute.mockResolvedValue(mockDbRatingResponse);
+    it("only requests course_code from ES _source", async () => {
+      mockEs.search.mockResolvedValue({ hits: { hits: [] } });
+      mockCourseService.getSummariesByCodes.mockResolvedValue([]);
+
+      await service.searchCourses("algebra", 10);
+
+      const call = mockEs.search.mock.calls[0][0] as { _source: string[] };
+      expect(call._source).toEqual(["course_code"]);
+    });
+
+    it("applies department filter on ES query", async () => {
+      mockEs.search.mockResolvedValue({ hits: { hits: [] } });
+      mockCourseService.getSummariesByCodes.mockResolvedValue([]);
 
       await service.searchCourses("algebra", 10, {
         department: "SF (SCI/Matematik) ",
       });
 
-      const calls = mockEs.search.mock.calls as Array<
-        [{ query: { bool: { filter: unknown[] } } }]
-      >;
-      expect(calls[0]?.[0].query.bool.filter).toEqual([
+      const call = mockEs.search.mock.calls[0][0] as {
+        query: { bool: { filter: unknown[] } };
+      };
+      expect(call.query.bool.filter).toEqual([
         { wildcard: { department: "*SCI*" } },
       ]);
     });
 
-    // failing test
-    it("should handle minRating filter", async () => {
+    it("applies minRating by filtering codes via reviews table before hydration", async () => {
       mockEs.search.mockResolvedValue(mockEsResponse);
-      mockDb.execute.mockResolvedValue(mockDbRatingResponse);
+      mockDb.execute.mockResolvedValue({
+        rows: [
+          { course_code: "SF1625", rating: 3 },
+          { course_code: "SF1624", rating: 5 },
+        ],
+      });
+      mockCourseService.getSummariesByCodes.mockResolvedValue([
+        mockSummaries[1],
+      ]);
 
       const result = await service.searchCourses("math", 10, { minRating: 4 });
-      expect(result.every((r) => (r.rating ?? 0) >= 4)).toBe(true);
+
+      expect(mockCourseService.getSummariesByCodes).toHaveBeenCalledWith([
+        "SF1624",
+      ]);
+      expect(result).toEqual([mockSummaries[1]]);
     });
 
-    it("should handle Elasticsearch errors", async () => {
-      const error = new Error("Elasticsearch connection failed");
-      mockEs.search.mockRejectedValue(error);
-
-      await expect(service.searchCourses("test")).rejects.toThrow(
-        "Elasticsearch connection failed",
+    it("propagates Elasticsearch errors", async () => {
+      mockEs.search.mockRejectedValue(
+        new Error("Elasticsearch connection failed"),
       );
-    });
-
-    it("should handle database errors", async () => {
-      mockEs.search.mockResolvedValue(mockEsResponse);
-      const dbError = new Error("Database connection failed");
-      mockDb.execute.mockRejectedValue(dbError);
-
       await expect(service.searchCourses("test")).rejects.toThrow(
-        "Database connection failed",
-      );
-    });
-  });
-
-  describe("getCourseByCode", () => {
-    const mockCourseData = {
-      _id: "SF1624",
-      course_name_swe: "Linjär algebra och geometri",
-      course_name_eng: "Linear Algebra and Geometry",
-      course_code: "SF1624",
-      department: "SF (SCI/Matematik) ",
-      credits: 7.5,
-      subject: "Matematik",
-      periods: ["P1 (7.5 hp)"],
-      course_category: ["PROGRAMME COURSE"],
-      goals: "Learn linear algebra and geometry concepts",
-      content: "Vectors, matrices, linear transformations",
-      eligibility: "",
-      state: "ESTABLISHED",
-      rating: 4,
-    };
-
-    it("should return course data when course exists", async () => {
-      const mockResponse = {
-        hits: {
-          hits: [
-            {
-              _id: "SF1624",
-              _source: mockCourseData,
-            },
-          ],
-        },
-      };
-      mockEs.search.mockResolvedValue(mockResponse);
-      mockDb.execute.mockResolvedValue({ rows: [{ rating: 4 }] });
-
-      const result = await service.getCourseByCode("SF1624");
-
-      expect(mockEs.search).toHaveBeenCalledWith({
-        index: "courses",
-        size: 1,
-        query: {
-          term: {
-            course_code: "SF1624",
-          },
-        },
-      });
-      expect(result).toEqual(mockCourseData);
-    });
-
-    it("should handle Elasticsearch errors", async () => {
-      const error = new Error("Elasticsearch connection failed");
-      mockEs.search.mockRejectedValue(error);
-
-      await expect(service.getCourseByCode("SF1624")).rejects.toThrow(
         "Elasticsearch connection failed",
       );
     });
   });
 });
 
-jest.mock("../../../types/database/schema", () => ({
-  reviews: {
-    courseCode: "mocked_course_code_column",
-  },
-  courses: {
-    code: "mocked_course_code",
-  },
+jest.mock("../db/schema", () => ({
+  reviews: { courseCode: "mocked_course_code_column" },
+  courses: { code: "mocked_course_code" },
 }));

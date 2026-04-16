@@ -1,12 +1,9 @@
 import { Inject, Injectable } from "@nestjs/common";
 import type { NeonHttpDatabase } from "drizzle-orm/neon-http";
 import { v4 as uuidv4 } from "uuid";
-import * as schema from "../../../types/database/schema";
-import {
-  feedback_form,
-  InsertFeedbackForm,
-} from "../../../types/database/schema";
-import { DRIZZLE } from "../database/drizzle.module";
+import { DRIZZLE } from "../db/drizzle.module";
+import * as schema from "../db/schema";
+import { feedback_form, InsertFeedbackForm } from "../db/schema";
 
 @Injectable()
 export class FeedbackService {

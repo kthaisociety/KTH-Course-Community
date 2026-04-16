@@ -1,5 +1,6 @@
 "use client";
 
+import type { CourseWithUserInfo } from "@shared/types";
 import { CourseCardWithCharts } from "@/components/CourseCardWithCharts";
 import { CourseItemSkeleton } from "@/components/CourseItemSkeleton";
 import {
@@ -9,7 +10,6 @@ import {
   getMockPrerequisites,
   getMockSummary,
 } from "@/data/courseCardMockData";
-import type { CourseWithUserInfo } from "@/models/CourseModel";
 
 const SKELETON_KEYS = ["f0", "f1", "f2", "f3", "f4"] as const;
 
@@ -50,16 +50,12 @@ export default function UserCoursesView({
         {!isListLoading && userFavoriteCourses.length > 0 && (
           <ul className="flex flex-col gap-4">
             {userFavoriteCourses.map((course) => (
-              <li key={course._id}>
+              <li key={course.courseCode}>
                 <CourseCardWithCharts
-                  title={course.name}
-                  goals={course.goals}
-                  content={course.content}
-                  summary={
-                    course.summary?.trim()
-                      ? course.summary
-                      : getMockSummary(course.courseCode)
-                  }
+                  title={course.titleEng}
+                  goals={""}
+                  content={""}
+                  summary={getMockSummary(course.courseCode)}
                   courseCode={course.courseCode}
                   department={course.department}
                   hp={course.credits}

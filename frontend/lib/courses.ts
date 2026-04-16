@@ -1,63 +1,36 @@
-import type { Course, CourseWithUserInfo } from "@/models/CourseModel";
-import type { CourseDocumentES } from "../../types/search/elastic.mappings";
+import type { CourseDetails, CourseSummary } from "@shared/types";
 
-export type NeonCoursePayload = {
-  courseCode: string;
-  department: string;
-  name: string;
-  currentStatus: string;
-  updatedAt: string;
-};
+const backend = process.env.NEXT_PUBLIC_BACKEND_DOMAIN;
 
-export async function getNeonCourse(
+// For course cards (search results, favorited course etc). Minimal course info.
+export async function getCourseSummary(
   courseCode: string,
-): Promise<NeonCoursePayload> {
-  const backend = process.env.NEXT_PUBLIC_BACKEND_DOMAIN;
+): Promise<CourseSummary> {
   if (!backend) throw new Error("NEXT_PUBLIC_BACKEND_DOMAIN is not set");
 
-  const res = await fetch(`${backend}/course/neon/${courseCode}`, {
-    cache: "no-store",
+  const res = await fetch(`${backend}/course/${courseCode}`, {
+    cache: "no-store", // TODO: Consider if we should store in cache.
   });
 
   if (res.status === 404) {
-    throw new Error(`Course ${courseCode} not found in Neon`);
+    throw new Error(`Course ${courseCode} not found in database.`);
   }
 
   if (!res.ok) {
     throw new Error(`HTTP ${res.status}: ${res.statusText}`);
   }
 
-  return (await res.json()) as NeonCoursePayload;
+  return (await res.json()) as CourseSummary;
 }
 
-export async function checkIfCourseCodeExists(
+// This should return the full information when displaying "more info". For course page.
+export async function getCourseDetails(
   courseCode: string,
-): Promise<boolean> {
+): Promise<CourseDetails> {
   const backend = process.env.NEXT_PUBLIC_BACKEND_DOMAIN;
-  if (!backend) throw new Error("NEXT_PUBLIC_BACKEND_DOMAIN is not set");
+  if (!backend) throw new Error("NEXT_PUBLIC_BACKEND_DOMAIN is not set.");
 
-  const res = await fetch(
-    `${backend}/course/neon/courseCodeExists/${courseCode}`,
-    {
-      cache: "no-store",
-    },
-  );
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-
-  const data = (await res.json()) as { exists: boolean };
-  return data.exists;
-}
-
-// These 2 exports needs to be merged into one with the same type --> Course type from course_models.
-// This one fetches from 'getCourse' from Search.controller, and the second one from 'Course.controller'.
-// See ticket in Linear, needs refactoring.
-export async function getCourseInfo(
-  courseCode: string,
-): Promise<CourseDocumentES> {
-  const backend = process.env.NEXT_PUBLIC_BACKEND_DOMAIN;
-  if (!backend) throw new Error("NEXT_PUBLIC_BACKEND_DOMAIN is not set");
-
-  const res = await fetch(`${backend}/course/${courseCode}`, {
+  const res = await fetch(`${backend}/course/${courseCode}/details`, {
     cache: "no-store",
   });
 
@@ -69,115 +42,10 @@ export async function getCourseInfo(
     throw new Error(`HTTP ${res.status}: ${res.statusText}`);
   }
 
-  const raw = (await res.json()) as {
-    _id?: string;
-    courseCode: string;
-    department: string;
-    nameSwe?: string;
-    nameEng?: string;
-    goals: string;
-    content: string;
-    credits?: number | null;
-    rating?: number;
-  };
-
-  if (!raw) throw new Error(`Course ${courseCode} data is empty`);
-
-  // Map backend payload to a stable shape that the rest of the frontend expects.
-  // (Backend currently returns `nameSwe`/`nameEng` for course titles.)
-  return {
-    course_code: raw.courseCode,
-    course_name_swe: raw.nameSwe ?? "",
-    course_name_eng: raw.nameEng ?? "",
-    department: raw.department,
-    credits: raw.credits ?? 0,
-    subject: "",
-    periods: [],
-    course_category: [],
-    goals: raw.goals ?? "",
-    content: raw.content ?? "",
-    eligibility: "",
-    state: "ESTABLISHED",
-  } satisfies CourseDocumentES;
-}
-
-// This one uses the get course from 'course.controller', which stitches the
-// object to be of type 'Course' (from course_models), without isUserFavorite.
-// This is the one to keep, and the first one we should replace with this.
-export async function getFullCourseInfo(courseCode: string): Promise<Course> {
-  const backend = process.env.NEXT_PUBLIC_BACKEND_DOMAIN;
-  if (!backend) throw new Error("NEXT_PUBLIC_BACKEND_DOMAIN is not set");
-
-  const res = await fetch(`${backend}/course/${courseCode}`, {
-    cache: "no-store",
-  });
-
-  if (res.status === 404) {
-    throw new Error(`Course ${courseCode} not found`);
-  }
-
-  if (!res.ok) {
-    throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-  }
-
-  const data = (await res.json()) as Course;
+  const data = (await res.json()) as CourseDetails;
 
   if (!data) {
-    throw new Error(`Course ${courseCode} data is empty`);
+    throw new Error(`Course ${courseCode} data is empty.`);
   }
-
   return data;
-}
-
-// Should maybe bake this into the course object fetched from the backend.
-// Is there any point in just fetching the credits without the course object?
-export async function getCourseCredits(
-  courseCode: string,
-): Promise<number | null> {
-  const backend = process.env.NEXT_PUBLIC_BACKEND_DOMAIN;
-  if (!backend) throw new Error("NEXT_PUBLIC_BACKEND_DOMAIN is not set");
-
-  const res = await fetch(
-    `${backend}/course/neon/courseCredits/${courseCode}`,
-    {
-      cache: "no-store",
-      credentials: "include",
-    },
-  );
-
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-
-  const data = (await res.json()) as { credits: number | null };
-  return data.credits;
-}
-
-/**
- * Card row for saved courses: title and department prefer Neon; credits from Neon;
- * goals/content/summary from Elasticsearch when available.
- */
-export async function getFavoriteCourseForCard(
-  courseCode: string,
-): Promise<CourseWithUserInfo> {
-  const [neon, credits, full] = await Promise.all([
-    getNeonCourse(courseCode).catch(() => null),
-    getCourseCredits(courseCode).catch(() => null),
-    getFullCourseInfo(courseCode).catch(() => null),
-  ]);
-
-  if (!neon && !full) {
-    throw new Error(`Course ${courseCode} could not be loaded`);
-  }
-
-  return {
-    _id: full?._id ?? courseCode,
-    courseCode,
-    name: neon?.name ?? full?.name ?? courseCode,
-    department: neon?.department ?? full?.department ?? "",
-    credits: credits ?? full?.credits ?? null,
-    goals: full?.goals ?? "",
-    content: full?.content ?? "",
-    summary: full?.summary,
-    rating: full?.rating,
-    isUserFavorite: true,
-  };
 }

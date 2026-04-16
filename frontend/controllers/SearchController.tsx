@@ -1,10 +1,10 @@
 "use client";
 
+import type { CourseWithUserInfo } from "@shared/types";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useUser } from "@/hooks/userHooks";
-import { getCourseCredits } from "@/lib/courses";
 import { toggleUserFavorite } from "@/lib/user";
 import { executeSearch } from "@/state/search/executeSearchThunk";
 import {
@@ -15,7 +15,6 @@ import {
 import type { Dispatch, RootState } from "@/state/store";
 import { toggleFavoriteSuccess } from "@/state/user/userSlice";
 import SearchView from "@/views/SearchView";
-import type { CourseWithUserInfo } from "../models/CourseModel";
 
 export default function SearchController() {
   // Access state
@@ -49,37 +48,14 @@ export default function SearchController() {
     };
   }, [localQuery, query, dispatch]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Adds 'isUserFavorites' and 'credits' to the result course object
+  // Augment search results with per-user info (favorites).
   useEffect(() => {
-    const fetchResultsWithUserInfo = async () => {
-      const resultsWithFavorites = results.map((result) => ({
+    setResultsFull(
+      results.map((result) => ({
         ...result,
         isUserFavorite: (userFavorites ?? []).includes(result.courseCode),
-      }));
-
-      // Fetch credits for each course
-      const resultsWithCredits = await Promise.all(
-        resultsWithFavorites.map(async (result) => {
-          try {
-            const credits = await getCourseCredits(result.courseCode);
-            return {
-              ...result,
-              credits: credits,
-            };
-          } catch (error) {
-            console.error(
-              `Failed to fetch credits for ${result.courseCode}:`,
-              error,
-            );
-            return result;
-          }
-        }),
-      );
-
-      setResultsFull(resultsWithCredits);
-    };
-
-    fetchResultsWithUserInfo();
+      })),
+    );
   }, [results, userFavorites]);
 
   // Are the "useCallbacks" really necessary here for the callback functions?

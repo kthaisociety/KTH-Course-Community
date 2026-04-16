@@ -1,8 +1,8 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { sql } from "drizzle-orm";
 import type { NeonHttpDatabase } from "drizzle-orm/neon-http";
-import * as schema from "../../../types/database/schema";
-import { DRIZZLE } from "../database/drizzle.module";
+import { DRIZZLE } from "../db/drizzle.module";
+import * as schema from "../db/schema";
 
 @Injectable()
 export class DepartmentsService {
