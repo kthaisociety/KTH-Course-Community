@@ -13,7 +13,7 @@ export async function getCourseSummary(
   });
 
   if (res.status === 404) {
-    throw new Error(`Course ${courseCode} not found in database (NEON)`);
+    throw new Error(`Course ${courseCode} not found in database.`);
   }
 
   if (!res.ok) {
@@ -28,9 +28,9 @@ export async function getCourseDetails(
   courseCode: string,
 ): Promise<CourseDetails> {
   const backend = process.env.NEXT_PUBLIC_BACKEND_DOMAIN;
-  if (!backend) throw new Error("NEXT_PUBLIC_BACKEND_DOMAIN is not set");
+  if (!backend) throw new Error("NEXT_PUBLIC_BACKEND_DOMAIN is not set.");
 
-  const res = await fetch(`${backend}/course/${courseCode}`, {
+  const res = await fetch(`${backend}/course/${courseCode}/details`, {
     cache: "no-store",
   });
 
@@ -45,7 +45,7 @@ export async function getCourseDetails(
   const data = (await res.json()) as CourseDetails;
 
   if (!data) {
-    throw new Error(`Course ${courseCode} data is empty`);
+    throw new Error(`Course ${courseCode} data is empty.`);
   }
   return data;
 }

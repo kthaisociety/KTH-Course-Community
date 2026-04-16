@@ -3,12 +3,12 @@
 import { ArrowLeft, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
+import type { CourseRoundSummary, ExamRoundSummary } from "@shared/types";
 import CourseHeader, {
   type CourseHeaderProps,
 } from "@/components/CourseHeader";
 import Post, { type PostProps } from "@/components/Post";
 import { Button } from "@/components/ui/button";
-import type { CourseSummaryPayload } from "@/lib/courses";
 import { kthCourseUrl as kthCoursePageUrl } from "@/lib/kth";
 
 export type CourseViewProps = CourseHeaderProps & {
@@ -18,25 +18,14 @@ export type CourseViewProps = CourseHeaderProps & {
   department: string;
   goalsHtml: string;
   contentHtml: string;
-  summary?: string;
-  neon: CourseSummaryPayload | null;
+  rounds: CourseRoundSummary[];
+  examinations: ExamRoundSummary[];
   /** Precomputed; defaults to `kthCourseUrl(courseCode)` if omitted */
   kthCourseUrl?: string;
   /** Top nav link; default explore */
   backHref?: string;
   backLabel?: string;
 };
-
-function formatDate(iso: string) {
-  try {
-    return new Intl.DateTimeFormat(undefined, {
-      dateStyle: "medium",
-      timeStyle: "short",
-    }).format(new Date(iso));
-  } catch {
-    return iso;
-  }
-}
 
 function SectionTitle({ children, id }: { children: ReactNode; id?: string }) {
   return (
@@ -47,6 +36,14 @@ function SectionTitle({ children, id }: { children: ReactNode; id?: string }) {
       {children}
     </h2>
   );
+}
+
+function formatTerm(startTerm: number): string {
+  // KOPPS encodes terms as YYYYN where N=1 (spring) or 2 (autumn).
+  const year = Math.floor(startTerm / 10);
+  const half = startTerm % 10;
+  const prefix = half === 1 ? "VT" : half === 2 ? "HT" : "";
+  return prefix ? `${prefix}${String(year).slice(-2)}` : String(startTerm);
 }
 
 export default function CourseView(props: CourseViewProps) {
@@ -70,7 +67,7 @@ export default function CourseView(props: CourseViewProps) {
         {backLabel}
       </Link>
 
-      {/* Hero — matches search course card shell */}
+      {/* Hero */}
       <div className="overflow-hidden rounded-lg border border-border bg-card shadow-sm">
         <div className="flex flex-col gap-4 p-5 md:flex-row md:items-start md:justify-between">
           <div className="min-w-0 flex-1">
@@ -81,11 +78,6 @@ export default function CourseView(props: CourseViewProps) {
               {hp} hp · {props.courseCode}
               {props.department ? ` · ${props.department}` : ""}
             </p>
-            {props.summary?.trim() ? (
-              <p className="mt-3 text-muted-foreground text-sm leading-snug">
-                {props.summary.trim()}
-              </p>
-            ) : null}
           </div>
           <div className="flex shrink-0 flex-col gap-2 sm:flex-row sm:items-center">
             <Button
@@ -103,51 +95,7 @@ export default function CourseView(props: CourseViewProps) {
         </div>
       </div>
 
-      {/* Neon: authoritative course record */}
-      <section className="rounded-lg border border-border bg-muted/30 p-5 shadow-sm">
-        <SectionTitle>Course record (database)</SectionTitle>
-        {props.neon ? (
-          <dl className="mt-4 grid gap-4 sm:grid-cols-2">
-            <div>
-              <dt className="text-muted-foreground text-xs">Status</dt>
-              <dd className="mt-0.5 font-medium text-sm capitalize">
-                {props.neon.currentStatus.toLowerCase().replaceAll("_", " ")}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground text-xs">
-                Record last updated
-              </dt>
-              <dd className="mt-0.5 font-medium text-sm">
-                {formatDate(props.neon.updatedAt)}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground text-xs">Name (database)</dt>
-              <dd className="mt-0.5 font-medium text-sm">{props.neon.name}</dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground text-xs">Course code</dt>
-              <dd className="mt-0.5 font-medium text-sm">
-                {props.neon.courseCode}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground text-xs">Department</dt>
-              <dd className="mt-0.5 font-medium text-sm">
-                {props.neon.department}
-              </dd>
-            </div>
-          </dl>
-        ) : (
-          <p className="mt-3 text-muted-foreground text-sm">
-            No matching database row was returned for this course code. Credits
-            and catalog text may still be shown from the search index.
-          </p>
-        )}
-      </section>
-
-      {/* Goals & content from Elasticsearch */}
+      {/* Goals & content */}
       <section className="rounded-lg border border-border bg-card p-5 shadow-sm">
         <div className="flex flex-col gap-6">
           <div>
@@ -173,6 +121,66 @@ export default function CourseView(props: CourseViewProps) {
           </div>
         </div>
       </section>
+
+      {/* Rounds */}
+      {props.rounds.length > 0 && (
+        <section className="rounded-lg border border-border bg-card p-5 shadow-sm">
+          <SectionTitle>Course offerings</SectionTitle>
+          <ul className="mt-3 flex flex-col gap-2 text-sm">
+            {props.rounds.map((r) => (
+              <li
+                key={`${r.startTerm}-${r.formattedPeriodsAndCredits ?? ""}`}
+                className="flex flex-wrap items-center gap-2 text-foreground"
+              >
+                <span className="font-medium">{formatTerm(r.startTerm)}</span>
+                {r.formattedPeriodsAndCredits && (
+                  <span className="text-muted-foreground">
+                    · {r.formattedPeriodsAndCredits}
+                  </span>
+                )}
+                {r.language && (
+                  <span className="text-muted-foreground">· {r.language}</span>
+                )}
+                {r.tutoringForm && (
+                  <span className="text-muted-foreground">
+                    · {r.tutoringForm}
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {/* Examinations */}
+      {props.examinations.length > 0 && (
+        <section className="rounded-lg border border-border bg-card p-5 shadow-sm">
+          <SectionTitle>Examinations</SectionTitle>
+          <ul className="mt-3 flex flex-col gap-2 text-sm">
+            {props.examinations.map((e) => (
+              <li
+                key={e.examCode}
+                className="flex flex-wrap items-center gap-2 text-foreground"
+              >
+                <span className="font-medium">{e.examCode}</span>
+                {e.title && (
+                  <span className="text-muted-foreground">· {e.title}</span>
+                )}
+                {e.credits != null && (
+                  <span className="text-muted-foreground">
+                    · {e.credits} hp
+                  </span>
+                )}
+                {e.gradeScaleCode && (
+                  <span className="text-muted-foreground">
+                    · {e.gradeScaleCode}
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {/* Review analytics + write review */}
       <section aria-labelledby="review-insights-heading">

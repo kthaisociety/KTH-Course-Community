@@ -1,27 +1,9 @@
 import { createSlice } from "@reduxjs/toolkit";
-import type { CourseSummaryPayload } from "@/lib/courses";
+import type { CourseDetails } from "@shared/types";
 import { fetchCourseInfo } from "./courseThunk";
 
-/** Merged ES + Neon + credits from `fetchCourseInfo`. */
-interface CourseInfo {
-  credits: number | null;
-  /** Legacy / ES mapping field names */
-  course_name?: string;
-  course_code?: string;
-  /** CamelCase from `GET /course/:code` */
-  name?: string;
-  courseCode?: string;
-  department: string;
-  goals: string;
-  content: string;
-  summary?: string;
-  rating?: number;
-  _id?: string;
-  neon?: CourseSummaryPayload | null;
-}
-
 interface CourseState {
-  courseInfo: CourseInfo | null;
+  courseInfo: CourseDetails | null;
   loading: boolean;
   error: string | null;
 }
