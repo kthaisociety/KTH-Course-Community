@@ -108,8 +108,14 @@ export default function SearchController() {
   const onCardClick = useCallback(
     (courseCode: string) => {
       const next = new URLSearchParams(searchParams.toString());
-      next.set("selected", courseCode);
-      router.replace(`${pathname}?${next.toString()}`, { scroll: false });
+      const current = next.get("selected");
+      if (current && current.toUpperCase() === courseCode.toUpperCase()) {
+        next.delete("selected");
+      } else {
+        next.set("selected", courseCode);
+      }
+      const qs = next.toString();
+      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
     },
     [router, pathname, searchParams],
   );
