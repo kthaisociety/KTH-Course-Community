@@ -13,8 +13,12 @@ COPY package.json package-lock.json ./
 COPY frontend/package.json ./frontend/
 COPY shared/ ./shared/
 
-# Install dependencies based on the preferred package manager
+# Install all dependencies
 RUN npm ci
+# supertokens-node needed at runtime but not in lockfile; re-install
+# lightningcss native binary after npm install prunes optional deps
+RUN npm install supertokens-node --workspace=frontend --no-save \
+    && npm install lightningcss-linux-x64-musl --no-save
 
 # Rebuild the source code only when needed
 FROM base AS builder
@@ -26,8 +30,6 @@ COPY --from=deps /app/package-lock.json ./package-lock.json
 # Copy source code
 COPY frontend/ ./frontend/
 COPY shared/ ./shared/
-
-RUN npm install supertokens-node --workspace=frontend --no-save
 
 # Build shared types before frontend
 RUN npm run build:shared
