@@ -27,7 +27,7 @@ COPY --from=deps /app/package-lock.json ./package-lock.json
 COPY frontend/ ./frontend/
 COPY shared/ ./shared/
 
-RUN npm install supertokens-node --prefix ./frontend --no-save
+RUN npm install supertokens-node --workspace=frontend --no-save
 
 # Build shared types before frontend
 RUN npm run build:shared
