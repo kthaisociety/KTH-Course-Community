@@ -14,10 +14,10 @@ COPY frontend/package.json ./frontend/
 COPY backend-nest/package.json ./backend-nest/
 COPY shared/package.json ./shared/
 
-# Use npm install instead of npm ci — lockfile generated on macOS lacks
-# linux-musl platform entries for native optional deps (lightningcss,
-# @tailwindcss/oxide). npm install resolves them for current platform.
-RUN npm install
+# Lockfile generated on macOS lacks linux-musl platform native binaries.
+# Delete it and do fresh install so npm resolves platform-specific optional
+# deps (lightningcss, @tailwindcss/oxide) for the current alpine/musl target.
+RUN rm package-lock.json && npm install
 
 # Rebuild the source code only when needed
 FROM base AS builder
