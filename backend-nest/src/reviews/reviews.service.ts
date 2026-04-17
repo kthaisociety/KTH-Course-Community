@@ -141,10 +141,7 @@ export class ReviewsService {
   }
 
   // toggle like for a review
-  async toggleLike(
-    reviewId: string,
-    userId: string,
-  ) {
+  async toggleLike(reviewId: string, userId: string) {
     // check if user already voted on this review
     const existingLike = await this.db
       .select()
@@ -158,7 +155,6 @@ export class ReviewsService {
       .limit(1);
 
     if (existingLike.length > 0) {
-
       // if same vote type, remove the vote
       if (existingLike.length > 0) {
         await this.db
