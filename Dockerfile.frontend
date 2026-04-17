@@ -14,8 +14,10 @@ COPY frontend/package.json ./frontend/
 COPY backend-nest/package.json ./backend-nest/
 COPY shared/package.json ./shared/
 
-# Install all dependencies (supertokens-node is already in frontend/package.json + lockfile)
-RUN npm ci
+# Use npm install instead of npm ci — lockfile generated on macOS lacks
+# linux-musl platform entries for native optional deps (lightningcss,
+# @tailwindcss/oxide). npm install resolves them for current platform.
+RUN npm install
 
 # Rebuild the source code only when needed
 FROM base AS builder
