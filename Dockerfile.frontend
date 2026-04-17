@@ -11,7 +11,7 @@ WORKDIR /app
 # Copy workspace package files
 COPY package.json package-lock.json ./
 COPY frontend/package.json ./frontend/
-COPY types/ ./types/
+COPY shared/ ./shared/
 
 # Install dependencies based on the preferred package manager
 RUN npm ci
@@ -25,9 +25,12 @@ COPY --from=deps /app/package-lock.json ./package-lock.json
 
 # Copy source code
 COPY frontend/ ./frontend/
-COPY types/ ./types/
+COPY shared/ ./shared/
 
 RUN npm install supertokens-node --prefix ./frontend --no-save
+
+# Build shared types before frontend
+RUN npm run build:shared
 
 # Next.js collects completely anonymous telemetry data about general usage.
 # Learn more here: https://nextjs.org/telemetry
