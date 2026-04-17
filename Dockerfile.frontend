@@ -8,10 +8,11 @@ FROM base AS deps
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
-# Copy workspace package files
+# Copy workspace package files (all workspaces must be present for npm ci)
 COPY package.json package-lock.json ./
 COPY frontend/package.json ./frontend/
-COPY shared/ ./shared/
+COPY backend-nest/package.json ./backend-nest/
+COPY shared/package.json ./shared/
 
 # Install all dependencies (supertokens-node is already in frontend/package.json + lockfile)
 RUN npm ci
