@@ -19,9 +19,10 @@ export class ReviewsController {
     @Body() body: {
       courseCode: string;
       userId: string;
-      easyScore: number;
-      usefulScore: number;
-      interestingScore: number;
+      examinationMethods: number;
+      theoreticalVsApplied: number;
+      workload: number;
+      learningExperience: number;
       wouldRecommend: boolean;
       content: string;
     },
@@ -47,9 +48,10 @@ export class ReviewsController {
   update(
     @Param("id") id: string,
     @Body() reviewData: {
-      easyScore: number;
-      usefulScore: number;
-      interestingScore: number;
+      examinationMethods: number;
+      theoreticalVsApplied: number;
+      workload: number;
+      learningExperience: number;
       wouldRecommend: boolean;
       content: string;
     },
@@ -64,19 +66,6 @@ export class ReviewsController {
 
   @Post(":id/like")
   likeReview(@Param("id") reviewId: string, @Body() body: { userId: string }) {
-    return this.reviewsService.toggleVote(reviewId, body.userId, "like");
-  }
-
-  @Post(":id/dislike")
-  dislikeReview(
-    @Param("id") reviewId: string,
-    @Body() body: { userId: string },
-  ) {
-    return this.reviewsService.toggleVote(reviewId, body.userId, "dislike");
-  }
-
-  @Delete(":id/vote")
-  removeVote(@Param("id") reviewId: string, @Body() body: { userId: string }) {
-    return this.reviewsService.removeVote(reviewId, body.userId);
+    return this.reviewsService.toggleLike(reviewId, body.userId);
   }
 }

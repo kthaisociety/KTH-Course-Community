@@ -131,9 +131,11 @@ export const reviews = pgTable("reviews", {
     .references(() => courses.code, { onDelete: "cascade" }), // foreign key to courses table
 
   // scores
-  easyScore: integer("easy_score").notNull().default(0), // 1-5
-  usefulScore: integer("useful_score").notNull().default(0), // 1-5
-  interestingScore: integer("interesting_score").notNull().default(0), // 1-5
+  examinationMethods: integer("examination_methods").notNull().default(0), // 1-5
+  theoreticalVsApplied: integer("theoretical_vs_applied").notNull().default(0), // 1-5
+  workload: integer("workload").notNull().default(0), // 1-5
+  learningExperience: integer("learning_experience").notNull().default(0), // 1-5
+
 
   wouldRecommend: boolean("would_recommend").notNull().default(false),
   content: text("content").notNull(),

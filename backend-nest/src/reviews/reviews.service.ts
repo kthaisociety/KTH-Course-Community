@@ -17,9 +17,10 @@ export class ReviewsService {
     courseCode: string,
     userId: string,
     reviewData: {
-      easyScore: number;
-      usefulScore: number;
-      interestingScore: number;
+      examinationMethods: number;
+      theoreticalVsApplied: number;
+      workload: number;
+      learningExperience: number;
       wouldRecommend: boolean;
       content: string;
     },
@@ -30,9 +31,10 @@ export class ReviewsService {
         id: nanoid(), // generate a unique review ID
         userId,
         courseCode,
-        easyScore: reviewData.easyScore,
-        usefulScore: reviewData.usefulScore,
-        interestingScore: reviewData.interestingScore,
+        examinationMethods: reviewData.examinationMethods,
+        theoreticalVsApplied: reviewData.theoreticalVsApplied,
+        workload: reviewData.workload,
+        learningExperience: reviewData.learningExperience,
         wouldRecommend: reviewData.wouldRecommend,
         content: reviewData.content,
       })
@@ -49,15 +51,15 @@ export class ReviewsService {
         id: schema.reviews.id,
         userId: schema.reviews.userId,
         courseCode: schema.reviews.courseCode,
-        easyScore: schema.reviews.easyScore,
-        usefulScore: schema.reviews.usefulScore,
-        interestingScore: schema.reviews.interestingScore,
+        examinationMethods: schema.reviews.examinationMethods,
+        theoreticalVsApplied: schema.reviews.theoreticalVsApplied,
+        workload: schema.reviews.workload,
+        learningExperience: schema.reviews.learningExperience,
         wouldRecommend: schema.reviews.wouldRecommend,
         content: schema.reviews.content,
         createdAt: schema.reviews.createdAt,
         updatedAt: schema.reviews.updatedAt,
         likeCount: sql<number>`COALESCE(like_counts.like_count, 0)`,
-        dislikeCount: sql<number>`COALESCE(dislike_counts.dislike_count, 0)`,
         userVote: schema.reviewLikes.voteType,
       })
       .from(schema.reviews)
@@ -69,15 +71,6 @@ export class ReviewsService {
           GROUP BY review_id
         ) as like_counts`,
         eq(schema.reviews.id, sql`like_counts.review_id`),
-      )
-      .leftJoin(
-        sql`(
-          SELECT review_id, COUNT(*) as dislike_count 
-          FROM ${schema.reviewLikes} 
-          WHERE vote_type = 'dislike' 
-          GROUP BY review_id
-        ) as dislike_counts`,
-        eq(schema.reviews.id, sql`dislike_counts.review_id`),
       )
       .leftJoin(
         schema.reviewLikes,
@@ -109,9 +102,10 @@ export class ReviewsService {
   async update(
     id: string,
     reviewData: {
-      easyScore: number;
-      usefulScore: number;
-      interestingScore: number;
+      examinationMethods: number;
+      theoreticalVsApplied: number;
+      workload: number;
+      learningExperience: number;
       wouldRecommend: boolean;
       content: string;
     },
@@ -119,10 +113,10 @@ export class ReviewsService {
     const [updated] = await this.db
       .update(schema.reviews)
       .set({
-        easyScore: reviewData.easyScore,
-        usefulScore: reviewData.usefulScore,
-        interestingScore: reviewData.interestingScore,
-        wouldRecommend: reviewData.wouldRecommend,
+        examinationMethods: reviewData.examinationMethods,
+        theoreticalVsApplied: reviewData.theoreticalVsApplied,
+        workload: reviewData.workload,
+        learningExperience: reviewData.learningExperience,
         content: reviewData.content,
         updatedAt: sql`now()`,
       })
@@ -146,14 +140,13 @@ export class ReviewsService {
     return deleted;
   }
 
-  // toggle like/dislike for a review
-  async toggleVote(
+  // toggle like for a review
+  async toggleLike(
     reviewId: string,
     userId: string,
-    voteType: "like" | "dislike",
   ) {
     // check if user already voted on this review
-    const existingVote = await this.db
+    const existingLike = await this.db
       .select()
       .from(schema.reviewLikes)
       .where(
@@ -164,11 +157,10 @@ export class ReviewsService {
       )
       .limit(1);
 
-    if (existingVote.length > 0) {
-      const currentVote = existingVote[0];
+    if (existingLike.length > 0) {
 
       // if same vote type, remove the vote
-      if (currentVote.voteType === voteType) {
+      if (existingLike.length > 0) {
         await this.db
           .delete(schema.reviewLikes)
           .where(
@@ -179,45 +171,18 @@ export class ReviewsService {
           );
         const review = await this.getReview(reviewId);
         if (review) this.reviewsGateway.emitCourseChanged(review.courseCode);
-        return { action: "removed", voteType: null };
+        return { action: "removed", isLiked: false };
       }
-      // if different vote type, update to new vote type
-      await this.db
-        .update(schema.reviewLikes)
-        .set({ voteType })
-        .where(
-          and(
-            eq(schema.reviewLikes.reviewId, reviewId),
-            eq(schema.reviewLikes.userId, userId),
-          ),
-        );
-      const review = await this.getReview(reviewId);
-      if (review) this.reviewsGateway.emitCourseChanged(review.courseCode);
-      return { action: "updated", voteType };
     }
     // if no existing vote, create new one
     await this.db.insert(schema.reviewLikes).values({
       userId,
       reviewId,
-      voteType,
+      voteType: "like",
     });
     const review = await this.getReview(reviewId);
     if (review) this.reviewsGateway.emitCourseChanged(review.courseCode);
-    return { action: "added", voteType };
-  }
-
-  async removeVote(reviewId: string, userId: string) {
-    await this.db
-      .delete(schema.reviewLikes)
-      .where(
-        and(
-          eq(schema.reviewLikes.reviewId, reviewId),
-          eq(schema.reviewLikes.userId, userId),
-        ),
-      );
-    const review = await this.getReview(reviewId);
-    if (review) this.reviewsGateway.emitCourseChanged(review.courseCode);
-    return { action: "removed", voteType: null };
+    return { action: "added", isLiked: true };
   }
 
   private async getReview(reviewId: string) {
