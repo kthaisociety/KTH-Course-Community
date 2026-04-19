@@ -35,13 +35,102 @@ export default function ProfileView({
 
   return (
     <main className="container mx-auto px-4 py-12 max-w-4xl">
+      {/*
       <h1 className="text-4xl font-bold text-foreground mb-6">My Profile</h1>
       <p className="text-muted-foreground mb-10">
         Manage your account settings and preferences
       </p>
+      */}
 
-      <div className="space-y-8">
-        {/* Profile Info Card */}
+      <div className="space-y-4">
+        <Card>
+          <CardContent className="flex justify-center items-center py-2">
+            <div className="relative">
+              {/* Profile picture*/}
+              <Avatar className="w-24 h-24 border-4 border-primary/10">
+                {preview ? (
+                  <AvatarImage
+                    src={preview}
+                    alt={name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <AvatarFallback className="text-xl bg-primary/10 text-primary">
+                    {getInitials(name || email)}
+                  </AvatarFallback>
+                )}
+              </Avatar>
+              {/* Bottom left - anchored to avatar */}
+              <div className="absolute top-2/3 right-full pr-4 -translate-y-1/2 whitespace-nowrap">
+                <p className="text-muted-foreground">{name}</p>
+              </div>
+
+              {/* Bottom right - anchored to avatar */}
+              <div className="absolute top-2/3 left-full pl-4 -translate-y-1/2 whitespace-nowrap">
+                <p className="text-muted-foreground">Computer Science</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/*Personal Data*/}
+        <div className="flex gap-4">
+          <div className="w-6/13 flex flex-col gap-4">
+            {/*Courses Taken*/}
+            <Card className="break-inside-avoid">
+              <CardHeader>
+                <CardTitle className="text-primary">Courses Taken</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground">
+                  Your taken courses will be shown here.
+                </p>
+              </CardContent>
+            </Card>
+
+            {/*Liked/Disliked Reviews*/}
+            <Card className="break-inside-avoid">
+              <CardHeader>
+                <CardTitle className="text-primary">
+                  Liked/Disliked Reviews
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground">
+                  Your reviews will be shown here.
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="w-7/13 flex flex-col gap-4">
+            {/*My Reviews*/}
+            <Card className="break-inside-avoid">
+              <CardHeader>
+                <CardTitle className="text-primary">My Reviews</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground">
+                  Your reviews will be shown here.
+                </p>
+              </CardContent>
+            </Card>
+
+            {/*My Goals*/}
+            <Card className="break-inside-avoid">
+              <CardHeader>
+                <CardTitle className="text-primary">My Goals</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground">
+                  Your goals will be shown here.
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        {/* Profile Info Card
         <Card>
           <CardHeader>
             <CardTitle>Profile Information</CardTitle>
@@ -50,7 +139,7 @@ export default function ProfileView({
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            {/* Profile picture */}
+            
             <div className="flex items-center gap-6">
               <Avatar className="w-24 h-24 border-4 border-primary/10">
                 {preview ? (
@@ -88,7 +177,7 @@ export default function ProfileView({
               </div>
             </div>
 
-            {/* Full Name (read-only) */}
+            
             <div>
               <Label htmlFor="name">Full Name</Label>
               <Input
@@ -100,6 +189,7 @@ export default function ProfileView({
             </div>
           </CardContent>
         </Card>
+           */}
 
         {/* Delete Account */}
         <Card className="border-destructive/50">
