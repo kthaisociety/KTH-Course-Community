@@ -83,11 +83,11 @@ export class ReviewsService {
       )
       .$dynamic();
 
-      if (courseCode) {
-        query = query.where(eq(schema.reviews.courseCode, courseCode));  // Assign back to query
-      }
-      query = query.orderBy(sql`created_at DESC`);  // Assign back to query
-      return await query;
+    if (courseCode) {
+      query = query.where(eq(schema.reviews.courseCode, courseCode)); // Assign back to query
+    }
+    query = query.orderBy(sql`created_at DESC`); // Assign back to query
+    return await query;
   }
 
   // fetch a single review by id
