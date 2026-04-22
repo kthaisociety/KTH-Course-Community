@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ReviewPreview } from "@/components/ReviewPreviewProfile";
 
 type ProfileViewProps = {
   name: string;
@@ -109,13 +110,23 @@ export default function ProfileView({
             <Card className="break-inside-avoid">
               <CardHeader>
                 <CardTitle>My Reviews</CardTitle>
+                <CardDescription>
+                  Reviews you've written will be shown here.
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 {userReviews.length > 0 ? (
                   <ul className="space-y-2">
                     {userReviews.map((review) => (
                       <li key={review.id} className="text-muted-foreground">
-                        {review.courseCode}
+                        <ReviewPreview
+                          courseCode={review.courseCode}
+                          content={review.content}
+                          easyScore={review.easyScore}
+                          usefulScore={review.usefulScore}
+                          interestingScore={review.interestingScore}
+                          wouldRecommend={review.wouldRecommend}
+                        />
                       </li>
                     ))}
                   </ul>
