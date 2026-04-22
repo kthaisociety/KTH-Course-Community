@@ -1,11 +1,11 @@
 import type { Client as ESClient, estypes } from "@elastic/elasticsearch";
 import { Inject, Injectable } from "@nestjs/common";
-import type { CourseSummary } from "../types/course.types";
 import { inArray, sql } from "drizzle-orm";
 import type { NeonHttpDatabase } from "drizzle-orm/neon-http";
 import { CourseService } from "../course/course.service";
 import { DRIZZLE } from "../db/drizzle.module";
 import * as schema from "../db/schema";
+import type { CourseSummary } from "../types/course.types";
 import { ES } from "./search.constants";
 
 const INDEX = "courses";
