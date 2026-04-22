@@ -160,16 +160,14 @@ function useResizableSidebar() {
     window.addEventListener("pointerup", onUp);
     document.body.style.cursor = "col-resize";
     document.body.style.userSelect = "none";
-    const onUp = () => {
-      window.removeEventListener("pointermove", onMove);
-      window.removeEventListener("pointerup", onUp);
-      window.removeEventListener("pointercancel", onUp);
-      document.body.style.cursor = "";
-      document.body.style.userSelect = "";
-    };
-    window.addEventListener("pointermove", onMove);
-    window.addEventListener("pointerup", onUp);
-    window.addEventListener("pointercancel", onUp);
+  };
+
+  const resetWidth = () => {
+    hasCustomizedRef.current = false;
+    localStorage.removeItem(SIDEBAR_WIDTH_STORAGE_KEY);
+    setWidth(bounds.default);
+  };
+
   const nudgeWidth = (delta: number) => {
     const next = Math.max(bounds.min, Math.min(bounds.max, width + delta));
     persistWidth(next);

@@ -34,7 +34,7 @@ export function useAddReview() {
         return false;
       }
       try {
-          description: `Disapproved words: ${profoundMatches.join(", ")}`,
+        await dispatch(
           submitReview({ courseCode, userId, reviewForm }),
         ).unwrap();
         toast.success("Review added successfully!");
