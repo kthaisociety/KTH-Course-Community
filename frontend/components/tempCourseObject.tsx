@@ -1,14 +1,17 @@
-import type { SelectUserFavorites } from "../../types/database/schema";
-
-interface TempCourse {
-  userFavorite: SelectUserFavorites;
+interface TempCourseObjectProps {
+  userFavorite: {
+    userId: string;
+    createdAt: Date;
+    favoriteCourse: string;
+  };
 }
 
-export default function TempCourseObject(props: TempCourse) {
+export default function TempCourseObject({
+  userFavorite,
+}: TempCourseObjectProps) {
   return (
-    <div className="flex w-full bg-red-600">
-      <p>Course: {props.userFavorite.favoriteCourse}</p>
-      <p>Some course informaion...</p>
+    <div className="p-2 border rounded mb-2">
+      <span>{userFavorite.favoriteCourse}</span>
     </div>
   );
 }

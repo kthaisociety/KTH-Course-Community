@@ -2,7 +2,7 @@ import { Inject, Injectable, NotFoundException } from "@nestjs/common";
 import { and, eq, sql } from "drizzle-orm";
 import type { NeonHttpDatabase } from "drizzle-orm/neon-http";
 import { nanoid } from "nanoid"; // for generating unique review ids
-import { DRIZZLE } from "src/database/drizzle.module";
+import { DRIZZLE } from "src/db/drizzle.module";
 import * as schema from "../db/schema";
 import { ReviewsGateway } from "./reviews.gateway";
 
@@ -17,10 +17,9 @@ export class ReviewsService {
     courseCode: string,
     userId: string,
     reviewData: {
-      examinationMethods: number;
-      theoreticalVsApplied: number;
-      workload: number;
-      learningExperience: number;
+      easyScore: number;
+      usefulScore: number;
+      interestingScore: number;
       wouldRecommend: boolean;
       content: string;
     },
@@ -31,10 +30,9 @@ export class ReviewsService {
         id: nanoid(), // generate a unique review ID
         userId,
         courseCode,
-        examinationMethods: reviewData.examinationMethods,
-        theoreticalVsApplied: reviewData.theoreticalVsApplied,
-        workload: reviewData.workload,
-        learningExperience: reviewData.learningExperience,
+        easyScore: reviewData.easyScore,
+        usefulScore: reviewData.usefulScore,
+        interestingScore: reviewData.interestingScore,
         wouldRecommend: reviewData.wouldRecommend,
         content: reviewData.content,
       })
@@ -46,20 +44,20 @@ export class ReviewsService {
 
   // either fetch all reviews or all reviews for a specific course
   async findAll(courseCode?: string, userId?: string) {
-    let query = this.db
+    const query = this.db
       .select({
         id: schema.reviews.id,
         userId: schema.reviews.userId,
         courseCode: schema.reviews.courseCode,
-        examinationMethods: schema.reviews.examinationMethods,
-        theoreticalVsApplied: schema.reviews.theoreticalVsApplied,
-        workload: schema.reviews.workload,
-        learningExperience: schema.reviews.learningExperience,
+        easyScore: schema.reviews.easyScore,
+        usefulScore: schema.reviews.usefulScore,
+        interestingScore: schema.reviews.interestingScore,
         wouldRecommend: schema.reviews.wouldRecommend,
         content: schema.reviews.content,
         createdAt: schema.reviews.createdAt,
         updatedAt: schema.reviews.updatedAt,
         likeCount: sql<number>`COALESCE(like_counts.like_count, 0)`,
+        dislikeCount: sql<number>`COALESCE(dislike_counts.dislike_count, 0)`,
         userVote: schema.reviewLikes.voteType,
       })
       .from(schema.reviews)
@@ -73,6 +71,15 @@ export class ReviewsService {
         eq(schema.reviews.id, sql`like_counts.review_id`),
       )
       .leftJoin(
+        sql`(
+          SELECT review_id, COUNT(*) as dislike_count 
+          FROM ${schema.reviewLikes} 
+          WHERE vote_type = 'dislike' 
+          GROUP BY review_id
+        ) as dislike_counts`,
+        eq(schema.reviews.id, sql`dislike_counts.review_id`),
+      )
+      .leftJoin(
         schema.reviewLikes,
         userId
           ? and(
@@ -80,13 +87,10 @@ export class ReviewsService {
               eq(schema.reviewLikes.userId, userId),
             )
           : sql`false`,
-      )
-      .$dynamic();
+      );
 
-    if (courseCode) {
-      query = query.where(eq(schema.reviews.courseCode, courseCode)); // Assign back to query
-    }
-    query = query.orderBy(sql`created_at DESC`); // Assign back to query
+    if (courseCode) query.where(eq(schema.reviews.courseCode, courseCode));
+    query.orderBy(sql`created_at DESC`);
     return await query;
   }
 
@@ -105,10 +109,9 @@ export class ReviewsService {
   async update(
     id: string,
     reviewData: {
-      examinationMethods: number;
-      theoreticalVsApplied: number;
-      workload: number;
-      learningExperience: number;
+      easyScore: number;
+      usefulScore: number;
+      interestingScore: number;
       wouldRecommend: boolean;
       content: string;
     },
@@ -116,10 +119,9 @@ export class ReviewsService {
     const [updated] = await this.db
       .update(schema.reviews)
       .set({
-        examinationMethods: reviewData.examinationMethods,
-        theoreticalVsApplied: reviewData.theoreticalVsApplied,
-        workload: reviewData.workload,
-        learningExperience: reviewData.learningExperience,
+        easyScore: reviewData.easyScore,
+        usefulScore: reviewData.usefulScore,
+        interestingScore: reviewData.interestingScore,
         wouldRecommend: reviewData.wouldRecommend,
         content: reviewData.content,
         updatedAt: sql`now()`,
@@ -144,10 +146,14 @@ export class ReviewsService {
     return deleted;
   }
 
-  // toggle like for a review
-  async toggleLike(reviewId: string, userId: string) {
-    // check if user already liked this review
-    const existingLike = await this.db
+  // toggle like/dislike for a review
+  async toggleVote(
+    reviewId: string,
+    userId: string,
+    voteType: "like" | "dislike",
+  ) {
+    // check if user already voted on this review
+    const existingVote = await this.db
       .select()
       .from(schema.reviewLikes)
       .where(
@@ -158,10 +164,27 @@ export class ReviewsService {
       )
       .limit(1);
 
-    if (existingLike.length > 0) {
-      // already liked, remove the like (unlike)
+    if (existingVote.length > 0) {
+      const currentVote = existingVote[0];
+
+      // if same vote type, remove the vote
+      if (currentVote.voteType === voteType) {
+        await this.db
+          .delete(schema.reviewLikes)
+          .where(
+            and(
+              eq(schema.reviewLikes.reviewId, reviewId),
+              eq(schema.reviewLikes.userId, userId),
+            ),
+          );
+        const review = await this.getReview(reviewId);
+        if (review) this.reviewsGateway.emitCourseChanged(review.courseCode);
+        return { action: "removed", voteType: null };
+      }
+      // if different vote type, update to new vote type
       await this.db
-        .delete(schema.reviewLikes)
+        .update(schema.reviewLikes)
+        .set({ voteType })
         .where(
           and(
             eq(schema.reviewLikes.reviewId, reviewId),
@@ -170,18 +193,31 @@ export class ReviewsService {
         );
       const review = await this.getReview(reviewId);
       if (review) this.reviewsGateway.emitCourseChanged(review.courseCode);
-      return { action: "removed", isLiked: false };
+      return { action: "updated", voteType };
     }
-
-    // no existing like, create new one
+    // if no existing vote, create new one
     await this.db.insert(schema.reviewLikes).values({
       userId,
       reviewId,
-      voteType: "like",
+      voteType,
     });
     const review = await this.getReview(reviewId);
     if (review) this.reviewsGateway.emitCourseChanged(review.courseCode);
-    return { action: "added", isLiked: true };
+    return { action: "added", voteType };
+  }
+
+  async removeVote(reviewId: string, userId: string) {
+    await this.db
+      .delete(schema.reviewLikes)
+      .where(
+        and(
+          eq(schema.reviewLikes.reviewId, reviewId),
+          eq(schema.reviewLikes.userId, userId),
+        ),
+      );
+    const review = await this.getReview(reviewId);
+    if (review) this.reviewsGateway.emitCourseChanged(review.courseCode);
+    return { action: "removed", voteType: null };
   }
 
   private async getReview(reviewId: string) {

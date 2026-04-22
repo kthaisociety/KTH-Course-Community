@@ -1,10 +1,9 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { and, eq } from "drizzle-orm";
 import type { NeonHttpDatabase } from "drizzle-orm/neon-http";
-import { CourseService } from "src/course/course.service";
+import { DRIZZLE } from "../db/drizzle.module";
 import * as schema from "../db/schema";
 import { SelectUser } from "../db/schema";
-import { DRIZZLE } from "../database/drizzle.module";
 
 // Since we can't change the schema to have the userFAvorites, we need to define a new type,
 // that includes the userFavorites property.
@@ -16,7 +15,6 @@ export type UserWithFavorites = SelectUser & {
 export class UserService {
   constructor(
     @Inject(DRIZZLE) private readonly db: NeonHttpDatabase<typeof schema>,
-    private readonly courseService: CourseService,
   ) {}
 
   async createNewUser(id: string, email: string, name: string): Promise<void> {
@@ -69,9 +67,6 @@ export class UserService {
   }
 
   async toggleUserFavorite(userId: string, courseCode: string) {
-    // Check if course code exists, throws error from course.service
-    await this.courseService.courseCodeExists(courseCode);
-
     const courseInFavorites = await this.db
       .select()
       .from(schema.user_favorites)

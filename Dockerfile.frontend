@@ -8,13 +8,16 @@ FROM base AS deps
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
-# Copy workspace package files
+# Copy workspace package files (all workspaces must be present for npm ci)
 COPY package.json package-lock.json ./
 COPY frontend/package.json ./frontend/
-COPY types/ ./types/
+COPY backend-nest/package.json ./backend-nest/
+COPY shared/package.json ./shared/
 
-# Install dependencies based on the preferred package manager
-RUN npm ci
+# Lockfile generated on macOS lacks linux-musl platform native binaries.
+# Delete it and do fresh install so npm resolves platform-specific optional
+# deps (lightningcss, @tailwindcss/oxide) for the current alpine/musl target.
+RUN rm package-lock.json && npm install
 
 # Rebuild the source code only when needed
 FROM base AS builder
@@ -25,9 +28,10 @@ COPY --from=deps /app/package-lock.json ./package-lock.json
 
 # Copy source code
 COPY frontend/ ./frontend/
-COPY types/ ./types/
+COPY shared/ ./shared/
 
-RUN npm install supertokens-node --prefix ./frontend --no-save
+# Build shared types before frontend
+RUN npm run build:shared
 
 # Next.js collects completely anonymous telemetry data about general usage.
 # Learn more here: https://nextjs.org/telemetry

@@ -9,8 +9,8 @@ import {
 type Review = {
   userId: string;
   id: string;
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: string;
+  updatedAt: string;
   courseCode: string;
   easyScore: number;
   usefulScore: number;

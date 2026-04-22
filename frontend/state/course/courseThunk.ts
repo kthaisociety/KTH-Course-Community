@@ -1,15 +1,8 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
-import { getCourseCredits, getCourseInfo, getNeonCourse } from "@/lib/courses";
+import type { CourseDetails } from "@shared/types";
+import { getCourseDetails } from "@/lib/courses";
 
-// Thunk: Elasticsearch course document + Neon metadata + credits
-export const fetchCourseInfo = createAsyncThunk(
+export const fetchCourseInfo = createAsyncThunk<CourseDetails, string>(
   "course/fetchCourseInfo",
-  async (courseCode: string) => {
-    const [info, credits, neon] = await Promise.all([
-      getCourseInfo(courseCode),
-      getCourseCredits(courseCode),
-      getNeonCourse(courseCode).catch(() => null),
-    ]);
-    return { ...info, credits, neon };
-  },
+  async (courseCode) => getCourseDetails(courseCode),
 );

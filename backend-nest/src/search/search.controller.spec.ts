@@ -1,6 +1,7 @@
 import { Test, type TestingModule } from "@nestjs/testing";
+import type { CourseSummary } from "@shared/types";
 import { SearchController } from "./search.controller";
-import { type SearchResult, SearchService } from "./search.service";
+import { SearchService } from "./search.service";
 
 describe("SearchController", () => {
   let controller: SearchController;
@@ -29,52 +30,42 @@ describe("SearchController", () => {
 
   it("should be defined", () => {
     expect(controller).toBeDefined();
-    expect(mockSearchService).toBeDefined();
   });
 
   describe("search", () => {
-    const mockSearchResults: SearchResult[] = [
+    const mockResults: CourseSummary[] = [
       {
-        _id: "1",
-        _score: 1.5,
-        course_name_swe: "Kalkyl i en variabel",
-        course_name_eng: "Calculus in One Variable",
-        course_code: "SF1625",
-        department: "SF (SCI/Matematik) ",
+        courseCode: "SF1625",
+        titleEng: "Calculus in One Variable",
+        currentStatus: "ESTABLISHED",
         credits: 7.5,
-        subject: "Matematik",
-        periods: ["P3 (7.5 hp)"],
-        course_category: ["PROGRAMME COURSE"],
-        goals: "Learn fundamentals of calculus",
-        content: "Limits, derivatives, integrals",
-        eligibility: "",
-        state: "ESTABLISHED",
-        rating: 4,
+        creditUnit: "hp",
+        department: "SF (SCI/Matematik) ",
+        startTerms: [20252],
+        examTypes: ["TEN1"],
+        languages: ["english"],
+        updatedAt: "2023-01-01T00:00:00.000Z",
       },
       {
-        _id: "2",
-        _score: 1.2,
-        course_name_swe: "Algebra och geometri",
-        course_name_eng: "Algebra and Geometry",
-        course_code: "SF1624",
-        department: "SF (SCI/Matematik) ",
+        courseCode: "SF1624",
+        titleEng: "Algebra and Geometry",
+        currentStatus: "ESTABLISHED",
         credits: 7.5,
-        subject: "Matematik",
-        periods: ["P1 (7.5 hp)"],
-        course_category: ["PROGRAMME COURSE"],
-        goals: "Learn algebra and geometry concepts",
-        content: "Equations, shapes, theorems",
-        eligibility: "",
-        state: "ESTABLISHED",
-        rating: 5,
+        creditUnit: "hp",
+        department: "SF (SCI/Matematik) ",
+        startTerms: [20251],
+        examTypes: ["TEN1"],
+        languages: ["english"],
+        updatedAt: "2023-01-01T00:00:00.000Z",
       },
     ];
 
-    it("should return search results", async () => {
-      mockSearchService.searchCourses.mockResolvedValue(mockSearchResults);
+    it("returns SearchResponse with pagination and department filter", async () => {
+      mockSearchService.searchCourses.mockResolvedValue(mockResults);
 
       const result = await controller.search(
         "algebra",
+        "1",
         "10",
         "SF (SCI/Matematik) ",
       );
@@ -82,17 +73,17 @@ describe("SearchController", () => {
       expect(mockSearchService.searchCourses).toHaveBeenCalledWith(
         "algebra",
         10,
-        {
-          department: "SF (SCI/Matematik) ",
-        },
+        { department: "SF (SCI/Matematik) ", minRating: undefined },
       );
       expect(result).toEqual({
-        results: mockSearchResults,
+        results: mockResults,
         total: 2,
+        page: 1,
+        pageSize: 10,
       });
     });
 
-    it("should handle empty search results", async () => {
+    it("defaults page to 1 and size to 10 when missing", async () => {
       mockSearchService.searchCourses.mockResolvedValue([]);
 
       const result = await controller.search("nonexistent");
@@ -100,21 +91,22 @@ describe("SearchController", () => {
       expect(mockSearchService.searchCourses).toHaveBeenCalledWith(
         "nonexistent",
         10,
-        { department: undefined },
+        { department: undefined, minRating: undefined },
       );
       expect(result).toEqual({
         results: [],
         total: 0,
+        page: 1,
+        pageSize: 10,
       });
     });
 
-    it("should pass department filter correctly", async () => {
-      mockSearchService.searchCourses.mockResolvedValue(mockSearchResults);
-
-      await controller.search("math", "20", "SF (SCI/Matematik) ");
-
+    it("passes through minRating filter", async () => {
+      mockSearchService.searchCourses.mockResolvedValue([]);
+      await controller.search("math", "1", "20", undefined, "4");
       expect(mockSearchService.searchCourses).toHaveBeenCalledWith("math", 20, {
-        department: "SF (SCI/Matematik) ",
+        department: undefined,
+        minRating: 4,
       });
     });
   });

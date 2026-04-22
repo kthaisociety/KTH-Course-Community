@@ -14,13 +14,12 @@ EXPOSE 8080
 # BUIDLER, installs dependencies and builds projects for production
 FROM base AS builder
 WORKDIR /app
-COPY backend-nest/. ./backend-nest  
-COPY types/ ./types 
+COPY backend-nest/. ./backend-nest
+COPY shared/ ./shared
 RUN npm install
-# RUN npm ci
 
-# docker:fe:build is custom script in package to handle workspaces
-
+# Build shared types first, then backend
+RUN npm run build:shared
 WORKDIR /app/backend-nest
 RUN npm run build
 
@@ -44,6 +43,7 @@ COPY --from=builder --chown=nodejs:nodejs /app/package-lock.json ./package-lock.
 
 # Copy the built backend-nest code and its package file to the workspace folder
 COPY --from=builder --chown=nodejs:nodejs /app/backend-nest /app/backend-nest
-#COPY --from=builder --chown=nodejs:nodejs /app/backend-nest/package.json ./backend-nest/package.json 
+# Copy built shared types (workspace dependency)
+COPY --from=builder --chown=nodejs:nodejs /app/shared /app/shared
 
 CMD ["npm", "run", "docker:start:prod"] 

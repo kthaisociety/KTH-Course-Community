@@ -6,22 +6,16 @@ import { SuperTokensExceptionFilter } from "supertokens-nestjs";
 import supertokens from "supertokens-node";
 import { AllExceptionsFilter } from "./all-exceptions.filter";
 import { AppModule } from "./app.module";
+import { getCorsOrigins } from "./cors";
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const configService = app.get(ConfigService);
 
-  // CORS must include SuperTokens' headers and allow credentials
-  const websiteDomain = configService.get<string>("WEBSITE_DOMAIN");
-  const origins = [
-    websiteDomain ?? "http://localhost:3000",
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    "https://coursecompass.azurewebsites.net", // Production frontend domain
-  ].filter((value, index, self) => value && self.indexOf(value) === index);
-
+  // CORS must include SuperTokens' headers and allow credentials.
+  // Origins configured via WEBSITE_DOMAIN + CORS_ORIGINS env vars.
   app.enableCors({
-    origin: origins,
+    origin: getCorsOrigins(),
     allowedHeaders: ["content-type", ...supertokens.getAllCORSHeaders()],
     methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE", "OPTIONS"],
     credentials: true,

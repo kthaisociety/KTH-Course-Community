@@ -3,6 +3,7 @@ import { Inject, Injectable, Logger } from "@nestjs/common";
 import { inArray, sql } from "drizzle-orm";
 import type { NeonHttpDatabase } from "drizzle-orm/neon-http";
 import type { z } from "zod";
+import { DRIZZLE } from "../db/drizzle.module";
 import {
   courseExaminations as courseExaminationsTable,
   courseRounds as courseRoundsTable,
@@ -11,15 +12,10 @@ import {
   type InsertCourseExamination,
   type InsertCourseRound,
 } from "../db/schema";
-import {
-  CourseDetailSchema,
-  CourseSchema,
-  CoursesSchema,
-} from "../../../types/ingest/schemas";
-import type { CourseDocumentES } from "../../../types/search/elastic.mappings";
-import { DRIZZLE } from "../database/drizzle.module";
+import type { CourseDocumentES } from "../search/elastic.mappings";
 import { ES } from "../search/search.constants.js";
 import { KoppsService } from "./kopps.service";
+import { CourseDetailSchema, CourseSchema, CoursesSchema } from "./schemas";
 
 const INDEX = "courses";
 
