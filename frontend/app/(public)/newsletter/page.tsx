@@ -1,5 +1,6 @@
 "use client";
 
+import { BookOpen, Briefcase, CalendarDays, Lightbulb } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,7 +13,6 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
-import { BookOpen, Briefcase, CalendarDays, Lightbulb } from "lucide-react";
 
 const issues = [
   {

@@ -137,7 +137,6 @@ export const reviews = pgTable("reviews", {
   workload: integer("workload").notNull().default(0), // 1-5
   learningExperience: integer("learning_experience").notNull().default(0), // 1-5
 
-
   wouldRecommend: boolean("would_recommend").notNull().default(false),
   content: text("content").notNull(),
 

@@ -66,6 +66,19 @@ export class ReviewsController {
 
   @Post(":id/like")
   likeReview(@Param("id") reviewId: string, @Body() body: { userId: string }) {
-    return this.reviewsService.toggleLike(reviewId, body.userId);
+    return this.reviewsService.toggleVote(reviewId, body.userId, "like");
+  }
+
+  @Post(":id/dislike")
+  dislikeReview(
+    @Param("id") reviewId: string,
+    @Body() body: { userId: string },
+  ) {
+    return this.reviewsService.toggleVote(reviewId, body.userId, "dislike");
+  }
+
+  @Delete(":id/vote")
+  removeVote(@Param("id") reviewId: string, @Body() body: { userId: string }) {
+    return this.reviewsService.removeVote(reviewId, body.userId);
   }
 }
