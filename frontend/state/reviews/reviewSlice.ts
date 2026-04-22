@@ -1,6 +1,5 @@
 import { createSlice } from "@reduxjs/toolkit";
 import {
-  dislikeCourseReview,
   fetchCourseReviews,
   likeCourseReview,
   submitReview,
@@ -59,9 +58,6 @@ const reviewSlice = createSlice({
         state.error = action.error.message ?? null;
       })
       .addCase(likeCourseReview.fulfilled, () => {
-        // Optionally handle update logic directly here or refetch reviews
-      })
-      .addCase(dislikeCourseReview.fulfilled, () => {
         // Optionally handle update logic directly here or refetch reviews
       });
   },

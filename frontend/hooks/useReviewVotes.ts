@@ -2,8 +2,8 @@
 
 import { useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { toast } from "sonner";
 import {
-  dislikeCourseReview,
   fetchCourseReviews,
   likeCourseReview,
 } from "@/state/reviews/reviewThunk";
@@ -25,12 +25,10 @@ export function useReviewVotes(courseCode: string) {
   const dislike = useCallback(
     async (postId: string) => {
       if (!userId) return;
-      await dispatch(
-        dislikeCourseReview({ reviewId: postId, userId }),
-      ).unwrap();
-      dispatch(fetchCourseReviews({ courseCode, userId }));
+      void postId;
+      toast.info("Dislike is temporarily unavailable");
     },
-    [dispatch, userId, courseCode],
+    [userId],
   );
 
   return { like, dislike };

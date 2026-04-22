@@ -64,22 +64,3 @@ export async function likeReview(
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
 }
-
-export async function dislikeReview(
-  reviewId: string,
-  userId: string,
-): Promise<void> {
-  const backend = process.env.NEXT_PUBLIC_BACKEND_DOMAIN;
-  if (!backend) throw new Error("NEXT_PUBLIC_BACKEND_DOMAIN is not set");
-
-  const res = await fetch(`${backend}/reviews/${reviewId}/dislike`, {
-    cache: "no-store",
-    credentials: "include",
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ userId }),
-  });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-}
