@@ -1,11 +1,12 @@
 "use client";
 
 import type { CourseWithUserInfo } from "@shared/types";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useUser } from "@/hooks/userHooks";
 import { toggleUserFavorite } from "@/lib/user";
+import { fetchCourseDetails } from "@/state/course/courseThunk";
 import { executeSearch } from "@/state/search/executeSearchThunk";
 import {
   filtersChanged,
@@ -24,6 +25,21 @@ export default function SearchController() {
   const { userFavorites } = useUser(); // useUser hook to fetch from Redux
   const dispatch = useDispatch<Dispatch>(); // connect between redux and the component
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const selectedCode = searchParams.get("selected");
+
+  // Sidebar course details (Redux-backed)
+  const courseDetails = useSelector((s: RootState) => s.course.courseDetails);
+  const courseDetailsLoading = useSelector((s: RootState) => s.course.loading);
+  const courseDetailsError = useSelector((s: RootState) => s.course.error);
+  const selectedCourseDetails =
+    selectedCode &&
+    courseDetails &&
+    courseDetails.courseCode.toUpperCase() === selectedCode.toUpperCase()
+      ? courseDetails
+      : null;
+
   const [localQuery, setLocalQuery] = useState(
     query || "interaction programming",
   ); // redux synced
@@ -58,7 +74,17 @@ export default function SearchController() {
     );
   }, [results, userFavorites]);
 
-  // Are the "useCallbacks" really necessary here for the callback functions?
+  // When ?selected= changes, pull full course details for the sidebar.
+  useEffect(() => {
+    if (!selectedCode) return;
+    if (
+      courseDetails &&
+      courseDetails.courseCode.toUpperCase() === selectedCode.toUpperCase()
+    ) {
+      return; // already cached
+    }
+    dispatch(fetchCourseDetails(selectedCode));
+  }, [selectedCode, courseDetails, dispatch]);
 
   const onSubmit = useCallback(
     (e?: React.FormEvent) => {
@@ -84,14 +110,28 @@ export default function SearchController() {
     },
     [dispatch], // eslint-disable-line react-hooks/exhaustive-deps
   );
-  // onSortChange
 
-  const onSeeReviews = useCallback(
+  const onCardClick = useCallback(
     (courseCode: string) => {
-      router.push(`/course/${courseCode}`);
+      const next = new URLSearchParams(searchParams.toString());
+      const current = next.get("selected");
+      if (current && current.toUpperCase() === courseCode.toUpperCase()) {
+        next.delete("selected");
+      } else {
+        next.set("selected", courseCode);
+      }
+      const qs = next.toString();
+      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
     },
-    [router],
+    [router, pathname, searchParams],
   );
+
+  const onCloseDetails = useCallback(() => {
+    const next = new URLSearchParams(searchParams.toString());
+    next.delete("selected");
+    const qs = next.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+  }, [router, pathname, searchParams]);
 
   const onWriteReview = useCallback(
     (courseCode: string) => {
@@ -139,10 +179,15 @@ export default function SearchController() {
       results={resultsFull}
       filters={filters}
       onFiltersChange={_onFiltersChange}
-      onSeeReviews={onSeeReviews}
+      onCardClick={onCardClick}
       onWriteReview={onWriteReview}
       onToggleFavorite={onToggleFavorite}
       onAddToComparison={onAddToComparison}
+      selectedCode={selectedCode}
+      courseDetails={selectedCourseDetails}
+      courseDetailsLoading={courseDetailsLoading}
+      courseDetailsError={courseDetailsError}
+      onCloseDetails={onCloseDetails}
     />
   );
 }

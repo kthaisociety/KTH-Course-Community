@@ -16,7 +16,7 @@ const SKELETON_KEYS = ["f0", "f1", "f2", "f3", "f4"] as const;
 interface UserCoursesViewProps {
   userFavoriteCourses: CourseWithUserInfo[];
   isListLoading: boolean;
-  onSeeReviews: (courseCode: string) => void;
+  onCardClick: (courseCode: string) => void;
   onWriteReview: (courseCode: string) => void;
   onToggleFavorite: (courseCode: string) => void;
   onAddToComparison: (courseCode: string) => void;
@@ -25,7 +25,7 @@ interface UserCoursesViewProps {
 export default function UserCoursesView({
   userFavoriteCourses,
   isListLoading,
-  onSeeReviews,
+  onCardClick,
   onWriteReview,
   onToggleFavorite,
   onAddToComparison,
@@ -64,7 +64,7 @@ export default function UserCoursesView({
                   chartData={getMockChartData(course.courseCode)}
                   stats={getMockCourseStats(course.courseCode)}
                   isUserFavorite={course.isUserFavorite}
-                  onSeeReviews={() => onSeeReviews(course.courseCode)}
+                  onCardClick={() => onCardClick(course.courseCode)}
                   onWriteReview={() => onWriteReview(course.courseCode)}
                   onToggleFavorite={() => onToggleFavorite(course.courseCode)}
                   onAddToComparison={() => onAddToComparison(course.courseCode)}

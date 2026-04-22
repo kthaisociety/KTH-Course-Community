@@ -2,7 +2,7 @@ import { createAsyncThunk } from "@reduxjs/toolkit";
 import type { CourseDetails } from "@shared/types";
 import { getCourseDetails } from "@/lib/courses";
 
-export const fetchCourseInfo = createAsyncThunk<CourseDetails, string>(
-  "course/fetchCourseInfo",
+export const fetchCourseDetails = createAsyncThunk<CourseDetails, string>(
+  "course/fetchCourseDetails",
   async (courseCode) => getCourseDetails(courseCode),
 );

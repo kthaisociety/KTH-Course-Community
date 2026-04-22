@@ -25,7 +25,7 @@ export default function UserCoursesController() {
 
   const isListLoading = isSessionLoading || isLoadingFavorites;
 
-  const onSeeReviews = useCallback(
+  const onCardClick = useCallback(
     (courseCode: string) => {
       router.push(`/course/${courseCode}?from=saved`);
     },
@@ -108,7 +108,7 @@ export default function UserCoursesController() {
     <UserCoursesView
       userFavoriteCourses={userFavoriteCourses}
       isListLoading={isListLoading}
-      onSeeReviews={onSeeReviews}
+      onCardClick={onCardClick}
       onWriteReview={onWriteReview}
       onToggleFavorite={onToggleFavorite}
       onAddToComparison={onAddToComparison}

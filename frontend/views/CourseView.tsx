@@ -3,28 +3,28 @@
 import type { CourseRoundSummary, ExamRoundSummary } from "@shared/types";
 import { ArrowLeft, ExternalLink } from "lucide-react";
 import Link from "next/link";
-import type { ReactNode } from "react";
-import CourseHeader, {
-  type CourseHeaderProps,
-} from "@/components/CourseHeader";
+import { type ReactNode, useEffect, useRef } from "react";
 import Post, { type PostProps } from "@/components/Post";
 import { Button } from "@/components/ui/button";
 import { kthCourseUrl as kthCoursePageUrl } from "@/lib/kth";
 
-export type CourseViewProps = CourseHeaderProps & {
-  posts: (PostProps & { postId: string })[];
-  onLikePost: (postId: string) => void;
-  onDislikePost: (postId: string) => void;
+export type CourseViewProps = {
+  courseCode: string;
+  courseTitle: string;
+  credits: number | null;
   department: string;
   goalsHtml: string;
   contentHtml: string;
   rounds: CourseRoundSummary[];
   examinations: ExamRoundSummary[];
+  posts: (PostProps & { postId: string })[];
   /** Precomputed; defaults to `kthCourseUrl(courseCode)` if omitted */
   kthCourseUrl?: string;
   /** Top nav link; default explore */
   backHref?: string;
   backLabel?: string;
+  /** If true, scroll user to reviews section on initial render. */
+  openReviewOnLoad?: boolean;
 };
 
 function SectionTitle({ children, id }: { children: ReactNode; id?: string }) {
@@ -56,6 +56,15 @@ export default function CourseView(props: CourseViewProps) {
         ? String(props.credits)
         : props.credits.toFixed(1)
       : "—";
+  const reviewsHeadingRef = useRef<HTMLHeadingElement>(null);
+
+  useEffect(() => {
+    if (!props.openReviewOnLoad) return;
+    reviewsHeadingRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  }, [props.openReviewOnLoad]);
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-4 pb-16 pt-6">
@@ -72,7 +81,7 @@ export default function CourseView(props: CourseViewProps) {
         <div className="flex flex-col gap-4 p-5 md:flex-row md:items-start md:justify-between">
           <div className="min-w-0 flex-1">
             <h1 className="text-2xl font-semibold capitalize leading-tight text-foreground">
-              {props.courseName}
+              {props.courseTitle}
             </h1>
             <p className="mt-1 text-muted-foreground text-sm">
               {hp} hp · {props.courseCode}
@@ -127,9 +136,9 @@ export default function CourseView(props: CourseViewProps) {
         <section className="rounded-lg border border-border bg-card p-5 shadow-sm">
           <SectionTitle>Course offerings</SectionTitle>
           <ul className="mt-3 flex flex-col gap-2 text-sm">
-            {props.rounds.map((r) => (
+            {props.rounds.map((r, idx) => (
               <li
-                key={`${r.startTerm}-${r.formattedPeriodsAndCredits ?? ""}`}
+                key={`${r.startTerm}-${r.formattedPeriodsAndCredits ?? ""}-${idx}`}
                 className="flex flex-wrap items-center gap-2 text-foreground"
               >
                 <span className="font-medium">{formatTerm(r.startTerm)}</span>
@@ -157,7 +166,7 @@ export default function CourseView(props: CourseViewProps) {
         <section className="rounded-lg border border-border bg-card p-5 shadow-sm">
           <SectionTitle>Examinations</SectionTitle>
           <ul className="mt-3 flex flex-col gap-2 text-sm">
-            {props.examinations.map((e) => (
+            {props.examinations.map((e: ExamRoundSummary) => (
               <li
                 key={e.examCode}
                 className="flex flex-wrap items-center gap-2 text-foreground"
@@ -182,43 +191,17 @@ export default function CourseView(props: CourseViewProps) {
         </section>
       )}
 
-      {/* Review analytics + write review */}
-      <section aria-labelledby="review-insights-heading">
-        <h2
-          id="review-insights-heading"
-          className="mb-3 text-lg font-semibold capitalize leading-tight"
-        >
-          Review insights
-        </h2>
-        <CourseHeader
-          courseCode={props.courseCode}
-          courseName={props.courseName}
-          courseRating={props.courseRating}
-          easyScoreDistribution={props.easyScoreDistribution}
-          usefulScoreDistribution={props.usefulScoreDistribution}
-          interestingScoreDistribution={props.interestingScoreDistribution}
-          ratingDistribution={props.ratingDistribution}
-          credits={props.credits}
-          syllabus={props.syllabus}
-          percentageWouldRecommend={props.percentageWouldRecommend}
-          onAddReview={props.onAddReview}
-          userId={props.userId}
-          openReview={props.openReview}
-          className="border border-border bg-muted/20 md:gap-x-12"
-        />
-      </section>
-
       {/* Reviews */}
       <section aria-labelledby="reviews-heading">
         <h2
           id="reviews-heading"
+          ref={reviewsHeadingRef}
           className="mb-4 text-lg font-semibold capitalize leading-tight"
         >
           Student reviews
         </h2>
         <p className="mb-4 text-muted-foreground text-sm">
-          Scores are from 1 (low) to 5 (high). Text may include formatting from
-          the editor.
+          Here are review insights and student comments about the course.
         </p>
         <div className="flex flex-col gap-4">
           {props.posts && props.posts.length > 0 ? (
@@ -226,6 +209,7 @@ export default function CourseView(props: CourseViewProps) {
               <Post
                 key={post.postId}
                 className="w-full max-w-full border border-border bg-card shadow-sm"
+                courseCode={props.courseCode}
                 wouldRecommend={post.wouldRecommend}
                 content={post.content}
                 easyScore={post.easyScore}
@@ -235,8 +219,6 @@ export default function CourseView(props: CourseViewProps) {
                 dislikeCount={post.dislikeCount}
                 userVote={post.userVote}
                 postId={post.postId}
-                onPostLike={props.onLikePost}
-                onPostDislike={props.onDislikePost}
               />
             ))
           ) : (
