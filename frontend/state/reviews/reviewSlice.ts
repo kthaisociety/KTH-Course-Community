@@ -11,9 +11,10 @@ type Review = {
   createdAt: string;
   updatedAt: string;
   courseCode: string;
-  easyScore: number;
-  usefulScore: number;
-  interestingScore: number;
+  examinationMethods: number;
+  theoreticalVsApplied: number;
+  workload: number;
+  learningExperience: number;
   wouldRecommend: boolean;
   content: string;
 };
