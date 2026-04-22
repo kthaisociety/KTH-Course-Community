@@ -16,8 +16,14 @@ export function useReviewVotes(courseCode: string) {
   const like = useCallback(
     async (postId: string) => {
       if (!userId) return;
-      await dispatch(likeCourseReview({ reviewId: postId, userId })).unwrap();
-      dispatch(fetchCourseReviews({ courseCode, userId }));
+      try {
+        await dispatch(likeCourseReview({ reviewId: postId, userId })).unwrap();
+        dispatch(fetchCourseReviews({ courseCode, userId }));
+      } catch {
+        toast.error("Failed to update vote", {
+          description: "Try again later",
+        });
+      }
     },
     [dispatch, userId, courseCode],
   );
