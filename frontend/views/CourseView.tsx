@@ -212,9 +212,10 @@ export default function CourseView(props: CourseViewProps) {
                 courseCode={props.courseCode}
                 wouldRecommend={post.wouldRecommend}
                 content={post.content}
-                easyScore={post.easyScore}
-                usefulScore={post.usefulScore}
-                interestingScore={post.interestingScore}
+                examinationMethods={post.examinationMethods}
+                theoreticalVsApplied={post.theoreticalVsApplied}
+                workload={post.workload}
+                learningExperience={post.learningExperience}
                 likeCount={post.likeCount}
                 dislikeCount={post.dislikeCount}
                 userVote={post.userVote}

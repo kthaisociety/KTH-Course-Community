@@ -3,11 +3,14 @@ export interface Review {
   id: string;
   userId: string;
   courseCode: string;
-  easyScore: number;
-  usefulScore: number;
-  interestingScore: number;
+  examinationMethods: number;
+  theoreticalVsApplied: number;
+  workload: number;
+  learningExperience: number;
   wouldRecommend: boolean;
   content: string;
   createdAt: string;
   updatedAt: string;
+  likeCount?: number;
+  userVote?: "like" | "dislike" | null;
 }

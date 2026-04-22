@@ -19,9 +19,10 @@ import { Switch } from "./ui/switch";
 export type ReviewFormData = {
   wouldRecommend: boolean;
   content: string;
-  easyScore: number;
-  usefulScore: number;
-  interestingScore: number;
+  examinationMethods: number;
+  theoreticalVsApplied: number;
+  workload: number;
+  learningExperience: number;
 };
 
 type ReviewProps = {
@@ -40,9 +41,10 @@ export function Review(props: Readonly<ReviewProps>) {
   const [reviewForm, setReviewForm] = useState<ReviewFormData>({
     wouldRecommend: false,
     content: "",
-    easyScore: 0,
-    usefulScore: 0,
-    interestingScore: 0,
+    examinationMethods: 0,
+    theoreticalVsApplied: 0,
+    workload: 0,
+    learningExperience: 0,
   });
 
   const [isSubmittingReviewForm, setIsSubmittingReviewForm] = useState(false);
@@ -51,9 +53,10 @@ export function Review(props: Readonly<ReviewProps>) {
   const isFormInvalid =
     !reviewForm.content ||
     reviewForm.content.replace(/<[^>]*>/g, "").trim() === "" ||
-    reviewForm.easyScore === 0 ||
-    reviewForm.usefulScore === 0 ||
-    reviewForm.interestingScore === 0;
+    reviewForm.examinationMethods === 0 ||
+    reviewForm.theoreticalVsApplied === 0 ||
+    reviewForm.workload === 0 ||
+    reviewForm.learningExperience === 0;
 
   const handleAddReview = async (
     courseCode: string,
@@ -103,13 +106,15 @@ export function Review(props: Readonly<ReviewProps>) {
             <h3 className="text-lg font-semibold">Rate the Course</h3>
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <Label className="text-sm font-medium">Effortlessness </Label>
+                <Label className="text-sm font-medium">
+                  Examination methods
+                </Label>
                 <Rating
-                  value={reviewForm.easyScore}
+                  value={reviewForm.examinationMethods}
                   onValueChange={(value) =>
                     setReviewForm({
                       ...reviewForm,
-                      easyScore: value,
+                      examinationMethods: value,
                     })
                   }
                 >
@@ -120,13 +125,13 @@ export function Review(props: Readonly<ReviewProps>) {
               </div>
 
               <div className="flex items-center justify-between">
-                <Label className="text-sm font-medium">Usefulness</Label>
+                <Label className="text-sm font-medium">Theory vs applied</Label>
                 <Rating
-                  value={reviewForm.usefulScore}
+                  value={reviewForm.theoreticalVsApplied}
                   onValueChange={(value) =>
                     setReviewForm({
                       ...reviewForm,
-                      usefulScore: value,
+                      theoreticalVsApplied: value,
                     })
                   }
                 >
@@ -137,18 +142,37 @@ export function Review(props: Readonly<ReviewProps>) {
               </div>
 
               <div className="flex items-center justify-between">
-                <Label className="text-sm font-medium">Interest Level</Label>
+                <Label className="text-sm font-medium">Workload</Label>
                 <Rating
-                  value={reviewForm.interestingScore}
+                  value={reviewForm.workload}
                   onValueChange={(value) =>
                     setReviewForm({
                       ...reviewForm,
-                      interestingScore: value,
+                      workload: value,
                     })
                   }
                 >
                   {Array.from({ length: 5 }, (_, i) => (
-                    <RatingButton key={`interest-star-${i + 1}`} />
+                    <RatingButton key={`workload-star-${i + 1}`} />
+                  ))}
+                </Rating>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-medium">
+                  Learning experience
+                </Label>
+                <Rating
+                  value={reviewForm.learningExperience}
+                  onValueChange={(value) =>
+                    setReviewForm({
+                      ...reviewForm,
+                      learningExperience: value,
+                    })
+                  }
+                >
+                  {Array.from({ length: 5 }, (_, i) => (
+                    <RatingButton key={`learning-star-${i + 1}`} />
                   ))}
                 </Rating>
               </div>

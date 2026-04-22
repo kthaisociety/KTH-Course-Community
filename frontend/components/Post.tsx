@@ -163,9 +163,10 @@ function RecommendChip(props: Readonly<RecommendChipProps>) {
 
 export type PostProps = {
   courseCode: string;
-  easyScore: number;
-  usefulScore: number;
-  interestingScore: number;
+  examinationMethods: number;
+  theoreticalVsApplied: number;
+  workload: number;
+  learningExperience: number;
   wouldRecommend: boolean;
   content: string;
   likeCount?: number;
@@ -177,9 +178,10 @@ export type PostProps = {
 };
 
 export default function Post(props: Readonly<PostProps>) {
-  const easy = normalizeRating(props.easyScore);
-  const useful = normalizeRating(props.usefulScore);
-  const interesting = normalizeRating(props.interestingScore);
+  const examinationMethods = normalizeRating(props.examinationMethods);
+  const theoreticalVsApplied = normalizeRating(props.theoreticalVsApplied);
+  const workload = normalizeRating(props.workload);
+  const learningExperience = normalizeRating(props.learningExperience);
   const { like, dislike } = useReviewVotes(props.courseCode);
 
   const [expanded, setExpanded] = useState(false);
@@ -193,10 +195,11 @@ export default function Post(props: Readonly<PostProps>) {
   return (
     <Card className={cn("w-[48rem] max-w-full", props.className)}>
       <CardContent className="flex flex-col gap-4">
-        <div className="grid grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-4">
-          <RatingPill name="Easy" rating={easy} />
-          <RatingPill name="Useful" rating={useful} />
-          <RatingPill name="Interesting" rating={interesting} />
+        <div className="grid grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-5">
+          <RatingPill name="Exam methods" rating={examinationMethods} />
+          <RatingPill name="Theory vs applied" rating={theoreticalVsApplied} />
+          <RatingPill name="Workload" rating={workload} />
+          <RatingPill name="Learning exp." rating={learningExperience} />
           <RecommendChip wouldRecommend={props.wouldRecommend} />
         </div>
 
