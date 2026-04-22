@@ -1,10 +1,4 @@
 import { Inject, Injectable } from "@nestjs/common";
-import type {
-  CourseDetails,
-  CourseRoundSummary,
-  CourseSummary,
-  ExamRoundSummary,
-} from "@shared/types";
 import { eq, inArray } from "drizzle-orm";
 import type { NeonHttpDatabase } from "drizzle-orm/neon-http";
 import { DRIZZLE } from "../db/drizzle.module";
@@ -15,6 +9,12 @@ import {
   courses,
   type SelectCourse,
 } from "../db/schema";
+import type {
+  CourseDetails,
+  CourseRoundSummary,
+  CourseSummary,
+  ExamRoundSummary,
+} from "../types/course.types";
 
 @Injectable()
 export class CourseService {

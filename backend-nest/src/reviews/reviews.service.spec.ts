@@ -23,9 +23,10 @@ describe("ReviewsService", () => {
   let mockDb: MockDb;
 
   const mockReviewData = {
-    easyScore: 4,
-    usefulScore: 5,
-    interestingScore: 3,
+    examinationMethods: 4,
+    theoreticalVsApplied: 5,
+    workload: 3,
+    learningExperience: 4,
     wouldRecommend: true,
     content: "Great course content!",
   };
@@ -199,9 +200,10 @@ jest.mock("../db/schema", () => ({
     id: "reviews.id",
     userId: "reviews.userId",
     courseCode: "reviews.courseCode",
-    easyScore: "reviews.easyScore",
-    usefulScore: "reviews.usefulScore",
-    interestingScore: "reviews.interestingScore",
+    examinationMethods: "reviews.examinationMethods",
+    theoreticalVsApplied: "reviews.theoreticalVsApplied",
+    workload: "reviews.workload",
+    learningExperience: "reviews.learningExperience",
     wouldRecommend: "reviews.wouldRecommend",
     content: "reviews.content",
     createdAt: "reviews.createdAt",

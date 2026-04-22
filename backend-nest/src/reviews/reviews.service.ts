@@ -17,9 +17,10 @@ export class ReviewsService {
     courseCode: string,
     userId: string,
     reviewData: {
-      easyScore: number;
-      usefulScore: number;
-      interestingScore: number;
+      examinationMethods: number;
+      theoreticalVsApplied: number;
+      workload: number;
+      learningExperience: number;
       wouldRecommend: boolean;
       content: string;
     },
@@ -30,9 +31,10 @@ export class ReviewsService {
         id: nanoid(), // generate a unique review ID
         userId,
         courseCode,
-        easyScore: reviewData.easyScore,
-        usefulScore: reviewData.usefulScore,
-        interestingScore: reviewData.interestingScore,
+        examinationMethods: reviewData.examinationMethods,
+        theoreticalVsApplied: reviewData.theoreticalVsApplied,
+        workload: reviewData.workload,
+        learningExperience: reviewData.learningExperience,
         wouldRecommend: reviewData.wouldRecommend,
         content: reviewData.content,
       })
@@ -44,20 +46,20 @@ export class ReviewsService {
 
   // either fetch all reviews or all reviews for a specific course
   async findAll(courseCode?: string, userId?: string) {
-    const query = this.db
+    const baseQuery = this.db
       .select({
         id: schema.reviews.id,
         userId: schema.reviews.userId,
         courseCode: schema.reviews.courseCode,
-        easyScore: schema.reviews.easyScore,
-        usefulScore: schema.reviews.usefulScore,
-        interestingScore: schema.reviews.interestingScore,
+        examinationMethods: schema.reviews.examinationMethods,
+        theoreticalVsApplied: schema.reviews.theoreticalVsApplied,
+        workload: schema.reviews.workload,
+        learningExperience: schema.reviews.learningExperience,
         wouldRecommend: schema.reviews.wouldRecommend,
         content: schema.reviews.content,
         createdAt: schema.reviews.createdAt,
         updatedAt: schema.reviews.updatedAt,
         likeCount: sql<number>`COALESCE(like_counts.like_count, 0)`,
-        dislikeCount: sql<number>`COALESCE(dislike_counts.dislike_count, 0)`,
         userVote: schema.reviewLikes.voteType,
       })
       .from(schema.reviews)
@@ -71,15 +73,6 @@ export class ReviewsService {
         eq(schema.reviews.id, sql`like_counts.review_id`),
       )
       .leftJoin(
-        sql`(
-          SELECT review_id, COUNT(*) as dislike_count 
-          FROM ${schema.reviewLikes} 
-          WHERE vote_type = 'dislike' 
-          GROUP BY review_id
-        ) as dislike_counts`,
-        eq(schema.reviews.id, sql`dislike_counts.review_id`),
-      )
-      .leftJoin(
         schema.reviewLikes,
         userId
           ? and(
@@ -87,10 +80,13 @@ export class ReviewsService {
               eq(schema.reviewLikes.userId, userId),
             )
           : sql`false`,
-      );
+      )
+      .orderBy(sql`created_at DESC`);
 
-    if (courseCode) query.where(eq(schema.reviews.courseCode, courseCode));
-    query.orderBy(sql`created_at DESC`);
+    const query = courseCode
+      ? baseQuery.where(eq(schema.reviews.courseCode, courseCode))
+      : baseQuery;
+
     return await query;
   }
 
@@ -109,9 +105,10 @@ export class ReviewsService {
   async update(
     id: string,
     reviewData: {
-      easyScore: number;
-      usefulScore: number;
-      interestingScore: number;
+      examinationMethods: number;
+      theoreticalVsApplied: number;
+      workload: number;
+      learningExperience: number;
       wouldRecommend: boolean;
       content: string;
     },
@@ -119,9 +116,10 @@ export class ReviewsService {
     const [updated] = await this.db
       .update(schema.reviews)
       .set({
-        easyScore: reviewData.easyScore,
-        usefulScore: reviewData.usefulScore,
-        interestingScore: reviewData.interestingScore,
+        examinationMethods: reviewData.examinationMethods,
+        theoreticalVsApplied: reviewData.theoreticalVsApplied,
+        workload: reviewData.workload,
+        learningExperience: reviewData.learningExperience,
         wouldRecommend: reviewData.wouldRecommend,
         content: reviewData.content,
         updatedAt: sql`now()`,

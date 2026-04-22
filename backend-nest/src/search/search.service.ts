@@ -1,11 +1,11 @@
 import type { Client as ESClient, estypes } from "@elastic/elasticsearch";
 import { Inject, Injectable } from "@nestjs/common";
-import type { CourseSummary } from "@shared/types";
 import { inArray, sql } from "drizzle-orm";
 import type { NeonHttpDatabase } from "drizzle-orm/neon-http";
 import { CourseService } from "../course/course.service";
 import { DRIZZLE } from "../db/drizzle.module";
 import * as schema from "../db/schema";
+import type { CourseSummary } from "../types/course.types";
 import { ES } from "./search.constants";
 
 const INDEX = "courses";
@@ -114,7 +114,7 @@ export class SearchService {
     if (minRating) {
       const ratingRows = await this.db.execute(
         sql`SELECT course_code,
-            ROUND((AVG(easy_score) + AVG(useful_score) + AVG(interesting_score))/3) AS rating
+            ROUND((AVG(examination_methods) + AVG(theoretical_vs_applied) + AVG(workload) + AVG(learning_experience))/4) AS rating
             FROM ${schema.reviews}
             WHERE ${inArray(schema.reviews.courseCode, codes)}
             GROUP BY course_code`,

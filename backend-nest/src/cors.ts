@@ -5,8 +5,7 @@
  * before the DI container exists (e.g. @WebSocketGateway).
  */
 export function getCorsOrigins(): string[] {
-  const websiteDomain =
-    process.env.WEBSITE_DOMAIN ?? "http://localhost:3000";
+  const websiteDomain = process.env.WEBSITE_DOMAIN ?? "http://localhost:3000";
   const extra = (process.env.CORS_ORIGINS ?? "")
     .split(",")
     .map((o) => o.trim())
