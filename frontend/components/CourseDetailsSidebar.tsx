@@ -1,6 +1,7 @@
 "use client";
 
 import type { CourseDetails } from "@shared/types";
+import DOMPurify from "isomorphic-dompurify";
 import { ExternalLink, X } from "lucide-react";
 import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
@@ -34,6 +35,11 @@ function formatTerm(startTerm: number): string {
 function formatHp(credits: number | null): string {
   if (credits == null || !Number.isFinite(credits)) return "—";
   return Number.isInteger(credits) ? String(credits) : credits.toFixed(1);
+}
+
+function sanitizeCourseHtml(html: string | null | undefined): string {
+  const normalized = html?.trim() || "<p>—</p>";
+  return DOMPurify.sanitize(normalized);
 }
 
 export function CourseDetailsSidebar({
@@ -177,9 +183,9 @@ function SidebarContent({ details }: { details: CourseDetails }) {
         <SectionTitle>Content</SectionTitle>
         <div
           className="prose prose-sm mt-3 max-w-none text-foreground dark:prose-invert"
-          /** biome-ignore lint/security/noDangerouslySetInnerHtml: course HTML from index */
+          /** biome-ignore lint/security/noDangerouslySetInnerHtml: sanitized with DOMPurify */
           dangerouslySetInnerHTML={{
-            __html: details.content?.trim() || "<p>—</p>",
+            __html: sanitizeCourseHtml(details.content),
           }}
         />
       </div>
@@ -188,9 +194,9 @@ function SidebarContent({ details }: { details: CourseDetails }) {
         <SectionTitle>Goals</SectionTitle>
         <div
           className="prose prose-sm mt-3 max-w-none text-foreground dark:prose-invert"
-          /** biome-ignore lint/security/noDangerouslySetInnerHtml: course HTML from index */
+          /** biome-ignore lint/security/noDangerouslySetInnerHtml: sanitized with DOMPurify */
           dangerouslySetInnerHTML={{
-            __html: details.goals?.trim() || "<p>—</p>",
+            __html: sanitizeCourseHtml(details.goals),
           }}
         />
       </div>

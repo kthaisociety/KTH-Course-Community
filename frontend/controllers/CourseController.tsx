@@ -19,6 +19,7 @@ export default function CourseController() {
   const dispatch = useDispatch<Dispatch>();
   const { userId } = useSessionData();
   const fromSaved = searchParams.get("from") === "saved";
+  const openReviewOnLoad = searchParams.get("writeReview") === "1";
   const backHref = fromSaved ? "/favorites" : "/search";
   const backLabel = fromSaved ? "Back to saved courses" : "Back to explore";
 
@@ -125,6 +126,7 @@ export default function CourseController() {
       rounds={courseDetails.rounds}
       examinations={courseDetails.examinations}
       posts={posts}
+      openReviewOnLoad={openReviewOnLoad}
       backHref={backHref}
       backLabel={backLabel}
     />

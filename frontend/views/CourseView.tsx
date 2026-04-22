@@ -3,7 +3,7 @@
 import type { CourseRoundSummary, ExamRoundSummary } from "@shared/types";
 import { ArrowLeft, ExternalLink } from "lucide-react";
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { type ReactNode, useEffect, useRef } from "react";
 import Post, { type PostProps } from "@/components/Post";
 import { Button } from "@/components/ui/button";
 import { kthCourseUrl as kthCoursePageUrl } from "@/lib/kth";
@@ -23,6 +23,8 @@ export type CourseViewProps = {
   /** Top nav link; default explore */
   backHref?: string;
   backLabel?: string;
+  /** If true, scroll user to reviews section on initial render. */
+  openReviewOnLoad?: boolean;
 };
 
 function SectionTitle({ children, id }: { children: ReactNode; id?: string }) {
@@ -54,6 +56,15 @@ export default function CourseView(props: CourseViewProps) {
         ? String(props.credits)
         : props.credits.toFixed(1)
       : "—";
+  const reviewsHeadingRef = useRef<HTMLHeadingElement>(null);
+
+  useEffect(() => {
+    if (!props.openReviewOnLoad) return;
+    reviewsHeadingRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  }, [props.openReviewOnLoad]);
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-4 pb-16 pt-6">
@@ -184,6 +195,7 @@ export default function CourseView(props: CourseViewProps) {
       <section aria-labelledby="reviews-heading">
         <h2
           id="reviews-heading"
+          ref={reviewsHeadingRef}
           className="mb-4 text-lg font-semibold capitalize leading-tight"
         >
           Student reviews

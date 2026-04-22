@@ -33,6 +33,12 @@ export default function SearchController() {
   const courseDetails = useSelector((s: RootState) => s.course.courseDetails);
   const courseDetailsLoading = useSelector((s: RootState) => s.course.loading);
   const courseDetailsError = useSelector((s: RootState) => s.course.error);
+  const selectedCourseDetails =
+    selectedCode &&
+    courseDetails &&
+    courseDetails.courseCode.toUpperCase() === selectedCode.toUpperCase()
+      ? courseDetails
+      : null;
 
   const [localQuery, setLocalQuery] = useState(
     query || "interaction programming",
@@ -178,7 +184,7 @@ export default function SearchController() {
       onToggleFavorite={onToggleFavorite}
       onAddToComparison={onAddToComparison}
       selectedCode={selectedCode}
-      courseDetails={courseDetails}
+      courseDetails={selectedCourseDetails}
       courseDetailsLoading={courseDetailsLoading}
       courseDetailsError={courseDetailsError}
       onCloseDetails={onCloseDetails}
