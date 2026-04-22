@@ -47,7 +47,7 @@ export default function ProfileView({
           <CardContent className="flex justify-center items-center py-2">
             <div className="relative">
               {/* Profile picture*/}
-              <Avatar className="w-24 h-24 border-4 border-primary/10">
+              <Avatar className="w-24 h-24 border-4">
                 {preview ? (
                   <AvatarImage
                     src={preview}
@@ -55,19 +55,19 @@ export default function ProfileView({
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  <AvatarFallback className="text-xl bg-primary/10 text-primary">
+                  <AvatarFallback className="text-xl">
                     {getInitials(name || email)}
                   </AvatarFallback>
                 )}
               </Avatar>
               {/* Bottom left - anchored to avatar */}
               <div className="absolute top-2/3 right-full pr-4 -translate-y-1/2 whitespace-nowrap">
-                <p className="text-muted-foreground">{name}</p>
+                <p>{name}</p>
               </div>
 
               {/* Bottom right - anchored to avatar */}
               <div className="absolute top-2/3 left-full pl-4 -translate-y-1/2 whitespace-nowrap">
-                <p className="text-muted-foreground">Computer Science</p>
+                <p>Computer Science</p>
               </div>
             </div>
           </CardContent>
@@ -79,7 +79,7 @@ export default function ProfileView({
             {/*Courses Taken*/}
             <Card className="break-inside-avoid">
               <CardHeader>
-                <CardTitle className="text-primary">Courses Taken</CardTitle>
+                <CardTitle>Courses Taken</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-muted-foreground">
@@ -91,9 +91,7 @@ export default function ProfileView({
             {/*Liked/Disliked Reviews*/}
             <Card className="break-inside-avoid">
               <CardHeader>
-                <CardTitle className="text-primary">
-                  Liked/Disliked Reviews
-                </CardTitle>
+                <CardTitle>Liked/Disliked Reviews</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-muted-foreground">
@@ -107,7 +105,7 @@ export default function ProfileView({
             {/*My Reviews*/}
             <Card className="break-inside-avoid">
               <CardHeader>
-                <CardTitle className="text-primary">My Reviews</CardTitle>
+                <CardTitle>My Reviews</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-muted-foreground">
@@ -119,7 +117,7 @@ export default function ProfileView({
             {/*My Goals*/}
             <Card className="break-inside-avoid">
               <CardHeader>
-                <CardTitle className="text-primary">My Goals</CardTitle>
+                <CardTitle>My Goals</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-muted-foreground">
