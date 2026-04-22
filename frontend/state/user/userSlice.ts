@@ -1,4 +1,5 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
+import type { Review } from "@shared/types";
 import { clearSession, getSession } from "../session/sessionSlice";
 
 export interface UserState {
@@ -6,6 +7,7 @@ export interface UserState {
   email: string;
   userFavorites: string[];
   profilePicture: string | null;
+  userReviews: Review[];
 }
 
 const initialState: UserState = {
@@ -13,6 +15,7 @@ const initialState: UserState = {
   email: "",
   userFavorites: [],
   profilePicture: null,
+  userReviews: [],
 };
 
 const userSlice = createSlice({
@@ -24,6 +27,7 @@ const userSlice = createSlice({
       state.email = action.payload.email;
       state.userFavorites = action.payload.userFavorites;
       state.profilePicture = action.payload.profilePicture ?? null;
+      state.userReviews = action.payload.userReviews;
     },
     toggleFavoriteSuccess: (
       state,
@@ -54,6 +58,7 @@ const userSlice = createSlice({
       state.email = "";
       state.userFavorites = [];
       state.profilePicture = null;
+      state.userReviews = [];
     },
   },
   extraReducers: (builder) => {
@@ -63,12 +68,14 @@ const userSlice = createSlice({
         state.email = "";
         state.userFavorites = [];
         state.profilePicture = null;
+        state.userReviews = [];
       })
       .addCase(clearSession, (state) => {
         state.name = "";
         state.email = "";
         state.userFavorites = [];
         state.profilePicture = null;
+        state.userReviews = [];
       });
   },
 });

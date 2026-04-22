@@ -8,12 +8,13 @@ import { and, eq } from "drizzle-orm";
 import type { NeonHttpDatabase } from "drizzle-orm/neon-http";
 import { DRIZZLE } from "../db/drizzle.module";
 import * as schema from "../db/schema";
-import { SelectUser } from "../db/schema";
+import { SelectReview, SelectUser } from "../db/schema";
 
 // Since we can't change the schema to have the userFAvorites, we need to define a new type,
 // that includes the userFavorites property.
-export type UserWithFavorites = SelectUser & {
+export type UserWithDetails = SelectUser & {
   userFavorites: string[];
+  userReviews: SelectReview[];
 };
 
 @Injectable()
@@ -133,7 +134,14 @@ export class UserService {
     return userFavorites.map((f) => f.favoriteCourse); // returns just the course codes
   }
 
-  async getUser(id: string): Promise<UserWithFavorites | undefined> {
+  async getUserReviews(userId: string): Promise<SelectReview[]> {
+    return await this.db
+      .select()
+      .from(schema.reviews)
+      .where(eq(schema.reviews.userId, userId));
+  }
+
+  async getUser(id: string): Promise<UserWithDetails | undefined> {
     const users = await this.db
       .select()
       .from(schema.users)
@@ -145,13 +153,14 @@ export class UserService {
       return undefined;
     }
     const userFavorites = await this.getUserFavorites(id);
-
+    const userReviews = await this.getUserReviews(id);
     // User favorites are fetched from a junction table that could probably be removed and re-worked into a new column in user table.
     // Also changed to now only return the course codes instead of an object
     return {
       ...user,
       userFavorites: userFavorites,
-    } as UserWithFavorites;
+      userReviews: userReviews,
+    } as UserWithDetails;
   }
 
   async toggleUserFavorite(userId: string, courseCode: string) {

@@ -56,6 +56,7 @@ export class UserController {
       email: user.email,
       userFavorites: user.userFavorites,
       profilePicture: user.profilePicture || null,
+      userReviews: user.userReviews,
     };
   }
 

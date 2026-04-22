@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
+import { useUser } from "@/hooks/userHooks";
 import { toast } from "sonner";
 import Session from "supertokens-auth-react/recipe/session";
 import type { Dispatch, RootState } from "@/state/store";
@@ -15,11 +16,10 @@ import ProfileView from "@/views/ProfileView";
 
 export default function ProfileController() {
   const router = useRouter();
+  const { name, email, profilePicture, userReviews } = useUser();
   const dispatch = useDispatch<Dispatch>();
-  const { name, email, profilePicture } = useSelector(
-    (state: RootState) => state.user,
-  );
 
+  console.log("User reviews in ProfileController:", userReviews);
   // Handle file upload
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -63,6 +63,7 @@ export default function ProfileController() {
       name={name}
       email={email}
       preview={profilePicture}
+      userReviews={userReviews}
       handleFileChange={handleFileChange}
       handleDeleteAccount={handleDeleteAccount}
     />
