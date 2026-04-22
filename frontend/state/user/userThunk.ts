@@ -16,6 +16,7 @@ export function getUser() {
           email: data.email,
           profilePicture: data.profilePicture ?? null,
           userFavorites: data.userFavorites ?? [],
+          userReviews: data.userReviews ?? [],
         }),
       );
       return { success: true as const };
