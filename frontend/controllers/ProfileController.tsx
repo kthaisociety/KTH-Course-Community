@@ -19,7 +19,6 @@ export default function ProfileController() {
   const { name, email, profilePicture, userReviews } = useUser();
   const dispatch = useDispatch<Dispatch>();
 
-  console.log("User reviews in ProfileController:", userReviews);
   // Handle file upload
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
