@@ -46,7 +46,7 @@ export class ReviewsService {
 
   // either fetch all reviews or all reviews for a specific course
   async findAll(courseCode?: string, userId?: string) {
-    const query = this.db
+    const baseQuery = this.db
       .select({
         id: schema.reviews.id,
         userId: schema.reviews.userId,
@@ -60,7 +60,6 @@ export class ReviewsService {
         createdAt: schema.reviews.createdAt,
         updatedAt: schema.reviews.updatedAt,
         likeCount: sql<number>`COALESCE(like_counts.like_count, 0)`,
-        dislikeCount: sql<number>`COALESCE(dislike_counts.dislike_count, 0)`,
         userVote: schema.reviewLikes.voteType,
       })
       .from(schema.reviews)
@@ -74,15 +73,6 @@ export class ReviewsService {
         eq(schema.reviews.id, sql`like_counts.review_id`),
       )
       .leftJoin(
-        sql`(
-          SELECT review_id, COUNT(*) as dislike_count 
-          FROM ${schema.reviewLikes} 
-          WHERE vote_type = 'dislike' 
-          GROUP BY review_id
-        ) as dislike_counts`,
-        eq(schema.reviews.id, sql`dislike_counts.review_id`),
-      )
-      .leftJoin(
         schema.reviewLikes,
         userId
           ? and(
@@ -90,10 +80,13 @@ export class ReviewsService {
               eq(schema.reviewLikes.userId, userId),
             )
           : sql`false`,
-      );
+      )
+      .orderBy(sql`created_at DESC`);
 
-    if (courseCode) query.where(eq(schema.reviews.courseCode, courseCode));
-    query.orderBy(sql`created_at DESC`);
+    const query = courseCode
+      ? baseQuery.where(eq(schema.reviews.courseCode, courseCode))
+      : baseQuery;
+
     return await query;
   }
 
