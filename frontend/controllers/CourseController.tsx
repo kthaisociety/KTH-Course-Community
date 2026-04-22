@@ -5,7 +5,9 @@ import { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { CoursePageSkeleton } from "@/components/CoursePageSkeleton";
 import type { PostProps } from "@/components/Post";
+import { Review } from "@/components/review";
 import { useSessionData } from "@/hooks/sessionHooks";
+import { useAddReview } from "@/hooks/useAddReview";
 import { getReviewsSocket } from "@/lib/realtime";
 import { fetchCourseDetails } from "@/state/course/courseThunk";
 import { fetchCourseReviews } from "@/state/reviews/reviewThunk";
@@ -20,6 +22,7 @@ export default function CourseController() {
   const { userId } = useSessionData();
   const fromSaved = searchParams.get("from") === "saved";
   const openReviewOnLoad = searchParams.get("writeReview") === "1";
+  const addReview = useAddReview();
   const backHref = fromSaved ? "/favorites" : "/search";
   const backLabel = fromSaved ? "Back to saved courses" : "Back to explore";
 
@@ -127,6 +130,16 @@ export default function CourseController() {
       examinations={courseDetails.examinations}
       posts={posts}
       openReviewOnLoad={openReviewOnLoad}
+      reviewComposer={
+        userId ? (
+          <Review
+            courseCode={courseDetails.courseCode}
+            userId={userId}
+            onAddReview={addReview}
+            openOnLoad={openReviewOnLoad}
+          />
+        ) : null
+      }
       backHref={backHref}
       backLabel={backLabel}
     />

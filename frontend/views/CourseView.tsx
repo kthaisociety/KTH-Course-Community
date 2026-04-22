@@ -25,6 +25,8 @@ export type CourseViewProps = {
   backLabel?: string;
   /** If true, scroll user to reviews section on initial render. */
   openReviewOnLoad?: boolean;
+  /** Optional write-review control rendered above the posts list. */
+  reviewComposer?: ReactNode;
 };
 
 function SectionTitle({ children, id }: { children: ReactNode; id?: string }) {
@@ -203,6 +205,9 @@ export default function CourseView(props: CourseViewProps) {
         <p className="mb-4 text-muted-foreground text-sm">
           Here are review insights and student comments about the course.
         </p>
+        {props.reviewComposer ? (
+          <div className="mb-4">{props.reviewComposer}</div>
+        ) : null}
         <div className="flex flex-col gap-4">
           {props.posts && props.posts.length > 0 ? (
             props.posts.map((post) => (
