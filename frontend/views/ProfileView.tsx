@@ -1,5 +1,6 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import type { Review } from "@shared/types";
 import {
   Card,
   CardContent,
@@ -14,6 +15,7 @@ type ProfileViewProps = {
   name: string;
   email: string;
   preview: string | null;
+  userReviews: Review[];
   handleFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleDeleteAccount: () => void;
 };
@@ -22,6 +24,7 @@ export default function ProfileView({
   name,
   email,
   preview,
+  userReviews,
   handleFileChange,
   handleDeleteAccount,
 }: ProfileViewProps) {
@@ -108,9 +111,19 @@ export default function ProfileView({
                 <CardTitle>My Reviews</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-muted-foreground">
-                  Your reviews will be shown here.
-                </p>
+                {userReviews.length > 0 ? (
+                  <ul className="space-y-2">
+                    {userReviews.map((review) => (
+                      <li key={review.id} className="text-muted-foreground">
+                        {review.courseCode}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-muted-foreground">
+                    You haven't written any reviews yet.
+                  </p>
+                )}
               </CardContent>
             </Card>
 
