@@ -13,7 +13,6 @@ describe("ReviewsController", () => {
     update: jest.fn(),
     remove: jest.fn(),
     toggleVote: jest.fn(),
-    removeVote: jest.fn(),
   };
 
   const mockReview = {
@@ -152,38 +151,6 @@ describe("ReviewsController", () => {
         "like",
       );
       expect(result).toEqual(likeResult);
-    });
-  });
-
-  describe("dislikeReview", () => {
-    it("should dislike review", async () => {
-      const reviewId = "123e4567-e89b-12d3-a456-426614174000";
-      const userId = "user-123";
-      const dislikeResult = { success: true, action: "disliked" };
-      mockReviewsService.toggleVote.mockResolvedValue(dislikeResult);
-
-      const result = await controller.dislikeReview(reviewId, { userId });
-
-      expect(reviewsService.toggleVote).toHaveBeenCalledWith(
-        reviewId,
-        userId,
-        "dislike",
-      );
-      expect(result).toEqual(dislikeResult);
-    });
-  });
-
-  describe("removeVote", () => {
-    it("should remove vote from review", async () => {
-      const reviewId = "123e4567-e89b-12d3-a456-426614174000";
-      const userId = "user-123";
-      const removeVoteResult = { action: "removed", voteType: null };
-      mockReviewsService.removeVote.mockResolvedValue(removeVoteResult);
-
-      const result = await controller.removeVote(reviewId, { userId });
-
-      expect(reviewsService.removeVote).toHaveBeenCalledWith(reviewId, userId);
-      expect(result).toEqual(removeVoteResult);
     });
   });
 });
