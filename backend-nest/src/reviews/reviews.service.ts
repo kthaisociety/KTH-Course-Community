@@ -17,9 +17,10 @@ export class ReviewsService {
     courseCode: string,
     userId: string,
     reviewData: {
-      easyScore: number;
-      usefulScore: number;
-      interestingScore: number;
+      examinationMethods: number;
+      theoreticalVsApplied: number;
+      workload: number;
+      learningExperience: number;
       wouldRecommend: boolean;
       content: string;
     },
@@ -30,9 +31,10 @@ export class ReviewsService {
         id: nanoid(), // generate a unique review ID
         userId,
         courseCode,
-        easyScore: reviewData.easyScore,
-        usefulScore: reviewData.usefulScore,
-        interestingScore: reviewData.interestingScore,
+        examinationMethods: reviewData.examinationMethods,
+        theoreticalVsApplied: reviewData.theoreticalVsApplied,
+        workload: reviewData.workload,
+        learningExperience: reviewData.learningExperience,
         wouldRecommend: reviewData.wouldRecommend,
         content: reviewData.content,
       })
@@ -49,9 +51,10 @@ export class ReviewsService {
         id: schema.reviews.id,
         userId: schema.reviews.userId,
         courseCode: schema.reviews.courseCode,
-        easyScore: schema.reviews.easyScore,
-        usefulScore: schema.reviews.usefulScore,
-        interestingScore: schema.reviews.interestingScore,
+        examinationMethods: schema.reviews.examinationMethods,
+        theoreticalVsApplied: schema.reviews.theoreticalVsApplied,
+        workload: schema.reviews.workload,
+        learningExperience: schema.reviews.learningExperience,
         wouldRecommend: schema.reviews.wouldRecommend,
         content: schema.reviews.content,
         createdAt: schema.reviews.createdAt,
@@ -109,9 +112,10 @@ export class ReviewsService {
   async update(
     id: string,
     reviewData: {
-      easyScore: number;
-      usefulScore: number;
-      interestingScore: number;
+      examinationMethods: number;
+      theoreticalVsApplied: number;
+      workload: number;
+      learningExperience: number;
       wouldRecommend: boolean;
       content: string;
     },
@@ -119,9 +123,10 @@ export class ReviewsService {
     const [updated] = await this.db
       .update(schema.reviews)
       .set({
-        easyScore: reviewData.easyScore,
-        usefulScore: reviewData.usefulScore,
-        interestingScore: reviewData.interestingScore,
+        examinationMethods: reviewData.examinationMethods,
+        theoreticalVsApplied: reviewData.theoreticalVsApplied,
+        workload: reviewData.workload,
+        learningExperience: reviewData.learningExperience,
         wouldRecommend: reviewData.wouldRecommend,
         content: reviewData.content,
         updatedAt: sql`now()`,

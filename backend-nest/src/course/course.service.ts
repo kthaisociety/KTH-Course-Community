@@ -4,7 +4,7 @@ import type {
   CourseRoundSummary,
   CourseSummary,
   ExamRoundSummary,
-} from "@shared/types";
+} from "../types/course.types";
 import { eq, inArray } from "drizzle-orm";
 import type { NeonHttpDatabase } from "drizzle-orm/neon-http";
 import { DRIZZLE } from "../db/drizzle.module";

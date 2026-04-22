@@ -1,5 +1,5 @@
 import { Controller, Get, Query } from "@nestjs/common";
-import type { SearchResponse } from "@shared/types";
+import type { SearchResponse } from "../types/course.types";
 import { SearchService } from "./search.service";
 
 @Controller("search")
