@@ -359,7 +359,10 @@ export default function SearchView({
                     chartData={getMockChartData(course.courseCode)}
                     stats={getMockCourseStats(course.courseCode)}
                     isUserFavorite={course.isUserFavorite}
-                    isSelected={selectedCode === course.courseCode}
+                    isSelected={
+                      selectedCode?.toUpperCase() ===
+                      course.courseCode.toUpperCase()
+                    }
                     onCardClick={() => onCardClick(course.courseCode)}
                     onWriteReview={() => onWriteReview(course.courseCode)}
                     onToggleFavorite={() => onToggleFavorite(course.courseCode)}
