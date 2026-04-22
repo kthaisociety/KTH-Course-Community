@@ -293,7 +293,7 @@ describe("SearchService", () => {
   });
 });
 
-jest.mock("../../../types/database/schema", () => ({
+jest.mock("../db/schema", () => ({
   reviews: {
     courseCode: "mocked_course_code_column",
   },

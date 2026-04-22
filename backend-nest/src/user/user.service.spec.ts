@@ -141,7 +141,7 @@ describe("UserService", () => {
   });
 });
 
-jest.mock("../../../types/database/schema", () => ({
+jest.mock("../db/schema", () => ({
   users: {
     id: "mocked-users-id",
   },

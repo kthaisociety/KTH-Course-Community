@@ -2,7 +2,7 @@ import type { Client as ESClient, estypes } from "@elastic/elasticsearch";
 import { Inject, Injectable } from "@nestjs/common";
 import { inArray, sql } from "drizzle-orm";
 import type { NeonHttpDatabase } from "drizzle-orm/neon-http";
-import * as schema from "../../../types/database/schema";
+import * as schema from "../db/schema";
 import type { CourseDocumentES } from "../../../types/search/elastic.mappings.js";
 import { DRIZZLE } from "../database/drizzle.module";
 import { ES } from "./search.constants";

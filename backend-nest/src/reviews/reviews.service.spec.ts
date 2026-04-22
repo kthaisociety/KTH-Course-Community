@@ -194,7 +194,7 @@ describe("ReviewsService", () => {
   });
 });
 
-jest.mock("../../../types/database/schema", () => ({
+jest.mock("../db/schema", () => ({
   reviews: {
     id: "reviews.id",
     userId: "reviews.userId",

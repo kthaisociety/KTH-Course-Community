@@ -10,7 +10,7 @@ import {
   type InsertCourse,
   type InsertCourseExamination,
   type InsertCourseRound,
-} from "../../../types/database/schema";
+} from "../db/schema";
 import {
   CourseDetailSchema,
   CourseSchema,
