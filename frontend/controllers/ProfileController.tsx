@@ -3,9 +3,9 @@
 import { useRouter } from "next/navigation";
 import { useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { useUser } from "@/hooks/userHooks";
 import { toast } from "sonner";
 import Session from "supertokens-auth-react/recipe/session";
-import { useUser } from "@/hooks/userHooks";
 import type { Dispatch, RootState } from "@/state/store";
 import { setProfilePicture } from "@/state/user/userSlice";
 import {
@@ -21,6 +21,7 @@ export default function ProfileController() {
     useUser();
   const dispatch = useDispatch<Dispatch>();
 
+  console.log("User reviews in ProfileController:", userReviews);
   // Handle file upload
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
