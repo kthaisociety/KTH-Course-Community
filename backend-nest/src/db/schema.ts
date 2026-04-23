@@ -89,7 +89,7 @@ export type SelectCourseExamination = typeof courseExaminations.$inferSelect;
 // --- USER DATA TABLES ----------------
 export const users = pgTable("users", {
   // TODO: Add new user-data to expand user table
-  id: text("id").primaryKey(), // This will be the SuperTokens user ID
+  id: text("id").primaryKey(), // App-internal user ID
   email: text("email").notNull().unique(),
   name: text("name").notNull(),
   profilePicture: text("profile_picture"), // URL to profile picture
@@ -97,6 +97,18 @@ export const users = pgTable("users", {
     .defaultNow()
     .notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+
+// Maps external auth user IDs (e.g. SuperTokens session user IDs)
+// to app-internal user IDs.
+export const user_auth_identities = pgTable("user_auth_identities", {
+  authUserId: text("auth_user_id").primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),
 });
@@ -184,6 +196,8 @@ export type InsertFeedbackForm = typeof feedback_form.$inferInsert;
 export type SelectFeedbackMessage = typeof feedback_form.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 export type SelectUser = typeof users.$inferSelect;
+export type InsertUserAuthIdentity = typeof user_auth_identities.$inferInsert;
+export type SelectUserAuthIdentity = typeof user_auth_identities.$inferSelect;
 export type InsertUserFavorite = typeof user_favorites.$inferInsert;
 export type SelectUserFavorites = typeof user_favorites.$inferSelect;
 export type InsertReviewLike = typeof reviewLikes.$inferInsert;

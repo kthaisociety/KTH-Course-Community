@@ -37,6 +37,7 @@ describe("UserController", () => {
 
   beforeEach(async () => {
     const mockUserService = {
+      resolveAppUserId: jest.fn(),
       getUser: jest.fn(),
       deleteUser: jest.fn(),
     };
@@ -70,6 +71,7 @@ describe("UserController", () => {
   describe("getMe", () => {
     it("should return user data when user exists", async () => {
       mockSession.getUserId.mockReturnValue("user-123");
+      jest.spyOn(userService, "resolveAppUserId").mockResolvedValue("user-123");
       jest.spyOn(userService, "getUser").mockResolvedValue(mockUser);
 
       const result = await userController.getMe(
@@ -90,6 +92,7 @@ describe("UserController", () => {
   describe("deleteAccount", () => {
     it("should delete user account successfully", async () => {
       mockSession.getUserId.mockReturnValue("user-123");
+      jest.spyOn(userService, "resolveAppUserId").mockResolvedValue("user-123");
       jest.spyOn(userService, "deleteUser").mockResolvedValue(undefined);
 
       const result = await userController.deleteAccount(

@@ -13,6 +13,8 @@ type MockDb = {
   where: jest.Mock;
   limit: jest.Mock;
   onConflictDoNothing: jest.Mock;
+  onConflictDoUpdate: jest.Mock;
+  returning: jest.Mock;
 };
 
 describe("UserService", () => {
@@ -53,6 +55,8 @@ describe("UserService", () => {
       where: jest.fn().mockReturnThis(),
       limit: jest.fn().mockReturnThis(),
       onConflictDoNothing: jest.fn(),
+      onConflictDoUpdate: jest.fn().mockReturnThis(),
+      returning: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -77,8 +81,9 @@ describe("UserService", () => {
   });
 
   describe("createNewUser", () => {
-    it("should create a new user", async () => {
-      mockDb.limit.mockResolvedValue([]);
+    it("should upsert by email and map auth identity", async () => {
+      mockDb.limit.mockResolvedValueOnce([]);
+      mockDb.returning.mockResolvedValueOnce([{ id: "app-user-123" }]);
       mockDb.onConflictDoNothing.mockResolvedValue(undefined);
 
       await userService.createNewUser("user-123", "Sven@kth.se", "Sven");
@@ -88,11 +93,28 @@ describe("UserService", () => {
       expect(mockDb.where).toHaveBeenCalled();
       expect(mockDb.limit).toHaveBeenCalledWith(1);
       expect(mockDb.insert).toHaveBeenCalled();
-      expect(mockDb.values).toHaveBeenCalledWith({
-        id: "user-123",
-        email: "Sven@kth.se",
-        name: "Sven",
-      });
+      expect(mockDb.values).toHaveBeenCalledWith(
+        expect.objectContaining({
+          email: "Sven@kth.se",
+          name: "Sven",
+        }),
+      );
+      expect(mockDb.onConflictDoUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          target: "mocked-users-email",
+        }),
+      );
+      expect(mockDb.returning).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: "mocked-users-id",
+        }),
+      );
+      expect(mockDb.values).toHaveBeenCalledWith(
+        expect.objectContaining({
+          authUserId: "user-123",
+          userId: "app-user-123",
+        }),
+      );
     });
   });
 
@@ -139,6 +161,11 @@ describe("UserService", () => {
 jest.mock("../db/schema", () => ({
   users: {
     id: "mocked-users-id",
+    email: "mocked-users-email",
+  },
+  user_auth_identities: {
+    authUserId: "mocked-auth-user-id",
+    userId: "mocked-auth-user-user-id",
   },
   user_favorites: {
     userId: "mocked-user-favorites-userId",

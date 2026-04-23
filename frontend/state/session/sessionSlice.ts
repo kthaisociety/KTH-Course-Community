@@ -1,6 +1,6 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import Session from "supertokens-auth-react/recipe/session";
-import { setUser } from "../user/userSlice";
+import { clearUser, setUser } from "../user/userSlice";
 
 export interface SessionState {
   userId: string;
@@ -19,32 +19,48 @@ const initialState: SessionState = {
 export const getSession = createAsyncThunk(
   "session/getSession",
   async (_, { dispatch }) => {
-    if (await Session.doesSessionExist()) {
-      const backendDomain = process.env.NEXT_PUBLIC_BACKEND_DOMAIN;
-      const userData = await fetch(`${backendDomain}/user/me`, {
-        credentials: "include",
-      }).then((res) => res.json());
+    try {
+      if (await Session.doesSessionExist()) {
+        const backendDomain = process.env.NEXT_PUBLIC_BACKEND_DOMAIN;
+        if (!backendDomain) {
+          throw new Error("NEXT_PUBLIC_BACKEND_DOMAIN is not set");
+        }
+        const response = await fetch(`${backendDomain}/user/me`, {
+          credentials: "include",
+        });
+        if (!response.ok) {
+          throw new Error(`Failed to fetch user: HTTP ${response.status}`);
+        }
+        const userData = await response.json();
+        if (!userData?.userId || !userData?.email) {
+          throw new Error("Invalid user response from /user/me");
+        }
 
-      dispatch(
-        setUser({
-          name: userData.name,
-          email: userData.email,
-          userFavorites: userData.userFavorites ?? [],
-          profilePicture: userData.profilePicture ?? null,
-        }),
-      );
+        dispatch(
+          setUser({
+            name: userData.name ?? "",
+            email: userData.email,
+            userFavorites: userData.userFavorites ?? [],
+            profilePicture: userData.profilePicture ?? null,
+          }),
+        );
 
+        return {
+          userId: userData.userId,
+          jwtPayload: await Session.getAccessTokenPayloadSecurely(),
+          isAuthenticated: true,
+        };
+      }
+      dispatch(clearUser());
       return {
-        userId: userData.userId,
-        jwtPayload: await Session.getAccessTokenPayloadSecurely(),
-        isAuthenticated: true,
+        userId: "",
+        jwtPayload: {},
+        isAuthenticated: false,
       };
+    } catch (error) {
+      dispatch(clearUser());
+      throw error;
     }
-    return {
-      userId: "",
-      jwtPayload: {},
-      isAuthenticated: false,
-    };
   },
 );
 

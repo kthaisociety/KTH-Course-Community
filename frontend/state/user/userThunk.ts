@@ -23,9 +23,14 @@ export function getUser() {
           userFavorites: data.userFavorites ?? [],
         }),
       );
+      return { success: true as const };
     } catch (err) {
       console.error("Failed to fetch user:", err);
       dispatch(clearUser());
+      return {
+        success: false as const,
+        error: err instanceof Error ? err.message : "Failed to fetch user",
+      };
     }
   };
 }

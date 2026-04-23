@@ -16,17 +16,30 @@ export default function OAuthCallbackController() {
   useEffect(() => {
     initST();
     (async () => {
-      const result = await ThirdParty.signInAndUp();
-      if (result.status === "OK") {
-        await ThirdParty.getStateAndOtherInfoFromStorage();
-        await dispatch(getUser()); // fetch user details and store in Redux
-        router.replace("/search");
-      } else {
-        // Todo add a toaser to show the error to the user
+      try {
+        const result = await ThirdParty.signInAndUp();
+        if (result.status === "OK") {
+          await ThirdParty.getStateAndOtherInfoFromStorage();
+          const userResult = await dispatch(getUser());
+          if (!userResult?.success) {
+            dispatch(clearUser());
+            router.replace("/auth?error=user");
+            return;
+          }
+          router.replace("/search");
+          return;
+        }
+        // Todo add a toaster to show the error to the user
         dispatch(clearUser());
-        router.replace("/login?error=oauth");
+        router.replace("/auth?error=oauth");
+      } catch (_error) {
+        dispatch(clearUser());
+        router.replace("/auth?error=oauth");
       }
-    })();
+    })().catch(() => {
+      dispatch(clearUser());
+      router.replace("/auth?error=oauth");
+    });
   }, [router, dispatch]);
 
   return <OAuthCallbackView />;
