@@ -170,6 +170,24 @@ export class UserService {
         dislikeCount: this.reviewVoteCount(schema.reviews.id, "dislike"),
       })
       .from(schema.reviews)
+      .leftJoin(
+        sql`(
+          SELECT review_id, COUNT(*) as like_count
+          FROM ${schema.reviewLikes}
+          WHERE vote_type = 'like'
+          GROUP BY review_id
+        ) as like_counts`,
+        eq(schema.reviews.id, sql`like_counts.review_id`),
+      )
+      .leftJoin(
+        sql`(
+          SELECT review_id, COUNT(*) as dislike_count
+          FROM ${schema.reviewLikes}
+          WHERE vote_type = 'dislike'
+          GROUP BY review_id
+        ) as dislike_counts`,
+        eq(schema.reviews.id, sql`dislike_counts.review_id`),
+      )
       .where(eq(schema.reviews.userId, userId));
   }
 
