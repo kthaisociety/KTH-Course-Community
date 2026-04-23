@@ -100,6 +100,18 @@ export const users = pgTable("users", {
     .defaultNow()
     .notNull(),
 });
+
+// Maps external auth user IDs (e.g. SuperTokens session user IDs)
+// to app-internal user IDs.
+export const user_auth_identities = pgTable("user_auth_identities", {
+  authUserId: text("auth_user_id").primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
 // TODO: This should be removed and replaced with new table
 // junction table for mapping users to favorite courses
 export const user_favorites = pgTable(
@@ -184,6 +196,8 @@ export type InsertFeedbackForm = typeof feedback_form.$inferInsert;
 export type SelectFeedbackMessage = typeof feedback_form.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 export type SelectUser = typeof users.$inferSelect;
+export type InsertUserAuthIdentity = typeof user_auth_identities.$inferInsert;
+export type SelectUserAuthIdentity = typeof user_auth_identities.$inferSelect;
 export type InsertUserFavorite = typeof user_favorites.$inferInsert;
 export type SelectUserFavorites = typeof user_favorites.$inferSelect;
 export type InsertReviewLike = typeof reviewLikes.$inferInsert;

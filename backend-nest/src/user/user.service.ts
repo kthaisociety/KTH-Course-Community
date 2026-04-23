@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { Inject, Injectable } from "@nestjs/common";
 import { and, eq } from "drizzle-orm";
 import type { NeonHttpDatabase } from "drizzle-orm/neon-http";
@@ -17,24 +18,105 @@ export class UserService {
     @Inject(DRIZZLE) private readonly db: NeonHttpDatabase<typeof schema>,
   ) {}
 
+  async resolveAppUserId(authUserId: string): Promise<string | undefined> {
+    try {
+      const mapping = await this.db
+        .select()
+        .from(schema.user_auth_identities)
+        .where(eq(schema.user_auth_identities.authUserId, authUserId))
+        .limit(1);
+      if (mapping[0]) {
+        return mapping[0].userId;
+      }
+    } catch {
+      // Mapping table may not exist yet in legacy environments.
+    }
+
+    // Backward compatibility: legacy users used auth ID as app user ID.
+    const legacyUser = await this.db
+      .select({ id: schema.users.id })
+      .from(schema.users)
+      .where(eq(schema.users.id, authUserId))
+      .limit(1);
+    if (legacyUser[0]) {
+      return legacyUser[0].id;
+    }
+    return undefined;
+  }
+
   async createNewUser(id: string, email: string, name: string): Promise<void> {
-    const existingById = await this.db
+    try {
+      const existingMapping = await this.db
+        .select()
+        .from(schema.user_auth_identities)
+        .where(eq(schema.user_auth_identities.authUserId, id))
+        .limit(1);
+
+      if (existingMapping[0]) {
+        await this.db
+          .update(schema.users)
+          .set({ name, email })
+          .where(eq(schema.users.id, existingMapping[0].userId));
+        return;
+      }
+    } catch {
+      // Mapping table may not exist yet in legacy environments.
+    }
+
+    const existingByEmail = await this.db
       .select()
       .from(schema.users)
-      .where(eq(schema.users.id, id))
+      .where(eq(schema.users.email, email))
       .limit(1);
 
-    if (existingById[0]) return; // user already exists in database
-    // TODO: Might want to return that feedback to the system.
+    if (existingByEmail[0]) {
+      // For now, keep the existing app account when email already exists.
+      // This avoids creating duplicate local users for the same email.
+      await this.db
+        .update(schema.users)
+        .set({ name, email })
+        .where(eq(schema.users.id, existingByEmail[0].id));
+      try {
+        await this.db
+          .insert(schema.user_auth_identities)
+          .values({
+            authUserId: id,
+            userId: existingByEmail[0].id,
+            createdAt: new Date(),
+          })
+          .onConflictDoNothing({
+            target: schema.user_auth_identities.authUserId,
+          });
+      } catch {
+        // Mapping table may not exist yet in legacy environments.
+      }
+      return;
+    }
 
+    const appUserId = randomUUID();
     await this.db
       .insert(schema.users)
       .values({
-        id,
+        id: appUserId,
         email,
         name,
       })
-      .onConflictDoNothing({ target: schema.users.email });
+      .onConflictDoNothing({ target: schema.users.id });
+
+    try {
+      await this.db
+        .insert(schema.user_auth_identities)
+        .values({
+          authUserId: id,
+          userId: appUserId,
+          createdAt: new Date(),
+        })
+        .onConflictDoNothing({
+          target: schema.user_auth_identities.authUserId,
+        });
+    } catch {
+      // Mapping table may not exist yet in legacy environments.
+    }
   }
 
   async getUserFavorites(userId: string): Promise<string[]> {

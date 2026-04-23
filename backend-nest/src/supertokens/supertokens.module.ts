@@ -52,10 +52,10 @@ import { UserService } from "../user/user.service";
           );
         }
 
-        const connectionURI = ST_CONNECTION_URI as string;
-        const websiteDomain = WEBSITE_DOMAIN as string;
-        const googleClientId = GOOGLE_CLIENT_ID as string;
-        const googleClientSecret = GOOGLE_CLIENT_SECRET as string;
+        const connectionURI = (ST_CONNECTION_URI as string).trim();
+        const websiteDomain = (WEBSITE_DOMAIN as string).trim();
+        const googleClientId = (GOOGLE_CLIENT_ID as string).trim();
+        const googleClientSecret = (GOOGLE_CLIENT_SECRET as string).trim();
 
         return {
           framework: "express",

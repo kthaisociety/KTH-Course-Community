@@ -26,10 +26,22 @@ import { UserService } from "./user.service";
 @UseGuards(SuperTokensAuthGuard)
 export class UserController {
   constructor(private readonly userService: UserService) {}
+
+  private async resolveAppUserId(session: SessionContainer): Promise<string> {
+    const authUserId = session.getUserId();
+    const appUserId = await this.userService.resolveAppUserId(authUserId);
+    if (!appUserId) {
+      throw new NotFoundException(
+        `No app user mapping found for auth user ID ${authUserId}.`,
+      );
+    }
+    return appUserId;
+  }
+
   @Get("/me")
   @VerifySession()
   async getMe(@Session() session: SessionContainer) {
-    const userId = session.getUserId();
+    const userId = await this.resolveAppUserId(session);
     const user = await this.userService.getUser(userId);
 
     if (!user) {
@@ -51,7 +63,7 @@ export class UserController {
   @Get("/favorites")
   @VerifySession()
   async getFavorites(@Session() session: SessionContainer) {
-    const userId = session.getUserId();
+    const userId = await this.resolveAppUserId(session);
     // Can be empty but we accept an empty array of favorite courses
     const userFavorites = await this.userService.getUserFavorites(userId);
     return userFavorites;
@@ -61,7 +73,7 @@ export class UserController {
   @Delete("/")
   @VerifySession()
   async deleteAccount(@Session() session: SessionContainer) {
-    const userId = session.getUserId();
+    const userId = await this.resolveAppUserId(session);
     await this.userService.deleteUser(userId);
     return { success: true };
   }
@@ -73,7 +85,7 @@ export class UserController {
     @Session() session: SessionContainer,
     @Body() body: { courseCode: string },
   ) {
-    const userId = session.getUserId();
+    const userId = await this.resolveAppUserId(session);
     const { courseCode } = body;
 
     const result = await this.userService.toggleUserFavorite(
@@ -99,7 +111,7 @@ export class UserController {
     @Session() session: SessionContainer,
     @UploadedFile() file: Express.Multer.File,
   ) {
-    const userId = session.getUserId();
+    const userId = await this.resolveAppUserId(session);
     if (!file) {
       throw new BadRequestException("No file provided or invalid image type");
     }
