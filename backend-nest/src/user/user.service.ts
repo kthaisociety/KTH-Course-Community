@@ -1,5 +1,9 @@
 import { randomUUID } from "node:crypto";
-import { Inject, Injectable } from "@nestjs/common";
+import {
+  Inject,
+  Injectable,
+  InternalServerErrorException,
+} from "@nestjs/common";
 import { and, eq } from "drizzle-orm";
 import type { NeonHttpDatabase } from "drizzle-orm/neon-http";
 import { DRIZZLE } from "../db/drizzle.module";
@@ -18,6 +22,20 @@ export class UserService {
     @Inject(DRIZZLE) private readonly db: NeonHttpDatabase<typeof schema>,
   ) {}
 
+  private isMissingUserAuthIdentitiesTableError(error: unknown): boolean {
+    if (typeof error !== "object" || error === null) {
+      return false;
+    }
+
+    const errorRecord = error as { code?: unknown; message?: unknown };
+    const message =
+      typeof errorRecord.message === "string" ? errorRecord.message : "";
+
+    return (
+      errorRecord.code === "42P01" && message.includes("user_auth_identities")
+    );
+  }
+
   async resolveAppUserId(authUserId: string): Promise<string | undefined> {
     try {
       const mapping = await this.db
@@ -28,8 +46,11 @@ export class UserService {
       if (mapping[0]) {
         return mapping[0].userId;
       }
-    } catch {
-      // Mapping table may not exist yet in legacy environments.
+    } catch (error) {
+      // Legacy environments may not have the mapping table yet.
+      if (!this.isMissingUserAuthIdentitiesTableError(error)) {
+        throw error;
+      }
     }
 
     // Backward compatibility: legacy users used auth ID as app user ID.
@@ -59,8 +80,11 @@ export class UserService {
           .where(eq(schema.users.id, existingMapping[0].userId));
         return;
       }
-    } catch {
-      // Mapping table may not exist yet in legacy environments.
+    } catch (error) {
+      // Legacy environments may not have the mapping table yet.
+      if (!this.isMissingUserAuthIdentitiesTableError(error)) {
+        throw error;
+      }
     }
 
     const [appUser] = await this.db
@@ -76,6 +100,12 @@ export class UserService {
       })
       .returning({ id: schema.users.id });
 
+    if (!appUser?.id) {
+      throw new InternalServerErrorException(
+        "Failed to resolve app user ID during signup.",
+      );
+    }
+
     try {
       await this.db
         .insert(schema.user_auth_identities)
@@ -87,8 +117,11 @@ export class UserService {
         .onConflictDoNothing({
           target: schema.user_auth_identities.authUserId,
         });
-    } catch {
-      // Mapping table may not exist yet in legacy environments.
+    } catch (error) {
+      // Legacy environments may not have the mapping table yet.
+      if (!this.isMissingUserAuthIdentitiesTableError(error)) {
+        throw error;
+      }
     }
   }
 

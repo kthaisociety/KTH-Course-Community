@@ -32,7 +32,7 @@ export class UserController {
     const appUserId = await this.userService.resolveAppUserId(authUserId);
     if (!appUserId) {
       throw new NotFoundException(
-        `No app user mapping found for auth user ID ${authUserId}.`,
+        "Authenticated user is not linked to an app account.",
       );
     }
     return appUserId;

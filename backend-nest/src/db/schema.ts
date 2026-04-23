@@ -89,7 +89,7 @@ export type SelectCourseExamination = typeof courseExaminations.$inferSelect;
 // --- USER DATA TABLES ----------------
 export const users = pgTable("users", {
   // TODO: Add new user-data to expand user table
-  id: text("id").primaryKey(), // This will be the SuperTokens user ID
+  id: text("id").primaryKey(), // App-internal user ID
   email: text("email").notNull().unique(),
   name: text("name").notNull(),
   profilePicture: text("profile_picture"), // URL to profile picture
