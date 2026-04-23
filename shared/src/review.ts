@@ -9,6 +9,8 @@ export interface Review {
   learningExperience: number;
   wouldRecommend: boolean;
   content: string;
+  likeCount?: number;
+  dislikeCount?: number;
   createdAt: string;
   updatedAt: string;
   likeCount?: number;

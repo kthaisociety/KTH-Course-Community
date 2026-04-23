@@ -12,13 +12,19 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ReviewPreview } from "@/components/ReviewPreviewProfile";
 
+type ProfileReview = Review & {
+  likeCount?: number;
+  dislikeCount?: number;
+};
+
 type ProfileViewProps = {
   name: string;
   email: string;
   preview: string | null;
-  userReviews: Review[];
+  userReviews: ProfileReview[];
   handleFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleDeleteAccount: () => void;
+  onClickReview: (courseCode: string) => void;
 };
 
 export default function ProfileView({
@@ -28,6 +34,7 @@ export default function ProfileView({
   userReviews,
   handleFileChange,
   handleDeleteAccount,
+  onClickReview,
 }: ProfileViewProps) {
   const getInitials = (name: string) =>
     name
@@ -126,6 +133,9 @@ export default function ProfileView({
                           usefulScore={review.usefulScore}
                           interestingScore={review.interestingScore}
                           wouldRecommend={review.wouldRecommend}
+                          likeCount={review.likeCount}
+                          dislikeCount={review.dislikeCount}
+                          onClickReview={() => onClickReview(review.courseCode)}
                         />
                       </li>
                     ))}
