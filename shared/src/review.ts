@@ -8,6 +8,8 @@ export interface Review {
   interestingScore: number;
   wouldRecommend: boolean;
   content: string;
+  likeCount?: number;
+  dislikeCount?: number;
   createdAt: string;
   updatedAt: string;
 }

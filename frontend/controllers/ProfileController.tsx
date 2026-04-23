@@ -13,6 +13,7 @@ import {
   uploadProfilePicture,
 } from "@/state/user/userThunk";
 import ProfileView from "@/views/ProfileView";
+import { useCallback } from "react";
 
 export default function ProfileController() {
   const router = useRouter();
@@ -57,6 +58,13 @@ export default function ProfileController() {
     }
   };
 
+  const onClickReview = useCallback(
+    (courseCode: string) => {
+      router.push(`/course/${courseCode}`);
+    },
+    [router],
+  );
+
   return (
     <ProfileView
       name={name}
@@ -65,6 +73,7 @@ export default function ProfileController() {
       userReviews={userReviews}
       handleFileChange={handleFileChange}
       handleDeleteAccount={handleDeleteAccount}
+      onClickReview={onClickReview}
     />
   );
 }

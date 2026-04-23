@@ -1,5 +1,5 @@
 import { Inject, Injectable } from "@nestjs/common";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import type { NeonHttpDatabase } from "drizzle-orm/neon-http";
 import { DRIZZLE } from "../db/drizzle.module";
 import * as schema from "../db/schema";
@@ -46,10 +46,41 @@ export class UserService {
     return userFavorites.map((f) => f.favoriteCourse); // returns just the course codes
   }
 
-  async getUserReviews(userId: string): Promise<SelectReview[]> {
+  async getUserReviews(userId: string) {
     return await this.db
-      .select()
+      .select({
+        id: schema.reviews.id,
+        userId: schema.reviews.userId,
+        courseCode: schema.reviews.courseCode,
+        easyScore: schema.reviews.easyScore,
+        usefulScore: schema.reviews.usefulScore,
+        interestingScore: schema.reviews.interestingScore,
+        wouldRecommend: schema.reviews.wouldRecommend,
+        content: schema.reviews.content,
+        createdAt: schema.reviews.createdAt,
+        updatedAt: schema.reviews.updatedAt,
+        likeCount: sql<number>`COALESCE(like_counts.like_count, 0)`,
+        dislikeCount: sql<number>`COALESCE(dislike_counts.dislike_count, 0)`,
+      })
       .from(schema.reviews)
+      .leftJoin(
+        sql`(
+          SELECT review_id, COUNT(*) as like_count
+          FROM ${schema.reviewLikes}
+          WHERE vote_type = 'like'
+          GROUP BY review_id
+        ) as like_counts`,
+        eq(schema.reviews.id, sql`like_counts.review_id`),
+      )
+      .leftJoin(
+        sql`(
+          SELECT review_id, COUNT(*) as dislike_count
+          FROM ${schema.reviewLikes}
+          WHERE vote_type = 'dislike'
+          GROUP BY review_id
+        ) as dislike_counts`,
+        eq(schema.reviews.id, sql`dislike_counts.review_id`),
+      )
       .where(eq(schema.reviews.userId, userId));
   }
 
