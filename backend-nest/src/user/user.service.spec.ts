@@ -13,6 +13,8 @@ type MockDb = {
   where: jest.Mock;
   limit: jest.Mock;
   onConflictDoNothing: jest.Mock;
+  onConflictDoUpdate: jest.Mock;
+  returning: jest.Mock;
 };
 
 describe("UserService", () => {
@@ -53,6 +55,8 @@ describe("UserService", () => {
       where: jest.fn().mockReturnThis(),
       limit: jest.fn().mockReturnThis(),
       onConflictDoNothing: jest.fn(),
+      onConflictDoUpdate: jest.fn().mockReturnThis(),
+      returning: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -77,8 +81,9 @@ describe("UserService", () => {
   });
 
   describe("createNewUser", () => {
-    it("should create a new user", async () => {
-      mockDb.limit.mockResolvedValueOnce([]).mockResolvedValueOnce([]);
+    it("should upsert by email and map auth identity", async () => {
+      mockDb.limit.mockResolvedValueOnce([]);
+      mockDb.returning.mockResolvedValueOnce([{ id: "app-user-123" }]);
       mockDb.onConflictDoNothing.mockResolvedValue(undefined);
 
       await userService.createNewUser("user-123", "Sven@kth.se", "Sven");
@@ -92,6 +97,22 @@ describe("UserService", () => {
         expect.objectContaining({
           email: "Sven@kth.se",
           name: "Sven",
+        }),
+      );
+      expect(mockDb.onConflictDoUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          target: "mocked-users-email",
+        }),
+      );
+      expect(mockDb.returning).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: "mocked-users-id",
+        }),
+      );
+      expect(mockDb.values).toHaveBeenCalledWith(
+        expect.objectContaining({
+          authUserId: "user-123",
+          userId: "app-user-123",
         }),
       );
     });

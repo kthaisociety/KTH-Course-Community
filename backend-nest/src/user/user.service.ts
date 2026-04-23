@@ -63,52 +63,25 @@ export class UserService {
       // Mapping table may not exist yet in legacy environments.
     }
 
-    const existingByEmail = await this.db
-      .select()
-      .from(schema.users)
-      .where(eq(schema.users.email, email))
-      .limit(1);
-
-    if (existingByEmail[0]) {
-      // For now, keep the existing app account when email already exists.
-      // This avoids creating duplicate local users for the same email.
-      await this.db
-        .update(schema.users)
-        .set({ name, email })
-        .where(eq(schema.users.id, existingByEmail[0].id));
-      try {
-        await this.db
-          .insert(schema.user_auth_identities)
-          .values({
-            authUserId: id,
-            userId: existingByEmail[0].id,
-            createdAt: new Date(),
-          })
-          .onConflictDoNothing({
-            target: schema.user_auth_identities.authUserId,
-          });
-      } catch {
-        // Mapping table may not exist yet in legacy environments.
-      }
-      return;
-    }
-
-    const appUserId = randomUUID();
-    await this.db
+    const [appUser] = await this.db
       .insert(schema.users)
       .values({
-        id: appUserId,
+        id: randomUUID(),
         email,
         name,
       })
-      .onConflictDoNothing({ target: schema.users.id });
+      .onConflictDoUpdate({
+        target: schema.users.email,
+        set: { name, email },
+      })
+      .returning({ id: schema.users.id });
 
     try {
       await this.db
         .insert(schema.user_auth_identities)
         .values({
           authUserId: id,
-          userId: appUserId,
+          userId: appUser.id,
           createdAt: new Date(),
         })
         .onConflictDoNothing({
