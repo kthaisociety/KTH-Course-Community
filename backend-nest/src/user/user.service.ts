@@ -8,13 +8,19 @@ import { and, eq, sql } from "drizzle-orm";
 import type { NeonHttpDatabase } from "drizzle-orm/neon-http";
 import { DRIZZLE } from "../db/drizzle.module";
 import * as schema from "../db/schema";
-import { SelectReview, SelectUser } from "../db/schema";
+import { SelectReview, SelectReviewLike, SelectUser } from "../db/schema";
 
 // Since we can't change the schema to have the userFAvorites, we need to define a new type,
 // that includes the userFavorites property.
+type ReviewWithCounts = SelectReview & {
+  likeCount: number;
+  dislikeCount: number;
+};
+
 export type UserWithDetails = SelectUser & {
   userFavorites: string[];
-  userReviews: SelectReview[];
+  userReviews: ReviewWithCounts[];
+  userLikedReviews: (SelectReviewLike & { review: ReviewWithCounts })[];
 };
 
 @Injectable()
@@ -22,6 +28,18 @@ export class UserService {
   constructor(
     @Inject(DRIZZLE) private readonly db: NeonHttpDatabase<typeof schema>,
   ) {}
+
+  private reviewVoteCount(
+    reviewIdColumn: typeof schema.reviews.id,
+    voteType: "like" | "dislike",
+  ) {
+    return sql<number>`(
+      SELECT COUNT(*)
+      FROM ${schema.reviewLikes}
+      WHERE ${schema.reviewLikes.reviewId} = ${reviewIdColumn}
+        AND ${schema.reviewLikes.voteType} = ${voteType}
+    )`;
+  }
 
   private isMissingUserAuthIdentitiesTableError(error: unknown): boolean {
     if (typeof error !== "object" || error === null) {
@@ -148,29 +166,43 @@ export class UserService {
         content: schema.reviews.content,
         createdAt: schema.reviews.createdAt,
         updatedAt: schema.reviews.updatedAt,
-        likeCount: sql<number>`COALESCE(like_counts.like_count, 0)`,
-        dislikeCount: sql<number>`COALESCE(dislike_counts.dislike_count, 0)`,
+        likeCount: this.reviewVoteCount(schema.reviews.id, "like"),
+        dislikeCount: this.reviewVoteCount(schema.reviews.id, "dislike"),
       })
       .from(schema.reviews)
-      .leftJoin(
-        sql`(
-          SELECT review_id, COUNT(*) as like_count
-          FROM ${schema.reviewLikes}
-          WHERE vote_type = 'like'
-          GROUP BY review_id
-        ) as like_counts`,
-        eq(schema.reviews.id, sql`like_counts.review_id`),
-      )
-      .leftJoin(
-        sql`(
-          SELECT review_id, COUNT(*) as dislike_count
-          FROM ${schema.reviewLikes}
-          WHERE vote_type = 'dislike'
-          GROUP BY review_id
-        ) as dislike_counts`,
-        eq(schema.reviews.id, sql`dislike_counts.review_id`),
-      )
       .where(eq(schema.reviews.userId, userId));
+  }
+
+  async getUserLikedReviews(userId: string) {
+    const userLikedReviews = await this.db
+      .select({
+        userId: schema.reviewLikes.userId,
+        reviewId: schema.reviewLikes.reviewId,
+        voteType: schema.reviewLikes.voteType,
+        createdAt: schema.reviewLikes.createdAt,
+        review: {
+          id: schema.reviews.id,
+          userId: schema.reviews.userId,
+          courseCode: schema.reviews.courseCode,
+          examinationMethods: schema.reviews.examinationMethods,
+          theoreticalVsApplied: schema.reviews.theoreticalVsApplied,
+          workload: schema.reviews.workload,
+          learningExperience: schema.reviews.learningExperience,
+          wouldRecommend: schema.reviews.wouldRecommend,
+          content: schema.reviews.content,
+          createdAt: schema.reviews.createdAt,
+          updatedAt: schema.reviews.updatedAt,
+          likeCount: this.reviewVoteCount(schema.reviews.id, "like"),
+          dislikeCount: this.reviewVoteCount(schema.reviews.id, "dislike"),
+        },
+      })
+      .from(schema.reviewLikes)
+      .innerJoin(
+        schema.reviews,
+        eq(schema.reviewLikes.reviewId, schema.reviews.id),
+      )
+      .where(eq(schema.reviewLikes.userId, userId));
+    return userLikedReviews;
   }
 
   async getUser(id: string): Promise<UserWithDetails | undefined> {
@@ -186,12 +218,14 @@ export class UserService {
     }
     const userFavorites = await this.getUserFavorites(id);
     const userReviews = await this.getUserReviews(id);
+    const userLikedReviews = await this.getUserLikedReviews(id);
     // User favorites are fetched from a junction table that could probably be removed and re-worked into a new column in user table.
     // Also changed to now only return the course codes instead of an object
     return {
       ...user,
       userFavorites: userFavorites,
       userReviews: userReviews,
+      userLikedReviews: userLikedReviews,
     } as UserWithDetails;
   }
 

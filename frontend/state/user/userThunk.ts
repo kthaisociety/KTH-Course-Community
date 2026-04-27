@@ -17,6 +17,7 @@ export function getUser() {
           profilePicture: data.profilePicture ?? null,
           userFavorites: data.userFavorites ?? [],
           userReviews: data.userReviews ?? [],
+          userLikedReviews: data.userLikedReviews ?? [],
         }),
       );
       return { success: true as const };
