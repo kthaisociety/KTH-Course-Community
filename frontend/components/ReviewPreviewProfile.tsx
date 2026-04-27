@@ -4,17 +4,18 @@ import {
   CardAction,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
-  CardFooter,
 } from "@/components/ui/card";
 
 type ReviewPreviewProps = {
   courseCode: string;
   content: string;
-  easyScore: number;
-  usefulScore: number;
-  interestingScore: number;
+  examinationMethods: number;
+  theoreticalVsApplied: number;
+  workload: number;
+  learningExperience: number;
   wouldRecommend: boolean;
   likeCount?: number;
   dislikeCount?: number;
@@ -28,7 +29,11 @@ export function ReviewPreview(props: Readonly<ReviewPreviewProps>) {
   };
 
   const averageScore =
-    (props.easyScore + props.usefulScore + props.interestingScore) / 3;
+    (props.examinationMethods +
+      props.theoreticalVsApplied +
+      props.workload +
+      props.learningExperience) /
+    4;
 
   const isClickable = Boolean(props.onClickReview);
 

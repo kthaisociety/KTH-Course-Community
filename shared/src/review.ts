@@ -13,6 +13,5 @@ export interface Review {
   dislikeCount?: number;
   createdAt: string;
   updatedAt: string;
-  likeCount?: number;
   userVote?: "like" | "dislike" | null;
 }
