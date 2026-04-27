@@ -1,5 +1,5 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
-import type { Review } from "@shared/types";
+import type { Review, UserLikedReview } from "@shared/types";
 import { clearSession, getSession } from "../session/sessionSlice";
 
 export interface UserState {
@@ -8,6 +8,7 @@ export interface UserState {
   userFavorites: string[];
   profilePicture: string | null;
   userReviews: Review[];
+  userLikedReviews: UserLikedReview[];
 }
 
 const initialState: UserState = {
@@ -16,6 +17,7 @@ const initialState: UserState = {
   userFavorites: [],
   profilePicture: null,
   userReviews: [],
+  userLikedReviews: [],
 };
 
 const userSlice = createSlice({
@@ -28,6 +30,7 @@ const userSlice = createSlice({
       state.userFavorites = action.payload.userFavorites;
       state.profilePicture = action.payload.profilePicture ?? null;
       state.userReviews = action.payload.userReviews;
+      state.userLikedReviews = action.payload.userLikedReviews;
     },
     toggleFavoriteSuccess: (
       state,
@@ -59,6 +62,7 @@ const userSlice = createSlice({
       state.userFavorites = [];
       state.profilePicture = null;
       state.userReviews = [];
+      state.userLikedReviews = [];
     },
   },
   extraReducers: (builder) => {
@@ -69,6 +73,7 @@ const userSlice = createSlice({
         state.userFavorites = [];
         state.profilePicture = null;
         state.userReviews = [];
+        state.userLikedReviews = [];
       })
       .addCase(clearSession, (state) => {
         state.name = "";
@@ -76,6 +81,7 @@ const userSlice = createSlice({
         state.userFavorites = [];
         state.profilePicture = null;
         state.userReviews = [];
+        state.userLikedReviews = [];
       });
   },
 });

@@ -15,3 +15,16 @@ export interface Review {
   updatedAt: string;
   userVote?: "like" | "dislike" | null;
 }
+
+/** Review like/dislike as exposed over the API (timestamp serialized as ISO string). */
+export interface ReviewLike {
+  userId: string;
+  reviewId: string;
+  voteType: "like" | "dislike";
+  createdAt: string;
+}
+
+/** User vote record with the full linked review payload. */
+export interface UserLikedReview extends ReviewLike {
+  review: Review;
+}

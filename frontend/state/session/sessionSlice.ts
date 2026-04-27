@@ -43,6 +43,7 @@ export const getSession = createAsyncThunk(
             userFavorites: userData.userFavorites ?? [],
             profilePicture: userData.profilePicture ?? null,
             userReviews: userData.userReviews ?? [],
+            userLikedReviews: userData.userLikedReviews ?? [],
           }),
         );
 
@@ -78,6 +79,7 @@ export const logout = createAsyncThunk(
         userFavorites: [],
         profilePicture: null,
         userReviews: [],
+        userLikedReviews: [],
       }),
     );
     // Redirect to home page

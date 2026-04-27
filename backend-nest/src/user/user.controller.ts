@@ -57,6 +57,7 @@ export class UserController {
       userFavorites: user.userFavorites,
       profilePicture: user.profilePicture || null,
       userReviews: user.userReviews,
+      userLikedReviews: user.userLikedReviews,
     };
   }
 

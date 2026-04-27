@@ -1,4 +1,4 @@
-import type { Review } from "@shared/types";
+import type { Review, UserLikedReview } from "@shared/types";
 import { ReviewPreview } from "@/components/ReviewPreviewProfile";
 import { RichTextEditor } from "@/components/RichEditor";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -23,6 +23,7 @@ type ProfileViewProps = {
   email: string;
   preview: string | null;
   userReviews: ProfileReview[];
+  userLikedReviews: UserLikedReview[];
   handleFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleDeleteAccount: () => void;
   onClickReview: (courseCode: string) => void;
@@ -33,6 +34,7 @@ export default function ProfileView({
   email,
   preview,
   userReviews,
+  userLikedReviews,
   handleFileChange,
   handleDeleteAccount,
   onClickReview,
@@ -44,7 +46,6 @@ export default function ProfileView({
       .join("")
       .toUpperCase()
       .slice(0, 2);
-
   return (
     <main className="container mx-auto px-4 py-12 max-w-4xl">
       {/*
@@ -104,11 +105,52 @@ export default function ProfileView({
             <Card className="break-inside-avoid">
               <CardHeader>
                 <CardTitle>Liked/Disliked Reviews</CardTitle>
+                <CardDescription>
+                  Reviews you've liked can be viewed here.
+                </CardDescription>
               </CardHeader>
               <CardContent>
-                <p className="text-muted-foreground">
-                  Your reviews will be shown here.
-                </p>
+                {userLikedReviews.length > 0 ? (
+                  <ul className="space-y-2">
+                    {[...userLikedReviews]
+                      .sort(
+                        (a, b) =>
+                          (b.review.likeCount ?? 0) - (a.review.likeCount ?? 0),
+                      )
+                      .slice(0, 4)
+                      .map((review) => (
+                        <li
+                          key={review.reviewId}
+                          className="text-muted-foreground"
+                        >
+                          <ReviewPreview
+                            courseCode={review.review.courseCode}
+                            content={review.review.content}
+                            examinationMethods={
+                              review.review.examinationMethods
+                            }
+                            theoreticalVsApplied={
+                              review.review.theoreticalVsApplied
+                            }
+                            workload={review.review.workload}
+                            learningExperience={
+                              review.review.learningExperience
+                            }
+                            wouldRecommend={review.review.wouldRecommend}
+                            likeCount={review.review.likeCount}
+                            dislikeCount={review.review.dislikeCount}
+                            onClickReview={() =>
+                              onClickReview(review.review.courseCode)
+                            }
+                          />
+                        </li>
+                      ))}
+                  </ul>
+                ) : (
+                  <p className="text-muted-foreground">
+                    You haven't written any reviews yet.
+                  </p>
+                )}
               </CardContent>
             </Card>
           </div>

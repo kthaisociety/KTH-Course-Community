@@ -1,10 +1,11 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { useUser } from "@/hooks/userHooks";
 import { toast } from "sonner";
 import Session from "supertokens-auth-react/recipe/session";
+import { useUser } from "@/hooks/userHooks";
 import type { Dispatch, RootState } from "@/state/store";
 import { setProfilePicture } from "@/state/user/userSlice";
 import {
@@ -13,11 +14,11 @@ import {
   uploadProfilePicture,
 } from "@/state/user/userThunk";
 import ProfileView from "@/views/ProfileView";
-import { useCallback } from "react";
 
 export default function ProfileController() {
   const router = useRouter();
-  const { name, email, profilePicture, userReviews } = useUser();
+  const { name, email, profilePicture, userReviews, userLikedReviews } =
+    useUser();
   const dispatch = useDispatch<Dispatch>();
 
   // Handle file upload
@@ -71,6 +72,7 @@ export default function ProfileController() {
       email={email}
       preview={profilePicture}
       userReviews={userReviews}
+      userLikedReviews={userLikedReviews}
       handleFileChange={handleFileChange}
       handleDeleteAccount={handleDeleteAccount}
       onClickReview={onClickReview}
