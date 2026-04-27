@@ -1,6 +1,8 @@
+import type { Review } from "@shared/types";
+import { ReviewPreview } from "@/components/ReviewPreviewProfile";
+import { RichTextEditor } from "@/components/RichEditor";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import type { Review } from "@shared/types";
 import {
   Card,
   CardContent,
@@ -10,7 +12,6 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ReviewPreview } from "@/components/ReviewPreviewProfile";
 
 type ProfileReview = Review & {
   likeCount?: number;
@@ -118,27 +119,33 @@ export default function ProfileView({
               <CardHeader>
                 <CardTitle>My Reviews</CardTitle>
                 <CardDescription>
-                  Reviews you've written will be shown here.
+                  Reviews you've written can be viewed here.
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 {userReviews.length > 0 ? (
                   <ul className="space-y-2">
-                    {userReviews.map((review) => (
-                      <li key={review.id} className="text-muted-foreground">
-                        <ReviewPreview
-                          courseCode={review.courseCode}
-                          content={review.content}
-                          easyScore={review.easyScore}
-                          usefulScore={review.usefulScore}
-                          interestingScore={review.interestingScore}
-                          wouldRecommend={review.wouldRecommend}
-                          likeCount={review.likeCount}
-                          dislikeCount={review.dislikeCount}
-                          onClickReview={() => onClickReview(review.courseCode)}
-                        />
-                      </li>
-                    ))}
+                    {[...userReviews]
+                      .sort((a, b) => (b.likeCount ?? 0) - (a.likeCount ?? 0))
+                      .slice(0, 4)
+                      .map((review) => (
+                        <li key={review.id} className="text-muted-foreground">
+                          <ReviewPreview
+                            courseCode={review.courseCode}
+                            content={review.content}
+                            examinationMethods={review.examinationMethods}
+                            theoreticalVsApplied={review.theoreticalVsApplied}
+                            workload={review.workload}
+                            learningExperience={review.learningExperience}
+                            wouldRecommend={review.wouldRecommend}
+                            likeCount={review.likeCount}
+                            dislikeCount={review.dislikeCount}
+                            onClickReview={() =>
+                              onClickReview(review.courseCode)
+                            }
+                          />
+                        </li>
+                      ))}
                   </ul>
                 ) : (
                   <p className="text-muted-foreground">
@@ -152,11 +159,14 @@ export default function ProfileView({
             <Card className="break-inside-avoid">
               <CardHeader>
                 <CardTitle>My Goals</CardTitle>
+                <CardDescription>
+                  <p className="text-muted-foreground">
+                    Your goals can be written here.
+                  </p>
+                </CardDescription>
               </CardHeader>
               <CardContent>
-                <p className="text-muted-foreground">
-                  Your goals will be shown here.
-                </p>
+                <RichTextEditor />
               </CardContent>
             </Card>
           </div>
