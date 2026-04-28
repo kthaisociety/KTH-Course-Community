@@ -19,7 +19,7 @@ import { Switch } from "./ui/switch";
 export type ReviewFormData = {
   wouldRecommend: boolean;
   content: string;
-  examinationMethods: number;
+  examinationMethods: number; //dela upp i fysiska och digitala examinationer? få eller många? eller hur vill vi göra?
   theoreticalVsApplied: number;
   workload: number;
   learningExperience: number;
@@ -41,7 +41,7 @@ export function Review(props: Readonly<ReviewProps>) {
   const [reviewForm, setReviewForm] = useState<ReviewFormData>({
     wouldRecommend: false,
     content: "",
-    examinationMethods: 0,
+    examinationMethods: 0,  
     theoreticalVsApplied: 0,
     workload: 0,
     learningExperience: 0,
@@ -54,7 +54,7 @@ export function Review(props: Readonly<ReviewProps>) {
     !reviewForm.content ||
     reviewForm.content.replace(/<[^>]*>/g, "").trim() === "" ||
     reviewForm.examinationMethods === 0 ||
-    reviewForm.theoreticalVsApplied === 0 ||
+    reviewForm.theoreticalVsApplied === 0 ||    
     reviewForm.workload === 0 ||
     reviewForm.learningExperience === 0;
 
@@ -105,79 +105,106 @@ export function Review(props: Readonly<ReviewProps>) {
           <div className="space-y-6">
             <h3 className="text-lg font-semibold">Rate the Course</h3>
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <Label className="text-sm font-medium">
-                  Examination methods
-                </Label>
-                <Rating
-                  value={reviewForm.examinationMethods}
-                  onValueChange={(value) =>
-                    setReviewForm({
-                      ...reviewForm,
-                      examinationMethods: value,
-                    })
-                  }
-                >
-                  {Array.from({ length: 5 }, (_, i) => (
-                    <RatingButton key={`difficulty-star-${i + 1}`} />
-                  ))}
-                </Rating>
-              </div>
 
+            <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label className="text-sm font-medium">Theory vs applied</Label>
-                <Rating
-                  value={reviewForm.theoreticalVsApplied}
-                  onValueChange={(value) =>
-                    setReviewForm({
-                      ...reviewForm,
-                      theoreticalVsApplied: value,
-                    })
-                  }
-                >
-                  {Array.from({ length: 5 }, (_, i) => (
-                    <RatingButton key={`usefulness-star-${i + 1}`} />
-                  ))}
-                </Rating>
+                <Label className="text-sm font-medium">Examination Methods</Label>
               </div>
-
-              <div className="flex items-center justify-between">
-                <Label className="text-sm font-medium">Workload</Label>
-                <Rating
-                  value={reviewForm.workload}
-                  onValueChange={(value) =>
-                    setReviewForm({
-                      ...reviewForm,
-                      workload: value,
-                    })
-                  }
-                >
-                  {Array.from({ length: 5 }, (_, i) => (
-                    <RatingButton key={`workload-star-${i + 1}`} />
-                  ))}
-                </Rating>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <Label className="text-sm font-medium">
-                  Learning experience
-                </Label>
-                <Rating
-                  value={reviewForm.learningExperience}
-                  onValueChange={(value) =>
-                    setReviewForm({
-                      ...reviewForm,
-                      learningExperience: value,
-                    })
-                  }
-                >
-                  {Array.from({ length: 5 }, (_, i) => (
-                    <RatingButton key={`learning-star-${i + 1}`} />
-                  ))}
-                </Rating>
+              <input
+                type="range"
+                min="1"
+                max="5"
+                step="1"
+                value={reviewForm.examinationMethods}
+                onChange={(e) => {
+                  setReviewForm({
+                    ...reviewForm,
+                    examinationMethods: parseInt(e.target.value),
+                  });
+                }}
+                className="w-full h-2 bg-gradient-to-r from-yellow-500 via-blue-600 to-green-600 rounded-lg appearance-none cursor-pointer slider-thumb"
+              />
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>Few</span>   {/* We can change this to something else, just a placeholder */}
+                <span>Many</span>
               </div>
             </div>
-          </div>
+
+              {/* Theoretical vs Applied - Slider */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm font-medium">Theoretical vs Applied</Label>
+                </div>
+                <input
+                  type="range"
+                  min="1"
+                  max="5"
+                  step="1"
+                  value={reviewForm.theoreticalVsApplied}
+                  onChange={(e) => {
+                    setReviewForm({
+                      ...reviewForm,
+                      theoreticalVsApplied: parseInt(e.target.value),
+                    });
+                  }}
+                  className="w-full h-2 bg-gradient-to-r from-sky-400 to-orange-500 rounded-lg appearance-none cursor-pointer slider-thumb"
+                />
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>More Theoretical</span>
+                  <span>More Applied</span>
+                </div>
+              </div>
+
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm font-medium">Workload</Label>
+                </div>
+                <input
+                  type="range"
+                  min="1"
+                  max="5"
+                  step="1"
+                  value={reviewForm.workload}
+                  onChange={(e) =>
+                    setReviewForm({
+                      ...reviewForm,
+                      workload: parseInt(e.target.value),
+                    })
+                  }
+                  className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer slider-thumb"
+                />
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>Light</span>
+                  <span>Heavy</span>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <Label className="text-sm font-medium">Learning Experience</Label>
+        </div>
+        <input
+          type="range"
+          min="1"
+          max="5"
+          step="1"
+          value={reviewForm.learningExperience}
+          onChange={(e) =>
+            setReviewForm({
+              ...reviewForm,
+              learningExperience: parseInt(e.target.value),
+            })
+          }
+          className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer slider-thumb"
+        />
+        <div className="flex justify-between text-xs text-muted-foreground">
+          <span>Poor</span>
+          <span>Excellent</span>
+        </div>
+      </div>
+    </div>
+  </div>
 
           {/* Recommendation Section */}
           <div className="space-y-4">
