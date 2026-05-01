@@ -3,6 +3,7 @@ import { Inject, Injectable, Logger } from "@nestjs/common";
 import { inArray, sql } from "drizzle-orm";
 import type { NeonHttpDatabase } from "drizzle-orm/neon-http";
 import type { z } from "zod";
+import { AiService } from "../ai/ai.service";
 import { DRIZZLE } from "../db/drizzle.module";
 import {
   courseExaminations as courseExaminationsTable,
@@ -25,6 +26,7 @@ export class IngestService {
 
   constructor(
     private readonly kopps: KoppsService,
+    private readonly ai: AiService,
     @Inject(DRIZZLE) private readonly db: NeonHttpDatabase,
     @Inject(ES) private readonly es: ESClient,
   ) {}
@@ -126,6 +128,11 @@ export class IngestService {
       await this.upsertCourses(converted);
       await this.upsertRounds(rounds);
       await this.upsertExaminations(examinations);
+
+      this.logger.log("Generating embeddings for courses...");
+      await this.generateAndStoreEmbeddings(converted);
+      this.logger.log("Embeddings stored successfully");
+
       this.status.neon.lastCompleted = new Date();
       this.logger.log("Courses upserted successfully");
     } catch (error) {
@@ -385,6 +392,38 @@ export class IngestService {
     };
   }
 
+  private async generateAndStoreEmbeddings(courses: InsertCourse[]) {
+    const BATCH_SIZE = 100; // openai allows up to 2048 inputs per request, but keep it safe
+
+    for (let i = 0; i < courses.length; i += BATCH_SIZE) {
+      const batch = courses.slice(i, i + BATCH_SIZE);
+
+      this.logger.log(
+        `Embedding batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(courses.length / BATCH_SIZE)}`,
+      );
+
+      // build the text to embed for each course — goals + content are the semantic core
+      const texts = batch.map((c) =>
+        [c.code, c.titleEng, c.titleSwe, c.goals, c.content]
+          .filter(Boolean)
+          .join(" "),
+      );
+
+      const { embeddings } = await this.ai.embedBatch(texts);
+
+      // store each embedding back into the courses table
+      await Promise.all(
+        batch.map((course, idx) =>
+          this.db
+            .update(coursesTable)
+            .set({
+              embedding: sql`${JSON.stringify(embeddings[idx])}::vector`,
+            })
+            .where(sql`code = ${course.code}`),
+        ),
+      );
+    }
+  }
   /** If the index exists with an older strict mapping, new fields are rejected. */
   private async coursesIndexNeedsRecreate(): Promise<boolean> {
     const exists = await this.es.indices.exists({ index: INDEX });
@@ -576,6 +615,8 @@ export class IngestService {
       await this.upsertCourses(converted);
       await this.upsertRounds(rounds);
       await this.upsertExaminations(examinations);
+      await this.generateAndStoreEmbeddings(converted);
+      this.logger.log("Embeddings stored successfully");
       this.logger.log("Neon test process completed successfully");
     } catch (error) {
       this.logger.error("Neon test process failed:", error);

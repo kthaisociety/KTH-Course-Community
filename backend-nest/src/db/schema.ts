@@ -1,5 +1,6 @@
 import {
   boolean,
+  customType,
   integer,
   pgEnum,
   pgTable,
@@ -8,6 +9,7 @@ import {
   serial,
   text,
   timestamp,
+  vector,
 } from "drizzle-orm/pg-core";
 
 const courseState = pgEnum("course_state", [
@@ -41,6 +43,8 @@ export const courses = pgTable("courses", {
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .defaultNow()
     .notNull(),
+  embedding: vector("embedding", { dimensions: 1536 }),
+  embeddingHash: text("embedding_hash"),
 });
 
 export type InsertCourse = typeof courses.$inferInsert;

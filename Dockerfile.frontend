@@ -38,10 +38,12 @@ RUN npm run build:shared
 # Uncomment the following line in case you want to disable telemetry during the build.
 ENV NEXT_TELEMETRY_DISABLED=1
 
-# Build the frontend
-# Add these lines before the CMD instruction
-ENV NEXT_PUBLIC_BACKEND_DOMAIN=https://backend-eyesdze7adehhebr.norwayeast-01.azurewebsites.net
-ENV NEXT_PUBLIC_WEBSITE_DOMAIN=https://coursecompass.azurewebsites.net
+# Build-time public env vars (pass via --build-arg in CI/CD for deployed builds).
+# Defaults are local-only and avoid baking legacy hosted domains into bundles.
+ARG NEXT_PUBLIC_BACKEND_DOMAIN=http://localhost:8080
+ARG NEXT_PUBLIC_WEBSITE_DOMAIN=http://localhost:3000
+ENV NEXT_PUBLIC_BACKEND_DOMAIN=$NEXT_PUBLIC_BACKEND_DOMAIN
+ENV NEXT_PUBLIC_WEBSITE_DOMAIN=$NEXT_PUBLIC_WEBSITE_DOMAIN
 WORKDIR /app/frontend
 RUN npm run build
 
