@@ -1,3 +1,5 @@
+-- LEGACY: kept for historical reference only.
+-- Use 0000_baseline_current_schema.sql for active schema bootstrap.
 -- Enable extensions
 CREATE EXTENSION IF NOT EXISTS vector;
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
@@ -5,7 +7,7 @@ CREATE EXTENSION IF NOT EXISTS pg_trgm;
 -- Add embedding column (already exists in DB, this is for fresh environments)
 ALTER TABLE courses ADD COLUMN IF NOT EXISTS embedding vector(1536);
 
--- Add generated search_vector column (not in Drizzle schema, managed here only)
+-- Add generated search_vector column 
 ALTER TABLE courses ADD COLUMN IF NOT EXISTS search_vector tsvector
   GENERATED ALWAYS AS (
     to_tsvector('simple',
