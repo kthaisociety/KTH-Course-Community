@@ -26,10 +26,10 @@ export function initST() {
   SuperTokens.init({
     appInfo: {
       appName: "CourseCompass",
-      // Use same-origin /auth calls from the browser and rely on Next.js rewrites.
-      // This avoids exposing/calling the raw backend host directly from the client.
+      // Use same-origin API calls from the browser and rely on Next.js rewrites.
+      // Keep website auth routes on /auth while proxying API calls via /api/auth.
       apiDomain: websiteDomain,
-      apiBasePath: "/auth",
+      apiBasePath: "/api/auth",
       websiteDomain: websiteDomain,
       websiteBasePath: "/auth",
     },

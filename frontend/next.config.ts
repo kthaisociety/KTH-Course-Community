@@ -14,7 +14,7 @@ const nextConfig: NextConfig = {
 
     return [
       {
-        source: "/auth/:path*",
+        source: "/api/auth/:path*",
         destination: `${backendDomain}/auth/:path*`,
       },
     ];
