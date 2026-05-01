@@ -1,6 +1,8 @@
+import { sql } from "drizzle-orm";
 import {
   boolean,
   customType,
+  index,
   integer,
   pgEnum,
   pgTable,
@@ -12,40 +14,55 @@ import {
   vector,
 } from "drizzle-orm/pg-core";
 
-const courseState = pgEnum("course_state", [
+export const courseState = pgEnum("course_state", [
   "CANCELLED",
   "ESTABLISHED",
   "DEACTIVATED",
 ]);
 
+const tsvector = customType<{ data: string }>({
+  dataType() {
+    return "tsvector";
+  },
+});
+
 // --- COURSE TABLES ----------------
 // courses table contains core course data.
 // more information is stored in courseRounds table
-export const courses = pgTable("courses", {
-  code: text("code").primaryKey(),
-  name: text("name").notNull(), // TODO: remove this, redudant info
-  titleSwe: text("name_swedish").notNull(),
-  titleEng: text("name_english").notNull(),
-  state: courseState("state").notNull(),
+export const courses = pgTable(
+  "courses",
+  {
+    code: text("code").primaryKey(),
+    name: text("name").notNull(), // TODO: remove this, redudant info
+    titleSwe: text("name_swedish").notNull(),
+    titleEng: text("name_english").notNull(),
+    state: courseState("state").notNull(),
 
-  credits: real("credits").notNull(),
-  creditUnit: text("credit_unit"),
+    credits: real("credits").notNull(),
+    creditUnit: text("credit_unit"),
 
-  departmentCode: text("department_code").notNull(),
-  department: text("department").notNull(),
-  educationalLevelCode: text("educational_level_code"),
-  gradeScaleCode: text("grade_scale_code"),
+    departmentCode: text("department_code").notNull(),
+    department: text("department").notNull(),
+    educationalLevelCode: text("educational_level_code"),
+    gradeScaleCode: text("grade_scale_code"),
 
-  // from latest publicSyllabusVersions entry
-  goals: text("goals"),
-  content: text("content"),
-  eligibility: text("eligibility"),
-  updatedAt: timestamp("updated_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-  embedding: vector("embedding", { dimensions: 1536 }),
-  embeddingHash: text("embedding_hash"),
-});
+    // from latest publicSyllabusVersions entry
+    goals: text("goals"),
+    content: text("content"),
+    eligibility: text("eligibility"),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    embedding: vector("embedding", { dimensions: 1536 }),
+    embeddingHash: text("embedding_hash"),
+    searchVector: tsvector("search_vector").generatedAlwaysAs(
+      sql`to_tsvector('simple', coalesce(name_english, '') || ' ' || coalesce(name_swedish, '') || ' ' || coalesce(code, '') || ' ' || coalesce(goals, '') || ' ' || coalesce(content, ''))`,
+    ),
+  },
+  (table) => [
+    index("courses_search_vector_idx").using("gin", table.searchVector),
+  ],
+);
 
 export type InsertCourse = typeof courses.$inferInsert;
 export type SelectCourse = typeof courses.$inferSelect;

@@ -1,1 +1,1 @@
-ALTER TABLE "courses" ADD COLUMN "embedding_hash" text;
+ALTER TABLE "courses" ADD COLUMN IF NOT EXISTS "embedding_hash" text;
