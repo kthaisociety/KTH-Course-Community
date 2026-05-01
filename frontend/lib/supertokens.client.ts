@@ -26,7 +26,9 @@ export function initST() {
   SuperTokens.init({
     appInfo: {
       appName: "CourseCompass",
-      apiDomain: backendDomain,
+      // Use same-origin /auth calls from the browser and rely on Next.js rewrites.
+      // This avoids exposing/calling the raw backend host directly from the client.
+      apiDomain: websiteDomain,
       apiBasePath: "/auth",
       websiteDomain: websiteDomain,
       websiteBasePath: "/auth",
