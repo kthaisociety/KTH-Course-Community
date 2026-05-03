@@ -11,7 +11,6 @@ export function initST() {
   if (typeof window === "undefined") return;
 
   if (inited) return;
-  inited = true;
 
   const backendDomain = process.env.NEXT_PUBLIC_BACKEND_DOMAIN;
   const websiteDomain = process.env.NEXT_PUBLIC_WEBSITE_DOMAIN;
@@ -42,4 +41,6 @@ export function initST() {
       }),
     ],
   });
+
+  inited = true;
 }
