@@ -61,6 +61,7 @@ jobs:
         env:
           NEXT_PUBLIC_BACKEND_DOMAIN: ${{ vars.NEXT_PUBLIC_BACKEND_DOMAIN }}
           NEXT_PUBLIC_WEBSITE_DOMAIN: ${{ vars.NEXT_PUBLIC_WEBSITE_DOMAIN }}
+          BACKEND_DOMAIN: ${{ vars.BACKEND_DOMAIN }}
         run: |
           if [ -z "$NEXT_PUBLIC_BACKEND_DOMAIN" ]; then
             echo "Missing repository variable: NEXT_PUBLIC_BACKEND_DOMAIN"
@@ -68,6 +69,10 @@ jobs:
           fi
           if [ -z "$NEXT_PUBLIC_WEBSITE_DOMAIN" ]; then
             echo "Missing repository variable: NEXT_PUBLIC_WEBSITE_DOMAIN"
+            exit 1
+          fi
+          if [ -z "$BACKEND_DOMAIN" ]; then
+            echo "Missing repository variable: BACKEND_DOMAIN"
             exit 1
           fi
 
@@ -84,5 +89,6 @@ jobs:
           build-args: |
             NEXT_PUBLIC_BACKEND_DOMAIN=${{ vars.NEXT_PUBLIC_BACKEND_DOMAIN }}
             NEXT_PUBLIC_WEBSITE_DOMAIN=${{ vars.NEXT_PUBLIC_WEBSITE_DOMAIN }}
+            BACKEND_DOMAIN=${{ vars.BACKEND_DOMAIN }}
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache,mode=max

@@ -1,7 +1,7 @@
 # Local dev stack. On Dokploy (frontend + backend both on the same project/network):
 # - Set NEXT_PUBLIC_* to the public HTTPS URLs users open in the browser (API + site).
-# - Set BACKEND_DOMAIN to the internal API URL the Next.js server uses (service name + port),
-#   e.g. http://your-backend-service:8080 — see frontend/.env.example.
+# - Set BACKEND_DOMAIN when building the frontend image (not runtime only), because Next
+#   rewrites are resolved during `next build`.
 services:
   frontend:
     image: maxandreasen/course-compass-frontend:latest
@@ -14,7 +14,8 @@ services:
       PORT: 3000
       NEXT_PUBLIC_BACKEND_DOMAIN: http://localhost:8080
       NEXT_PUBLIC_WEBSITE_DOMAIN: http://localhost:3000
-      # Server-side rewrite target (Docker network). Browser still uses NEXT_PUBLIC_*.
+      # Runtime BACKEND_DOMAIN does not affect rewrites in prebuilt images.
+      # Keep for local/adhoc builds where `next build` runs in this env.
       BACKEND_DOMAIN: http://backend:8080
 
     ports:
