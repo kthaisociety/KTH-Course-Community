@@ -1,3 +1,5 @@
+-- LEGACY: kept for historical reference only.
+-- Use 0000_baseline_current_schema.sql for active schema bootstrap.
 CREATE TYPE "public"."course_state" AS ENUM('CANCELLED', 'ESTABLISHED', 'DEACTIVATED');--> statement-breakpoint
 CREATE TABLE "courses" (
 	"code" text PRIMARY KEY NOT NULL,

@@ -18,10 +18,79 @@ export interface SearchHit {
 @Injectable()
 export class SearchService {
   constructor(
-    @Inject(ES) private readonly es: ESClient,
+    @Inject(ES) private readonly es: ESClient | null,
     @Inject(DRIZZLE) private readonly db: NeonHttpDatabase<typeof schema>,
     private readonly courseService: CourseService,
   ) {}
+
+  private resolveDepartmentFilter(department?: string): string | null {
+    if (!department) return null;
+    const departments = ["EECS", "ABE", "CBH", "ITM", "SCI"];
+    const matchingDepts = departments.find((abbr) => department.includes(abbr));
+    return matchingDepts ?? department;
+  }
+
+  private async searchWithDatabase(
+    query: string,
+    size: number,
+    departmentFilter: string | null,
+    hasMinRatingFilter: boolean,
+  ): Promise<SearchHit[]> {
+    const normalizedQuery = query.trim();
+    const queryUpper = normalizedQuery.toUpperCase();
+    const fetchSize = hasMinRatingFilter ? size * 5 : size;
+    const textPattern = `%${normalizedQuery}%`;
+    const codePrefix = `${queryUpper}%`;
+    const codeContains = `%${queryUpper}%`;
+
+    const conditions = [
+      sql`(
+        code ILIKE ${codePrefix}
+        OR code ILIKE ${codeContains}
+        OR name_swedish ILIKE ${textPattern}
+        OR name_english ILIKE ${textPattern}
+        OR (
+          ${normalizedQuery} <> ''
+          AND search_vector @@ plainto_tsquery('simple', ${normalizedQuery})
+        )
+      )`,
+    ];
+    if (departmentFilter) {
+      conditions.push(sql`department ILIKE ${`%${departmentFilter}%`}`);
+    }
+
+    const whereSql = sql.join(conditions, sql` AND `);
+    const result = await this.db.execute(sql`
+      SELECT code
+      FROM ${schema.courses}
+      WHERE ${whereSql}
+      ORDER BY
+        CASE
+          WHEN code ILIKE ${codePrefix} THEN 0
+          WHEN code ILIKE ${codeContains} THEN 1
+          WHEN (
+            ${normalizedQuery} <> ''
+            AND search_vector @@ plainto_tsquery('simple', ${normalizedQuery})
+          ) THEN 2
+          ELSE 3
+        END,
+        CASE
+          WHEN (
+            ${normalizedQuery} <> ''
+            AND search_vector @@ plainto_tsquery('simple', ${normalizedQuery})
+          )
+            THEN ts_rank(search_vector, plainto_tsquery('simple', ${normalizedQuery}))
+          ELSE 0
+        END DESC,
+        code ASC
+      LIMIT ${fetchSize}
+    `);
+
+    return (result.rows as Array<{ code: string }>).map((r) => ({
+      courseCode: r.code,
+      score: null,
+    }));
+  }
 
   async searchCourses(
     query: string,
@@ -29,82 +98,84 @@ export class SearchService {
     filters?: { department?: string; minRating?: number },
   ): Promise<CourseSummary[]> {
     if (!query?.trim()) return [];
+    const departmentFilter = this.resolveDepartmentFilter(filters?.department);
+    const hasMinRatingFilter = Boolean(filters?.minRating);
 
-    // constructs the filter
-    const searchFilters: estypes.QueryDslQueryContainer[] = [];
-    if (filters?.department) {
-      const dept = filters.department;
-      const departments = ["EECS", "ABE", "CBH", "ITM", "SCI"]; // TODO: Why hardcoded?
-      const matchingDepts = departments.find((abbr) => dept.includes(abbr));
-      if (matchingDepts) {
+    let ranked: SearchHit[] = [];
+    if (this.es) {
+      // constructs the filter
+      const searchFilters: estypes.QueryDslQueryContainer[] = [];
+      if (departmentFilter) {
         searchFilters.push({
-          wildcard: { department: `*${matchingDepts}*` },
-        } as estypes.QueryDslQueryContainer);
-      } else {
-        searchFilters.push({
-          term: { department: dept },
+          wildcard: { department: `*${departmentFilter}*` },
         } as estypes.QueryDslQueryContainer);
       }
-    }
 
-    // search results for the user query
-    const res = await this.es.search<unknown>({
-      index: INDEX,
-      // over-fetch when rating filter is active so we can filter client-side
-      size: filters?.minRating ? size * 5 : size,
-      query: {
-        bool: {
-          should: [
-            { prefix: { course_code: query.toUpperCase() } },
-            { wildcard: { course_code: `*${query.toUpperCase()}*` } },
-            {
-              multi_match: {
-                query,
-                fields: ["course_name_swe^2", "course_name_eng^2"],
-                type: "phrase_prefix",
+      // search results for the user query
+      const res = await this.es.search<unknown>({
+        index: INDEX,
+        // over-fetch when rating filter is active so we can filter client-side
+        size: hasMinRatingFilter ? size * 5 : size,
+        query: {
+          bool: {
+            should: [
+              { prefix: { course_code: query.toUpperCase() } },
+              { wildcard: { course_code: `*${query.toUpperCase()}*` } },
+              {
+                multi_match: {
+                  query,
+                  fields: ["course_name_swe^2", "course_name_eng^2"],
+                  type: "phrase_prefix",
+                },
               },
-            },
-            {
-              multi_match: {
-                query,
-                fields: [
-                  "course_name_swe^2",
-                  "course_name_eng^2",
-                  "course_code^2",
-                  "department",
-                  "subject",
-                  "periods",
-                  "course_category",
-                  "state",
-                  "credits",
-                  "goals",
-                  "content",
-                  "eligibility",
-                ],
-                fuzziness: "AUTO",
-                type: "best_fields",
-                lenient: true,
+              {
+                multi_match: {
+                  query,
+                  fields: [
+                    "course_name_swe^2",
+                    "course_name_eng^2",
+                    "course_code^2",
+                    "department",
+                    "subject",
+                    "periods",
+                    "course_category",
+                    "state",
+                    "credits",
+                    "goals",
+                    "content",
+                    "eligibility",
+                  ],
+                  fuzziness: "AUTO",
+                  type: "best_fields",
+                  lenient: true,
+                },
               },
-            },
-          ],
-          minimum_should_match: 1,
-          filter: searchFilters,
+            ],
+            minimum_should_match: 1,
+            filter: searchFilters,
+          },
         },
-      },
-      _source: ["course_code"],
-    });
+        _source: ["course_code"],
+      });
 
-    //
-    const hits = (res.hits?.hits ?? []) as Array<{
-      _score: number | null;
-      _source?: { course_code?: string };
-    }>;
-    const ranked: SearchHit[] = hits
-      .map((h) => ({
-        courseCode: h._source?.course_code ?? "",
-        score: h._score,
-      }))
-      .filter((h) => h.courseCode.length > 0);
+      const hits = (res.hits?.hits ?? []) as Array<{
+        _score: number | null;
+        _source?: { course_code?: string };
+      }>;
+      ranked = hits
+        .map((h) => ({
+          courseCode: h._source?.course_code ?? "",
+          score: h._score,
+        }))
+        .filter((h) => h.courseCode.length > 0);
+    } else {
+      ranked = await this.searchWithDatabase(
+        query,
+        size,
+        departmentFilter,
+        hasMinRatingFilter,
+      );
+    }
 
     if (ranked.length === 0) return [];
 

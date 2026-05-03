@@ -1,8 +1,10 @@
+import { createHash } from "node:crypto";
 import type { Client as ESClient } from "@elastic/elasticsearch";
 import { Inject, Injectable, Logger } from "@nestjs/common";
 import { inArray, sql } from "drizzle-orm";
 import type { NeonHttpDatabase } from "drizzle-orm/neon-http";
 import type { z } from "zod";
+import { AiService } from "../ai/ai.service";
 import { DRIZZLE } from "../db/drizzle.module";
 import {
   courseExaminations as courseExaminationsTable,
@@ -25,8 +27,9 @@ export class IngestService {
 
   constructor(
     private readonly kopps: KoppsService,
+    private readonly ai: AiService,
     @Inject(DRIZZLE) private readonly db: NeonHttpDatabase,
-    @Inject(ES) private readonly es: ESClient,
+    @Inject(ES) private readonly es: ESClient | null,
   ) {}
 
   // used for checking ingest status
@@ -90,7 +93,11 @@ export class IngestService {
     this.logger.log("Fetching courses from KTH API (once for full ingest)...");
     const courses = await this.kopps.getCourses();
     await this.runNeonIngest(courses);
-    await this.runElasticIngest(courses);
+    if (this.es) {
+      await this.runElasticIngest(courses);
+    } else {
+      this.logger.log("Elasticsearch disabled; skipping Elastic ingest.");
+    }
   }
 
   // ingests courses into neon db
@@ -126,6 +133,11 @@ export class IngestService {
       await this.upsertCourses(converted);
       await this.upsertRounds(rounds);
       await this.upsertExaminations(examinations);
+
+      this.logger.log("Generating embeddings for courses...");
+      await this.generateAndStoreEmbeddings(converted);
+      this.logger.log("Embeddings stored successfully");
+
       this.status.neon.lastCompleted = new Date();
       this.logger.log("Courses upserted successfully");
     } catch (error) {
@@ -139,6 +151,11 @@ export class IngestService {
 
   // ingests into elastic db
   async runElasticIngest(coursesInput?: z.infer<typeof CoursesSchema>) {
+    if (!this.es) {
+      this.logger.warn("Elasticsearch disabled; skipping Elastic ingest");
+      return;
+    }
+
     if (this.status.elastic.running) {
       this.logger.warn(
         "Elastic ingestion already running; skipping new request",
@@ -385,8 +402,80 @@ export class IngestService {
     };
   }
 
+  private async generateAndStoreEmbeddings(courses: InsertCourse[]) {
+    const BATCH_SIZE = 100; // openai allows up to 2048 inputs per request, but keep it safe
+
+    for (let i = 0; i < courses.length; i += BATCH_SIZE) {
+      const batch = courses.slice(i, i + BATCH_SIZE);
+
+      this.logger.log(
+        `Embedding batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(courses.length / BATCH_SIZE)}`,
+      );
+
+      // Build deterministic embedding source text + hash for incremental updates.
+      const batchWithHash = batch.map((course) => {
+        const text = [
+          course.code,
+          course.titleEng,
+          course.titleSwe,
+          course.goals,
+          course.content,
+        ]
+          .filter(Boolean)
+          .join(" ");
+        const hash = createHash("sha256").update(text).digest("hex");
+        return { course, text, hash };
+      });
+
+      const existingRows = await this.db
+        .select({
+          code: coursesTable.code,
+          embeddingHash: coursesTable.embeddingHash,
+        })
+        .from(coursesTable)
+        .where(
+          inArray(
+            coursesTable.code,
+            batch.map((c) => c.code),
+          ),
+        );
+
+      const existingHashByCode = new Map(
+        existingRows.map((row) => [row.code, row.embeddingHash]),
+      );
+
+      const toEmbed = batchWithHash.filter(
+        ({ course, hash }) => existingHashByCode.get(course.code) !== hash,
+      );
+
+      if (toEmbed.length === 0) {
+        this.logger.log(
+          `Embedding batch ${Math.floor(i / BATCH_SIZE) + 1}: skipped (all up to date)`,
+        );
+        continue;
+      }
+
+      const { embeddings } = await this.ai.embedBatch(
+        toEmbed.map((x) => x.text),
+      );
+
+      // Store vector + hash so future ingests can skip unchanged courses.
+      await Promise.all(
+        toEmbed.map((item, idx) =>
+          this.db
+            .update(coursesTable)
+            .set({
+              embedding: sql`${JSON.stringify(embeddings[idx])}::vector`,
+              embeddingHash: item.hash,
+            })
+            .where(sql`code = ${item.course.code}`),
+        ),
+      );
+    }
+  }
   /** If the index exists with an older strict mapping, new fields are rejected. */
   private async coursesIndexNeedsRecreate(): Promise<boolean> {
+    if (!this.es) return false;
     const exists = await this.es.indices.exists({ index: INDEX });
     if (!exists) return false;
     const mapping = await this.es.indices.getMapping({ index: INDEX });
@@ -405,6 +494,7 @@ export class IngestService {
 
   //
   private async ensureIndex() {
+    if (!this.es) return;
     if (await this.coursesIndexNeedsRecreate()) {
       await this.es.indices.delete({ index: INDEX });
     }
@@ -463,6 +553,11 @@ export class IngestService {
   }
 
   private async indexBulk(docs: CourseDocumentES[]) {
+    if (!this.es) {
+      this.logger.warn("Elasticsearch disabled; skipping bulk indexing");
+      return;
+    }
+
     if (!docs.length) {
       this.logger.warn("No course documents to index; skipping bulk request");
       return;
@@ -576,6 +671,8 @@ export class IngestService {
       await this.upsertCourses(converted);
       await this.upsertRounds(rounds);
       await this.upsertExaminations(examinations);
+      await this.generateAndStoreEmbeddings(converted);
+      this.logger.log("Embeddings stored successfully");
       this.logger.log("Neon test process completed successfully");
     } catch (error) {
       this.logger.error("Neon test process failed:", error);
@@ -585,6 +682,11 @@ export class IngestService {
 
   // runs a test for the elastic ingestion with 10 courses
   async runElasticTest() {
+    if (!this.es) {
+      this.logger.warn("Elasticsearch disabled; skipping Elastic test process");
+      return;
+    }
+
     this.logger.log("Starting elastic test process");
     try {
       this.logger.log("Fetching courses from KTH API...");
