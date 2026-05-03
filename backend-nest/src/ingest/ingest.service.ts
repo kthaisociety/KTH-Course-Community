@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import type { Client as ESClient } from "@elastic/elasticsearch";
 import { Inject, Injectable, Logger } from "@nestjs/common";
 import { inArray, sql } from "drizzle-orm";
@@ -411,24 +412,63 @@ export class IngestService {
         `Embedding batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(courses.length / BATCH_SIZE)}`,
       );
 
-      // build the text to embed for each course — goals + content are the semantic core
-      const texts = batch.map((c) =>
-        [c.code, c.titleEng, c.titleSwe, c.goals, c.content]
+      // Build deterministic embedding source text + hash for incremental updates.
+      const batchWithHash = batch.map((course) => {
+        const text = [
+          course.code,
+          course.titleEng,
+          course.titleSwe,
+          course.goals,
+          course.content,
+        ]
           .filter(Boolean)
-          .join(" "),
+          .join(" ");
+        const hash = createHash("sha256").update(text).digest("hex");
+        return { course, text, hash };
+      });
+
+      const existingRows = await this.db
+        .select({
+          code: coursesTable.code,
+          embeddingHash: coursesTable.embeddingHash,
+        })
+        .from(coursesTable)
+        .where(
+          inArray(
+            coursesTable.code,
+            batch.map((c) => c.code),
+          ),
+        );
+
+      const existingHashByCode = new Map(
+        existingRows.map((row) => [row.code, row.embeddingHash]),
       );
 
-      const { embeddings } = await this.ai.embedBatch(texts);
+      const toEmbed = batchWithHash.filter(
+        ({ course, hash }) => existingHashByCode.get(course.code) !== hash,
+      );
 
-      // store each embedding back into the courses table
+      if (toEmbed.length === 0) {
+        this.logger.log(
+          `Embedding batch ${Math.floor(i / BATCH_SIZE) + 1}: skipped (all up to date)`,
+        );
+        continue;
+      }
+
+      const { embeddings } = await this.ai.embedBatch(
+        toEmbed.map((x) => x.text),
+      );
+
+      // Store vector + hash so future ingests can skip unchanged courses.
       await Promise.all(
-        batch.map((course, idx) =>
+        toEmbed.map((item, idx) =>
           this.db
             .update(coursesTable)
             .set({
               embedding: sql`${JSON.stringify(embeddings[idx])}::vector`,
+              embeddingHash: item.hash,
             })
-            .where(sql`code = ${course.code}`),
+            .where(sql`code = ${item.course.code}`),
         ),
       );
     }
