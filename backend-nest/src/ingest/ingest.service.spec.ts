@@ -1,6 +1,7 @@
 import { Logger } from "@nestjs/common";
 import { Test, type TestingModule } from "@nestjs/testing";
 import type { z } from "zod";
+import { AiService } from "../ai/ai.service";
 import { DRIZZLE } from "../db/drizzle.module";
 import type { CourseDocumentES } from "../search/elastic.mappings";
 import { ES } from "../search/search.constants";
@@ -46,6 +47,7 @@ function callToDocument(
 describe("IngestService", () => {
   let service: IngestService;
   let mockKopps: { getCourses: jest.Mock; getCourseInformation: jest.Mock };
+  let mockAi: { embedBatch: jest.Mock };
   let mockEs: {
     indices: {
       create: jest.Mock;
@@ -60,6 +62,9 @@ describe("IngestService", () => {
     mockKopps = {
       getCourses: jest.fn(),
       getCourseInformation: jest.fn(),
+    };
+    mockAi = {
+      embedBatch: jest.fn().mockResolvedValue({ embeddings: [], usage: {} }),
     };
     mockEs = {
       indices: {
@@ -78,6 +83,7 @@ describe("IngestService", () => {
       providers: [
         IngestService,
         { provide: KoppsService, useValue: mockKopps },
+        { provide: AiService, useValue: mockAi },
         { provide: ES, useValue: mockEs },
         { provide: DRIZZLE, useValue: {} },
       ],
