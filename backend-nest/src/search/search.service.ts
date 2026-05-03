@@ -36,9 +36,10 @@ export class SearchService {
     departmentFilter: string | null,
     hasMinRatingFilter: boolean,
   ): Promise<SearchHit[]> {
-    const queryUpper = query.toUpperCase();
+    const normalizedQuery = query.trim();
+    const queryUpper = normalizedQuery.toUpperCase();
     const fetchSize = hasMinRatingFilter ? size * 5 : size;
-    const textPattern = `%${query}%`;
+    const textPattern = `%${normalizedQuery}%`;
     const codePrefix = `${queryUpper}%`;
     const codeContains = `%${queryUpper}%`;
 
@@ -48,8 +49,10 @@ export class SearchService {
         OR code ILIKE ${codeContains}
         OR name_swedish ILIKE ${textPattern}
         OR name_english ILIKE ${textPattern}
-        OR goals ILIKE ${textPattern}
-        OR content ILIKE ${textPattern}
+        OR (
+          ${normalizedQuery} <> ''
+          AND search_vector @@ plainto_tsquery('simple', ${normalizedQuery})
+        )
       )`,
     ];
     if (departmentFilter) {
@@ -65,8 +68,20 @@ export class SearchService {
         CASE
           WHEN code ILIKE ${codePrefix} THEN 0
           WHEN code ILIKE ${codeContains} THEN 1
-          ELSE 2
+          WHEN (
+            ${normalizedQuery} <> ''
+            AND search_vector @@ plainto_tsquery('simple', ${normalizedQuery})
+          ) THEN 2
+          ELSE 3
         END,
+        CASE
+          WHEN (
+            ${normalizedQuery} <> ''
+            AND search_vector @@ plainto_tsquery('simple', ${normalizedQuery})
+          )
+            THEN ts_rank(search_vector, plainto_tsquery('simple', ${normalizedQuery}))
+          ELSE 0
+        END DESC,
         code ASC
       LIMIT ${fetchSize}
     `);

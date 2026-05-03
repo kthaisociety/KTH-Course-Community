@@ -7,6 +7,11 @@ import { firstValueFrom } from "rxjs";
 import { DRIZZLE } from "../db/drizzle.module";
 import { ES } from "../search/search.constants.js";
 
+type HealthCheckResult = {
+  ok: boolean;
+  [key: string]: unknown;
+};
+
 @Injectable()
 export class HealthService {
   constructor(
@@ -51,12 +56,47 @@ export class HealthService {
 
     const [dbRes, esRes, kthRes] = results;
 
-    /*const format = (res: PromiseSettledResult<any>) =>
-      res.status === "fulfilled"
-        ? res.value
-        : { ok: false, error: res.reason?.message ?? String(res.reason) };*/
-    const format = (res: PromiseSettledResult<unknown>) =>
-      res.status === "fulfilled" ? res.value : res.reason;
+    const serializeError = (reason: unknown) => {
+      if (reason instanceof Error) {
+        return {
+          ok: false,
+          error: reason.message,
+          name: reason.name,
+        };
+      }
+
+      if (
+        reason &&
+        typeof reason === "object" &&
+        "message" in reason &&
+        typeof (reason as { message?: unknown }).message === "string"
+      ) {
+        const maybeReason = reason as {
+          message: string;
+          name?: unknown;
+          response?: { status?: unknown };
+        };
+        return {
+          ok: false,
+          error: maybeReason.message,
+          name:
+            typeof maybeReason.name === "string"
+              ? maybeReason.name
+              : "UnknownError",
+          status:
+            typeof maybeReason.response?.status === "number"
+              ? maybeReason.response.status
+              : undefined,
+        };
+      }
+
+      return { ok: false, error: String(reason) };
+    };
+
+    const format = (
+      res: PromiseSettledResult<HealthCheckResult>,
+    ): HealthCheckResult =>
+      res.status === "fulfilled" ? res.value : serializeError(res.reason);
 
     const db = format(dbRes);
     const elasticsearch = format(esRes);

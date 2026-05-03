@@ -6,6 +6,7 @@
 -- Legacy chain files are kept for historical reference only.
 
 CREATE EXTENSION IF NOT EXISTS vector;
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
 DO $$
 BEGIN
@@ -127,3 +128,6 @@ CREATE TABLE IF NOT EXISTS "feedback_form" (
 --> statement-breakpoint
 
 CREATE INDEX IF NOT EXISTS "courses_search_vector_idx" ON "courses" USING gin ("search_vector");
+CREATE INDEX IF NOT EXISTS "courses_embedding_idx" ON "courses" USING hnsw ("embedding" vector_cosine_ops);
+CREATE INDEX IF NOT EXISTS "courses_name_trgm_idx" ON "courses" USING gin ("name" gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS "courses_code_trgm_idx" ON "courses" USING gin ("code" gin_trgm_ops);
