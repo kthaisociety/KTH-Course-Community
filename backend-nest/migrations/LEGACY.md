@@ -4,6 +4,8 @@ Legacy migration chain
 Legacy cutoff date: 2026-05-01
 Baseline replacement: `0000_baseline_current_schema.sql`
 Rationale: historical migrations drifted from current schema and are retained for reference only.
+Safety note: the baseline migration is intentionally idempotent (IF NOT EXISTS guards)
+so it can be applied safely on existing environments during migration metadata transitions.
 
 The old numbered files are kept only for historical reference:
 

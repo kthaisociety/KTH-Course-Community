@@ -7,9 +7,20 @@
 
 CREATE EXTENSION IF NOT EXISTS vector;
 
-CREATE TYPE "public"."course_state" AS ENUM('CANCELLED', 'ESTABLISHED', 'DEACTIVATED');--> statement-breakpoint
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_type t
+    JOIN pg_namespace n ON n.oid = t.typnamespace
+    WHERE t.typname = 'course_state' AND n.nspname = 'public'
+  ) THEN
+    CREATE TYPE "public"."course_state" AS ENUM('CANCELLED', 'ESTABLISHED', 'DEACTIVATED');
+  END IF;
+END
+$$;--> statement-breakpoint
 
-CREATE TABLE "courses" (
+CREATE TABLE IF NOT EXISTS "courses" (
   "code" text PRIMARY KEY NOT NULL,
   "name" text NOT NULL,
   "name_swedish" text NOT NULL,
@@ -31,9 +42,9 @@ CREATE TABLE "courses" (
 );
 --> statement-breakpoint
 
-CREATE TABLE "course_rounds" (
+CREATE TABLE IF NOT EXISTS "course_rounds" (
   "id" serial PRIMARY KEY NOT NULL,
-  "course_code" text NOT NULL,
+  "course_code" text NOT NULL REFERENCES "public"."courses"("code") ON DELETE cascade ON UPDATE no action,
   "start_term" integer NOT NULL,
   "study_pace" integer,
   "schema_url" text,
@@ -46,8 +57,8 @@ CREATE TABLE "course_rounds" (
 );
 --> statement-breakpoint
 
-CREATE TABLE "course_examinations" (
-  "course_code" text NOT NULL,
+CREATE TABLE IF NOT EXISTS "course_examinations" (
+  "course_code" text NOT NULL REFERENCES "public"."courses"("code") ON DELETE cascade ON UPDATE no action,
   "exam_code" text NOT NULL,
   "title" text,
   "credits" real,
@@ -56,7 +67,7 @@ CREATE TABLE "course_examinations" (
 );
 --> statement-breakpoint
 
-CREATE TABLE "users" (
+CREATE TABLE IF NOT EXISTS "users" (
   "id" text PRIMARY KEY NOT NULL,
   "email" text NOT NULL,
   "name" text NOT NULL,
@@ -67,17 +78,17 @@ CREATE TABLE "users" (
 );
 --> statement-breakpoint
 
-CREATE TABLE "user_auth_identities" (
+CREATE TABLE IF NOT EXISTS "user_auth_identities" (
   "auth_user_id" text PRIMARY KEY NOT NULL,
-  "user_id" text NOT NULL,
+  "user_id" text NOT NULL REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action,
   "created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 
-CREATE TABLE "reviews" (
+CREATE TABLE IF NOT EXISTS "reviews" (
   "id" text PRIMARY KEY NOT NULL,
-  "user_id" text NOT NULL,
-  "course_code" text NOT NULL,
+  "user_id" text NOT NULL REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action,
+  "course_code" text NOT NULL REFERENCES "public"."courses"("code") ON DELETE cascade ON UPDATE no action,
   "examination_methods" integer DEFAULT 0 NOT NULL,
   "theoretical_vs_applied" integer DEFAULT 0 NOT NULL,
   "workload" integer DEFAULT 0 NOT NULL,
@@ -89,24 +100,24 @@ CREATE TABLE "reviews" (
 );
 --> statement-breakpoint
 
-CREATE TABLE "review_likes" (
-  "user_id" text NOT NULL,
-  "review_id" text NOT NULL,
+CREATE TABLE IF NOT EXISTS "review_likes" (
+  "user_id" text NOT NULL REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action,
+  "review_id" text NOT NULL REFERENCES "public"."reviews"("id") ON DELETE cascade ON UPDATE no action,
   "vote_type" text NOT NULL,
   "created_at" timestamp with time zone DEFAULT now() NOT NULL,
   CONSTRAINT "review_likes_user_id_review_id_pk" PRIMARY KEY("user_id","review_id")
 );
 --> statement-breakpoint
 
-CREATE TABLE "user_favorites" (
-  "user_id" text NOT NULL,
-  "fav_course_code" text NOT NULL,
+CREATE TABLE IF NOT EXISTS "user_favorites" (
+  "user_id" text NOT NULL REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action,
+  "fav_course_code" text NOT NULL REFERENCES "public"."courses"("code") ON DELETE cascade ON UPDATE no action,
   "created_at" timestamp with time zone DEFAULT now() NOT NULL,
   CONSTRAINT "user_favorites_user_id_fav_course_code_pk" PRIMARY KEY("user_id","fav_course_code")
 );
 --> statement-breakpoint
 
-CREATE TABLE "feedback_form" (
+CREATE TABLE IF NOT EXISTS "feedback_form" (
   "id" text PRIMARY KEY NOT NULL,
   "name" text NOT NULL,
   "email" text NOT NULL,
@@ -115,14 +126,4 @@ CREATE TABLE "feedback_form" (
 );
 --> statement-breakpoint
 
-ALTER TABLE "course_rounds" ADD CONSTRAINT "course_rounds_course_code_courses_code_fk" FOREIGN KEY ("course_code") REFERENCES "public"."courses"("code") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "course_examinations" ADD CONSTRAINT "course_examinations_course_code_courses_code_fk" FOREIGN KEY ("course_code") REFERENCES "public"."courses"("code") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "user_auth_identities" ADD CONSTRAINT "user_auth_identities_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "reviews" ADD CONSTRAINT "reviews_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "reviews" ADD CONSTRAINT "reviews_course_code_courses_code_fk" FOREIGN KEY ("course_code") REFERENCES "public"."courses"("code") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "review_likes" ADD CONSTRAINT "review_likes_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "review_likes" ADD CONSTRAINT "review_likes_review_id_reviews_id_fk" FOREIGN KEY ("review_id") REFERENCES "public"."reviews"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "user_favorites" ADD CONSTRAINT "user_favorites_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "user_favorites" ADD CONSTRAINT "user_favorites_fav_course_code_courses_code_fk" FOREIGN KEY ("fav_course_code") REFERENCES "public"."courses"("code") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-
-CREATE INDEX "courses_search_vector_idx" ON "courses" USING gin ("search_vector");
+CREATE INDEX IF NOT EXISTS "courses_search_vector_idx" ON "courses" USING gin ("search_vector");
