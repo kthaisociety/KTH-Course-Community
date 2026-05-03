@@ -1,13 +1,12 @@
 // frontend/lib/feedback.ts
+import { nestHttpUrl } from "@/lib/nest-http";
+
 export async function sendFeedback(data: {
   name: string;
   email: string;
   message: string;
 }): Promise<void> {
-  const backend = process.env.NEXT_PUBLIC_BACKEND_DOMAIN;
-  if (!backend) throw new Error("NEXT_PUBLIC_BACKEND_DOMAIN is not set");
-
-  const res = await fetch(`${backend}/feedback`, {
+  const res = await fetch(nestHttpUrl("/feedback"), {
     method: "POST",
     credentials: "include",
     headers: {

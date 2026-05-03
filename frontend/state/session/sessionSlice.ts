@@ -1,5 +1,6 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import Session from "supertokens-auth-react/recipe/session";
+import { nestHttpUrl } from "@/lib/nest-http";
 import { clearUser, setUser } from "../user/userSlice";
 
 export interface SessionState {
@@ -21,13 +22,7 @@ export const getSession = createAsyncThunk(
   async (_, { dispatch }) => {
     try {
       if (await Session.doesSessionExist()) {
-        const backendDomain = process.env.NEXT_PUBLIC_BACKEND_DOMAIN;
-        if (!backendDomain) {
-          throw new Error("NEXT_PUBLIC_BACKEND_DOMAIN is not set");
-        }
-        const response = await fetch(`${backendDomain}/user/me`, {
-          credentials: "include",
-        });
+        const response = await fetch(nestHttpUrl("/user/me"));
         if (!response.ok) {
           throw new Error(`Failed to fetch user: HTTP ${response.status}`);
         }

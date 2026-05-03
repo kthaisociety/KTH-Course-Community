@@ -1,26 +1,22 @@
-const backend = process.env.NEXT_PUBLIC_BACKEND_DOMAIN;
+import { nestHttpUrl } from "@/lib/nest-http";
 
 // Fetches a list of user favorite courses (courseCodes).
 export async function getUserFavorites(): Promise<string[]> {
-  if (!backend) throw new Error("NEXT_PUBLIC_BACKEND_DOMAIN is not set");
-
-  const res = await fetch(`${backend}/user/favorites`, {
+  const res = await fetch(nestHttpUrl("/user/favorites"), {
     cache: "no-store",
     credentials: "include",
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
-  const data = (await res.json()) as { favorites: string[] };
-  return data.favorites;
+  const data = (await res.json()) as string[] | { favorites: string[] };
+  return Array.isArray(data) ? data : data.favorites;
 }
 
 // Adds / removes a course to user favorite courses.
 export async function toggleUserFavorite(
   courseCode: string,
 ): Promise<{ action: "added" | "removed" }> {
-  if (!backend) throw new Error("NEXT_PUBLIC_BACKEND_DOMAIN is not set");
-
-  const res = await fetch(`${backend}/user/toggle-favorite`, {
+  const res = await fetch(nestHttpUrl("/user/toggle-favorite"), {
     cache: "no-store",
     credentials: "include",
     method: "POST",
@@ -31,7 +27,7 @@ export async function toggleUserFavorite(
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
-  const data = await res.json();
+  const data = (await res.json()) as { action: "added" | "removed" };
   return data;
 }
 

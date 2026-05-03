@@ -1,16 +1,11 @@
+import { nestHttpUrl } from "@/lib/nest-http";
 import type { Dispatch } from "@/state/store";
 import { clearUser, setProfilePicture, setUser } from "./userSlice";
-
-const API_URL =
-  process.env.NEXT_PUBLIC_BACKEND_DOMAIN || "http://localhost:8080";
 
 export function getUser() {
   return async (dispatch: Dispatch) => {
     try {
-      const res = await fetch(`${API_URL}/user/me`, {
-        method: "GET",
-        credentials: "include", // include SuperTokens session cookies
-      });
+      const res = await fetch(nestHttpUrl("/user/me"));
 
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
@@ -42,7 +37,7 @@ export function uploadProfilePicture(file: File) {
       const formData = new FormData();
       formData.append("file", file);
 
-      const res = await fetch(`${API_URL}/user/profile-picture`, {
+      const res = await fetch(nestHttpUrl("/user/profile-picture"), {
         method: "POST",
         body: formData,
         credentials: "include",
@@ -85,7 +80,7 @@ export function uploadProfilePicture(file: File) {
 export function deleteAccount() {
   return async (dispatch: Dispatch) => {
     try {
-      const res = await fetch(`${API_URL}/user`, {
+      const res = await fetch(nestHttpUrl("/user"), {
         method: "DELETE",
         credentials: "include",
       });
