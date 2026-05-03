@@ -42,8 +42,11 @@ ENV NEXT_TELEMETRY_DISABLED=1
 # Defaults are local-only and avoid baking legacy hosted domains into bundles.
 ARG NEXT_PUBLIC_BACKEND_DOMAIN=http://localhost:8080
 ARG NEXT_PUBLIC_WEBSITE_DOMAIN=http://localhost:3000
+# Same target as NEXT_PUBLIC_BACKEND_DOMAIN; used by next.config rewrites for /api/auth -> backend /auth
+ARG BACKEND_DOMAIN=
 ENV NEXT_PUBLIC_BACKEND_DOMAIN=$NEXT_PUBLIC_BACKEND_DOMAIN
 ENV NEXT_PUBLIC_WEBSITE_DOMAIN=$NEXT_PUBLIC_WEBSITE_DOMAIN
+ENV BACKEND_DOMAIN=$BACKEND_DOMAIN
 WORKDIR /app/frontend
 RUN npm run build
 

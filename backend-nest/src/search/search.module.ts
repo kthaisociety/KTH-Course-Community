@@ -19,7 +19,13 @@ import { SearchService } from "./search.service.js";
     {
       provide: ES,
       inject: [ConfigService],
-      useFactory: (config: ConfigService): Client => {
+      useFactory: (config: ConfigService): Client | null => {
+        const elasticsearchEnabled =
+          config.get<string>("ELASTICSEARCH_ENABLED", "true") !== "false";
+        if (!elasticsearchEnabled) {
+          return null;
+        }
+
         const url = config.get<string>("ELASTICSEARCH_URL");
         if (!url) throw new Error("ELASTICSEARCH_URL is not set");
 

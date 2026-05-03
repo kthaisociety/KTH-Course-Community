@@ -28,7 +28,7 @@ export class IngestService {
     private readonly kopps: KoppsService,
     private readonly ai: AiService,
     @Inject(DRIZZLE) private readonly db: NeonHttpDatabase,
-    @Inject(ES) private readonly es: ESClient,
+    @Inject(ES) private readonly es: ESClient | null,
   ) {}
 
   // used for checking ingest status
@@ -92,7 +92,11 @@ export class IngestService {
     this.logger.log("Fetching courses from KTH API (once for full ingest)...");
     const courses = await this.kopps.getCourses();
     await this.runNeonIngest(courses);
-    await this.runElasticIngest(courses);
+    if (this.es) {
+      await this.runElasticIngest(courses);
+    } else {
+      this.logger.log("Elasticsearch disabled; skipping Elastic ingest.");
+    }
   }
 
   // ingests courses into neon db
@@ -146,6 +150,11 @@ export class IngestService {
 
   // ingests into elastic db
   async runElasticIngest(coursesInput?: z.infer<typeof CoursesSchema>) {
+    if (!this.es) {
+      this.logger.warn("Elasticsearch disabled; skipping Elastic ingest");
+      return;
+    }
+
     if (this.status.elastic.running) {
       this.logger.warn(
         "Elastic ingestion already running; skipping new request",
@@ -426,6 +435,7 @@ export class IngestService {
   }
   /** If the index exists with an older strict mapping, new fields are rejected. */
   private async coursesIndexNeedsRecreate(): Promise<boolean> {
+    if (!this.es) return false;
     const exists = await this.es.indices.exists({ index: INDEX });
     if (!exists) return false;
     const mapping = await this.es.indices.getMapping({ index: INDEX });
@@ -444,6 +454,7 @@ export class IngestService {
 
   //
   private async ensureIndex() {
+    if (!this.es) return;
     if (await this.coursesIndexNeedsRecreate()) {
       await this.es.indices.delete({ index: INDEX });
     }
@@ -502,6 +513,11 @@ export class IngestService {
   }
 
   private async indexBulk(docs: CourseDocumentES[]) {
+    if (!this.es) {
+      this.logger.warn("Elasticsearch disabled; skipping bulk indexing");
+      return;
+    }
+
     if (!docs.length) {
       this.logger.warn("No course documents to index; skipping bulk request");
       return;
@@ -626,6 +642,11 @@ export class IngestService {
 
   // runs a test for the elastic ingestion with 10 courses
   async runElasticTest() {
+    if (!this.es) {
+      this.logger.warn("Elasticsearch disabled; skipping Elastic test process");
+      return;
+    }
+
     this.logger.log("Starting elastic test process");
     try {
       this.logger.log("Fetching courses from KTH API...");

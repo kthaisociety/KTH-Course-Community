@@ -12,7 +12,7 @@ export class HealthService {
   constructor(
     private readonly http: HttpService,
     @Inject(DRIZZLE) private readonly db: NeonHttpDatabase,
-    @Inject(ES) private readonly es: ESClient,
+    @Inject(ES) private readonly es: ESClient | null,
   ) {}
 
   private async checkDb() {
@@ -22,6 +22,9 @@ export class HealthService {
   }
 
   private async checkElasticsearch() {
+    if (!this.es) {
+      return { ok: true, skipped: true, reason: "disabled" };
+    }
     const start = Date.now();
     await this.es.ping();
     return { ok: true, ms: Date.now() - start };
