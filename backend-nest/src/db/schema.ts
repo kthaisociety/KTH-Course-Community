@@ -61,6 +61,12 @@ export const courses = pgTable(
   },
   (table) => [
     index("courses_search_vector_idx").using("gin", table.searchVector),
+    index("courses_embedding_idx").using(
+      "hnsw",
+      table.embedding.op("vector_cosine_ops"),
+    ),
+    index("courses_name_trgm_idx").using("gin", table.name.op("gin_trgm_ops")),
+    index("courses_code_trgm_idx").using("gin", table.code.op("gin_trgm_ops")),
   ],
 );
 

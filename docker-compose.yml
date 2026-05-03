@@ -45,11 +45,11 @@ services:
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
       AI_GATEWAY_API_KEY: ${AI_GATEWAY_API_KEY:-}
-      # Set false to run without Elasticsearch (matches backend-nest env names)
-      ELASTICSEARCH_ENABLED: ${ELASTICSEARCH_ENABLED:-true}
+      # Optional by default; set true (and provide ES_PASSWORD_SECRET) to enable.
+      ELASTICSEARCH_ENABLED: ${ELASTICSEARCH_ENABLED:-false}
       ELASTICSEARCH_URL: http://elasticsearch:9200
       ELASTICSEARCH_USERNAME: ${ES_USER_SECRET:-elastic}
-      ELASTICSEARCH_PASSWORD: ${ES_PASSWORD_SECRET}
+      ELASTICSEARCH_PASSWORD: ${ES_PASSWORD_SECRET:-}
     
     ports:
       - "8080:8080"
