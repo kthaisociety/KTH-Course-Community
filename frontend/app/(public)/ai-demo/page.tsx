@@ -52,6 +52,7 @@ import {
   ToolInput,
   ToolOutput,
 } from "@/components/ai-elements/tool";
+import { nestHttpUrl } from "@/lib/nest-http";
 
 /**
  * AI Chat Demo — KTH Course Community
@@ -61,7 +62,7 @@ import {
  *
  *  Browser (useChat)
  *
- *    → POST <backend>/ai/chat     (NestJS AiController)
+ *    → POST /api/nest/ai/chat     (rewritten to Nest AiController)
  *    → kthCourseAgent.stream()    (ToolLoopAgent, multi-step tool loop)
  *      ↳ tools: retrieveKthCourses, getWeather
  *    → openai/gpt-5.4-mini        (via Vercel AI Gateway)
@@ -121,7 +122,7 @@ export default function AiDemoPage() {
 
   const { messages, sendMessage, status } = useChat<KthCourseAgentUIMessage>({
     transport: new DefaultChatTransport({
-      api: `${process.env.NEXT_PUBLIC_BACKEND_DOMAIN}/ai/chat`,
+      api: nestHttpUrl("/ai/chat"),
     }),
   });
 

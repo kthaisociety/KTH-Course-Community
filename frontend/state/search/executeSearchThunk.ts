@@ -1,4 +1,5 @@
 import type { SearchResponse } from "@shared/types";
+import { nestHttpUrl } from "@/lib/nest-http";
 import type { Dispatch, RootState } from "@/state/store";
 import { searchFailed, searchRequested, searchSucceeded } from "./searchSlice";
 
@@ -36,9 +37,7 @@ export function executeSearch() {
     }
 
     try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_DOMAIN}/search?${params.toString()}`,
-      );
+      const res = await fetch(nestHttpUrl(`/search?${params.toString()}`));
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
       const body = (await res.json()) as SearchResponse;
@@ -47,7 +46,7 @@ export function executeSearch() {
       const rawMessage = err instanceof Error ? err.message : "Search failed";
       const message =
         rawMessage === "Failed to fetch"
-          ? "Could not reach the server. Check that the backend is running and NEXT_PUBLIC_BACKEND_DOMAIN is correct."
+          ? "Could not reach the server. Check that the backend is running and Next.js /api/nest rewrites are configured."
           : rawMessage;
       dispatch(searchFailed(message));
     }

@@ -1,14 +1,11 @@
 import type { CourseDetails, CourseSummary } from "@shared/types";
-
-const backend = process.env.NEXT_PUBLIC_BACKEND_DOMAIN;
+import { nestHttpUrl } from "@/lib/nest-http";
 
 // For course cards (search results, favorited course etc). Minimal course info.
 export async function getCourseSummary(
   courseCode: string,
 ): Promise<CourseSummary> {
-  if (!backend) throw new Error("NEXT_PUBLIC_BACKEND_DOMAIN is not set");
-
-  const res = await fetch(`${backend}/course/${courseCode}`, {
+  const res = await fetch(nestHttpUrl(`/course/${courseCode}`), {
     cache: "no-store", // TODO: Consider if we should store in cache.
   });
 
@@ -27,10 +24,7 @@ export async function getCourseSummary(
 export async function getCourseDetails(
   courseCode: string,
 ): Promise<CourseDetails> {
-  const backend = process.env.NEXT_PUBLIC_BACKEND_DOMAIN;
-  if (!backend) throw new Error("NEXT_PUBLIC_BACKEND_DOMAIN is not set.");
-
-  const res = await fetch(`${backend}/course/${courseCode}/details`, {
+  const res = await fetch(nestHttpUrl(`/course/${courseCode}/details`), {
     cache: "no-store",
   });
 

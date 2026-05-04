@@ -12,10 +12,16 @@ const nextConfig: NextConfig = {
   async rewrites() {
     if (!backendDomain) return [];
 
+    const base = backendDomain.replace(/\/$/, "");
+
     return [
       {
         source: "/api/auth/:path*",
-        destination: `${backendDomain}/auth/:path*`,
+        destination: `${base}/auth/:path*`,
+      },
+      {
+        source: "/api/nest/:path*",
+        destination: `${base}/:path*`,
       },
     ];
   },

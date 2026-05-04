@@ -1,17 +1,14 @@
 import type { Review } from "@shared/types";
 import type { ReviewFormData } from "@/components/review";
+import { nestHttpUrl } from "@/lib/nest-http";
 
 export async function createReview(
   courseCode: string,
   userId: string,
   reviewForm: ReviewFormData,
 ): Promise<void> {
-  const backend = process.env.NEXT_PUBLIC_BACKEND_DOMAIN;
-  if (!backend) throw new Error("NEXT_PUBLIC_BACKEND_DOMAIN is not set");
-
-  const res = await fetch(`${backend}/reviews`, {
+  const res = await fetch(nestHttpUrl("/reviews"), {
     cache: "no-store",
-    credentials: "include",
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -25,18 +22,14 @@ export async function findAllReviews(
   courseCode: string,
   userId?: string,
 ): Promise<Review[] | null> {
-  const backend = process.env.NEXT_PUBLIC_BACKEND_DOMAIN;
-  if (!backend) throw new Error("NEXT_PUBLIC_BACKEND_DOMAIN is not set");
-
-  const url = new URL(`${backend}/reviews`);
-  url.searchParams.set("courseCode", courseCode);
+  const params = new URLSearchParams();
+  params.set("courseCode", courseCode);
   if (userId) {
-    url.searchParams.set("userId", userId);
+    params.set("userId", userId);
   }
 
-  const res = await fetch(url.toString(), {
+  const res = await fetch(`${nestHttpUrl("/reviews")}?${params.toString()}`, {
     cache: "no-store",
-    credentials: "include",
     method: "GET",
     headers: {
       "Content-Type": "application/json",
@@ -50,12 +43,8 @@ export async function likeReview(
   reviewId: string,
   userId: string,
 ): Promise<void> {
-  const backend = process.env.NEXT_PUBLIC_BACKEND_DOMAIN;
-  if (!backend) throw new Error("NEXT_PUBLIC_BACKEND_DOMAIN is not set");
-
-  const res = await fetch(`${backend}/reviews/${reviewId}/like`, {
+  const res = await fetch(nestHttpUrl(`/reviews/${reviewId}/like`), {
     cache: "no-store",
-    credentials: "include",
     method: "POST",
     headers: {
       "Content-Type": "application/json",
