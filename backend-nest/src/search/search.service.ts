@@ -20,6 +20,8 @@ export interface SearchHit {
 export class SearchService {
   private readonly logger = new Logger(SearchService.name);
   private readonly embeddingCache = new Map<string, number[]>();
+  private readonly embeddingInflight = new Map<string, Promise<number[]>>();
+  private embeddingSearchFailures = 0;
 
   constructor(
     @Inject(ES) private readonly es: ESClient | null,
@@ -107,15 +109,32 @@ export class SearchService {
 
       let embedding = this.embeddingCache.get(cacheKey);
       if (!embedding) {
-        const { embedding: fresh } = await this.aiService.embedSingle(query);
-        embedding = fresh;
-        if (this.embeddingCache.size >= 500) {
-          const firstKey = this.embeddingCache.keys().next().value;
-          if (firstKey !== undefined) {
-            this.embeddingCache.delete(firstKey);
-          }
+        let pending = this.embeddingInflight.get(cacheKey);
+        if (!pending) {
+          let settle!: (v: number[]) => void;
+          let fail!: (e: unknown) => void;
+          pending = new Promise<number[]>((resolve, reject) => {
+            settle = resolve;
+            fail = reject;
+          });
+          this.embeddingInflight.set(cacheKey, pending);
+          void pending.finally(() => {
+            this.embeddingInflight.delete(cacheKey);
+          });
+          void this.aiService
+            .embedSingle(query)
+            .then(({ embedding: fresh }) => {
+              if (this.embeddingCache.size >= 500) {
+                const firstKey = this.embeddingCache.keys().next().value;
+                if (firstKey !== undefined) {
+                  this.embeddingCache.delete(firstKey);
+                }
+              }
+              this.embeddingCache.set(cacheKey, fresh);
+              settle(fresh);
+            }, fail);
         }
-        this.embeddingCache.set(cacheKey, embedding);
+        embedding = await pending;
       }
 
       const vectorLiteral = JSON.stringify(embedding);
@@ -127,10 +146,11 @@ export class SearchService {
       const whereSql = sql.join(conditions, sql` AND `);
 
       const result = await this.db.execute(sql`
-        SELECT code, 1 - (embedding <=> ${vectorLiteral}::vector) AS score
-        FROM ${schema.courses}
+        WITH q AS (SELECT ${vectorLiteral}::vector AS v)
+        SELECT code, 1 - (embedding <=> q.v) AS score
+        FROM ${schema.courses}, q
         WHERE ${whereSql}
-        ORDER BY embedding <=> ${vectorLiteral}::vector
+        ORDER BY embedding <=> q.v
         LIMIT ${limit}
       `);
 
@@ -141,8 +161,11 @@ export class SearchService {
         }),
       );
     } catch (err) {
+      this.embeddingSearchFailures += 1;
       const detail = err instanceof Error ? err.message : String(err);
-      this.logger.warn(`Embedding search failed, returning []. ${detail}`);
+      this.logger.warn(
+        `Embedding search failed, returning []. (failure #${this.embeddingSearchFailures}) ${detail}`,
+      );
       return [];
     }
   }
