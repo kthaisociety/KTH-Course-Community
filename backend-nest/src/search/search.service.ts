@@ -107,7 +107,7 @@ export class SearchService {
     try {
       const cacheKey = query.trim().toLowerCase();
 
-      let embedding = this.embeddingCache.get(cacheKey);
+      let embedding: number[] | undefined = this.embeddingCache.get(cacheKey);
       if (!embedding) {
         let pending = this.embeddingInflight.get(cacheKey);
         if (!pending) {
@@ -118,23 +118,41 @@ export class SearchService {
             fail = reject;
           });
           this.embeddingInflight.set(cacheKey, pending);
-          void pending.finally(() => {
-            this.embeddingInflight.delete(cacheKey);
-          });
-          void this.aiService
-            .embedSingle(query)
-            .then(({ embedding: fresh }) => {
-              if (this.embeddingCache.size >= 500) {
-                const firstKey = this.embeddingCache.keys().next().value;
-                if (firstKey !== undefined) {
-                  this.embeddingCache.delete(firstKey);
+          void pending
+            .finally(() => {
+              this.embeddingInflight.delete(cacheKey);
+            })
+            .catch(() => {});
+          void this.aiService.embedSingle(query).then(
+            ({ embedding: fresh }) => {
+              try {
+                if (this.embeddingCache.size >= 500) {
+                  const firstKey = this.embeddingCache.keys().next().value;
+                  if (firstKey !== undefined) {
+                    this.embeddingCache.delete(firstKey);
+                  }
                 }
+                this.embeddingCache.set(cacheKey, fresh);
+                settle(fresh);
+              } catch (e: unknown) {
+                fail(e);
               }
-              this.embeddingCache.set(cacheKey, fresh);
-              settle(fresh);
-            }, fail);
+            },
+            (err: unknown) => {
+              this.embeddingSearchFailures += 1;
+              const detail = err instanceof Error ? err.message : String(err);
+              this.logger.warn(
+                `Embedding search failed, returning []. (failure #${this.embeddingSearchFailures}) ${detail}`,
+              );
+              fail(err);
+            },
+          );
         }
-        embedding = await pending;
+        try {
+          embedding = await pending;
+        } catch {
+          return [];
+        }
       }
 
       const vectorLiteral = JSON.stringify(embedding);
