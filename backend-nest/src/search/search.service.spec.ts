@@ -1,5 +1,6 @@
 import { Test, type TestingModule } from "@nestjs/testing";
 import type { CourseSummary } from "@shared/types";
+import { AiService } from "../ai/ai.service";
 import { CourseService } from "../course/course.service";
 import { DRIZZLE } from "../db/drizzle.module";
 import { ES } from "./search.constants";
@@ -10,6 +11,7 @@ describe("SearchService", () => {
   let mockEs: { search: jest.Mock };
   let mockDb: { execute: jest.Mock };
   let mockCourseService: { getSummariesByCodes: jest.Mock };
+  let mockAiService: { embedSingle: jest.Mock };
 
   const mockSummaries: CourseSummary[] = [
     {
@@ -51,6 +53,12 @@ describe("SearchService", () => {
     mockEs = { search: jest.fn() };
     mockDb = { execute: jest.fn() };
     mockCourseService = { getSummariesByCodes: jest.fn() };
+    mockAiService = {
+      embedSingle: jest.fn().mockResolvedValue({
+        embedding: new Array(1536).fill(0),
+        usage: {},
+      }),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -58,6 +66,7 @@ describe("SearchService", () => {
         { provide: ES, useValue: mockEs },
         { provide: DRIZZLE, useValue: mockDb },
         { provide: CourseService, useValue: mockCourseService },
+        { provide: AiService, useValue: mockAiService },
       ],
     }).compile();
 

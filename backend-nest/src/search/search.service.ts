@@ -1,7 +1,8 @@
 import type { Client as ESClient, estypes } from "@elastic/elasticsearch";
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, Logger } from "@nestjs/common";
 import { inArray, sql } from "drizzle-orm";
 import type { NeonHttpDatabase } from "drizzle-orm/neon-http";
+import { AiService } from "../ai/ai.service";
 import { CourseService } from "../course/course.service";
 import { DRIZZLE } from "../db/drizzle.module";
 import * as schema from "../db/schema";
@@ -17,10 +18,14 @@ export interface SearchHit {
 
 @Injectable()
 export class SearchService {
+  private readonly logger = new Logger(SearchService.name);
+  private readonly embeddingCache = new Map<string, number[]>();
+
   constructor(
     @Inject(ES) private readonly es: ESClient | null,
     @Inject(DRIZZLE) private readonly db: NeonHttpDatabase<typeof schema>,
     private readonly courseService: CourseService,
+    private readonly aiService: AiService,
   ) {}
 
   private resolveDepartmentFilter(department?: string): string | null {
@@ -90,6 +95,56 @@ export class SearchService {
       courseCode: r.code,
       score: null,
     }));
+  }
+
+  private async searchWithEmbedding(
+    query: string,
+    limit: number,
+    departmentFilter: string | null,
+  ): Promise<SearchHit[]> {
+    try {
+      const cacheKey = query.trim().toLowerCase();
+
+      let embedding = this.embeddingCache.get(cacheKey);
+      if (!embedding) {
+        const { embedding: fresh } = await this.aiService.embedSingle(query);
+        embedding = fresh;
+        if (this.embeddingCache.size >= 500) {
+          const firstKey = this.embeddingCache.keys().next().value;
+          if (firstKey !== undefined) {
+            this.embeddingCache.delete(firstKey);
+          }
+        }
+        this.embeddingCache.set(cacheKey, embedding);
+      }
+
+      const vectorLiteral = JSON.stringify(embedding);
+
+      const conditions = [sql`embedding IS NOT NULL`];
+      if (departmentFilter) {
+        conditions.push(sql`department ILIKE ${`%${departmentFilter}%`}`);
+      }
+      const whereSql = sql.join(conditions, sql` AND `);
+
+      const result = await this.db.execute(sql`
+        SELECT code, 1 - (embedding <=> ${vectorLiteral}::vector) AS score
+        FROM ${schema.courses}
+        WHERE ${whereSql}
+        ORDER BY embedding <=> ${vectorLiteral}::vector
+        LIMIT ${limit}
+      `);
+
+      return (result.rows as Array<{ code: string; score: number }>).map(
+        (r) => ({
+          courseCode: r.code,
+          score: r.score,
+        }),
+      );
+    } catch (err) {
+      const detail = err instanceof Error ? err.message : String(err);
+      this.logger.warn(`Embedding search failed, returning []. ${detail}`);
+      return [];
+    }
   }
 
   async searchCourses(
@@ -169,12 +224,23 @@ export class SearchService {
         }))
         .filter((h) => h.courseCode.length > 0);
     } else {
-      ranked = await this.searchWithDatabase(
-        query,
-        size,
-        departmentFilter,
-        hasMinRatingFilter,
-      );
+      const fetchSize = hasMinRatingFilter ? size * 5 : size;
+      const [keywordHits, semanticHits] = await Promise.all([
+        this.searchWithDatabase(
+          query,
+          size,
+          departmentFilter,
+          hasMinRatingFilter,
+        ),
+        this.searchWithEmbedding(query, fetchSize, departmentFilter),
+      ]);
+
+      const seen = new Set(keywordHits.map((h) => h.courseCode));
+      const merged = [
+        ...keywordHits,
+        ...semanticHits.filter((h) => !seen.has(h.courseCode)),
+      ];
+      ranked = merged.slice(0, fetchSize);
     }
 
     if (ranked.length === 0) return [];
