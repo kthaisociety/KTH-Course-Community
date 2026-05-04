@@ -1,6 +1,8 @@
 /**
  * Nest HTTP base path on the **browser origin** (proxied by `next.config.ts` rewrites).
- * All credentialed / session-aware `fetch` from the client should use `nestHttpUrl()`.
+ * All session-aware `fetch` from the client should use `nestHttpUrl()`.
+ * Do not set `credentials: "include"` for those calls: same-origin requests already send
+ * cookies with the default `credentials` mode (`"same-origin"`).
  */
 const BROWSER_NEST_PREFIX = "/api/nest";
 

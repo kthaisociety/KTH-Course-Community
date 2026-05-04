@@ -9,7 +9,6 @@ export async function createReview(
 ): Promise<void> {
   const res = await fetch(nestHttpUrl("/reviews"), {
     cache: "no-store",
-    credentials: "include",
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -31,7 +30,6 @@ export async function findAllReviews(
 
   const res = await fetch(`${nestHttpUrl("/reviews")}?${params.toString()}`, {
     cache: "no-store",
-    credentials: "include",
     method: "GET",
     headers: {
       "Content-Type": "application/json",
@@ -47,7 +45,6 @@ export async function likeReview(
 ): Promise<void> {
   const res = await fetch(nestHttpUrl(`/reviews/${reviewId}/like`), {
     cache: "no-store",
-    credentials: "include",
     method: "POST",
     headers: {
       "Content-Type": "application/json",

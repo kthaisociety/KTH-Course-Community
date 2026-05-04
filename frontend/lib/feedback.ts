@@ -8,7 +8,6 @@ export async function sendFeedback(data: {
 }): Promise<void> {
   const res = await fetch(nestHttpUrl("/feedback"), {
     method: "POST",
-    credentials: "include",
     headers: {
       "Content-Type": "application/json",
     },

@@ -40,7 +40,6 @@ export function uploadProfilePicture(file: File) {
       const res = await fetch(nestHttpUrl("/user/profile-picture"), {
         method: "POST",
         body: formData,
-        credentials: "include",
       });
 
       if (!res.ok) {
@@ -82,7 +81,6 @@ export function deleteAccount() {
     try {
       const res = await fetch(nestHttpUrl("/user"), {
         method: "DELETE",
-        credentials: "include",
       });
 
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
