@@ -4,11 +4,17 @@ import {
   Injectable,
   InternalServerErrorException,
 } from "@nestjs/common";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import type { NeonHttpDatabase } from "drizzle-orm/neon-http";
 import { DRIZZLE } from "../db/drizzle.module";
 import * as schema from "../db/schema";
-import { SelectReview, SelectReviewLike, SelectUser } from "../db/schema";
+import {
+  SelectReview,
+  SelectReviewLike,
+  SelectUser,
+  SelectUserCourse,
+} from "../db/schema";
+import type { ParsedCourse } from "./transcript.parser";
 
 // Since we can't change the schema to have the userFAvorites, we need to define a new type,
 // that includes the userFavorites property.
@@ -21,6 +27,7 @@ export type UserWithDetails = SelectUser & {
   userFavorites: string[];
   userReviews: ReviewWithCounts[];
   userLikedReviews: (SelectReviewLike & { review: ReviewWithCounts })[];
+  transcriptCourses: SelectUserCourse[];
 };
 
 @Injectable()
@@ -170,24 +177,6 @@ export class UserService {
         dislikeCount: this.reviewVoteCount(schema.reviews.id, "dislike"),
       })
       .from(schema.reviews)
-      .leftJoin(
-        sql`(
-          SELECT review_id, COUNT(*) as like_count
-          FROM ${schema.reviewLikes}
-          WHERE vote_type = 'like'
-          GROUP BY review_id
-        ) as like_counts`,
-        eq(schema.reviews.id, sql`like_counts.review_id`),
-      )
-      .leftJoin(
-        sql`(
-          SELECT review_id, COUNT(*) as dislike_count
-          FROM ${schema.reviewLikes}
-          WHERE vote_type = 'dislike'
-          GROUP BY review_id
-        ) as dislike_counts`,
-        eq(schema.reviews.id, sql`dislike_counts.review_id`),
-      )
       .where(eq(schema.reviews.userId, userId));
   }
 
@@ -234,16 +223,19 @@ export class UserService {
     if (!user) {
       return undefined;
     }
-    const userFavorites = await this.getUserFavorites(id);
-    const userReviews = await this.getUserReviews(id);
-    const userLikedReviews = await this.getUserLikedReviews(id);
-    // User favorites are fetched from a junction table that could probably be removed and re-worked into a new column in user table.
-    // Also changed to now only return the course codes instead of an object
+    const [userFavorites, userReviews, userLikedReviews, transcriptCourses] =
+      await Promise.all([
+        this.getUserFavorites(id),
+        this.getUserReviews(id),
+        this.getUserLikedReviews(id),
+        this.getTranscriptCourses(id),
+      ]);
     return {
       ...user,
-      userFavorites: userFavorites,
-      userReviews: userReviews,
-      userLikedReviews: userLikedReviews,
+      userFavorites,
+      userReviews,
+      userLikedReviews,
+      transcriptCourses,
     } as UserWithDetails;
   }
 
@@ -286,6 +278,54 @@ export class UserService {
       .update(schema.users)
       .set({ profilePicture: profilePictureUrl })
       .where(eq(schema.users.id, userId));
+  }
+
+  async saveTranscriptCourses(
+    userId: string,
+    parsed: ParsedCourse[],
+  ): Promise<{ imported: string[]; unrecognized: string[] }> {
+    if (parsed.length === 0) return { imported: [], unrecognized: [] };
+
+    const codes = parsed.map((c) => c.courseCode);
+    const existing = await this.db
+      .select({ code: schema.courses.code })
+      .from(schema.courses)
+      .where(inArray(schema.courses.code, codes));
+
+    const existingSet = new Set(existing.map((c) => c.code));
+    const recognized = parsed.filter((c) => existingSet.has(c.courseCode));
+    const unrecognized = parsed
+      .filter((c) => !existingSet.has(c.courseCode))
+      .map((c) => c.courseCode);
+
+    if (recognized.length > 0) {
+      await this.db
+        .insert(schema.userCourses)
+        .values(
+          recognized.map((c) => ({
+            userId,
+            courseCode: c.courseCode,
+            grade: c.grade,
+            credits: c.credits ?? undefined,
+          })),
+        )
+        .onConflictDoUpdate({
+          target: [schema.userCourses.userId, schema.userCourses.courseCode],
+          set: {
+            grade: sql`excluded.grade`,
+            credits: sql`excluded.credits`,
+          },
+        });
+    }
+
+    return { imported: recognized.map((c) => c.courseCode), unrecognized };
+  }
+
+  async getTranscriptCourses(userId: string) {
+    return this.db
+      .select()
+      .from(schema.userCourses)
+      .where(eq(schema.userCourses.userId, userId));
   }
 
   async deleteUser(id: string): Promise<void> {

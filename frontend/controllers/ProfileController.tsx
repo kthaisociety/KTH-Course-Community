@@ -1,25 +1,48 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useCallback } from "react";
-import { useDispatch, useSelector } from "react-redux";
-import { useUser } from "@/hooks/userHooks";
+import { useCallback, useEffect, useState } from "react";
+import { useDispatch } from "react-redux";
 import { toast } from "sonner";
 import Session from "supertokens-auth-react/recipe/session";
-import type { Dispatch, RootState } from "@/state/store";
+import { useUser } from "@/hooks/userHooks";
+import { getCourseNames } from "@/lib/courses";
+import type { Dispatch } from "@/state/store";
 import { setProfilePicture } from "@/state/user/userSlice";
 import {
   deleteAccount,
   getUser,
   uploadProfilePicture,
+  uploadTranscript,
 } from "@/state/user/userThunk";
 import ProfileView from "@/views/ProfileView";
 
 export default function ProfileController() {
   const router = useRouter();
-  const { name, email, profilePicture, userReviews, userLikedReviews } =
-    useUser();
+  const {
+    name,
+    email,
+    profilePicture,
+    userReviews,
+    userLikedReviews,
+    transcriptCourses,
+  } = useUser();
   const dispatch = useDispatch<Dispatch>();
+  const [courseNames, setCourseNames] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    const codes = [
+      ...new Set([
+        ...transcriptCourses.map((c) => c.courseCode),
+        ...userReviews.map((r) => r.courseCode),
+        ...userLikedReviews.map((r) => r.review.courseCode),
+      ]),
+    ];
+    if (codes.length === 0) return;
+    getCourseNames(codes)
+      .then(setCourseNames)
+      .catch(() => {});
+  }, [transcriptCourses, userReviews, userLikedReviews]);
 
   // Handle file upload
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -59,6 +82,35 @@ export default function ProfileController() {
     }
   };
 
+  const handleTranscriptUpload = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const result = await dispatch(uploadTranscript(file));
+    if (!result.success) {
+      toast.error(result.error || "Transcript upload failed.");
+      return;
+    }
+    const imported = (result as { imported: string[] }).imported ?? [];
+    const unrecognized =
+      (result as { unrecognized: string[] }).unrecognized ?? [];
+    if (imported.length > 0) {
+      toast.success(
+        `Imported ${imported.length} course${imported.length !== 1 ? "s" : ""}.`,
+      );
+    }
+    if (unrecognized.length > 0) {
+      toast.warning(
+        `${unrecognized.length} course code${unrecognized.length !== 1 ? "s" : ""} not found in the database.`,
+      );
+    }
+    if (imported.length === 0 && unrecognized.length === 0) {
+      toast.info("No courses found in the uploaded transcript.");
+    }
+  };
+
   const onClickReview = useCallback(
     (courseCode: string) => {
       router.push(`/course/${courseCode}`);
@@ -73,7 +125,10 @@ export default function ProfileController() {
       preview={profilePicture}
       userReviews={userReviews}
       userLikedReviews={userLikedReviews}
+      transcriptCourses={transcriptCourses}
+      courseNames={courseNames}
       handleFileChange={handleFileChange}
+      handleTranscriptUpload={handleTranscriptUpload}
       handleDeleteAccount={handleDeleteAccount}
       onClickReview={onClickReview}
     />

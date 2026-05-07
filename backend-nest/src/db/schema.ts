@@ -159,6 +159,28 @@ export const user_favorites = pgTable(
   }),
 );
 
+// junction table for courses a user has completed (imported from transcript)
+export const userCourses = pgTable(
+  "user_courses",
+  {
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    courseCode: text("course_code")
+      .notNull()
+      .references(() => courses.code, { onDelete: "cascade" }),
+    grade: text("grade"),
+    credits: real("credits"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.userId, table.courseCode] })],
+);
+
+export type InsertUserCourse = typeof userCourses.$inferInsert;
+export type SelectUserCourse = typeof userCourses.$inferSelect;
+
 // --- REVIEW / FORUM TABLES ----------------
 // table for reviews that references users (posters) and courses (reviewed)
 export const reviews = pgTable("reviews", {

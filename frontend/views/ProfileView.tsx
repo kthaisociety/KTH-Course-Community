@@ -7,16 +7,39 @@ import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import type { TranscriptCourse } from "@/state/user/userSlice";
 
 type ProfileReview = Review & {
   likeCount?: number;
   dislikeCount?: number;
 };
+
+const GRADE_POINTS: Record<string, number> = {
+  A: 5,
+  B: 4.5,
+  C: 4,
+  D: 3.5,
+  E: 3,
+};
+
+function calculateGPA(courses: TranscriptCourse[]): number | null {
+  const gradable = courses.filter(
+    (c) => c.grade && GRADE_POINTS[c.grade] !== undefined && c.credits,
+  );
+  if (gradable.length === 0) return null;
+  const totalCredits = gradable.reduce((sum, c) => sum + (c.credits ?? 0), 0);
+  const weightedSum = gradable.reduce(
+    (sum, c) => sum + GRADE_POINTS[c.grade!] * (c.credits ?? 0),
+    0,
+  );
+  return totalCredits > 0 ? weightedSum / totalCredits : null;
+}
 
 type ProfileViewProps = {
   name: string;
@@ -24,7 +47,10 @@ type ProfileViewProps = {
   preview: string | null;
   userReviews: ProfileReview[];
   userLikedReviews: UserLikedReview[];
+  transcriptCourses: TranscriptCourse[];
+  courseNames: Record<string, string>;
   handleFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  handleTranscriptUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleDeleteAccount: () => void;
   onClickReview: (courseCode: string) => void;
 };
@@ -35,10 +61,18 @@ export default function ProfileView({
   preview,
   userReviews,
   userLikedReviews,
+  transcriptCourses,
+  courseNames,
   handleFileChange,
+  handleTranscriptUpload,
   handleDeleteAccount,
   onClickReview,
 }: ProfileViewProps) {
+  const gpa = calculateGPA(transcriptCourses);
+
+  const formatCredits = (credits: number | null) =>
+    credits !== null ? credits.toFixed(1) : "-";
+
   const getInitials = (name: string) =>
     name
       .split(" ")
@@ -88,17 +122,88 @@ export default function ProfileView({
 
         {/*Personal Data*/}
         <div className="flex gap-4">
-          <div className="w-6/13 flex flex-col gap-4">
+          <div className="w-7/13 flex flex-col gap-4">
             {/*Courses Taken*/}
             <Card className="break-inside-avoid">
               <CardHeader>
                 <CardTitle>Courses Taken</CardTitle>
+                <CardDescription>
+                  Import your KTH transcript to populate this table.
+                </CardDescription>
               </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">
-                  Your taken courses will be shown here.
-                </p>
+              <CardContent className="space-y-3">
+                {transcriptCourses.length > 0 ? (
+                  <div className="overflow-x-auto rounded-md border">
+                    <table className="min-w-full divide-y divide-border text-sm">
+                      <thead className="bg-muted/40">
+                        <tr>
+                          <th className="px-3 py-2 text-left font-medium">
+                            Course Code
+                          </th>
+                          <th className="px-3 py-2 text-left font-medium">
+                            Course Name
+                          </th>
+                          <th className="px-3 py-2 text-left font-medium">
+                            Credits
+                          </th>
+                          <th className="px-3 py-2 text-left font-medium">
+                            Grade
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border">
+                        {transcriptCourses.map((c) => (
+                          <tr key={c.courseCode} className="hover:bg-muted/40">
+                            <td className="px-3 py-2">
+                              <button
+                                type="button"
+                                onClick={() => onClickReview(c.courseCode)}
+                                title={courseNames[c.courseCode]}
+                                className="text-left hover:underline"
+                              >
+                                {c.courseCode}
+                              </button>
+                            </td>
+                            <td className="px-3 py-2">
+                              {courseNames[c.courseCode] ?? c.courseCode}
+                            </td>
+                            <td className="px-3 py-2">
+                              {formatCredits(c.credits)}
+                            </td>
+                            <td className="px-3 py-2">{c.grade ?? "-"}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    No courses imported yet.
+                  </p>
+                )}
+                <label htmlFor="transcript-upload">
+                  <Button variant="secondary" size="sm" asChild>
+                    <span>Upload Transcript (PDF)</span>
+                  </Button>
+                  <Input
+                    id="transcript-upload"
+                    type="file"
+                    accept=".pdf,application/pdf"
+                    onChange={handleTranscriptUpload}
+                    className="hidden"
+                  />
+                </label>
               </CardContent>
+              <CardFooter>
+                {gpa !== null && (
+                  <p className="text-sm font-medium">
+                    GPA: <span className="font-semibold">{gpa.toFixed(2)}</span>
+                    <span className="text-muted-foreground text-xs ml-1">
+                      / 5.00
+                    </span>
+                  </p>
+                )}
+              </CardFooter>
             </Card>
 
             {/*Liked/Disliked Reviews*/}
@@ -125,6 +230,7 @@ export default function ProfileView({
                         >
                           <ReviewPreview
                             courseCode={review.review.courseCode}
+                            courseTitle={courseNames[review.review.courseCode]}
                             content={review.review.content}
                             examinationMethods={
                               review.review.examinationMethods
@@ -155,7 +261,22 @@ export default function ProfileView({
             </Card>
           </div>
 
-          <div className="w-7/13 flex flex-col gap-4">
+          <div className="max-w-6/13 flex flex-col gap-4">
+            {/*My Goals*/}
+            <Card className="break-inside-avoid">
+              <CardHeader>
+                <CardTitle>My Goals</CardTitle>
+                <CardDescription>
+                  <p className="text-muted-foreground">
+                    Your goals can be written here.
+                  </p>
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <RichTextEditor />
+              </CardContent>
+            </Card>
+
             {/*My Reviews*/}
             <Card className="break-inside-avoid">
               <CardHeader>
@@ -174,6 +295,7 @@ export default function ProfileView({
                         <li key={review.id} className="text-muted-foreground">
                           <ReviewPreview
                             courseCode={review.courseCode}
+                            courseTitle={courseNames[review.courseCode]}
                             content={review.content}
                             examinationMethods={review.examinationMethods}
                             theoreticalVsApplied={review.theoreticalVsApplied}
@@ -194,21 +316,6 @@ export default function ProfileView({
                     You haven't written any reviews yet.
                   </p>
                 )}
-              </CardContent>
-            </Card>
-
-            {/*My Goals*/}
-            <Card className="break-inside-avoid">
-              <CardHeader>
-                <CardTitle>My Goals</CardTitle>
-                <CardDescription>
-                  <p className="text-muted-foreground">
-                    Your goals can be written here.
-                  </p>
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <RichTextEditor />
               </CardContent>
             </Card>
           </div>

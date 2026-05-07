@@ -1,9 +1,25 @@
-import { Controller, Get, NotFoundException, Param } from "@nestjs/common";
+import {
+  Controller,
+  Get,
+  NotFoundException,
+  Param,
+  Query,
+} from "@nestjs/common";
 import { CourseService } from "./course.service";
 
 @Controller("course")
 export class CourseController {
   constructor(private readonly courseService: CourseService) {}
+
+  @Get("/names")
+  async getCourseNames(@Query("codes") codesParam: string) {
+    if (!codesParam?.trim()) return [];
+    const codes = codesParam
+      .split(",")
+      .map((c) => c.trim())
+      .filter(Boolean);
+    return this.courseService.getCourseNames(codes);
+  }
 
   @Get("/:course_code")
   async getCourseSummary(@Param("course_code") courseCode: string) {

@@ -1,6 +1,19 @@
 import type { CourseDetails, CourseSummary } from "@shared/types";
 import { nestHttpUrl } from "@/lib/nest-http";
 
+export async function getCourseNames(
+  codes: string[],
+): Promise<Record<string, string>> {
+  if (codes.length === 0) return {};
+  const res = await fetch(
+    nestHttpUrl(`/course/names?codes=${codes.join(",")}`),
+    { cache: "no-store" },
+  );
+  if (!res.ok) return {};
+  const data: { courseCode: string; titleEng: string }[] = await res.json();
+  return Object.fromEntries(data.map((c) => [c.courseCode, c.titleEng]));
+}
+
 // For course cards (search results, favorited course etc). Minimal course info.
 export async function getCourseSummary(
   courseCode: string,

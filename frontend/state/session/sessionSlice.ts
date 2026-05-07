@@ -1,7 +1,7 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import Session from "supertokens-auth-react/recipe/session";
 import { nestHttpUrl } from "@/lib/nest-http";
-import { clearUser, setUser } from "../user/userSlice";
+import { clearUser, setTranscriptCourses, setUser } from "../user/userSlice";
 
 export interface SessionState {
   userId: string;
@@ -40,6 +40,21 @@ export const getSession = createAsyncThunk(
             userReviews: userData.userReviews ?? [],
             userLikedReviews: userData.userLikedReviews ?? [],
           }),
+        );
+        dispatch(
+          setTranscriptCourses(
+            (userData.transcriptCourses ?? []).map(
+              (c: {
+                courseCode: string;
+                grade: string | null;
+                credits: number | null;
+              }) => ({
+                courseCode: c.courseCode,
+                grade: c.grade ?? null,
+                credits: c.credits ?? null,
+              }),
+            ),
+          ),
         );
 
         return {

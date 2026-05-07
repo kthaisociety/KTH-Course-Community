@@ -11,6 +11,7 @@ import {
 
 type ReviewPreviewProps = {
   courseCode: string;
+  courseTitle?: string;
   content: string;
   examinationMethods: number;
   theoreticalVsApplied: number;
@@ -41,24 +42,25 @@ export function ReviewPreview(props: Readonly<ReviewPreviewProps>) {
     <Card
       className={
         isClickable
-          ? "relative mx-auto max-w-sm cursor-pointer shadow-none transition-colors hover:bg-muted/40"
-          : "relative mx-auto max-w-sm shadow-none"
+          ? "relative mx-auto max-w-sm rounded-sm cursor-pointer shadow-none transition-colors hover:bg-muted/40"
+          : "relative mx-auto max-w-sm rounded-sm shadow-none"
       }
       role={isClickable ? "button" : undefined}
       tabIndex={isClickable ? 0 : undefined}
       onClick={props.onClickReview}
     >
       <CardHeader>
-        <CardTitle>{props.courseCode}</CardTitle>
+        <CardTitle className="text-sm">{props.courseTitle}</CardTitle>
         <CardAction>
           <p className="text-muted-foreground text-sm text-right">
-            {averageScore.toFixed(1) + " / 5"}
-          </p>
-          <p className="mt-2 text-muted-foreground text-xs text-right">
-            Likes: {props.likeCount ?? 0} | Dislikes: {props.dislikeCount ?? 0}
+            {props.courseCode}
           </p>
         </CardAction>
-        <CardDescription>{stripHtmlTags(props.content)}</CardDescription>
+        <CardDescription>
+          {stripHtmlTags(props.content).length < 50
+            ? stripHtmlTags(props.content)
+            : stripHtmlTags(props.content).slice(0, 25) + "..."}
+        </CardDescription>
       </CardHeader>
     </Card>
   );

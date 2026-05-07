@@ -2,6 +2,12 @@ import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import type { Review, UserLikedReview } from "@shared/types";
 import { clearSession, getSession } from "../session/sessionSlice";
 
+export type TranscriptCourse = {
+  courseCode: string;
+  grade: string | null;
+  credits: number | null;
+};
+
 export interface UserState {
   name: string;
   email: string;
@@ -9,6 +15,7 @@ export interface UserState {
   profilePicture: string | null;
   userReviews: Review[];
   userLikedReviews: UserLikedReview[];
+  transcriptCourses: TranscriptCourse[];
 }
 
 const initialState: UserState = {
@@ -18,19 +25,29 @@ const initialState: UserState = {
   profilePicture: null,
   userReviews: [],
   userLikedReviews: [],
+  transcriptCourses: [] as TranscriptCourse[],
 };
 
 const userSlice = createSlice({
   name: "user",
   initialState,
   reducers: {
-    setUser: (state, action: PayloadAction<UserState>) => {
+    setUser: (
+      state,
+      action: PayloadAction<Omit<UserState, "transcriptCourses">>,
+    ) => {
       state.name = action.payload.name;
       state.email = action.payload.email;
       state.userFavorites = action.payload.userFavorites;
       state.profilePicture = action.payload.profilePicture ?? null;
       state.userReviews = action.payload.userReviews;
       state.userLikedReviews = action.payload.userLikedReviews;
+    },
+    setTranscriptCourses: (
+      state,
+      action: PayloadAction<TranscriptCourse[]>,
+    ) => {
+      state.transcriptCourses = action.payload;
     },
     toggleFavoriteSuccess: (
       state,
@@ -63,6 +80,7 @@ const userSlice = createSlice({
       state.profilePicture = null;
       state.userReviews = [];
       state.userLikedReviews = [];
+      state.transcriptCourses = [];
     },
   },
   extraReducers: (builder) => {
@@ -74,6 +92,7 @@ const userSlice = createSlice({
         state.profilePicture = null;
         state.userReviews = [];
         state.userLikedReviews = [];
+        state.transcriptCourses = [];
       })
       .addCase(clearSession, (state) => {
         state.name = "";
@@ -82,10 +101,16 @@ const userSlice = createSlice({
         state.profilePicture = null;
         state.userReviews = [];
         state.userLikedReviews = [];
+        state.transcriptCourses = [];
       });
   },
 });
 
-export const { setUser, toggleFavoriteSuccess, setProfilePicture, clearUser } =
-  userSlice.actions;
+export const {
+  setUser,
+  toggleFavoriteSuccess,
+  setProfilePicture,
+  setTranscriptCourses,
+  clearUser,
+} = userSlice.actions;
 export default userSlice.reducer;

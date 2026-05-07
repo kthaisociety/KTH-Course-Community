@@ -22,6 +22,17 @@ export class CourseService {
     @Inject(DRIZZLE) private readonly db: NeonHttpDatabase<typeof schema>,
   ) {}
 
+  async getCourseNames(
+    codes: string[],
+  ): Promise<{ courseCode: string; titleEng: string }[]> {
+    if (codes.length === 0) return [];
+    const rows = await this.db
+      .select({ code: courses.code, titleEng: courses.titleEng })
+      .from(courses)
+      .where(inArray(courses.code, codes));
+    return rows.map((r) => ({ courseCode: r.code, titleEng: r.titleEng }));
+  }
+
   // retrieves the basic course object (course table) based on course code
   async getCourse(courseCode: string): Promise<SelectCourse | undefined> {
     const [course] = await this.db
