@@ -110,6 +110,11 @@
   body {
     @apply bg-background text-foreground;
   }
+  /* Tailwind v4 preflight sets buttons to cursor: default; restore pointer */
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
 }
 
 /* Thin, muted scrollbar for internal scroll panes (e.g. search list, sidebar). */

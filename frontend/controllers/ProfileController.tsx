@@ -11,6 +11,7 @@ import type { Dispatch } from "@/state/store";
 import { setProfilePicture } from "@/state/user/userSlice";
 import {
   deleteAccount,
+  deleteTranscriptCourse,
   getUser,
   uploadProfilePicture,
   uploadTranscript,
@@ -109,6 +110,13 @@ export default function ProfileController() {
     }
   };
 
+  const handleDeleteCourse = async (courseCode: string) => {
+    const result = await dispatch(deleteTranscriptCourse(courseCode));
+    if (!result.success) {
+      toast.error(result.error || "Failed to remove the course.");
+    }
+  };
+
   const onClickReview = useCallback(
     (courseCode: string) => {
       router.push(`/course/${courseCode}`);
@@ -128,6 +136,7 @@ export default function ProfileController() {
       handleFileChange={handleFileChange}
       handleTranscriptUpload={handleTranscriptUpload}
       handleDeleteAccount={handleDeleteAccount}
+      handleDeleteCourse={handleDeleteCourse}
       onClickReview={onClickReview}
     />
   );

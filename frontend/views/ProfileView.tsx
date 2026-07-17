@@ -1,4 +1,6 @@
 import type { Review, UserLikedReview } from "@shared/types";
+import { ChevronDown, ChevronUp, Trash2 } from "lucide-react";
+import { useState } from "react";
 import { ReviewPreview } from "@/components/ReviewPreviewProfile";
 import { RichTextEditor } from "@/components/RichEditor";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -13,6 +15,9 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import type { TranscriptCourse } from "@/state/user/userSlice";
+
+// Number of course rows shown before the table is collapsed behind "Show all"
+const COLLAPSED_COURSE_COUNT = 6;
 
 const GRADE_POINTS: Record<string, number> = {
   A: 5,
@@ -49,6 +54,7 @@ type ProfileViewProps = {
   handleFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleTranscriptUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleDeleteAccount: () => void;
+  handleDeleteCourse: (courseCode: string) => void;
   onClickReview: (courseCode: string) => void;
 };
 
@@ -63,9 +69,17 @@ export default function ProfileView({
   handleFileChange,
   handleTranscriptUpload,
   handleDeleteAccount,
+  handleDeleteCourse,
   onClickReview,
 }: ProfileViewProps) {
   const gpa = calculateGPA(transcriptCourses);
+
+  const [showAllCourses, setShowAllCourses] = useState(false);
+  const hasHiddenCourses = transcriptCourses.length > COLLAPSED_COURSE_COUNT;
+  const visibleCourses =
+    showAllCourses || !hasHiddenCourses
+      ? transcriptCourses
+      : transcriptCourses.slice(0, COLLAPSED_COURSE_COUNT);
 
   const formatCredits = (credits: number | null) =>
     credits !== null ? credits.toFixed(1) : "-";
@@ -145,10 +159,13 @@ export default function ProfileView({
                           <th className="px-3 py-2 text-left font-medium">
                             Grade
                           </th>
+                          <th className="px-3 py-2">
+                            <span className="sr-only">Remove</span>
+                          </th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-border">
-                        {transcriptCourses.map((c) => (
+                        {visibleCourses.map((c) => (
                           <tr key={c.courseCode} className="hover:bg-muted/40">
                             <td className="px-3 py-2">
                               <button
@@ -167,6 +184,20 @@ export default function ProfileView({
                               {formatCredits(c.credits)}
                             </td>
                             <td className="px-3 py-2">{c.grade ?? "-"}</td>
+                            <td className="px-3 py-2 text-right">
+                              <Button
+                                variant="ghost"
+                                size="icon-sm"
+                                className="text-muted-foreground hover:text-destructive"
+                                title={`Remove ${c.courseCode}`}
+                                onClick={() => handleDeleteCourse(c.courseCode)}
+                              >
+                                <Trash2 className="size-4" />
+                                <span className="sr-only">
+                                  Remove {c.courseCode}
+                                </span>
+                              </Button>
+                            </td>
                           </tr>
                         ))}
                       </tbody>
@@ -177,18 +208,39 @@ export default function ProfileView({
                     No courses imported yet.
                   </p>
                 )}
-                <label htmlFor="transcript-upload">
-                  <Button variant="secondary" size="sm" asChild>
-                    <span>Upload Transcript (PDF)</span>
+                {hasHiddenCourses && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full text-muted-foreground"
+                    onClick={() => setShowAllCourses((prev) => !prev)}
+                  >
+                    {showAllCourses ? (
+                      <>
+                        Show less <ChevronUp className="size-4" />
+                      </>
+                    ) : (
+                      <>
+                        Show all {transcriptCourses.length} courses{" "}
+                        <ChevronDown className="size-4" />
+                      </>
+                    )}
                   </Button>
-                  <Input
-                    id="transcript-upload"
-                    type="file"
-                    accept=".pdf,application/pdf"
-                    onChange={handleTranscriptUpload}
-                    className="hidden"
-                  />
-                </label>
+                )}
+                {transcriptCourses.length === 0 && (
+                  <label htmlFor="transcript-upload">
+                    <Button variant="secondary" size="sm" asChild>
+                      <span>Upload Transcript (PDF)</span>
+                    </Button>
+                    <Input
+                      id="transcript-upload"
+                      type="file"
+                      accept=".pdf,application/pdf"
+                      onChange={handleTranscriptUpload}
+                      className="hidden"
+                    />
+                  </label>
+                )}
               </CardContent>
               <CardFooter>
                 {gpa !== null && (

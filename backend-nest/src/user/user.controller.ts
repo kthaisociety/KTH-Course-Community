@@ -8,6 +8,7 @@ import {
   Get,
   InternalServerErrorException,
   NotFoundException,
+  Param,
   Post,
   UploadedFile,
   UseGuards,
@@ -170,5 +171,16 @@ export class UserController {
   async getTranscriptCourses(@Session() session: SessionContainer) {
     const userId = await this.resolveAppUserId(session);
     return this.userService.getTranscriptCourses(userId);
+  }
+
+  @Delete("/transcript-courses/:courseCode")
+  @VerifySession()
+  async deleteTranscriptCourse(
+    @Session() session: SessionContainer,
+    @Param("courseCode") courseCode: string,
+  ) {
+    const userId = await this.resolveAppUserId(session);
+    await this.userService.deleteTranscriptCourse(userId, courseCode);
+    return { success: true };
   }
 }

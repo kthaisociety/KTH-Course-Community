@@ -328,6 +328,20 @@ export class UserService {
       .where(eq(schema.userCourses.userId, userId));
   }
 
+  async deleteTranscriptCourse(
+    userId: string,
+    courseCode: string,
+  ): Promise<void> {
+    await this.db
+      .delete(schema.userCourses)
+      .where(
+        and(
+          eq(schema.userCourses.userId, userId),
+          eq(schema.userCourses.courseCode, courseCode),
+        ),
+      );
+  }
+
   async deleteUser(id: string): Promise<void> {
     await this.db
       .delete(schema.user_favorites)

@@ -2,6 +2,7 @@ import { nestHttpUrl } from "@/lib/nest-http";
 import type { Dispatch } from "@/state/store";
 import {
   clearUser,
+  removeTranscriptCourse,
   setProfilePicture,
   setTranscriptCourses,
   setUser,
@@ -154,6 +155,28 @@ export function fetchTranscriptCourses() {
       );
     } catch {
       // non-critical, silently ignore
+    }
+  };
+}
+
+export function deleteTranscriptCourse(courseCode: string) {
+  return async (dispatch: Dispatch) => {
+    try {
+      const res = await fetch(
+        nestHttpUrl(
+          `/user/transcript-courses/${encodeURIComponent(courseCode)}`,
+        ),
+        { method: "DELETE" },
+      );
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      dispatch(removeTranscriptCourse(courseCode));
+      return { success: true as const };
+    } catch (err) {
+      return {
+        success: false as const,
+        error:
+          err instanceof Error ? err.message : "Failed to remove the course",
+      };
     }
   };
 }

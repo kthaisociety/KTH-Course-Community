@@ -49,6 +49,11 @@ const userSlice = createSlice({
     ) => {
       state.transcriptCourses = action.payload;
     },
+    removeTranscriptCourse: (state, action: PayloadAction<string>) => {
+      state.transcriptCourses = state.transcriptCourses.filter(
+        (c) => c.courseCode !== action.payload,
+      );
+    },
     toggleFavoriteSuccess: (
       state,
       action: PayloadAction<{
@@ -111,6 +116,7 @@ export const {
   toggleFavoriteSuccess,
   setProfilePicture,
   setTranscriptCourses,
+  removeTranscriptCourse,
   clearUser,
 } = userSlice.actions;
 export default userSlice.reducer;
