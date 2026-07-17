@@ -12,13 +12,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import type { TranscriptCourse } from "@/state/user/userSlice";
-
-type ProfileReview = Review & {
-  likeCount?: number;
-  dislikeCount?: number;
-};
 
 const GRADE_POINTS: Record<string, number> = {
   A: 5,
@@ -29,23 +23,26 @@ const GRADE_POINTS: Record<string, number> = {
 };
 
 function calculateGPA(courses: TranscriptCourse[]): number | null {
-  const gradable = courses.filter(
-    (c) => c.grade && GRADE_POINTS[c.grade] !== undefined && c.credits,
-  );
-  if (gradable.length === 0) return null;
-  const totalCredits = gradable.reduce((sum, c) => sum + (c.credits ?? 0), 0);
+  const gradable = courses.flatMap((c) => {
+    const points = c.grade ? GRADE_POINTS[c.grade] : undefined;
+    return points !== undefined && c.credits
+      ? [{ points, credits: c.credits }]
+      : [];
+  });
+  const totalCredits = gradable.reduce((sum, c) => sum + c.credits, 0);
+  if (totalCredits === 0) return null;
   const weightedSum = gradable.reduce(
-    (sum, c) => sum + GRADE_POINTS[c.grade!] * (c.credits ?? 0),
+    (sum, c) => sum + c.points * c.credits,
     0,
   );
-  return totalCredits > 0 ? weightedSum / totalCredits : null;
+  return weightedSum / totalCredits;
 }
 
 type ProfileViewProps = {
   name: string;
   email: string;
   preview: string | null;
-  userReviews: ProfileReview[];
+  userReviews: Review[];
   userLikedReviews: UserLikedReview[];
   transcriptCourses: TranscriptCourse[];
   courseNames: Record<string, string>;
@@ -82,40 +79,39 @@ export default function ProfileView({
       .slice(0, 2);
   return (
     <main className="container mx-auto px-4 py-12 max-w-4xl">
-      {/*
-      <h1 className="text-4xl font-bold text-foreground mb-6">My Profile</h1>
-      <p className="text-muted-foreground mb-10">
-        Manage your account settings and preferences
-      </p>
-      */}
-
       <div className="space-y-4">
         <Card>
           <CardContent className="flex justify-center items-center py-2">
             <div className="relative">
-              {/* Profile picture*/}
-              <Avatar className="w-24 h-24 border-4">
-                {preview ? (
-                  <AvatarImage
-                    src={preview}
-                    alt={name}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <AvatarFallback className="text-xl">
-                    {getInitials(name || email)}
-                  </AvatarFallback>
-                )}
-              </Avatar>
-              {/* Bottom left - anchored to avatar */}
-              <div className="absolute top-2/3 right-full pr-4 -translate-y-1/2 whitespace-nowrap">
-                <p>{name}</p>
-              </div>
-
-              {/* Bottom right - anchored to avatar */}
-              <div className="absolute top-2/3 left-full pl-4 -translate-y-1/2 whitespace-nowrap">
-                <p>Computer Science</p>
-              </div>
+              {/* Profile picture — click to upload a new one */}
+              <label
+                htmlFor="profile-upload"
+                className="block"
+                title="Change profile picture"
+              >
+                <Avatar className="w-24 h-24 border-4">
+                  {preview ? (
+                    <AvatarImage
+                      src={preview}
+                      alt={name}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <AvatarFallback className="text-xl">
+                      {getInitials(name || email)}
+                    </AvatarFallback>
+                  )}
+                </Avatar>
+                {/*
+                <Input
+                  id="profile-upload"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  className="hidden"
+                />
+                */}
+              </label>
             </div>
           </CardContent>
         </Card>
@@ -232,17 +228,6 @@ export default function ProfileView({
                             courseCode={review.review.courseCode}
                             courseTitle={courseNames[review.review.courseCode]}
                             content={review.review.content}
-                            examinationMethods={
-                              review.review.examinationMethods
-                            }
-                            theoreticalVsApplied={
-                              review.review.theoreticalVsApplied
-                            }
-                            workload={review.review.workload}
-                            learningExperience={
-                              review.review.learningExperience
-                            }
-                            wouldRecommend={review.review.wouldRecommend}
                             likeCount={review.review.likeCount}
                             dislikeCount={review.review.dislikeCount}
                             onClickReview={() =>
@@ -254,7 +239,7 @@ export default function ProfileView({
                   </ul>
                 ) : (
                   <p className="text-muted-foreground">
-                    You haven't written any reviews yet.
+                    You haven't liked any reviews yet.
                   </p>
                 )}
               </CardContent>
@@ -267,9 +252,7 @@ export default function ProfileView({
               <CardHeader>
                 <CardTitle>My Goals</CardTitle>
                 <CardDescription>
-                  <p className="text-muted-foreground">
-                    Your goals can be written here.
-                  </p>
+                  Your goals can be written here.
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -297,11 +280,6 @@ export default function ProfileView({
                             courseCode={review.courseCode}
                             courseTitle={courseNames[review.courseCode]}
                             content={review.content}
-                            examinationMethods={review.examinationMethods}
-                            theoreticalVsApplied={review.theoreticalVsApplied}
-                            workload={review.workload}
-                            learningExperience={review.learningExperience}
-                            wouldRecommend={review.wouldRecommend}
                             likeCount={review.likeCount}
                             dislikeCount={review.dislikeCount}
                             onClickReview={() =>
@@ -320,67 +298,6 @@ export default function ProfileView({
             </Card>
           </div>
         </div>
-
-        {/* Profile Info Card
-        <Card>
-          <CardHeader>
-            <CardTitle>Profile Information</CardTitle>
-            <CardDescription>
-              Update your profile picture and personal details
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            
-            <div className="flex items-center gap-6">
-              <Avatar className="w-24 h-24 border-4 border-primary/10">
-                {preview ? (
-                  <AvatarImage
-                    src={preview}
-                    alt={name}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <AvatarFallback className="text-xl bg-primary/10 text-primary">
-                    {getInitials(name || email)}
-                  </AvatarFallback>
-                )}
-              </Avatar>
-
-              <div className="space-y-2">
-                <Label htmlFor="profile-upload">Profile Picture</Label>
-                <div className="flex gap-2">
-                  <label htmlFor="profile-upload">
-                    <Button variant="secondary" size="sm" asChild>
-                      <span>Upload New</span>
-                    </Button>
-                    <Input
-                      id="profile-upload"
-                      type="file"
-                      accept="image/*"
-                      onChange={handleFileChange}
-                      className="hidden"
-                    />
-                  </label>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Max 2MB. JPG, PNG, or GIF.
-                </p>
-              </div>
-            </div>
-
-            
-            <div>
-              <Label htmlFor="name">Full Name</Label>
-              <Input
-                id="name"
-                value={name}
-                readOnly
-                className="max-w-md bg-muted cursor-not-allowed"
-              />
-            </div>
-          </CardContent>
-        </Card>
-           */}
 
         {/* Delete Account */}
         <Card className="border-destructive/50">

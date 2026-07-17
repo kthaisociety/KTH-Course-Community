@@ -4,7 +4,8 @@ export type ParsedCourse = {
   credits: number | null;
 };
 
-const COURSE_CODE_RE = /\b([A-Z]{2,3}\d{4})\b/;
+// Matches regular course codes (e.g. SF1624) and degree-project codes (e.g. DA231X)
+const COURSE_CODE_RE = /\b([A-Z]{2,3}\d{4}|[A-Z]{2}\d{3}X)\b/;
 // Fx must be checked before F to avoid partial match
 const GRADE_RE = /\b(A|B|C|D|E|Fx|F|VG|G|P|U)\b/;
 const CREDITS_RE = /(\d+[.,]\d+)\s*hp/i;
@@ -34,7 +35,7 @@ export function parseTranscript(text: string): ParsedCourse[] {
     const creditsMatch = CREDITS_RE.exec(block);
     const credits = creditsMatch
       ? Number.parseFloat(creditsMatch[1].replace(",", "."))
-      : 0;
+      : null;
 
     results.push({
       courseCode,

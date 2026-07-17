@@ -157,9 +157,8 @@ export class UserController {
       pdfText = result.text;
       await parser.destroy();
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
       console.error("PDF parse error:", err);
-      throw new InternalServerErrorException(`Failed to parse PDF: ${msg}`);
+      throw new InternalServerErrorException("Failed to parse PDF");
     }
 
     const parsed = parseTranscript(pdfText);

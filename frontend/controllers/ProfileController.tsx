@@ -93,9 +93,7 @@ export default function ProfileController() {
       toast.error(result.error || "Transcript upload failed.");
       return;
     }
-    const imported = (result as { imported: string[] }).imported ?? [];
-    const unrecognized =
-      (result as { unrecognized: string[] }).unrecognized ?? [];
+    const { imported, unrecognized } = result;
     if (imported.length > 0) {
       toast.success(
         `Imported ${imported.length} course${imported.length !== 1 ? "s" : ""}.`,

@@ -123,10 +123,10 @@ export function uploadTranscript(file: File) {
         await res.json();
       // Re-fetch full course data (with grades/credits) after upload
       await dispatch(fetchTranscriptCourses());
-      return { success: true, ...data };
+      return { success: true as const, ...data };
     } catch (err) {
       return {
-        success: false,
+        success: false as const,
         error: err instanceof Error ? err.message : "Upload failed",
       };
     }

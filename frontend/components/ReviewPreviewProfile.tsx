@@ -1,8 +1,8 @@
 "use client";
+import { ThumbsDown, ThumbsUp } from "lucide-react";
 import {
   Card,
   CardAction,
-  CardContent,
   CardDescription,
   CardFooter,
   CardHeader,
@@ -13,28 +13,13 @@ type ReviewPreviewProps = {
   courseCode: string;
   courseTitle?: string;
   content: string;
-  examinationMethods: number;
-  theoreticalVsApplied: number;
-  workload: number;
-  learningExperience: number;
-  wouldRecommend: boolean;
   likeCount?: number;
   dislikeCount?: number;
   onClickReview?: () => void;
 };
 
 export function ReviewPreview(props: Readonly<ReviewPreviewProps>) {
-  // Function to strip HTML tags from text
-  const stripHtmlTags = (html: string): string => {
-    return html.replace(/<[^>]*>/g, " ");
-  };
-
-  const averageScore =
-    (props.examinationMethods +
-      props.theoreticalVsApplied +
-      props.workload +
-      props.learningExperience) /
-    4;
+  const previewText = props.content.replace(/<[^>]*>/g, " ").trim();
 
   const isClickable = Boolean(props.onClickReview);
 
@@ -48,20 +33,36 @@ export function ReviewPreview(props: Readonly<ReviewPreviewProps>) {
       role={isClickable ? "button" : undefined}
       tabIndex={isClickable ? 0 : undefined}
       onClick={props.onClickReview}
+      onKeyDown={(e) => {
+        if (isClickable && (e.key === "Enter" || e.key === " ")) {
+          e.preventDefault();
+          props.onClickReview?.();
+        }
+      }}
     >
       <CardHeader>
-        <CardTitle className="text-sm">{props.courseTitle}</CardTitle>
+        <CardTitle className="text-sm">
+          {props.courseTitle ?? props.courseCode}
+        </CardTitle>
         <CardAction>
           <p className="text-muted-foreground text-sm text-right">
             {props.courseCode}
           </p>
         </CardAction>
-        <CardDescription>
-          {stripHtmlTags(props.content).length < 50
-            ? stripHtmlTags(props.content)
-            : stripHtmlTags(props.content).slice(0, 25) + "..."}
+        <CardDescription className="min-w-0 truncate">
+          {previewText}
         </CardDescription>
       </CardHeader>
+      <CardFooter className="gap-3 text-muted-foreground text-xs">
+        <span className="flex items-center gap-1">
+          <ThumbsUp className="size-3" />
+          {props.likeCount ?? 0}
+        </span>
+        <span className="flex items-center gap-1">
+          <ThumbsDown className="size-3" />
+          {props.dislikeCount ?? 0}
+        </span>
+      </CardFooter>
     </Card>
   );
 }
