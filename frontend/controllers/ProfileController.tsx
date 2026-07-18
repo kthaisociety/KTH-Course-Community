@@ -8,12 +8,9 @@ import Session from "supertokens-auth-react/recipe/session";
 import { useUser } from "@/hooks/userHooks";
 import { getCourseNames } from "@/lib/courses";
 import type { Dispatch } from "@/state/store";
-import { setProfilePicture } from "@/state/user/userSlice";
 import {
   deleteAccount,
   deleteTranscriptCourse,
-  getUser,
-  uploadProfilePicture,
   uploadTranscript,
 } from "@/state/user/userThunk";
 import ProfileView from "@/views/ProfileView";
@@ -45,31 +42,6 @@ export default function ProfileController() {
       .catch(() => {});
   }, [transcriptCourses, userReviews, userLikedReviews]);
 
-  // Handle file upload
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const localPreview = URL.createObjectURL(file);
-      dispatch(setProfilePicture(localPreview));
-
-      // Await the resolved return value of the thunk, which is always {success, error?}
-      const result: {
-        success: boolean;
-        url?: string;
-        error?: string;
-        message?: string;
-      } = await dispatch(uploadProfilePicture(file));
-      if (!result.success) {
-        toast.error(result.error || result.message || "Image upload failed.");
-        if (profilePicture) dispatch(setProfilePicture(profilePicture));
-        URL.revokeObjectURL(localPreview);
-        return;
-      }
-      await dispatch(getUser());
-      URL.revokeObjectURL(localPreview);
-    }
-  };
-
   // Handle account deletion
   const handleDeleteAccount = async () => {
     if (
@@ -88,6 +60,8 @@ export default function ProfileController() {
   ) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    // Clear the input so picking the same file again re-triggers onChange
+    e.target.value = "";
 
     const result = await dispatch(uploadTranscript(file));
     if (!result.success) {
@@ -133,7 +107,6 @@ export default function ProfileController() {
       userLikedReviews={userLikedReviews}
       transcriptCourses={transcriptCourses}
       courseNames={courseNames}
-      handleFileChange={handleFileChange}
       handleTranscriptUpload={handleTranscriptUpload}
       handleDeleteAccount={handleDeleteAccount}
       handleDeleteCourse={handleDeleteCourse}

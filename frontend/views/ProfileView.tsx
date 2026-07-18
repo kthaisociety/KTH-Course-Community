@@ -47,6 +47,7 @@ function formatHp(value: number): string {
 }
 
 /** Soft green→red tints per grade; the letter itself stays the primary signal.
+ *  Keys are uppercase — look up with grade.toUpperCase() ("Fx" → "FX").
  *  Grades outside the A–F scale (P, G, …) fall back to the neutral outline. */
 const GRADE_BADGE_CLASSES: Record<string, string> = {
   A: "border-emerald-200 bg-emerald-100 text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-300",
@@ -62,7 +63,10 @@ function GradeBadge({ grade }: { grade: string }) {
   return (
     <Badge
       variant="outline"
-      className={cn("min-w-7 justify-center", GRADE_BADGE_CLASSES[grade])}
+      className={cn(
+        "min-w-7 justify-center",
+        GRADE_BADGE_CLASSES[grade.toUpperCase()],
+      )}
     >
       {grade}
     </Badge>
@@ -103,7 +107,6 @@ type ProfileViewProps = {
   userLikedReviews: UserLikedReview[];
   transcriptCourses: TranscriptCourse[];
   courseNames: Record<string, string>;
-  handleFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleTranscriptUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleDeleteAccount: () => void;
   handleDeleteCourse: (courseCode: string) => void;
@@ -155,12 +158,13 @@ export default function ProfileView({
         {/* Hero: identity + headline stats */}
         <section className="shrink-0 overflow-hidden rounded-xl border border-border bg-card shadow-sm">
           <div className="flex flex-col gap-4 p-6 sm:flex-row sm:items-center">
-            {/* Profile picture — click to upload a new one */}
-            <label
-              htmlFor="profile-upload"
-              className="block shrink-0"
-              title="Change profile picture"
-            >
+            {/* Profile picture upload is disabled for now. To re-enable, wrap
+                the avatar in a <label htmlFor="profile-upload">, render a
+                hidden <Input id="profile-upload" type="file" accept="image/*"
+                onChange={handleFileChange} /> and restore the
+                handleFileChange wiring in ProfileController (see git
+                history). */}
+            <div className="shrink-0">
               <Avatar className="size-20 border-4">
                 {preview ? (
                   <AvatarImage
@@ -174,11 +178,7 @@ export default function ProfileView({
                   </AvatarFallback>
                 )}
               </Avatar>
-              {/* Profile picture upload is disabled for now. To re-enable,
-                  destructure handleFileChange from props and render:
-                  <Input id="profile-upload" type="file" accept="image/*"
-                    onChange={handleFileChange} className="hidden" /> */}
-            </label>
+            </div>
             <div className="min-w-0 flex-1">
               <h1 className="truncate text-2xl font-semibold leading-tight text-foreground">
                 {name || email}
@@ -222,6 +222,20 @@ export default function ProfileView({
               <CardDescription>
                 Imported from your KTH transcript.
               </CardDescription>
+              {transcriptCourses.length > 0 && (
+                <CardAction>
+                  {/* Re-uploading merges: new courses are added, existing
+                      ones get their grade/credits refreshed. */}
+                  <label htmlFor="transcript-upload" className="cursor-pointer">
+                    <Button variant="secondary" size="sm" asChild>
+                      <span>
+                        <Upload className="size-4" />
+                        Update transcript
+                      </span>
+                    </Button>
+                  </label>
+                </CardAction>
+              )}
             </CardHeader>
             <CardContent className="flex flex-col lg:min-h-0 lg:flex-1">
               <Input

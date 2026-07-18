@@ -31,11 +31,24 @@ export function parseTranscript(text: string): ParsedCourse[] {
     }
     const block = window.join(" ");
 
-    const gradeMatch = GRADE_RE.exec(block);
     const creditsMatch = CREDITS_RE.exec(block);
     const credits = creditsMatch
       ? Number.parseFloat(creditsMatch[1].replace(",", "."))
       : null;
+
+    // Ladok transcripts list the grade after the credits ("… 7,5 hp A"), so
+    // search there first — otherwise standalone letters in course titles
+    // ("English A") would be mistaken for grades. Fall back to the whole
+    // block for layouts where the grade precedes the credits.
+    let gradeMatch: RegExpExecArray | null = null;
+    if (creditsMatch) {
+      gradeMatch = GRADE_RE.exec(
+        block.slice(creditsMatch.index + creditsMatch[0].length),
+      );
+    }
+    if (!gradeMatch) {
+      gradeMatch = GRADE_RE.exec(block);
+    }
 
     results.push({
       courseCode,

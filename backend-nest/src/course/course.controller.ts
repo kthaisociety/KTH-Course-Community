@@ -7,6 +7,9 @@ import {
 } from "@nestjs/common";
 import { CourseService } from "./course.service";
 
+// Public endpoint: cap the IN-list so arbitrary callers can't send huge queries
+const MAX_NAME_LOOKUP_CODES = 200;
+
 @Controller("course")
 export class CourseController {
   constructor(private readonly courseService: CourseService) {}
@@ -14,10 +17,14 @@ export class CourseController {
   @Get("/names")
   async getCourseNames(@Query("codes") codesParam: string) {
     if (!codesParam?.trim()) return [];
-    const codes = codesParam
-      .split(",")
-      .map((c) => c.trim())
-      .filter(Boolean);
+    const codes = [
+      ...new Set(
+        codesParam
+          .split(",")
+          .map((c) => c.trim())
+          .filter(Boolean),
+      ),
+    ].slice(0, MAX_NAME_LOOKUP_CODES);
     return this.courseService.getCourseNames(codes);
   }
 

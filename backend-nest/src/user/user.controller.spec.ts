@@ -2,7 +2,7 @@ import { Readable } from "node:stream";
 import { Test, type TestingModule } from "@nestjs/testing";
 import type { SessionContainer } from "supertokens-node/recipe/session";
 import { UserController } from "./user.controller";
-import { UserService, type UserWithFavorites } from "./user.service";
+import { UserService, type UserWithDetails } from "./user.service";
 
 type MockSession = Pick<SessionContainer, "getUserId">;
 
@@ -11,7 +11,7 @@ describe("UserController", () => {
   let userService: UserService;
   let mockSession: jest.Mocked<MockSession>;
 
-  const mockUser: UserWithFavorites = {
+  const mockUser: UserWithDetails = {
     id: "user-123",
     email: "Sven@kth.se",
     name: "Sven",
@@ -19,6 +19,9 @@ describe("UserController", () => {
     createdAt: new Date("2023-10-15"),
     updatedAt: new Date("2023-10-15"),
     userFavorites: ["SF1625", "SF1624"],
+    userReviews: [],
+    userLikedReviews: [],
+    transcriptCourses: [],
   };
 
   // For testing profile image later when functionality fixed
@@ -85,6 +88,9 @@ describe("UserController", () => {
         email: "Sven@kth.se",
         profilePicture: null,
         userFavorites: mockUser.userFavorites,
+        userReviews: [],
+        userLikedReviews: [],
+        transcriptCourses: [],
       });
     });
   });

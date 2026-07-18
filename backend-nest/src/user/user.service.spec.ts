@@ -1,6 +1,6 @@
 import { Test, type TestingModule } from "@nestjs/testing";
 import { DRIZZLE } from "../db/drizzle.module";
-import { UserService, type UserWithFavorites } from "./user.service";
+import { UserService, type UserWithDetails } from "./user.service";
 
 type MockDb = {
   insert: jest.Mock;
@@ -129,15 +129,21 @@ describe("UserService", () => {
   });
 
   describe("getUser", () => {
-    it("should return user with favorites", async () => {
+    it("should return user with favorites, reviews and transcript courses", async () => {
       mockDb.limit.mockResolvedValue([mockUser]);
       jest
         .spyOn(userService, "getUserFavorites")
         .mockResolvedValue(["SF1625", "SF1624"]);
+      jest.spyOn(userService, "getUserReviews").mockResolvedValue([]);
+      jest.spyOn(userService, "getUserLikedReviews").mockResolvedValue([]);
+      jest.spyOn(userService, "getTranscriptCourses").mockResolvedValue([]);
 
-      const expected: UserWithFavorites = {
+      const expected: UserWithDetails = {
         ...mockUser,
         userFavorites: ["SF1625", "SF1624"],
+        userReviews: [],
+        userLikedReviews: [],
+        transcriptCourses: [],
       };
 
       const result = await userService.getUser("user-123");

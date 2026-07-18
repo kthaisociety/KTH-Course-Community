@@ -40,8 +40,9 @@ export class UserService {
     reviewIdColumn: typeof schema.reviews.id,
     voteType: "like" | "dislike",
   ) {
+    // ::int so the driver returns a JS number (bigint counts arrive as strings)
     return sql<number>`(
-      SELECT COUNT(*)
+      SELECT COUNT(*)::int
       FROM ${schema.reviewLikes}
       WHERE ${schema.reviewLikes.reviewId} = ${reviewIdColumn}
         AND ${schema.reviewLikes.voteType} = ${voteType}
