@@ -57,6 +57,17 @@ export default function Navbar() {
             variant="nav"
             className="w-full justify-start hover:bg-primary"
           >
+            <img
+              src="/ais-symbol-white.png"
+              alt="KTH AI Society"
+              className="!h-12 !w-12 object-contain"
+            />
+            <img
+              src="/logo-divider.png"
+              alt=""
+              aria-hidden
+              className="!h-12 w-auto object-contain"
+            />
             <DiCompass className="text-white !h-12 !w-12" />
             <h1 className="text-xl">Course Community</h1>
           </Button>

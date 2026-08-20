@@ -9,6 +9,17 @@ export default function Topbar() {
     <div className="flex w-full fixed z-50 p-5 bg-primary items-center justify-between">
       <Link href="/">
         <Button variant="nav" className="w-full justify-start hover:bg-primary">
+          <img
+            src="/ais-symbol-white.png"
+            alt="KTH AI Society"
+            className="!w-9 !h-9 object-contain"
+          />
+          <img
+            src="/logo-divider.png"
+            alt=""
+            aria-hidden
+            className="!h-9 w-auto object-contain"
+          />
           <DiCompass className="text-white !w-9 !h-9" />
           <h1 className="font-bold text-3xl text-white">Course Community</h1>
         </Button>
