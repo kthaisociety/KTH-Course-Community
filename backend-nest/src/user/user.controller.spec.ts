@@ -1,8 +1,22 @@
 import { Readable } from "node:stream";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  jest,
+} from "@jest/globals";
 import { Test, type TestingModule } from "@nestjs/testing";
+import type {} from "multer";
+import { PDFParse } from "pdf-parse";
 import type { SessionContainer } from "supertokens-node/recipe/session";
 import { UserController } from "./user.controller";
 import { UserService, type UserWithDetails } from "./user.service";
+
+jest.mock("pdf-parse", () => ({
+  PDFParse: jest.fn(),
+}));
 
 type MockSession = Pick<SessionContainer, "getUserId">;
 
@@ -110,6 +124,42 @@ describe("UserController", () => {
     });
   });
 
+  describe("uploadTranscript", () => {
+    it("releases PDF parser resources when transcript parsing fails", async () => {
+      const destroy = jest
+        .fn<() => Promise<void>>()
+        .mockResolvedValue(undefined);
+
+      const getText = jest
+        .fn<() => Promise<{ text: string }>>()
+        .mockRejectedValue(new Error("Malformed PDF"));
+
+      jest.mocked(PDFParse).mockImplementation(
+        () =>
+          ({
+            getText,
+            destroy,
+          }) as unknown as jest.Mocked<PDFParse>,
+      );
+
+      mockSession.getUserId.mockReturnValue("user-123");
+
+      jest.spyOn(userService, "resolveAppUserId").mockResolvedValue("user-123");
+
+      await expect(
+        userController.uploadTranscript(
+          mockSession as unknown as SessionContainer,
+          {
+            ..._mockFile,
+            originalname: "transcript.pdf",
+            mimetype: "application/pdf",
+          },
+        ),
+      ).rejects.toThrow("Failed to parse PDF");
+
+      expect(destroy).toHaveBeenCalledTimes(1);
+    });
+  });
   // We have not implemented blob storage for images yet
   /*
   describe("uploadProfilePicture", () => {

@@ -122,9 +122,15 @@ export function uploadTranscript(file: File) {
 
       const data: { imported: string[]; unrecognized: string[] } =
         await res.json();
+
       // Re-fetch full course data (with grades/credits) after upload
-      await dispatch(fetchTranscriptCourses());
-      return { success: true as const, ...data };
+      const refreshResult = await dispatch(fetchTranscriptCourses());
+
+      return {
+        success: true as const,
+        refreshed: refreshResult.success,
+        ...data,
+      };
     } catch (err) {
       return {
         success: false as const,
@@ -138,12 +144,20 @@ export function fetchTranscriptCourses() {
   return async (dispatch: Dispatch) => {
     try {
       const res = await fetch(nestHttpUrl("/user/transcript-courses"));
-      if (!res.ok) return;
+
+      if (!res.ok) {
+        return {
+          success: false as const,
+          error: `HTTP ${res.status}`,
+        };
+      }
+
       const data: {
         courseCode: string;
         grade: string | null;
         credits: number | null;
       }[] = await res.json();
+
       dispatch(
         setTranscriptCourses(
           data.map((c) => ({
@@ -153,8 +167,13 @@ export function fetchTranscriptCourses() {
           })),
         ),
       );
-    } catch {
-      // non-critical, silently ignore
+
+      return { success: true as const };
+    } catch (err) {
+      return {
+        success: false as const,
+        error: err instanceof Error ? err.message : "Failed to refresh courses",
+      };
     }
   };
 }

@@ -16,6 +16,7 @@ import {
 } from "@nestjs/common";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { put } from "@vercel/blob";
+import { PDFParse } from "pdf-parse";
 import {
   Session,
   SuperTokensAuthGuard,
@@ -151,14 +152,22 @@ export class UserController {
     }
 
     let pdfText: string;
+
     try {
-      const { PDFParse } = await import("pdf-parse");
-      const parser = new PDFParse({ data: file.buffer, verbosity: 0 });
-      const result = await parser.getText();
-      pdfText = result.text;
-      await parser.destroy();
+      const parser = new PDFParse({
+        data: file.buffer,
+        verbosity: 0,
+      });
+
+      try {
+        const result = await parser.getText();
+        pdfText = result.text;
+      } finally {
+        await parser.destroy();
+      }
     } catch (err) {
       console.error("PDF parse error:", err);
+
       throw new InternalServerErrorException("Failed to parse PDF");
     }
 

@@ -6,7 +6,7 @@ export async function getCourseNames(
 ): Promise<Record<string, string>> {
   if (codes.length === 0) return {};
   const res = await fetch(
-    nestHttpUrl(`/course/names?codes=${codes.join(",")}`),
+    nestHttpUrl(`/course/names?codes=${encodeURIComponent(codes.join(","))}`),
     { cache: "no-store" },
   );
   if (!res.ok) return {};

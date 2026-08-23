@@ -70,9 +70,17 @@ export default function ProfileController() {
     }
     const { imported, unrecognized } = result;
     if (imported.length > 0) {
-      toast.success(
-        `Imported ${imported.length} course${imported.length !== 1 ? "s" : ""}.`,
-      );
+      if (result.refreshed) {
+        toast.success(
+          `Imported ${imported.length} course${
+            imported.length !== 1 ? "s" : ""
+          }.`,
+        );
+      } else {
+        toast.warning(
+          "Transcript imported, but the course list could not be refreshed. Please reload the page.",
+        );
+      }
     }
     if (unrecognized.length > 0) {
       toast.warning(
