@@ -1,5 +1,14 @@
 import { Readable } from "node:stream";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  jest,
+} from "@jest/globals";
 import { Test, type TestingModule } from "@nestjs/testing";
+import type { Multer } from "multer";
 import type { SessionContainer } from "supertokens-node/recipe/session";
 import { UserController } from "./user.controller";
 import { UserService, type UserWithFavorites } from "./user.service";

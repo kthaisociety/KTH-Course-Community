@@ -26,3 +26,17 @@ Monorepo for a KTH course community app with a Next.js frontend and a NestJS bac
 - `CLAUDE.md`: same project guidance for Claude-oriented workflows
 - Repo-local skills live under `.agents/skills/`
 - Current repo-local skill: `.agents/skills/ai-sdk/SKILL.md`
+
+## Agent skills
+
+### Issue tracker
+
+Issues and specs are tracked in GitHub Issues using the `gh` CLI. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+The default triage labels are used: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, and `wontfix`. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+This is a multi-context repo; use `CONTEXT-MAP.md` to locate relevant context files. See `docs/agents/domain.md`.
