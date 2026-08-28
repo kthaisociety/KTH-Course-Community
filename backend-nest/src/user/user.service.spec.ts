@@ -80,44 +80,6 @@ describe("UserService", () => {
     expect(userService).toBeDefined();
   });
 
-  describe("createNewUser", () => {
-    it("should upsert by email and map auth identity", async () => {
-      mockDb.limit.mockResolvedValueOnce([]);
-      mockDb.returning.mockResolvedValueOnce([{ id: "app-user-123" }]);
-      mockDb.onConflictDoNothing.mockResolvedValue(undefined);
-
-      await userService.createNewUser("user-123", "Sven@kth.se", "Sven");
-
-      expect(mockDb.select).toHaveBeenCalled();
-      expect(mockDb.from).toHaveBeenCalled();
-      expect(mockDb.where).toHaveBeenCalled();
-      expect(mockDb.limit).toHaveBeenCalledWith(1);
-      expect(mockDb.insert).toHaveBeenCalled();
-      expect(mockDb.values).toHaveBeenCalledWith(
-        expect.objectContaining({
-          email: "Sven@kth.se",
-          name: "Sven",
-        }),
-      );
-      expect(mockDb.onConflictDoUpdate).toHaveBeenCalledWith(
-        expect.objectContaining({
-          target: "mocked-users-email",
-        }),
-      );
-      expect(mockDb.returning).toHaveBeenCalledWith(
-        expect.objectContaining({
-          id: "mocked-users-id",
-        }),
-      );
-      expect(mockDb.values).toHaveBeenCalledWith(
-        expect.objectContaining({
-          authUserId: "user-123",
-          userId: "app-user-123",
-        }),
-      );
-    });
-  });
-
   describe("getUserFavorites", () => {
     it("should return user favorites", async () => {
       mockDb.where.mockResolvedValue(mockUserFavorites);
@@ -162,10 +124,6 @@ jest.mock("../db/schema", () => ({
   users: {
     id: "mocked-users-id",
     email: "mocked-users-email",
-  },
-  user_auth_identities: {
-    authUserId: "mocked-auth-user-id",
-    userId: "mocked-auth-user-user-id",
   },
   user_favorites: {
     userId: "mocked-user-favorites-userId",
