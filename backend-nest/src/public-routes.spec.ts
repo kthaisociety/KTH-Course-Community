@@ -3,10 +3,6 @@ import { CourseController } from "./course/course.controller";
 import { CourseService } from "./course/course.service";
 import { HealthController } from "./health/health.controller";
 import { HealthService } from "./health/health.service";
-import { IngestController } from "./ingest/ingest.controller";
-import { IngestService } from "./ingest/ingest.service";
-import { ReviewsController } from "./reviews/reviews.controller";
-import { ReviewsService } from "./reviews/reviews.service";
 import { DepartmentsController } from "./search/departments.controller";
 import { DepartmentsService } from "./search/departments.service";
 import { SearchController } from "./search/search.controller";
@@ -35,14 +31,7 @@ describe("Public routes (HTTP)", () => {
     { name: "course details", method: "get", path: "/course/SF1625/details" },
     { name: "search", method: "get", path: "/search?q=algebra" },
     { name: "departments", method: "get", path: "/departments" },
-    {
-      name: "review listing",
-      method: "get",
-      path: "/reviews?courseCode=SF1625",
-    },
-    { name: "single review", method: "get", path: "/reviews/review-123" },
     { name: "health", method: "get", path: "/health" },
-    { name: "ingest status", method: "get", path: "/ingest/status" },
   ] as const;
 
   beforeEach(async () => {
@@ -51,9 +40,7 @@ describe("Public routes (HTTP)", () => {
         CourseController,
         SearchController,
         DepartmentsController,
-        ReviewsController,
         HealthController,
-        IngestController,
       ],
       providers: [
         {
@@ -72,21 +59,8 @@ describe("Public routes (HTTP)", () => {
           useValue: { getDepartments: jest.fn().mockResolvedValue([]) },
         },
         {
-          provide: ReviewsService,
-          useValue: {
-            findAll: jest.fn().mockResolvedValue([]),
-            findOne: jest.fn().mockResolvedValue({ id: "review-123" }),
-          },
-        },
-        {
           provide: HealthService,
           useValue: { testAll: jest.fn().mockResolvedValue({ ok: true }) },
-        },
-        {
-          provide: IngestService,
-          useValue: {
-            getIngestStatus: jest.fn().mockReturnValue({ ok: true }),
-          },
         },
       ],
     });

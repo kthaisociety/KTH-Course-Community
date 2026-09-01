@@ -8,7 +8,7 @@
   "scripts": {
     "build": "nest build",
     "start": "nest start",
-    "start:dev": "npx dotenv-cli -e .env.local -- nest start --watch",
+    "start:dev": "npx dotenv-cli -e .env -- nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node ./dist/main",
     "test": "jest",

@@ -119,10 +119,21 @@ The frontend will be available at [http://localhost:3000](http://localhost:3000)
 
 ### 7. Ingest Data
 
-After the backend has started, you can ingest course data into ElasticSearch by running the following command:
-
 ```bash
-curl -X POST "http://localhost:8080/ingest/courses"
+npm run dev:be
+```
+After the backend has started, you can ingest course data. 
+1) Set correct INGEST_SECRET in .env. 
+2) Test the endpoint by running: 
+```bash
+export INGEST_SECRET=$(grep '^INGEST_SECRET=' backend-nest/.env | cut -d= -f2-)
+curl -X POST http://localhost:8080/ingest/test-neon -H "x-ingest-key: $INGEST_SECRET"
+```
+
+3) To do the full ingestion, run: 
+```bash
+export INGEST_SECRET=$(grep '^INGEST_SECRET=' backend-nest/.env | cut -d= -f2-)
+curl -X POST http://localhost:8080/ingest/courses/neon -H "x-ingest-key: $INGEST_SECRET"
 ```
 
 This process may take some time. You can monitor the logs from the backend server for progress.
