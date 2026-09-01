@@ -1,6 +1,6 @@
 import { Controller, Get, HttpException, HttpStatus } from "@nestjs/common";
-import { HealthService } from "./health.service";
 import { AllowAnonymous } from "@thallesp/nestjs-better-auth";
+import { HealthService } from "./health.service";
 
 @AllowAnonymous()
 @Controller("health")

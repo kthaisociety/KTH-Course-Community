@@ -25,8 +25,11 @@ module.exports = {
   testTimeout: 10000,
   // Every `.mjs` under node_modules is ESM by definition, so none of them are
   // ignored. Packages listed by name additionally ship ESM with a `.js`
-  // extension.
+  // extension. The leading `(?:...)*` lets the allowlist match a package that
+  // is hoisted into a nested `node_modules` too (better-auth pins its own
+  // copies of `@noble/hashes` and `jose`), which a bare `node_modules/<pkg>/`
+  // check would miss.
   transformIgnorePatterns: [
-    "node_modules/(?!(uuid|@nestjs|@noble|jose)/).*(?<!\\.mjs)$",
+    "node_modules/(?!(?:(?:@[^/]+/)?[^/]+/node_modules/)*(uuid|@nestjs|@noble|jose)/).*(?<!\\.mjs)$",
   ],
 };

@@ -15,6 +15,7 @@ import {
 } from "drizzle-orm/pg-core";
 
 import { users } from "./auth-schema";
+
 export * from "./auth-schema";
 
 export const courseState = pgEnum("course_state", [

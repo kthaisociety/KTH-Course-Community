@@ -1,6 +1,6 @@
 import { Test, type TestingModule } from "@nestjs/testing";
 import { DRIZZLE } from "../db/drizzle.module";
-import { UserService, type UserWithFavorites } from "./user.service";
+import { UserService } from "./user.service";
 
 type MockDb = {
   insert: jest.Mock;
@@ -20,15 +20,6 @@ type MockDb = {
 describe("UserService", () => {
   let userService: UserService;
   let mockDb: MockDb;
-
-  const mockUser = {
-    id: "user-123",
-    email: "Sven@kth.se",
-    name: "Sven",
-    image: null,
-    createdAt: new Date("2023-10-15"),
-    updatedAt: new Date("2023-10-15"),
-  };
 
   const mockUserFavorites = [
     {
@@ -90,32 +81,16 @@ describe("UserService", () => {
     });
   });
 
-  describe("getUser", () => {
-    it("should return user with favorites", async () => {
-      mockDb.limit.mockResolvedValue([mockUser]);
-      jest
-        .spyOn(userService, "getUserFavorites")
-        .mockResolvedValue(["SF1625", "SF1624"]);
-
-      const expected: UserWithFavorites = {
-        ...mockUser,
-        userFavorites: ["SF1625", "SF1624"],
-      };
-
-      const result = await userService.getUser("user-123");
-
-      expect(result).toEqual(expected);
-    });
-  });
-
   describe("deleteUser", () => {
-    it("should delete user and their favorites", async () => {
+    it("deletes the user row and lets the cascades clear what references it", async () => {
       mockDb.where.mockResolvedValue(undefined);
 
       await userService.deleteUser("user-123");
 
-      expect(mockDb.delete).toHaveBeenCalledTimes(2);
-      expect(mockDb.where).toHaveBeenCalledTimes(2);
+      // user_favorites, reviews and review_likes declare `onDelete: "cascade"`
+      // on their users.id foreign key, so one delete is enough.
+      expect(mockDb.delete).toHaveBeenCalledTimes(1);
+      expect(mockDb.where).toHaveBeenCalledTimes(1);
     });
   });
 });

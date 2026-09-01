@@ -17,11 +17,11 @@ export class UserService {
     @Inject(DRIZZLE) private readonly db: NeonHttpDatabase<typeof schema>,
   ) {}
 
-  async getUserFavorites(userId: string): Promise<string[]> {
+  async getUserFavorites(id: string): Promise<string[]> {
     const userFavorites = await this.db
       .select()
       .from(schema.user_favorites)
-      .where(eq(schema.user_favorites.userId, userId));
+      .where(eq(schema.user_favorites.userId, id));
     return userFavorites.map((f) => f.favoriteCourse); // returns just the course codes
   }
 
@@ -65,7 +65,7 @@ export class UserService {
       .set({ image: imageURL })
       .where(eq(schema.users.id, id));
   }
-  
+
   async deleteUser(id: string): Promise<void> {
     // user_favorites, reviews and review_likes all declare
     // `onDelete: "cascade"` on their users.id foreign key, so removing the

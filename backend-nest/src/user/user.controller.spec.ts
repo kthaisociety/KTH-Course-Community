@@ -47,14 +47,6 @@ describe("UserController (HTTP)", () => {
     it("returns the signed-in user's profile", async () => {
       testApp.signInAs();
       mockDb.queueResult([
-        {
-          id: SESSION_USER.id,
-          name: SESSION_USER.name,
-          email: SESSION_USER.email,
-          image: null,
-        },
-      ]);
-      mockDb.queueResult([
         { favoriteCourse: "SF1625" },
         { favoriteCourse: "SF1624" },
       ]);
@@ -68,13 +60,6 @@ describe("UserController (HTTP)", () => {
         userFavorites: ["SF1625", "SF1624"],
         image: null,
       });
-    });
-
-    it("reports 404 when the session's user has no row", async () => {
-      testApp.signInAs();
-      mockDb.queueResult([]);
-
-      await http().get("/user/me").expect(404);
     });
 
     it("rejects anonymous callers", async () => {
