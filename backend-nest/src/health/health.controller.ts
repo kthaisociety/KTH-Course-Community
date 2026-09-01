@@ -1,6 +1,8 @@
 import { Controller, Get, HttpException, HttpStatus } from "@nestjs/common";
 import { HealthService } from "./health.service";
+import { AllowAnonymous } from "@thallesp/nestjs-better-auth";
 
+@AllowAnonymous()
 @Controller("health")
 export class HealthController {
   constructor(private readonly healthService: HealthService) {}

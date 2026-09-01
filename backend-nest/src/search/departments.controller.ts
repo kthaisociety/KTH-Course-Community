@@ -1,6 +1,6 @@
 import { Controller, Get } from "@nestjs/common";
-import { DepartmentsService } from "./departments.service";
 import { AllowAnonymous } from "@thallesp/nestjs-better-auth";
+import { DepartmentsService } from "./departments.service";
 
 @AllowAnonymous()
 @Controller("departments")
