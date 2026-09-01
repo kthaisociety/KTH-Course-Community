@@ -2,8 +2,6 @@
 
 import { ConfigService } from "@nestjs/config";
 import { NestFactory } from "@nestjs/core";
-import { SuperTokensExceptionFilter } from "supertokens-nestjs";
-import supertokens from "supertokens-node";
 import { AllExceptionsFilter } from "./all-exceptions.filter";
 import { AppModule } from "./app.module";
 import { getCorsOrigins } from "./cors";
@@ -14,6 +12,8 @@ async function bootstrap() {
 
   // CORS must include SuperTokens' headers and allow credentials.
   // Origins configured via WEBSITE_DOMAIN + CORS_ORIGINS env vars.
+
+  // TODO: Replace supertokens modules
   app.enableCors({
     origin: getCorsOrigins(),
     allowedHeaders: ["content-type", ...supertokens.getAllCORSHeaders()],

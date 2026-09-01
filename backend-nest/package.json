@@ -44,9 +44,7 @@
     "nanoid": "^3.3.11",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
-    "supertokens-nestjs": "^1.0.1",
-    "supertokens-node": "^24.0.2",
-    "uuid": "^8.3.2",
+    "uuid": "^14.0.2",
     "zod": "^3.23.8"
   },
   "devDependencies": {

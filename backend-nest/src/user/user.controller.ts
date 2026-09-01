@@ -14,21 +14,15 @@ import {
 } from "@nestjs/common";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { put } from "@vercel/blob";
-import {
-  Session,
-  SuperTokensAuthGuard,
-  VerifySession,
-} from "supertokens-nestjs";
-import type { SessionContainer } from "supertokens-node/recipe/session";
 import { UserService } from "./user.service";
 
 @Controller("user")
-@UseGuards(SuperTokensAuthGuard)
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
-  private async resolveAppUserId(session: SessionContainer): Promise<string> {
-    const authUserId = session.getUserId();
+  // TODO: rework with BA
+  private async resolveAppUserId(): Promise<string> {
+    const authUserId = session.getUserId(); 
     const appUserId = await this.userService.resolveAppUserId(authUserId);
     if (!appUserId) {
       throw new NotFoundException(
@@ -39,8 +33,8 @@ export class UserController {
   }
 
   @Get("/me")
-  @VerifySession()
-  async getMe(@Session() session: SessionContainer) {
+  // TODO: rework with BA
+  async getMe() {
     const userId = await this.resolveAppUserId(session);
     const user = await this.userService.getUser(userId);
 
@@ -61,7 +55,7 @@ export class UserController {
 
   // Get user favorite courses
   @Get("/favorites")
-  @VerifySession()
+  // TODO: rework with BA
   async getFavorites(@Session() session: SessionContainer) {
     const userId = await this.resolveAppUserId(session);
     // Can be empty but we accept an empty array of favorite courses
@@ -71,7 +65,7 @@ export class UserController {
 
   // Delete account
   @Delete("/")
-  @VerifySession()
+  // TODO: rework with BA
   async deleteAccount(@Session() session: SessionContainer) {
     const userId = await this.resolveAppUserId(session);
     await this.userService.deleteUser(userId);
@@ -80,7 +74,7 @@ export class UserController {
 
   // Add a course to user favorites
   @Post("/toggle-favorite")
-  @VerifySession()
+  // TODO: rework with BA
   async addFavoriteCourse(
     @Session() session: SessionContainer,
     @Body() body: { courseCode: string },
@@ -97,7 +91,7 @@ export class UserController {
 
   // Upload and save a new profile picture
   @Post("/profile-picture")
-  @VerifySession()
+  // TODO: rework with BA
   @UseInterceptors(
     FileInterceptor("file", {
       limits: { fileSize: 2 * 1024 * 1024 },
@@ -107,6 +101,7 @@ export class UserController {
       },
     }),
   )
+  // TODO: rework with BA
   async uploadProfilePicture(
     @Session() session: SessionContainer,
     @UploadedFile() file: Express.Multer.File,
