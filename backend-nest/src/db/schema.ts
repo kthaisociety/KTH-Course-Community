@@ -17,7 +17,6 @@ import {
 import { users } from "./auth-schema";
 export * from "./auth-schema";
 
-
 export const courseState = pgEnum("course_state", [
   "CANCELLED",
   "ESTABLISHED",
@@ -117,8 +116,6 @@ export const courseExaminations = pgTable(
 
 export type InsertCourseExamination = typeof courseExaminations.$inferInsert;
 export type SelectCourseExamination = typeof courseExaminations.$inferSelect;
-
-
 
 // TODO: This should be removed and replaced with new table
 // junction table for mapping users to favorite courses

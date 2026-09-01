@@ -66,7 +66,7 @@ describe("UserController (HTTP)", () => {
         name: SESSION_USER.name,
         email: SESSION_USER.email,
         userFavorites: ["SF1625", "SF1624"],
-        profilePicture: null,
+        image: null,
       });
     });
 

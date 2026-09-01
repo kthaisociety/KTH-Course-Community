@@ -25,7 +25,7 @@ describe("UserService", () => {
     id: "user-123",
     email: "Sven@kth.se",
     name: "Sven",
-    profilePicture: null,
+    image: null,
     createdAt: new Date("2023-10-15"),
     updatedAt: new Date("2023-10-15"),
   };

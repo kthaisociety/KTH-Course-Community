@@ -1,9 +1,4 @@
-import { randomUUID } from "node:crypto";
-import {
-  Inject,
-  Injectable,
-  InternalServerErrorException,
-} from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 import { and, eq } from "drizzle-orm";
 import type { NeonHttpDatabase } from "drizzle-orm/neon-http";
 import { DRIZZLE } from "../db/drizzle.module";
@@ -22,136 +17,12 @@ export class UserService {
     @Inject(DRIZZLE) private readonly db: NeonHttpDatabase<typeof schema>,
   ) {}
 
-  private isMissingUserAuthIdentitiesTableError(error: unknown): boolean {
-    if (typeof error !== "object" || error === null) {
-      return false;
-    }
-
-    const errorRecord = error as { code?: unknown; message?: unknown };
-    const message =
-      typeof errorRecord.message === "string" ? errorRecord.message : "";
-
-    return (
-      errorRecord.code === "42P01" && message.includes("user_auth_identities")
-    );
-  }
-
-  async resolveAppUserId(authUserId: string): Promise<string | undefined> {
-    try {
-      const mapping = await this.db
-        .select()
-        .from(schema.user_auth_identities)
-        .where(eq(schema.user_auth_identities.authUserId, authUserId))
-        .limit(1);
-      if (mapping[0]) {
-        return mapping[0].userId;
-      }
-    } catch (error) {
-      // Legacy environments may not have the mapping table yet.
-      if (!this.isMissingUserAuthIdentitiesTableError(error)) {
-        throw error;
-      }
-    }
-
-    // Backward compatibility: legacy users used auth ID as app user ID.
-    const legacyUser = await this.db
-      .select({ id: schema.users.id })
-      .from(schema.users)
-      .where(eq(schema.users.id, authUserId))
-      .limit(1);
-    if (legacyUser[0]) {
-      return legacyUser[0].id;
-    }
-    return undefined;
-  }
-
-  async createNewUser(id: string, email: string, name: string): Promise<void> {
-    try {
-      const existingMapping = await this.db
-        .select()
-        .from(schema.user_auth_identities)
-        .where(eq(schema.user_auth_identities.authUserId, id))
-        .limit(1);
-
-      if (existingMapping[0]) {
-        await this.db
-          .update(schema.users)
-          .set({ name, email })
-          .where(eq(schema.users.id, existingMapping[0].userId));
-        return;
-      }
-    } catch (error) {
-      // Legacy environments may not have the mapping table yet.
-      if (!this.isMissingUserAuthIdentitiesTableError(error)) {
-        throw error;
-      }
-    }
-
-    const [appUser] = await this.db
-      .insert(schema.users)
-      .values({
-        id: randomUUID(),
-        email,
-        name,
-      })
-      .onConflictDoUpdate({
-        target: schema.users.email,
-        set: { name, email },
-      })
-      .returning({ id: schema.users.id });
-
-    if (!appUser?.id) {
-      throw new InternalServerErrorException(
-        "Failed to resolve app user ID during signup.",
-      );
-    }
-
-    try {
-      await this.db
-        .insert(schema.user_auth_identities)
-        .values({
-          authUserId: id,
-          userId: appUser.id,
-          createdAt: new Date(),
-        })
-        .onConflictDoNothing({
-          target: schema.user_auth_identities.authUserId,
-        });
-    } catch (error) {
-      // Legacy environments may not have the mapping table yet.
-      if (!this.isMissingUserAuthIdentitiesTableError(error)) {
-        throw error;
-      }
-    }
-  }
-
   async getUserFavorites(userId: string): Promise<string[]> {
     const userFavorites = await this.db
       .select()
       .from(schema.user_favorites)
       .where(eq(schema.user_favorites.userId, userId));
     return userFavorites.map((f) => f.favoriteCourse); // returns just the course codes
-  }
-
-  async getUser(id: string): Promise<UserWithFavorites | undefined> {
-    const users = await this.db
-      .select()
-      .from(schema.users)
-      .where(eq(schema.users.id, id))
-      .limit(1);
-    const user = users[0];
-
-    if (!user) {
-      return undefined;
-    }
-    const userFavorites = await this.getUserFavorites(id);
-
-    // User favorites are fetched from a junction table that could probably be removed and re-worked into a new column in user table.
-    // Also changed to now only return the course codes instead of an object
-    return {
-      ...user,
-      userFavorites: userFavorites,
-    } as UserWithFavorites;
   }
 
   async toggleUserFavorite(userId: string, courseCode: string) {
@@ -188,18 +59,17 @@ export class UserService {
     return { action: "added" };
   }
 
-  async updateProfilePicture(userId: string, profilePictureUrl: string) {
+  async updateImage(id: string, imageURL: string) {
     return await this.db
       .update(schema.users)
-      .set({ profilePicture: profilePictureUrl })
-      .where(eq(schema.users.id, userId));
+      .set({ image: imageURL })
+      .where(eq(schema.users.id, id));
   }
-
+  
   async deleteUser(id: string): Promise<void> {
-    await this.db
-      .delete(schema.user_favorites)
-      .where(eq(schema.user_favorites.userId, id));
-
+    // user_favorites, reviews and review_likes all declare
+    // `onDelete: "cascade"` on their users.id foreign key, so removing the
+    // user row is enough to clear them.
     await this.db.delete(schema.users).where(eq(schema.users.id, id));
   }
 }

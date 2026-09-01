@@ -1,18 +1,16 @@
 // src/app.controller.ts
-
 import {
   BadRequestException,
   Body,
   Controller,
   Delete,
   Get,
-  NotFoundException,
   Post,
   UploadedFile,
-  UseGuards,
   UseInterceptors,
 } from "@nestjs/common";
 import { FileInterceptor } from "@nestjs/platform-express";
+import { Session, type UserSession } from "@thallesp/nestjs-better-auth";
 import { put } from "@vercel/blob";
 import { UserService } from "./user.service";
 
@@ -20,78 +18,51 @@ import { UserService } from "./user.service";
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
-  // TODO: rework with BA
-  private async resolveAppUserId(): Promise<string> {
-    const authUserId = session.getUserId();
-    const appUserId = await this.userService.resolveAppUserId(authUserId);
-    if (!appUserId) {
-      throw new NotFoundException(
-        "Authenticated user is not linked to an app account.",
-      );
-    }
-    return appUserId;
-  }
-
-  @Get("/me")
-  // TODO: rework with BA
-  async getMe() {
-    const userId = await this.resolveAppUserId(session);
-    const user = await this.userService.getUser(userId);
-
-    if (!user) {
-      // Throw an exception if the user exists in SuperTokens but not in the database
-      throw new NotFoundException(
-        `User with ID ${userId} not found in database.`,
-      );
-    }
+  @Get("me")
+  async getMe(@Session() session: UserSession) {
+    const { id, name, email, image } = session.user;
     return {
-      userId: user.id,
-      name: user.name,
-      email: user.email,
-      userFavorites: user.userFavorites,
-      profilePicture: user.profilePicture || null,
+      userId: id,
+      name: name,
+      email: email,
+      image: image,
+      userFavorites: await this.userService.getUserFavorites(id),
     };
   }
 
   // Get user favorite courses
-  @Get("/favorites")
-  // TODO: rework with BA
-  async getFavorites(@Session() session: SessionContainer) {
-    const userId = await this.resolveAppUserId(session);
+  @Get("favorites")
+  async getFavorites(@Session() session: UserSession) {
+    const id = session.user.id;
     // Can be empty but we accept an empty array of favorite courses
-    const userFavorites = await this.userService.getUserFavorites(userId);
+    const userFavorites = await this.userService.getUserFavorites(id);
     return userFavorites;
   }
 
   // Delete account
-  @Delete("/")
-  // TODO: rework with BA
-  async deleteAccount(@Session() session: SessionContainer) {
-    const userId = await this.resolveAppUserId(session);
-    await this.userService.deleteUser(userId);
+  @Delete("/") // endpoint becomes DELETE /api/user
+  // TODO: rework with BA (make sure the Better Auth endpoint is invoked too)
+  async deleteAccount(@Session() session: UserSession) {
+    const id = session.user.id;
+    await this.userService.deleteUser(id);
     return { success: true };
   }
 
   // Add a course to user favorites
-  @Post("/toggle-favorite")
-  // TODO: rework with BA
+  @Post("toggle-favorite")
   async addFavoriteCourse(
-    @Session() session: SessionContainer,
+    @Session() session: UserSession,
     @Body() body: { courseCode: string },
   ) {
-    const userId = await this.resolveAppUserId(session);
+    const id = session.user.id;
     const { courseCode } = body;
 
-    const result = await this.userService.toggleUserFavorite(
-      userId,
-      courseCode,
-    );
+    const result = await this.userService.toggleUserFavorite(id, courseCode);
     return { success: true, action: result.action };
   }
 
   // Upload and save a new profile picture
-  @Post("/profile-picture")
-  // TODO: rework with BA
+  @Post("profile-picture")
   @UseInterceptors(
     FileInterceptor("file", {
       limits: { fileSize: 2 * 1024 * 1024 },
@@ -101,12 +72,11 @@ export class UserController {
       },
     }),
   )
-  // TODO: rework with BA
-  async uploadProfilePicture(
-    @Session() session: SessionContainer,
+  async uploadImage(
+    @Session() session: UserSession,
     @UploadedFile() file: Express.Multer.File,
   ) {
-    const userId = await this.resolveAppUserId(session);
+    const id = session.user.id;
     if (!file) {
       throw new BadRequestException("No file provided or invalid image type");
     }
@@ -116,7 +86,7 @@ export class UserController {
       addRandomSuffix: true,
     });
 
-    await this.userService.updateProfilePicture(userId, blob.url);
+    await this.userService.updateImage(id, blob.url);
     return { url: blob.url };
   }
 }

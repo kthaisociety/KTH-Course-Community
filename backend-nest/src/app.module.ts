@@ -10,6 +10,11 @@ import { ReviewsModule } from "./reviews/reviews.module";
 import { ElasticSearchModule } from "./search/search.module";
 import { UserModule } from "./user/user.module";
 
+// AUTH imports (Better Auth)
+import { AuthModule } from './auth/auth.module';
+import { APP_GUARD } from "@nestjs/core";
+import { AuthGuard } from "@thallesp/nestjs-better-auth";
+
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
@@ -22,6 +27,15 @@ import { UserModule } from "./user/user.module";
     CourseModule,
     ReviewsModule,
     FeedbackModule,
+    AuthModule,
   ],
+
+  // routes all requests through the Better Auth guard / module
+  providers: [
+    {
+      provide: APP_GUARD, 
+      useClass: AuthGuard,
+    }
+  ]
 })
 export class AppModule {}

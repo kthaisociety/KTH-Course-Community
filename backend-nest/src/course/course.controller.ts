@@ -1,6 +1,8 @@
 import { Controller, Get, NotFoundException, Param } from "@nestjs/common";
 import { CourseService } from "./course.service";
+import { AllowAnonymous } from "@thallesp/nestjs-better-auth";
 
+@AllowAnonymous() // ALL endpoints are public / open to non logged-in users
 @Controller("course")
 export class CourseController {
   constructor(private readonly courseService: CourseService) {}
