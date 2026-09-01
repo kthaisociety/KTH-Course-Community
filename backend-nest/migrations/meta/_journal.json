@@ -8,6 +8,13 @@
       "when": 1777643461166,
       "tag": "0000_baseline_current_schema",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1788254785864,
+      "tag": "0005_equal_pestilence",
+      "breakpoints": true
     }
   ]
 }

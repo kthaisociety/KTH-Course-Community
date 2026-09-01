@@ -22,7 +22,7 @@ export class UserController {
 
   // TODO: rework with BA
   private async resolveAppUserId(): Promise<string> {
-    const authUserId = session.getUserId(); 
+    const authUserId = session.getUserId();
     const appUserId = await this.userService.resolveAppUserId(authUserId);
     if (!appUserId) {
       throw new NotFoundException(
