@@ -1,6 +1,1 @@
-export type OauthProvider =
-  | "apple"
-  | "google"
-  | "facebook"
-  | "github"
-  | "microsoft";
+export type OauthProvider = "apple" | "google" | "github" | "microsoft";

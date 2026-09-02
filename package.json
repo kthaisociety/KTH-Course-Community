@@ -52,6 +52,7 @@
     "zod": "^3.23.8"
   },
   "dependencies": {
+    "better-auth": "^1.7.2",
     "drizzle-orm": "0.45.2"
   }
 }

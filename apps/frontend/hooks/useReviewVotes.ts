@@ -3,19 +3,19 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 import { toast } from "sonner";
-import { useMe } from "@/hooks/useMe";
+import { useSessionData } from "@/hooks/sessionHooks";
 import { queryKeys } from "@/lib/query-keys";
 import { likeReview } from "@/lib/reviews";
 
 export function useReviewVotes(courseCode: string) {
   const queryClient = useQueryClient();
-  const { userId } = useMe();
+  const { userId } = useSessionData();
 
   const like = useCallback(
     async (postId: string) => {
       if (!userId) return;
       try {
-        await likeReview(postId, userId);
+        await likeReview(postId);
         await queryClient.invalidateQueries({
           queryKey: queryKeys.reviews(courseCode),
         });

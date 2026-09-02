@@ -1,9 +1,8 @@
 // frontend/views/AuthView.tsx
 
-import type { OauthProvider } from "@shared/types";
+import type { OauthProvider } from "@shared/types"; //TODO: consider if this should be a shared type or not
 import {
   AppleIcon,
-  FacebookIcon,
   GithubIcon,
   GoogleIcon,
   MicrosoftIcon,
@@ -71,20 +70,6 @@ export default function AuthView({
                         <Spinner variant="ring" />
                       ) : (
                         "Login with Google"
-                      )}
-                    </Button>
-                    <Button
-                      disabled={isLoading}
-                      variant="outline"
-                      type="button"
-                      className="w-full"
-                      onClick={() => onSubmit("facebook")}
-                    >
-                      <FacebookIcon />
-                      {isLoading && providerClicked === "facebook" ? (
-                        <Spinner variant="ring" />
-                      ) : (
-                        "Login with Facebook"
                       )}
                     </Button>
                     <Button

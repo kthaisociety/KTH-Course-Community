@@ -12,6 +12,7 @@ You are a test engineer for the KTH-Course-Community monorepo. You write focused
 - **Frontend tests:** No Jest is configured in the frontend (`package.json` script echoes a placeholder). Frontend logic can be tested by adding Jest; for now, focus on backend tests.
 - **E2E:** `apps/backend-nest/test/` using `jest-e2e.json` config with Supertest.
 - **Database mocks:** Backend tests mock the Drizzle DB token (`DRIZZLE`) with a typed `MockDb` object — see existing spec files for the pattern.
+- **Auth in tests:** Better Auth behind a global `AuthGuard`. Use `createAuthTestApp()` from `src/testing/better-auth-test-app.ts` rather than stubbing the guard — see "Overriding providers and guards" below.
 
 ## Write-access behavior
 
@@ -62,7 +63,9 @@ const module = await Test.createTestingModule({ imports: [AppModule] })
   .compile();
 ```
 
-This is the correct pattern when testing controllers that sit inside a full `AppModule` (e.g. E2E-style unit tests) or when you need to strip out the SuperTokens auth guard without importing the full SuperTokens module.
+This is the correct pattern when testing controllers that sit inside a full `AppModule` (e.g. E2E-style unit tests).
+
+**For auth, prefer the existing helper over overriding the guard.** `src/testing/better-auth-test-app.ts` exports `createAuthTestApp()`, which boots a minimal app around the controllers under test with the *real* global `AuthGuard` in place and fakes only `auth.api.getSession`. Call `signInAs()` / `signOut()` to switch identity between requests. Because the guard and the `@Session()` decorator run for real, this is what lets a test observe that `@AllowAnonymous()` routes stay reachable anonymously — an `overrideGuard(AuthGuard).useValue({ canActivate: () => true })` would make every route look public and prove nothing. See `public-routes.spec.ts`, `user.controller.spec.ts` and `reviews.controller.spec.ts`.
 
 ### E2E tests with Supertest
 

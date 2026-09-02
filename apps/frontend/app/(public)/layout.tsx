@@ -3,10 +3,10 @@
 import type { ReactNode } from "react";
 import Navbar from "@/components/Navbar";
 import Topbar from "@/components/Topbar";
-import { useMe } from "@/hooks/useMe";
+import { useSessionData } from "@/hooks/sessionHooks";
 
 export default function PublicLayout({ children }: { children: ReactNode }) {
-  const { isAuthenticated } = useMe();
+  const { isAuthenticated } = useSessionData();
 
   return (
     <div className="min-h-screen flex">

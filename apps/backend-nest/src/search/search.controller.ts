@@ -1,7 +1,9 @@
 import { Controller, Get, Query } from "@nestjs/common";
+import { AllowAnonymous } from "@thallesp/nestjs-better-auth";
 import type { SearchResponse } from "../types/course.types";
 import { SearchService } from "./search.service";
 
+@AllowAnonymous()
 @Controller("search")
 export class SearchController {
   constructor(private readonly searchService: SearchService) {}

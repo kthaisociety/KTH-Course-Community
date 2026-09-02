@@ -5,7 +5,7 @@ if (!process.env.DATABASE_URL) {
 }
 
 export default defineConfig({
-  schema: "./src/db/schema.ts",
+  schema: ["./src/db/schema.ts", "./src/db/auth-schema.ts"], // supports adding multiple schema-files
   out: "./migrations",
   dialect: "postgresql",
   migrations: {

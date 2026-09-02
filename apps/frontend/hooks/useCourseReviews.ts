@@ -10,7 +10,7 @@ export function useCourseReviews(
 ) {
   return useQuery({
     queryKey: [...queryKeys.reviews(courseCode ?? ""), userId ?? ""] as const,
-    queryFn: () => findAllReviews(courseCode as string, userId),
+    queryFn: () => findAllReviews(courseCode as string),
     enabled: Boolean(courseCode),
   });
 }

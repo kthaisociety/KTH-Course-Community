@@ -1,5 +1,5 @@
 import AuthController from "@/controllers/AuthController";
 
-export default function LoginPage() {
+export default function AuthPage() {
   return <AuthController />;
 }

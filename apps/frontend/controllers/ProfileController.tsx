@@ -3,8 +3,8 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
+import { useRequireSession } from "@/hooks/sessionHooks";
 import { useLogout } from "@/hooks/useLogout";
-import { useMe } from "@/hooks/useMe";
 import { queryKeys } from "@/lib/query-keys";
 import { deleteAccount, type Me, uploadProfilePicture } from "@/lib/user";
 import ProfileView from "@/views/ProfileView";
@@ -12,12 +12,12 @@ import ProfileView from "@/views/ProfileView";
 export default function ProfileController() {
   const queryClient = useQueryClient();
   const logout = useLogout();
-  const { user } = useMe();
+  const { user, refetch } = useRequireSession();
   const [preview, setPreview] = useState<string | null>(null);
 
   const name = user?.name ?? "";
   const email = user?.email ?? "";
-  const profilePicture = preview ?? user?.profilePicture ?? null;
+  const image = preview ?? user?.image ?? null;
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -35,9 +35,10 @@ export default function ProfileController() {
     }
 
     queryClient.setQueryData<Me | null>(queryKeys.me, (current) =>
-      current ? { ...current, profilePicture: result.url } : current,
+      current ? { ...current, image: result.url } : current,
     );
     await queryClient.invalidateQueries({ queryKey: queryKeys.me });
+    await refetch();
     setPreview(null);
     URL.revokeObjectURL(localPreview);
   };
@@ -61,7 +62,7 @@ export default function ProfileController() {
     <ProfileView
       name={name}
       email={email}
-      preview={profilePicture}
+      preview={image}
       handleFileChange={handleFileChange}
       handleDeleteAccount={handleDeleteAccount}
     />

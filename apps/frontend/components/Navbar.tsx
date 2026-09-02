@@ -17,12 +17,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useSessionData } from "@/hooks/sessionHooks";
 import { useLogout } from "@/hooks/useLogout";
-import { useMe } from "@/hooks/useMe";
 
 export default function Navbar() {
   const pathname = usePathname();
-  const { user } = useMe();
+  const { user, isPending } = useSessionData();
   const logout = useLogout();
 
   const handleLogout = () => {
@@ -142,9 +142,9 @@ export default function Navbar() {
       <DropdownMenu>
         <DropdownMenuTrigger className="w-full mb-10 h-auto rounded-md text-sm font-medium transition-all gap-2 py-2 pl-2 pr-2 justify-start whitespace-normal cursor-pointer flex items-center group hover:bg-primary-light">
           <Avatar className="w-10 h-10">
-            {user?.profilePicture ? (
+            {user?.image ? (
               <AvatarImage
-                src={user.profilePicture}
+                src={user.image}
                 alt="Profile"
                 className="rounded-full object-cover"
               />
@@ -156,7 +156,7 @@ export default function Navbar() {
           <span className="transition-all group-hover:font-bold">
             {user?.name?.trim() ||
               user?.email?.split("@")[0] ||
-              "Loading user..."}
+              (isPending ? "Loading user..." : "Sign in")}
           </span>
         </DropdownMenuTrigger>
         <DropdownMenuContent>

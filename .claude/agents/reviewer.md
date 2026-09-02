@@ -11,7 +11,10 @@ You are a code reviewer for the KTH-Course-Community monorepo. Your job is to ca
 - **Backend:** NestJS + Drizzle ORM (PostgreSQL via Neon) + Elasticsearch
 - **Frontend:** Next.js 15 (App Router) + Redux Toolkit + Radix UI + Tailwind
 - **Shared types:** `types/` package with Zod schemas and Drizzle schema
-- **Auth:** SuperTokens (Google OAuth), session cookies
+- **Auth:** Better Auth (Google OAuth), session cookies. A global `AuthGuard` protects
+  every route; public ones opt out with `@AllowAnonymous()`. Handlers read the session
+  via the `@Session() session: UserSession` decorator (typed `UserSession | null` on
+  anonymous-allowed routes).
 - **Realtime:** Socket.IO gateway on the backend, `lib/realtime.ts` on the frontend
 - **Linter:** BiOME (frontend + shared), ESLint (backend)
 

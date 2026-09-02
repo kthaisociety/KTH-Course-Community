@@ -4,7 +4,7 @@ import { nestHttpUrl } from "@/lib/nest-http";
 
 export async function createReview(
   courseCode: string,
-  userId: string,
+  _userId: string,
   reviewForm: ReviewFormData,
 ): Promise<void> {
   const res = await fetch(nestHttpUrl("/reviews"), {
@@ -13,20 +13,16 @@ export async function createReview(
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ courseCode, userId, ...reviewForm }),
+    body: JSON.stringify({ courseCode, ...reviewForm }),
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
 }
 
 export async function findAllReviews(
   courseCode: string,
-  userId?: string,
 ): Promise<Review[] | null> {
   const params = new URLSearchParams();
   params.set("courseCode", courseCode);
-  if (userId) {
-    params.set("userId", userId);
-  }
 
   const res = await fetch(`${nestHttpUrl("/reviews")}?${params.toString()}`, {
     cache: "no-store",
@@ -39,17 +35,13 @@ export async function findAllReviews(
   return await res.json();
 }
 
-export async function likeReview(
-  reviewId: string,
-  userId: string,
-): Promise<void> {
+export async function likeReview(reviewId: string): Promise<void> {
   const res = await fetch(nestHttpUrl(`/reviews/${reviewId}/like`), {
     cache: "no-store",
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ userId }),
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
 }

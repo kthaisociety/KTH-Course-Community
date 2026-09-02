@@ -31,6 +31,7 @@
     "node_modules",
     "dist",
     "test",
+    "src/testing",
     "**/*spec.ts",
     "drizzle.config.ts"
   ]

@@ -1,22 +1,18 @@
 "use client";
 
-import Session from "supertokens-auth-react/recipe/session";
 import { nestHttpUrl } from "@/lib/nest-http";
-import { initST } from "@/lib/supertokens.client";
 
 export type Me = {
   userId: string;
   name: string;
   email: string;
   userFavorites: string[];
-  profilePicture: string | null;
+  image: string | null;
 };
 
 export async function getMe(): Promise<Me | null> {
-  initST();
-  if (!(await Session.doesSessionExist())) return null;
-
   const res = await fetch(nestHttpUrl("/user/me"));
+  if (res.status === 401) return null;
   if (!res.ok) {
     throw new Error(`Failed to fetch user: HTTP ${res.status}`);
   }
@@ -31,7 +27,7 @@ export async function getMe(): Promise<Me | null> {
     name: data.name ?? "",
     email: data.email,
     userFavorites: data.userFavorites ?? [],
-    profilePicture: data.profilePicture ?? null,
+    image: data.image ?? null,
   };
 }
 

@@ -8,6 +8,7 @@ export function useMe() {
   const query = useQuery({
     queryKey: queryKeys.me,
     queryFn: getMe,
+    retry: false,
   });
 
   return {

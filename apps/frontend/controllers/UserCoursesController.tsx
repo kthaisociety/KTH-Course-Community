@@ -4,6 +4,7 @@ import type { CourseWithUserInfo } from "@shared/types";
 import { useQueries } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useCallback } from "react";
+import { useRequireSession } from "@/hooks/sessionHooks";
 import { useMe } from "@/hooks/useMe";
 import { useToggleFavorite } from "@/hooks/useToggleFavorite";
 import { getCourseSummary } from "@/lib/courses";
@@ -11,6 +12,7 @@ import { queryKeys } from "@/lib/query-keys";
 import UserCoursesView from "@/views/UserCoursesView";
 
 export default function UserCoursesController() {
+  useRequireSession();
   const { user, isLoading: isSessionLoading } = useMe();
   const toggleFavorite = useToggleFavorite();
   const router = useRouter();
