@@ -42,8 +42,12 @@
   "homepage": "https://github.com/Tegelstenen/course-compass#readme",
   "overrides": {
     "lodash": "^4.18.1",
-    "@angular-devkit/core>picomatch": "^4.0.4",
-    "@esbuild-kit/core-utils>esbuild": ">=0.25.0"
+    "@angular-devkit/core": {
+      "picomatch": "^4.0.4"
+    },
+    "@esbuild-kit/core-utils": {
+      "esbuild": ">=0.25.0"
+    }
   },
   "devDependencies": {
     "@biomejs/biome": "2.2.6",
