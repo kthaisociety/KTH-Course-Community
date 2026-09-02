@@ -1,11 +1,11 @@
 "use client";
 
-import type { CourseWithUserInfo } from "@/types";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useState } from "react";
 import { useMe } from "@/features/auth";
 import { useCourseDetails } from "@/features/courses";
 import { useToggleFavorite } from "@/features/favorites";
+import type { CourseWithUserInfo } from "@/types";
 import { toSearchCoursesInput, useSearchCourses } from "../api/queries";
 import { useDebouncedQuery } from "./use-debounced-query";
 

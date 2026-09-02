@@ -1,10 +1,10 @@
+import { eq, inArray } from "drizzle-orm";
 import type {
   CourseDetails,
   CourseRoundSummary,
   CourseSummary,
   ExamRoundSummary,
 } from "@/types";
-import { eq, inArray } from "drizzle-orm";
 import type { Database } from "./db";
 import {
   courseExaminations,

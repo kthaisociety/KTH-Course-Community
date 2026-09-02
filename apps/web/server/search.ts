@@ -1,5 +1,5 @@
-import type { CourseSummary } from "@/types";
 import { inArray, sql } from "drizzle-orm";
+import type { CourseSummary } from "@/types";
 import { embedSingle } from "./ai";
 import { getSummariesByCodes } from "./course";
 import type { Database } from "./db";
