@@ -14,8 +14,8 @@
         "zod": "^3.23.8",
       },
     },
-    "apps/frontend": {
-      "name": "kth-course-community-frontend",
+    "apps/web": {
+      "name": "kth-course-community-web",
       "version": "0.1.0",
       "dependencies": {
         "@base-ui/react": "^1.7.0",
@@ -892,7 +892,7 @@
 
     "json5": ["json5@2.2.3", "", { "bin": { "json5": "lib/cli.js" } }, "sha512-XmOWe7eyHYH14cLdVPoyg+GOH3rYX++KpzrylJwSW98t3Nk+U8XOl8FWKOgwtzdb8lXGf6zYwDUzeHMWfxasyg=="],
 
-    "kth-course-community-frontend": ["kth-course-community-frontend@workspace:apps/frontend"],
+    "kth-course-community-web": ["kth-course-community-web@workspace:apps/web"],
 
     "kysely": ["kysely@0.29.5", "", {}, "sha512-ooa+eSbBNPTo3MycPEuW5jdrxQdQwdtB3LC3h43FiXQbIry5tR0C5lDG7eealK0E4D7XjrnOP5DIUg/LyjRMYQ=="],
 

@@ -37,15 +37,15 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build and push frontend image
+      - name: Build and push web image
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
         with:
           context: .
-          file: Dockerfile.frontend
+          file: Dockerfile.web
           push: true
           platforms: linux/amd64
           tags: |
-            tegelsten/course-compass-frontend:latest
-            tegelsten/course-compass-frontend:${{ steps.meta.outputs.SHORT_SHA }}
+            tegelsten/course-compass-web:latest
+            tegelsten/course-compass-web:${{ steps.meta.outputs.SHORT_SHA }}
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache,mode=max

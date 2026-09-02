@@ -40,7 +40,7 @@ bun i
 
 ### 3. Set Up Environment Variables
 
-Copy `apps/frontend/.env.example` to `apps/frontend/.env.local` and fill in:
+Copy `apps/web/.env.example` to `apps/web/.env.local` and fill in:
 
 - `DATABASE_URL`
 - `BETTER_AUTH_URL` (the public site origin, e.g. `http://localhost:3000`)
@@ -54,7 +54,7 @@ Google OAuth authorised redirect URI: `${BETTER_AUTH_URL}/api/auth/callback/goog
 ### 4. Set Up the Database
 
 ```bash
-cd apps/frontend
+cd apps/web
 bun run db:push
 ```
 
@@ -79,7 +79,7 @@ This talks to KTH KOPPS and writes into Neon (including embeddings). It can take
 ### 7. Build Docker Image
 
 ```bash
-docker build -t your-dockerhub-username/course-compass-frontend:latest -f Dockerfile.frontend .
+docker build -t your-dockerhub-username/course-compass-web:latest -f Dockerfile.web .
 ```
 
 ## Adding a feature
@@ -87,7 +87,7 @@ docker build -t your-dockerhub-username/course-compass-frontend:latest -f Docker
 Product code is split by layer: **server owns data and auth, features own UI and client queries, `app/` only routes.** Do not put tRPC routers under `features/` — that mixes server-only modules into the browser graph.
 
 ```text
-apps/frontend/
+apps/web/
   app/                         # routes and layouts only
   features/<name>/
     api/queries.ts             # tRPC queryOptions factories
@@ -121,11 +121,11 @@ export const notesRouter = createTRPCRouter({
 });
 ```
 
-Register it on `appRouter` in `server/api/root.ts`. If you need a new table, add it in `server/db/schema.ts` (or `auth-schema.ts` for identity) and run `bun run db:push` from `apps/frontend`. Types that both server and UI share go in `packages/shared`.
+Register it on `appRouter` in `server/api/root.ts`. If you need a new table, add it in `server/db/schema.ts` (or `auth-schema.ts` for identity) and run `bun run db:push` from `apps/web`. Types that both server and UI share go in `packages/shared`.
 
 ### 2. Frontend
 
-Add `apps/frontend/features/<name>/`. Expose query/mutation **options**, not wrapped `useQuery` hooks, so components compose TanStack Query themselves:
+Add `apps/web/features/<name>/`. Expose query/mutation **options**, not wrapped `useQuery` hooks, so components compose TanStack Query themselves:
 
 ```ts
 // features/notes/api/queries.ts
@@ -165,7 +165,7 @@ See `features/search` and `server/api/routers/search.ts` for a complete slice.
 
 ## AI Integration
 
-Search and ingest use the Vercel AI SDK for embeddings via `apps/frontend/server/ai.ts`.
+Search and ingest use the Vercel AI SDK for embeddings via `apps/web/server/ai.ts`.
 
 Get a key at [vercel.com/dashboard → AI Gateway → API Keys](https://vercel.com/dashboard/ai-gateway/api-keys).
 
@@ -181,7 +181,7 @@ Repo-local agent skills live under `.agents/skills/`.
 | Script | Description |
 | --- | --- |
 | `bun run dev` | Starts the Next.js development server |
-| `bun run test:fe` | Runs Vitest |
+| `bun run test:web` | Runs Vitest |
 | `bun run ingest` | Ingests KOPPS courses into Neon |
-| `bun run add:fe` | Adds a dependency to the frontend workspace |
-| `bun run rm:fe` | Removes a dependency from the frontend workspace |
+| `bun run add:web` | Adds a dependency to the web workspace |
+| `bun run rm:web` | Removes a dependency from the web workspace |

@@ -43,4 +43,4 @@ jobs:
       - name: Build shared types
         run: bun run build:shared
       - name: Run tests
-        run: bun run test:fe
+        run: bun run test:web

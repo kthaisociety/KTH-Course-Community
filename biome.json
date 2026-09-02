@@ -62,7 +62,7 @@
   },
   "overrides": [
     {
-      "includes": ["apps/frontend/components/ui/**"],
+      "includes": ["apps/web/components/ui/**"],
       "linter": {
         "enabled": false
       }

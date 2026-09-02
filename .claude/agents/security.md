@@ -126,7 +126,7 @@ Researched April 2026. Check each item against the installed package versions be
 
 **Check:**
 1. Verify Next.js version >= 15.2.3.
-2. Search for auth logic in middleware: `glob apps/frontend/middleware.ts apps/frontend/src/middleware.ts`. If middleware performs auth, this CVE is critical for this project.
+2. Search for auth logic in middleware: `glob apps/web/middleware.ts apps/web/src/middleware.ts`. If middleware performs auth, this CVE is critical for this project.
 3. Even if patched, add a reverse proxy rule (nginx/Caddy) to strip the `x-middleware-subrequest` header from all inbound external requests as defense-in-depth.
 4. Do not rely on middleware alone for authorization — every API route and Server Action must independently verify the session.
 
@@ -176,7 +176,7 @@ vulnerable one. `npm audit` (above) is the authority; if it flags them, report i
 **Check:**
 1. `grep -rn "defaultCookieAttributes\|httpOnly\|sameSite\|secure" apps/backend-nest/src/auth/` — in `auth.ts`, production sets `sameSite: "none"; secure: true` (cross-site API/site origins) and development sets neither, so `Lax` applies and the cookie is not `Secure` over plain http. Flag any `httpOnly: false`, and flag `secure: false` reaching production.
 2. `grep -rn "trustedOrigins\|getCorsOrigins" apps/backend-nest/src/` — the trusted-origin list is shared with CORS. A wildcard or an unintended origin here is both a CORS hole and a redirect hole.
-3. `grep -rn "dangerouslySetInnerHTML" apps/frontend/` — any occurrence must sanitise with DOMPurify first.
+3. `grep -rn "dangerouslySetInnerHTML" apps/web/` — any occurrence must sanitise with DOMPurify first.
 4. Verify the authorised redirect URI in the Google Cloud console is the exact `<site origin>/api/auth/callback/google` — wildcard or subdomain matches allow redirect hijacking.
 5. Check that review/feedback content is rendered as React children (escaped by default), not injected as raw HTML.
 

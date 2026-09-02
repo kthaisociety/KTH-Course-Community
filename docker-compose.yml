@@ -1,8 +1,8 @@
 # Local/prod stack. Auth, tRPC, and Drizzle all run inside the Next.js app.
 services:
-  frontend:
-    image: maxandreasen/course-compass-frontend:latest
-    container_name: frontend
+  web:
+    image: maxandreasen/course-compass-web:latest
+    container_name: web
     restart: always
     environment:
       NODE_ENV: production

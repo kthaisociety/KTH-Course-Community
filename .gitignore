@@ -22,11 +22,11 @@ next-env.d.ts
 types/**/*.d.ts
 
 # =================================
-# FRONTEND (Next.js)
+# WEB (Next.js)
 # =================================
 
 # dependencies
-/apps/frontend/node_modules
+/apps/web/node_modules
 /.pnp
 .pnp.*
 .yarn/*
@@ -37,28 +37,28 @@ types/**/*.d.ts
 
 # Next.js build output
 .next/
-/apps/frontend/out/
-/apps/frontend/build
+/apps/web/out/
+/apps/web/build
 
 # testing
-/apps/frontend/coverage
-/apps/frontend/.nyc_output
+/apps/web/coverage
+/apps/web/.nyc_output
 
 # logs
-/apps/frontend/npm-debug.log*
-/apps/frontend/yarn-debug.log*
-/apps/frontend/yarn-error.log*
-/apps/frontend/.pnpm-debug.log*
+/apps/web/npm-debug.log*
+/apps/web/yarn-debug.log*
+/apps/web/yarn-error.log*
+/apps/web/.pnpm-debug.log*
 
 # Vercel
-/apps/frontend/.vercel
+/apps/web/.vercel
 
 # misc
-/apps/frontend/.temp
-/apps/frontend/.tmp
+/apps/web/.temp
+/apps/web/.tmp
 
 # history
-/apps/frontend/.history
+/apps/web/.history
 
 # =================================
 # BACKEND (Nest.js)
