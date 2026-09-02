@@ -1,24 +1,22 @@
 # KTH-Course-Community
 
-Monorepo for a KTH course community app with a Next.js frontend and a NestJS backend.
+Monorepo for a KTH course community app. Next.js hosts the UI, Better Auth, Drizzle/Neon, and the tRPC API.
 
 ## Quick Reference
 
 - Package manager: `bun` workspaces
-- Frontend: `apps/frontend`
-- Backend: `apps/backend-nest`
-- Shared types: `packages/shared`
+- App: `apps/web`
 - Install: `bun i`
-- Run both: `bun run dev`
-- Run frontend: `bun run dev:fe`
-- Run backend: `bun run dev:be`
-- Backend tests: `bun run test:be`
-- Frontend tests: `bun run test:fe`
+- Run: `bun run dev`
+- Tests: `bun run test:web`
+- Ingest: `bun run ingest`
 
 ## Project Notes
 
-- Embedding helpers live in `apps/backend-nest/src/ai` (used by search/ingest).
-- Frontend talks to the backend using `NEXT_PUBLIC_BACKEND_DOMAIN`.
+- Product UI lives in `apps/web/features/<name>`. `app/` only routes. Feature `index.ts` is the cross-feature API (hooks, shared UI); pages import from `features/<name>/components`. A feature route is one component (data + layout). Split a child only when it has its own name (`CourseCard`, `Review`), not a Screen/View pair. tRPC routers stay in `server/api/routers`.
+- Drizzle (schema, client, kit config, migrations) lives in `apps/web/server/db`. Repositories in `apps/web/server/repositories` import `db` and run queries. Services in `apps/web/server/services` hold business logic and call repositories. tRPC server in `apps/web/server/api`; browser tRPC client in `apps/web/trpc`.
+- Embedding helpers live in `apps/web/server/ai.ts` (used by search/ingest).
+- Browser calls same-origin `/api/trpc` and `/api/auth`.
 - Prefer documenting real behavior from code, not intended behavior.
 
 ## Repo Agent Files

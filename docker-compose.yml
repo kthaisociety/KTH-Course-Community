@@ -1,91 +1,28 @@
-# Local dev stack. On Dokploy (frontend + backend both on the same project/network):
-# - Set NEXT_PUBLIC_* to the public HTTPS URLs users open in the browser (API + site).
-# - Set BACKEND_DOMAIN when building the frontend image (not runtime only), because Next
-#   rewrites are resolved during `next build`.
+# Local/prod stack. Auth, tRPC, and Drizzle all run inside the Next.js app.
 services:
-  frontend:
-    image: maxandreasen/course-compass-frontend:latest
-    container_name: frontend
-
+  web:
+    image: maxandreasen/course-compass-web:latest
+    container_name: web
     restart: always
-
     environment:
       NODE_ENV: production
       PORT: 3000
-      NEXT_PUBLIC_BACKEND_DOMAIN: http://localhost:8080
-      NEXT_PUBLIC_WEBSITE_DOMAIN: http://localhost:3000
-      # Runtime BACKEND_DOMAIN does not affect rewrites in prebuilt images.
-      # Keep for local/adhoc builds where `next build` runs in this env.
-      BACKEND_DOMAIN: http://backend:8080
-
-    ports:
-      - "3000:3000"
-
-    depends_on:
-      - backend
-
-    logging: # used to avoid logs filling up on server disk
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "5"
-
-  backend:
-    image: maxandreasen/course-compass-backend:latest
-    container_name: backend
-    environment: # environmental variables for production
-      NODE_ENV: production
-      PORT: 8080
       DATABASE_URL: ${NEON_DATABASE_URL}
-      WEBSITE_DOMAIN: ${WEBSITE_DOMAIN:-http://localhost:3000}
-      API_DOMAIN: ${API_DOMAIN:-http://localhost:8080}
-      CORS_ORIGINS: ${CORS_ORIGINS:-}
       BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:3000}
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
       AI_GATEWAY_API_KEY: ${AI_GATEWAY_API_KEY:-}
-      INGEST_SECRET: ${INGEST_SECRET:-}
-      # Optional by default; set true (and provide ES_PASSWORD_SECRET) to enable.
-      ELASTICSEARCH_ENABLED: ${ELASTICSEARCH_ENABLED:-false}
-      ELASTICSEARCH_URL: http://elasticsearch:9200
-      ELASTICSEARCH_USERNAME: ${ES_USER_SECRET:-elastic}
-      ELASTICSEARCH_PASSWORD: ${ES_PASSWORD_SECRET:-}
-    
+      BLOB_READ_WRITE_TOKEN: ${BLOB_READ_WRITE_TOKEN:-}
     ports:
-      - "8080:8080"
-    
+      - "3000:3000"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
       interval: 30s
       timeout: 15s
       retries: 5
-    
-    logging: # used to avoid logs filling up on server disk
+    logging:
       driver: "json-file"
       options:
         max-size: "10m"
         max-file: "5"
-
-
-  elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.12.2
-    container_name: elasticsearch
-    restart: always
-    ports:
-      - "9200:9200"
-    environment:
-      - xpack.security.enabled=true # secuirity
-      - ELASTIC_PASSWORD=${ES_PASSWORD_SECRET} 
-      - ELASTIC_USER=${ES_USER_SECRET}
-      - discovery.type=single-node
-    ulimits:
-      memlock:
-        soft: -1
-        hard: -1
-    volumes:
-      - esdata:/usr/share/elasticsearch/data
-
-volumes:
-  esdata:
-    driver: local

@@ -13,8 +13,8 @@
       "!.next",
       "!dist",
       "!build",
-      "!types",
-      "!migrations"
+      "!migrations",
+      "!drizzle"
     ]
   },
   "formatter": {
@@ -61,33 +61,9 @@
   },
   "overrides": [
     {
-      "includes": ["apps/frontend/components/ui/**"],
+      "includes": ["apps/web/components/ui/**"],
       "linter": {
         "enabled": false
-      }
-    },
-    {
-      "includes": [
-        "apps/backend-nest/src/**/*.service.ts",
-        "apps/backend-nest/src/**/*.controller.ts",
-        "apps/backend-nest/src/**/*.module.ts"
-      ],
-      "linter": {
-        "rules": {
-          "style": {
-            "useImportType": "off"
-          }
-        }
-      }
-    },
-    {
-      "includes": ["apps/frontend/views/ProfileView.tsx"],
-      "linter": {
-        "rules": {
-          "performance": {
-            "noImgElement": "off"
-          }
-        }
       }
     }
   ]

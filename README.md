@@ -1,31 +1,29 @@
 # KTH-Course-Community
 
-KTH-Course-Community is a full-stack application designed to help KTH students search for and explore courses. It features a Next.js frontend and a NestJS backend, powered by ElasticSearch for searching and PostgreSQL for data storage.
+KTH-Course-Community helps KTH students search for and explore courses. Next.js
+hosts the UI, Better Auth, Drizzle/Neon, and the tRPC API.
 
 ## Open Source Contribution
-All contributions to the project are very welcome! 
+
+All contributions to the project are very welcome!
 To make a contribution:
--   Open a new issue
-    - Usually good to await comment from code admins before starting working on the feature.      
--   Create a new branch or fork
--   Implement new feature / ticket
--   Create a PR into the Dev branch
-    - Link issue in PR. 
--   Wait for approval or comment by code admins
+
+- Open a new issue
+  - Usually good to await comment from code admins before starting working on the feature.
+- Create a new branch or fork
+- Implement new feature / ticket
+- Create a PR into the Dev branch
+  - Link issue in PR.
+- Wait for approval or comment by code admins
 
 If you have any suggestions you are always welcome to open an issue in the repository!
 
 ## Prerequisites
 
-Before you begin, ensure you have the following installed on your local machine:
-
--   [Node.js](https://nodejs.org/) (v18 or later recommended)
--   [Bun](https://bun.sh/)
--   [Docker Desktop](https://www.docker.com/products/docker-desktop/)
+- [Node.js](https://nodejs.org/) (v18 or later recommended)
+- [Bun](https://bun.sh/)
 
 ## Getting Started
-
-Follow these steps to get the project up and running on your local machine.
 
 ### 1. Clone the Repository
 
@@ -36,171 +34,160 @@ cd KTH-Course-Community
 
 ### 2. Install Dependencies
 
-Install all the necessary dependencies for both the frontend and backend from the root directory.
-
 ```bash
 bun i
 ```
 
 ### 3. Set Up Environment Variables
 
-You'll need to create two `.env` files, one for the backend and one for the frontend.
+Copy `apps/web/.env.example` to `apps/web/.env.local` and fill in:
 
-**Backend (`apps/backend-nest/.env`)**
+- `DATABASE_URL`
+- `BETTER_AUTH_URL` (the public site origin, e.g. `http://localhost:3000`)
+- `BETTER_AUTH_SECRET`
+- `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`
+- `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET`
+- `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` / `AWS_REGION` (SES magic-link email)
+- `SES_SENDER` / `SES_REPLY_TO`
+- `AI_GATEWAY_API_KEY` (embeddings for search/ingest)
+- `BLOB_READ_WRITE_TOKEN` (profile pictures)
 
-Create a file at `apps/backend-nest/.env` and add the following variables.
-
-```env
-# PostgreSQL database connection string
-DATABASE_URL=postgresql://user:password@host:port/database
-
-# Auth (Better Auth, mounted inside Nest at /api/auth)
-# BETTER_AUTH_URL is the frontend/site URL, not this API's, because /api/auth/* is
-# proxied there by Next. Pointing it at the API sets the session cookie on a host
-# the browser never talks to directly, and sign-in silently stops working.
-BETTER_AUTH_URL=http://localhost:3000
-BETTER_AUTH_SECRET= # Generate with: openssl rand -base64 32
-
-# Google OAuth credentials: https://console.cloud.google.com/apis/credentials
-# Add ${BETTER_AUTH_URL}/api/auth/callback/google as an authorised redirect URI.
-GOOGLE_CLIENT_ID=
-GOOGLE_CLIENT_SECRET=
-
-# ElasticSearch credentials
-ELASTICSEARCH_URL=http://localhost:9200
-ELASTICSEARCH_USERNAME=elastic
-ELASTICSEARCH_PASSWORD= # The password you get after starting ElasticSearch
-
-# Application URLs and Port
-PORT=8080
-WEBSITE_DOMAIN=http://localhost:3000
-API_DOMAIN=http://localhost:8080
-
-# Extra CORS origins (comma-separated). WEBSITE_DOMAIN is always included.
-# This list is also Better Auth's trustedOrigins, so an origin missing here is
-# rejected as a post-sign-in redirect target.
-CORS_ORIGINS=
-```
-
-See `apps/backend-nest/.env.example` for the full list, including the ingestion and AI
-variables used later in this guide.
-
-**Frontend (`apps/frontend/.env`)**
-
-Create a file at `apps/frontend/.env` and add the following variables.
-
-```env
-# What the browser calls: REST base URL and the Socket.IO origin.
-NEXT_PUBLIC_BACKEND_DOMAIN=http://localhost:8080
-NEXT_PUBLIC_WEBSITE_DOMAIN=http://localhost:3000
-
-# Server-side only, and read by `next.config.ts` at build time. It is the target
-# of the rewrites that put the backend on the site origin:
-#   /api/auth/* -> Better Auth on the Nest host (so the session cookie is set on
-#                  the origin the browser is already on)
-#   /api/nest/* -> every other Nest route, same-origin, so the cookie is sent
-# Without it there are no rewrites and sign-in cannot complete.
-BACKEND_DOMAIN=http://localhost:8080
-```
+Google OAuth authorised redirect URI: `${BETTER_AUTH_URL}/api/auth/callback/google`.
+GitHub OAuth authorised callback URL: `${BETTER_AUTH_URL}/api/auth/callback/github`.
+Magic-link sign-in sends mail through Amazon SES from `SES_SENDER`.
 
 ### 4. Set Up the Database
 
-This project uses PostgreSQL and `drizzle-orm`. Make sure you have a running PostgreSQL instance and that the `DATABASE_URL` in `apps/backend-nest/.env` is configured correctly.
-
-Once configured, run the database migrations to set up the schema:
-
 ```bash
-cd apps/backend-nest
-bun run db:generate
+cd apps/web
 bun run db:push
 ```
 
-### 5. Start ElasticSearch
-
-You can run a local instance of ElasticSearch using Docker. The following command will download and start it.
-
-```bash
-curl -fsSL https://elastic.co/start-local | sh
-```
-
-When the process has finished, it will print a password for the `elastic` user. **Make sure to copy this password and add it to the `ELASTICSEARCH_PASSWORD` variable in your `apps/backend-nest/.env` file.**
-
-### 6. Start the Development Servers
-
-Start both the frontend and backend from the repo root:
+### 5. Start the Development Server
 
 ```bash
 bun run dev
 ```
 
-The frontend will be available at [http://localhost:3000](http://localhost:3000). To run one side only, use `bun run dev:fe` or `bun run dev:be`.
+The app is at [http://localhost:3000](http://localhost:3000).
 
-### 7. Ingest Data
-
-```bash
-bun run dev:be
-```
-After the backend has started, you can ingest course data. 
-1) Set correct INGEST_SECRET in .env. 
-2) Test the endpoint by running: 
-```bash
-export INGEST_SECRET=$(grep '^INGEST_SECRET=' apps/backend-nest/.env | cut -d= -f2-)
-curl -X POST http://localhost:8080/ingest/test-neon -H "x-ingest-key: $INGEST_SECRET"
-```
-
-3) To do the full ingestion, run: 
-```bash
-export INGEST_SECRET=$(grep '^INGEST_SECRET=' apps/backend-nest/.env | cut -d= -f2-)
-curl -X POST http://localhost:8080/ingest/courses/neon -H "x-ingest-key: $INGEST_SECRET"
-```
-
-This process may take some time. You can monitor the logs from the backend server for progress.
-
-### 8. Build Docker Image (optionally if want to run through containers)
-To build the Docker image, run
+### 6. Ingest Data
 
 ```bash
-docker build -t your-dockerhub-username/course-compass-frontend:latest -f Dockerfile.frontend .
-docker build -t your-dockerhub-username/course-compass-backend:latest -f Dockerfile.backend .
+bun run ingest
 ```
+
+Optional: `bun run ingest -- --test` ingests 10 random established courses.
+
+This talks to KTH KOPPS and writes into Neon (including embeddings). It can take a while.
+
+### 7. Build Docker Image
+
+```bash
+docker build -t your-dockerhub-username/course-compass-web:latest -f Dockerfile.web .
+```
+
+## Adding a feature
+
+Product code is split by layer: **server owns data and auth, features own UI and client queries, `app/` only routes.** Do not put tRPC routers under `features/` — that mixes server-only modules into the browser graph.
+
+```text
+apps/web/
+  app/                         # routes and layouts only
+  features/<name>/
+    api/queries.ts             # tRPC queryOptions factories
+    api/mutations.ts           # tRPC mutationOptions factories
+    components/                # feature UI
+    hooks/                     # feature-local UI state
+    index.ts                   # hooks and shared UI for other features
+  server/
+    <name>.ts                  # domain logic
+    db/                        # schema, client, drizzle-kit, migrations
+    api/routers/<name>.ts      # procedures
+    api/root.ts                # register the router
+  trpc/                        # client + QueryClient
+  types/                       # shared server + UI types
+```
+
+### 1. Server
+
+Keep I/O in `server/<name>.ts`. The router should stay thin: validate input, pick `baseProcedure` or `protectedProcedure`, call the domain function.
+
+`protectedProcedure` requires a Better Auth session (`ctx.session.user`). Visitors may browse courses, search, and read reviews; everything else should be protected. `proxy.ts` only checks that a cookie exists — the procedure is the real gate.
+
+```ts
+// server/api/routers/notes.ts
+export const notesRouter = createTRPCRouter({
+  list: protectedProcedure
+    .input(z.object({ courseCode: z.string() }))
+    .query(({ ctx, input }) => listNotes(ctx.db, ctx.session.user.id, input)),
+  create: protectedProcedure
+    .input(createNoteSchema)
+    .mutation(({ ctx, input }) => createNote(ctx.db, ctx.session.user.id, input)),
+});
+```
+
+Register it on `appRouter` in `server/api/root.ts`. If you need a new table, add it in `server/db/schema.ts` (or `auth-schema.ts` for identity) and run `bun run db:push` from `apps/web`. Types that both server and UI share go in `types/`.
+
+### 2. Frontend
+
+Add `apps/web/features/<name>/`. Expose query/mutation **options**, not wrapped `useQuery` hooks, so components compose TanStack Query themselves:
+
+```ts
+// features/notes/api/queries.ts
+export function useNotesQueries() {
+  const trpc = useTRPC();
+  return {
+    list: (courseCode: string) =>
+      trpc.notes.list.queryOptions({ courseCode }),
+  };
+}
+```
+
+```ts
+// features/notes/api/mutations.ts
+export function useNotesMutations() {
+  const trpc = useTRPC();
+  return {
+    create: () => trpc.notes.create.mutationOptions(),
+  };
+}
+```
+
+Put feature UI in `components/` — no required `screen`/`view` naming. Other features import hooks/shared UI from `features/<name>` (`index.ts`). **Pages import the route component from `features/<name>/components`** so a barrel does not pull that page into unrelated routes.
+
+```tsx
+// app/(service)/notes/page.tsx
+import { NoteList } from "@/features/notes/components/note-list";
+
+export default function Page() {
+  return <NoteList />;
+}
+```
+
+Reuse existing features instead of duplicating them (`useMe` / session from `auth`, course cards from `courses`, `useToggleFavorite` from `favorites`). Leave shadcn primitives in `components/ui`.
+
+See `features/search` and `server/api/routers/search.ts` for a complete slice.
 
 ## AI Integration
 
-Search and ingest use the Vercel AI SDK for embeddings via `apps/backend-nest/src/ai/ai.service.ts`.
-
-Add `AI_GATEWAY_API_KEY` to `apps/backend-nest/.env.local`:
-
-```env
-AI_GATEWAY_API_KEY=your_key_here
-```
+Search and ingest use the Vercel AI SDK for embeddings via `apps/web/server/ai.ts`.
 
 Get a key at [vercel.com/dashboard → AI Gateway → API Keys](https://vercel.com/dashboard/ai-gateway/api-keys).
 
 ## Agent Files
 
-This repo also includes short root-level agent instruction files:
-
 - `AGENTS.md` for Codex/OpenAI-style agents
 - `CLAUDE.md` for Claude-oriented workflows
 
-Both files are intentionally concise and point agents to the same core project facts: workspace layout, common commands, and where the AI SDK integration lives.
-
-Repo-local agent skills live under `.agents/skills/`. Right now the repo includes:
-
-- `.agents/skills/ai-sdk/SKILL.md` for AI SDK-specific guidance used in this codebase
+Repo-local agent skills live under `.agents/skills/`.
 
 ## Available Scripts
 
-The following scripts are available to be run from the root directory:
-
-| Script         | Description                                        |
-| -------------- | -------------------------------------------------- |
-| `bun run dev`      | Starts the frontend and backend development servers. |
-| `bun run dev:fe`   | Starts the frontend development server.            |
-| `bun run dev:be`   | Starts the backend development server.             |
-| `bun run add:fe`   | Adds a dependency to the frontend workspace.     |
-| `bun run add:be`   | Adds a dependency to the backend workspace.      |
-| `bun run rm:fe`    | Removes a dependency from the frontend workspace.  |
-| `bun run rm:be`    | Removes a dependency from the backend workspace.   |
-
-Other scripts can be found in the `package.json` files within the `apps/frontend` and `apps/backend-nest` directories.
+| Script | Description |
+| --- | --- |
+| `bun run dev` | Starts the Next.js development server |
+| `bun run test:web` | Runs Vitest |
+| `bun run ingest` | Ingests KOPPS courses into Neon |
+| `bun run add:web` | Adds a dependency to the web workspace |
+| `bun run rm:web` | Removes a dependency from the web workspace |

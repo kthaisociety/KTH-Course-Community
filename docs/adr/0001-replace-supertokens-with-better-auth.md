@@ -89,14 +89,14 @@ backfill, email-relinking or compatibility shim was written.
   course-code rooms and broadcasts "reviews changed" — nothing user-specific
   crosses it — and it connects cross-origin directly to the backend rather than
   through the Next.js rewrites. Revisit if it ever carries per-user data.
-- **Frontend route protection is optimistic.** `frontend/proxy.ts` checks for the
+- **Frontend route protection is optimistic.** `apps/web/proxy.ts` checks for the
   *existence* of the session cookie and redirects to `/auth` when it is absent; it
   never validates. The backend guards remain the real enforcement.
-- **Google is the sole provider.** The UI stubs for other providers keep their
-  "not supported yet" behaviour.
+- **Google and magic link.** Email sign-in is a magic link sent through Amazon
+  SES. The UI stubs for other OAuth providers keep their previous behaviour.
 
 This ADR is the intended long-term home for the name "SuperTokens": once the
 remnant purge is finished it should be the only place in the repo that mentions
 it. At the time of writing one other mention survives, a comment in
-`frontend/.env.example` explaining why `NEXT_PUBLIC_WEBSITE_DOMAIN` is still
+`apps/web/.env.example` explaining why `NEXT_PUBLIC_WEBSITE_DOMAIN` is still
 declared but unread.

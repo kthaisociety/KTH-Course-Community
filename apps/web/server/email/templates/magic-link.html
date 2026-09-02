@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="theme-color" content="#003984">
+    <meta name="author" content="{{appName}}">
+    <meta name="description" content="{{appDescription}}">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        .email-footer img {
+            display: inline-block
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            font-size: 100%;
+            font-family: "Roboto", "Arial", sans-serif;
+            line-height: 1.65
+        }
+
+        img {
+            max-width: 100%;
+            margin: 0 auto;
+            display: block
+        }
+
+        body,
+        .body-wrap {
+            width: 100% !important;
+            height: 100%
+        }
+
+        a {
+            color: #000000;
+            text-decoration: none
+        }
+
+        .text-center {
+            text-align: center
+        }
+
+        h1,
+        h2,
+        h3,
+        h4,
+        h5,
+        h6 {
+            margin-bottom: 25px;
+            line-height: 1.25;
+            color: #333
+        }
+
+        p,
+        ul,
+        ol {
+            font-size: 16px;
+            font-weight: normal;
+            margin-bottom: 20px;
+            color: #333
+        }
+
+        .container {
+            display: block !important;
+            clear: both !important;
+            margin: 0 auto !important;
+            max-width: 580px !important
+        }
+
+        .container table {
+            width: 100% !important;
+            border-collapse: collapse
+        }
+
+        .container .masthead {
+            padding: 40px 25px;
+            background: #ffffff;
+            color: #000000
+        }
+
+        .container .content {
+            background: white;
+            padding: 30px 35px
+        }
+
+        .container .content.footer {
+            background: 0;
+            padding: 25px 30px 35px 30px
+        }
+
+        .container .content.footer p {
+            margin-bottom: 0;
+            color: #888;
+            text-align: center;
+            font-size: 14px
+        }
+
+        .container .content.footer a {
+            color: #888;
+            text-decoration: none;
+            font-weight: bold
+        }
+
+        .email-button {
+            display: inline-block;
+            border: 0;
+            border-radius: 8px;
+            color: #fff !important;
+            padding: 14px 32px !important;
+            margin-top: -1px;
+            background-color: #1751A6;
+            font-size: 16px;
+            font-weight: 600 !important
+        }
+
+        .email-legal {
+            font-weight: 400 !important;
+            text-transform: uppercase;
+            font-size: 12px;
+            margin-left: 7.5px;
+            margin-right: 7.5px
+        }
+    </style>
+</head>
+
+<body>
+    <table class="body-wrap">
+        <tr>
+            <td class="container" style="padding-top: 35px !important;">
+                <table>
+                    <tr>
+                        <td align="center" class="masthead">
+                            <img style="height: 36px; width: 168px;" src="{{logoUrl}}" alt="{{appName}}" />
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="content" style="margin: 30px 35px !important; background-color:#f8f8f8;">
+                            <p>Hello!</p>
+                            <p>Click the link below to sign in. If you did not try to sign in, please disregard this message.</p>
+                            <table>
+                                <tr>
+                                    <td align="center">
+                                        <p>
+                                            <a href="{{url}}" class="email-button">Sign in</a>
+                                        </p>
+                                    </td>
+                                </tr>
+                            </table>
+                            <p style="margin:0;">Best,<br>{{appName}}</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="container" style="margin: 0 auto !important;">
+                            <table>
+                                <tr>
+                                    <td class="content footer" align="center">
+                                        <p style="margin: 5px auto; display: inline-block;" class="email-footer">Sent
+                                            with 💛 by students at KTH 🇸🇪</p>
+                                        <br>
+                                        <a href="{{legalNoticeUrl}}" class="email-legal">Legal notice</a>
+                                        <a href="{{termsAndConditionsUrl}}" class="email-legal">Terms and
+                                            Conditions</a>
+                                        <a href="{{privacyAndCookiesUrl}}" class="email-legal">Privacy and Cookies</a>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+
+</html>

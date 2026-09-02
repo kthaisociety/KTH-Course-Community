@@ -7,10 +7,10 @@
  * Usage: Reference this in your drizzle.config.ts
  */
 
-import { config } from 'dotenv';
-import type { Config } from 'drizzle-kit';
+import { config } from "dotenv";
+import type { Config } from "drizzle-kit";
 
-config({ path: '.env.local' });
+config({ path: ".env.local" });
 
 /**
  * Drizzle Configuration for Neon Postgres
@@ -22,16 +22,16 @@ config({ path: '.env.local' });
 const dbUrl = process.env.DATABASE_URL;
 
 if (!dbUrl) {
-  throw new Error('DATABASE_URL environment variable is not set');
+  throw new Error("DATABASE_URL environment variable is not set");
 }
 
 // Determine connection type based on environment
-const isServerless = process.env.RUNTIME === 'edge' ||
-                    process.env.VERCEL_ENV === 'production';
+const isServerless =
+  process.env.RUNTIME === "edge" || process.env.VERCEL_ENV === "production";
 
 export default {
-  schema: './src/db/schema.ts', // Path to your schema file
-  out: './src/db/migrations', // Output directory for migrations
+  schema: "./src/db/schema.ts", // Path to your schema file
+  out: "./src/db/migrations", // Output directory for migrations
 
   // Database connection
   dbCredentials: {
@@ -40,11 +40,11 @@ export default {
 
   // Migration options
   migrations: {
-    prefix: 'timestamp', // or 'none'
+    prefix: "timestamp", // or 'none'
   },
 
   // Verbose logging for debugging
-  verbose: process.env.DEBUG === 'true',
+  verbose: process.env.DEBUG === "true",
 
   // Strict mode ensures all migrations are applied
   strict: true,
