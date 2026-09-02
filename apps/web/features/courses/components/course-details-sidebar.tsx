@@ -2,7 +2,17 @@
 
 import { ExternalLink, X } from "lucide-react";
 import type { ReactNode } from "react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatHp, formatTerm, kthCourseUrl } from "@/lib/kth";
 import { sanitizeCourseHtml } from "@/lib/sanitize-html";
@@ -19,7 +29,7 @@ export type CourseDetailsSidebarProps = {
 
 function SectionTitle({ children }: { children: ReactNode }) {
   return (
-    <h3 className="border-b border-border pb-1.5 text-base font-semibold uppercase tracking-wide text-foreground">
+    <h3 className="text-base font-semibold uppercase tracking-wide text-foreground">
       {children}
     </h3>
   );
@@ -37,39 +47,35 @@ export function CourseDetailsSidebar({
   const showError = !details && !loading && error;
 
   return (
-    <div className="flex h-full flex-col overflow-hidden rounded-lg border border-border bg-card shadow-sm">
-      <header className="flex shrink-0 items-start justify-between gap-3 border-b border-border px-5 py-4">
-        <div className="min-w-0 flex-1">
-          <p className="text-muted-foreground text-xs uppercase tracking-wide">
-            Course details
-          </p>
-          <p className="mt-0.5 truncate text-sm font-medium text-foreground">
-            {headerCode}
-          </p>
-        </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onClose}
-          aria-label="Close course details"
-          className="h-8 w-8 shrink-0"
-        >
-          <X className="h-4 w-4" />
-        </Button>
-      </header>
-
-      <div className="scrollbar-subtle flex-1 overflow-y-auto px-5 py-4">
+    <Card className="h-full gap-0 p-0">
+      <CardHeader className="p-5">
+        <CardDescription>Course details</CardDescription>
+        <CardTitle>{headerCode}</CardTitle>
+        <CardAction>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onClose}
+            aria-label="Close course details"
+          >
+            <X />
+          </Button>
+        </CardAction>
+      </CardHeader>
+      <Separator />
+      <CardContent className="scrollbar-subtle min-h-0 flex-1 overflow-y-auto p-5">
         {showError ? (
-          <div className="rounded-md border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
-            Could not load course. {error}
-          </div>
+          <Alert variant="destructive">
+            <AlertTitle>Could not load course</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
         ) : showSkeleton ? (
           <SidebarSkeleton />
         ) : details ? (
           <SidebarContent details={details} />
         ) : null}
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -80,31 +86,27 @@ function SidebarContent({ details }: { details: CourseDetails }) {
         <h2 className="text-xl font-semibold capitalize leading-tight text-foreground">
           {details.titleEng}
         </h2>
-        <p className="mt-1 text-muted-foreground text-sm">
+        <p className="mt-1 text-sm text-muted-foreground">
           {formatHp(details.credits)} hp · {details.courseCode}
           {details.department ? ` · ${details.department}` : ""}
         </p>
-        <Button
-          variant="outline"
-          size="sm"
-          className="mt-3 h-8 gap-2 text-xs"
-          asChild
-        >
+        <Button variant="outline" size="sm" className="mt-3" asChild>
           <a
             href={kthCourseUrl(details.courseCode)}
             target="_blank"
             rel="noopener noreferrer"
           >
-            <ExternalLink className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+            <ExternalLink data-icon="inline-start" />
             Open on KTH.se
           </a>
         </Button>
       </div>
 
       {details.rounds.length > 0 && (
-        <div>
+        <div className="flex flex-col gap-3">
           <SectionTitle>Offerings</SectionTitle>
-          <ul className="mt-3 flex flex-col gap-1.5 text-sm">
+          <Separator />
+          <ul className="flex flex-col gap-1.5 text-sm">
             {details.rounds.map((r, idx) => (
               <li
                 key={`${r.startTerm}-${r.formattedPeriodsAndCredits ?? ""}-${idx}`}
@@ -131,9 +133,10 @@ function SidebarContent({ details }: { details: CourseDetails }) {
       )}
 
       {details.examinations.length > 0 && (
-        <div>
+        <div className="flex flex-col gap-3">
           <SectionTitle>Examinations</SectionTitle>
-          <ul className="mt-3 flex flex-col gap-1.5 text-sm">
+          <Separator />
+          <ul className="flex flex-col gap-1.5 text-sm">
             {details.examinations.map((e) => (
               <li
                 key={e.examCode}
@@ -159,10 +162,11 @@ function SidebarContent({ details }: { details: CourseDetails }) {
         </div>
       )}
 
-      <div>
+      <div className="flex flex-col gap-3">
         <SectionTitle>Content</SectionTitle>
+        <Separator />
         <div
-          className="prose prose-sm mt-3 max-w-none text-foreground dark:prose-invert"
+          className="prose prose-sm mt-0 max-w-none text-foreground dark:prose-invert"
           /** biome-ignore lint/security/noDangerouslySetInnerHtml: sanitized with DOMPurify */
           dangerouslySetInnerHTML={{
             __html: sanitizeCourseHtml(details.content),
@@ -170,10 +174,11 @@ function SidebarContent({ details }: { details: CourseDetails }) {
         />
       </div>
 
-      <div>
+      <div className="flex flex-col gap-3">
         <SectionTitle>Goals</SectionTitle>
+        <Separator />
         <div
-          className="prose prose-sm mt-3 max-w-none text-foreground dark:prose-invert"
+          className="prose prose-sm mt-0 max-w-none text-foreground dark:prose-invert"
           /** biome-ignore lint/security/noDangerouslySetInnerHtml: sanitized with DOMPurify */
           dangerouslySetInnerHTML={{
             __html: sanitizeCourseHtml(details.goals),
@@ -187,18 +192,18 @@ function SidebarContent({ details }: { details: CourseDetails }) {
 function SidebarSkeleton() {
   return (
     <div className="flex flex-col gap-5">
-      <div className="space-y-2">
+      <div className="flex flex-col gap-2">
         <Skeleton className="h-6 w-4/5" />
         <Skeleton className="h-3 w-2/3" />
         <Skeleton className="mt-2 h-8 w-32 rounded-md" />
       </div>
-      <div className="space-y-2">
+      <div className="flex flex-col gap-2">
         <Skeleton className="h-3 w-16" />
         <Skeleton className="h-3 w-full" />
         <Skeleton className="h-3 w-[92%]" />
         <Skeleton className="h-3 w-4/5" />
       </div>
-      <div className="space-y-2">
+      <div className="flex flex-col gap-2">
         <Skeleton className="h-3 w-24" />
         <Skeleton className="h-3 w-full" />
         <Skeleton className="h-3 w-full" />

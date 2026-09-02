@@ -9,7 +9,7 @@ import {
   MicrosoftIcon,
 } from "@/components/icon";
 import { Button } from "@/components/ui/button";
-import { Spinner } from "@/components/ui/shadcn-io/spinner";
+import { Spinner } from "@/components/ui/spinner";
 import { authClient } from "@/lib/auth-client";
 import type { OauthProvider } from "@/types";
 
@@ -41,65 +41,63 @@ export function AuthProviders() {
 
   return (
     <form>
-      <div className="grid gap-6">
-        <div className="flex flex-col gap-4">
-          <Button
-            disabled={isLoading}
-            variant="outline"
-            type="button"
-            className="w-full"
-            onClick={() => handleSubmit("apple")}
-          >
+      <div className="flex flex-col gap-4">
+        <Button
+          disabled={isLoading}
+          variant="outline"
+          type="button"
+          className="w-full"
+          onClick={() => handleSubmit("apple")}
+        >
+          {isLoading && providerClicked === "apple" ? (
+            <Spinner data-icon="inline-start" />
+          ) : (
             <AppleIcon />
-            {isLoading && providerClicked === "apple" ? (
-              <Spinner variant="ring" />
-            ) : (
-              "Login with Apple"
-            )}
-          </Button>
-          <Button
-            disabled={isLoading}
-            variant="outline"
-            type="button"
-            className="w-full"
-            onClick={() => handleSubmit("google")}
-          >
+          )}
+          Login with Apple
+        </Button>
+        <Button
+          disabled={isLoading}
+          variant="outline"
+          type="button"
+          className="w-full"
+          onClick={() => handleSubmit("google")}
+        >
+          {isLoading && providerClicked === "google" ? (
+            <Spinner data-icon="inline-start" />
+          ) : (
             <GoogleIcon />
-            {isLoading && providerClicked === "google" ? (
-              <Spinner variant="ring" />
-            ) : (
-              "Login with Google"
-            )}
-          </Button>
-          <Button
-            disabled={isLoading}
-            variant="outline"
-            type="button"
-            className="w-full"
-            onClick={() => handleSubmit("github")}
-          >
+          )}
+          Login with Google
+        </Button>
+        <Button
+          disabled={isLoading}
+          variant="outline"
+          type="button"
+          className="w-full"
+          onClick={() => handleSubmit("github")}
+        >
+          {isLoading && providerClicked === "github" ? (
+            <Spinner data-icon="inline-start" />
+          ) : (
             <GithubIcon />
-            {isLoading && providerClicked === "github" ? (
-              <Spinner variant="ring" />
-            ) : (
-              "Login with Github"
-            )}
-          </Button>
-          <Button
-            disabled={isLoading}
-            variant="outline"
-            type="button"
-            className="w-full"
-            onClick={() => handleSubmit("microsoft")}
-          >
+          )}
+          Login with Github
+        </Button>
+        <Button
+          disabled={isLoading}
+          variant="outline"
+          type="button"
+          className="w-full"
+          onClick={() => handleSubmit("microsoft")}
+        >
+          {isLoading && providerClicked === "microsoft" ? (
+            <Spinner data-icon="inline-start" />
+          ) : (
             <MicrosoftIcon />
-            {isLoading && providerClicked === "microsoft" ? (
-              <Spinner variant="ring" />
-            ) : (
-              "Login with Microsoft"
-            )}
-          </Button>
-        </div>
+          )}
+          Login with Microsoft
+        </Button>
       </div>
     </form>
   );

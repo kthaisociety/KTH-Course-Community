@@ -1,7 +1,15 @@
 "use client";
 
+import { Bookmark } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback } from "react";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import {
   getMockChartData,
   getMockCourseStats,
@@ -103,10 +111,18 @@ export function Favorites() {
         )}
 
         {!isListLoading && userFavoriteCourses.length === 0 && (
-          <p className="rounded-lg border border-dashed border-border bg-muted/20 px-6 py-12 text-center text-muted-foreground text-sm">
-            You have no saved courses yet. Save courses from explore to see them
-            here.
-          </p>
+          <Empty className="border">
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <Bookmark />
+              </EmptyMedia>
+              <EmptyTitle>No saved courses</EmptyTitle>
+              <EmptyDescription>
+                You have no saved courses yet. Save courses from explore to see
+                them here.
+              </EmptyDescription>
+            </EmptyHeader>
+          </Empty>
         )}
       </div>
     </div>

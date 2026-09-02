@@ -14,8 +14,16 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
+import {
+  Field,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+  FieldLegend,
+  FieldSet,
+} from "@/components/ui/field";
 import { Rating, RatingButton } from "@/components/ui/shadcn-io/rating";
+import { Spinner } from "@/components/ui/spinner";
 import { Switch } from "@/components/ui/switch";
 import { useMe } from "@/features/auth";
 import { useAddReview } from "../hooks/use-add-review";
@@ -95,7 +103,7 @@ export function Review({
             Add Review
           </Button>
         </DialogTrigger>
-        <DialogContent className="max-w-4xl min-w-3xl max-h-[100vh] overflow-y-auto">
+        <DialogContent className="max-h-[100vh] max-w-4xl min-w-3xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Share Your Experience</DialogTitle>
             <DialogDescription>
@@ -103,15 +111,12 @@ export function Review({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-8 py-6">
-            {/* Rating Section */}
-            <div className="space-y-6">
-              <h3 className="text-lg font-semibold">Rate the Course</h3>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <Label className="text-sm font-medium">
-                    Examination methods
-                  </Label>
+          <FieldGroup className="py-6">
+            <FieldSet>
+              <FieldLegend>Rate the Course</FieldLegend>
+              <FieldGroup>
+                <Field orientation="horizontal">
+                  <FieldLabel>Examination methods</FieldLabel>
                   <Rating
                     value={reviewForm.examinationMethods}
                     onValueChange={(value) =>
@@ -125,12 +130,10 @@ export function Review({
                       <RatingButton key={`difficulty-star-${i + 1}`} />
                     ))}
                   </Rating>
-                </div>
+                </Field>
 
-                <div className="flex items-center justify-between">
-                  <Label className="text-sm font-medium">
-                    Theory vs applied
-                  </Label>
+                <Field orientation="horizontal">
+                  <FieldLabel>Theory vs applied</FieldLabel>
                   <Rating
                     value={reviewForm.theoreticalVsApplied}
                     onValueChange={(value) =>
@@ -144,10 +147,10 @@ export function Review({
                       <RatingButton key={`usefulness-star-${i + 1}`} />
                     ))}
                   </Rating>
-                </div>
+                </Field>
 
-                <div className="flex items-center justify-between">
-                  <Label className="text-sm font-medium">Workload</Label>
+                <Field orientation="horizontal">
+                  <FieldLabel>Workload</FieldLabel>
                   <Rating
                     value={reviewForm.workload}
                     onValueChange={(value) =>
@@ -161,12 +164,10 @@ export function Review({
                       <RatingButton key={`workload-star-${i + 1}`} />
                     ))}
                   </Rating>
-                </div>
+                </Field>
 
-                <div className="flex items-center justify-between">
-                  <Label className="text-sm font-medium">
-                    Learning experience
-                  </Label>
+                <Field orientation="horizontal">
+                  <FieldLabel>Learning experience</FieldLabel>
                   <Rating
                     value={reviewForm.learningExperience}
                     onValueChange={(value) =>
@@ -180,15 +181,15 @@ export function Review({
                       <RatingButton key={`learning-star-${i + 1}`} />
                     ))}
                   </Rating>
-                </div>
-              </div>
-            </div>
+                </Field>
+              </FieldGroup>
+            </FieldSet>
 
-            {/* Recommendation Section */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Recommendation</h3>
-              <div className="flex items-center space-x-3">
+            <FieldSet>
+              <FieldLegend>Recommendation</FieldLegend>
+              <Field orientation="horizontal">
                 <Switch
+                  id="recommendation"
                   checked={reviewForm.wouldRecommend}
                   onCheckedChange={(checked) =>
                     setReviewForm({
@@ -197,46 +198,31 @@ export function Review({
                     })
                   }
                 />
-                <Label htmlFor="recommendation" className="text-sm">
+                <FieldLabel htmlFor="recommendation">
                   I would recommend this course
-                </Label>
-              </div>
-            </div>
+                </FieldLabel>
+              </Field>
+            </FieldSet>
 
-            {/* Content Section */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Your Review</h3>
-              <div className="space-y-2">
-                {/* <Textarea
-                id="review-content"
-                placeholder="Share your experience, what you learned, and any tips for future students..."
-                value={reviewForm.content}
-                onChange={(e) =>
-                  setReviewForm({
-                    ...reviewForm,
-                    content: e.target.value,
-                  })
-                }
-                className="min-h-[120px] resize-none"
-              /> */}
-                <div>
-                  <RichTextEditor
-                    onContentChange={(content) =>
-                      setReviewForm({
-                        ...reviewForm,
-                        content: content,
-                      })
-                    }
-                  />
-                </div>
-                <div className="flex justify-between items-center text-xs text-muted-foreground">
-                  <span>Be constructive and respectful</span>
-                </div>
-              </div>
-            </div>
-          </div>
+            <FieldSet>
+              <FieldLegend>Your Review</FieldLegend>
+              <Field>
+                <RichTextEditor
+                  onContentChange={(content) =>
+                    setReviewForm({
+                      ...reviewForm,
+                      content: content,
+                    })
+                  }
+                />
+                <FieldDescription>
+                  Be constructive and respectful
+                </FieldDescription>
+              </Field>
+            </FieldSet>
+          </FieldGroup>
 
-          <DialogFooter className="flex gap-3 pt-4">
+          <DialogFooter>
             <DialogClose asChild>
               <Button
                 type="button"
@@ -251,6 +237,7 @@ export function Review({
               onClick={handleAddReview}
               disabled={isFormInvalid || isSubmittingReviewForm}
             >
+              {isSubmittingReviewForm && <Spinner data-icon="inline-start" />}
               {isSubmittingReviewForm ? "Submitting..." : "Submit Review"}
             </Button>
           </DialogFooter>

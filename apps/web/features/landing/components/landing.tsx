@@ -1,9 +1,9 @@
 "use client";
 
 import { motion, type Variants } from "framer-motion";
+import { ArrowRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { ArrowRightIcon } from "@/components/icon";
 import Topbar from "@/components/Topbar";
 import { Button } from "@/components/ui/button";
 import { useSessionData } from "@/features/auth";
@@ -144,26 +144,12 @@ export function Landing() {
           }}
           className="flex relative z-10 w-full pt-8"
         >
-          <Button
-            asChild
-            size="lg"
-            variant="default"
-            className="h-15 text-lg px-9"
-          >
-            <motion.button
-              type="button"
-              onClick={onSubmit}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="relative inline-block px-8 py-4 font-bold text-white rounded-lg overflow-hidden cursor-pointer"
-            >
-              <span className="absolute inset-0 bg-gradient-to-l from-primary to-secondary bg-[length:125%_100%] bg-[100%_10%] transition-all duration-500 ease-out hover:bg-[length:200%_100%] hover:bg-[0%_0%]" />
-              <span className="relative z-10 flex items-center gap-2">
-                Get started
-                <ArrowRightIcon />
-              </span>
-            </motion.button>
-          </Button>
+          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+            <Button size="lg" onClick={onSubmit}>
+              Get started
+              <ArrowRight data-icon="inline-end" />
+            </Button>
+          </motion.div>
         </motion.div>
       </motion.div>
     </div>

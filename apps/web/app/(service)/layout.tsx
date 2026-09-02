@@ -1,19 +1,10 @@
 import type React from "react";
-import Navbar from "../../components/Navbar";
+import { AppShell } from "@/components/layout";
 
 export default function ServiceLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  return (
-    <div className="min-h-screen flex">
-      <aside className="xl:w-80 md:w-50 w-50 fixed h-full">
-        <Navbar />
-      </aside>
-      <main className="flex-1 ml-50 xl:ml-80 md:ml-50 overflow-auto">
-        {children}
-      </main>
-    </div>
-  );
+  return <AppShell>{children}</AppShell>;
 }

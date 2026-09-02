@@ -1,9 +1,25 @@
 import { TRPCError } from "@trpc/server";
-import { ArrowLeft, ExternalLink } from "lucide-react";
+import { ArrowLeft, ExternalLink, MessageSquare } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
+import { Separator } from "@/components/ui/separator";
 import { Post } from "@/features/reviews/components/post";
 import { Review } from "@/features/reviews/components/review";
 import { formatHp, formatTerm, kthCourseUrl } from "@/lib/kth";
@@ -50,44 +66,34 @@ export async function Course({
   const hp = formatHp(details.credits);
 
   return (
-    <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-4 pb-16 pt-6">
-      <Link
-        href={backHref}
-        className="inline-flex w-fit items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-      >
-        <ArrowLeft className="h-4 w-4 shrink-0" aria-hidden />
-        {backLabel}
-      </Link>
+    <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-4 pt-6 pb-16">
+      <Button variant="ghost" className="w-fit" asChild>
+        <Link href={backHref}>
+          <ArrowLeft data-icon="inline-start" />
+          {backLabel}
+        </Link>
+      </Button>
 
-      <div className="overflow-hidden rounded-lg border border-border bg-card shadow-sm">
-        <div className="flex flex-col gap-4 p-5 md:flex-row md:items-start md:justify-between">
-          <div className="min-w-0 flex-1">
-            <h1 className="text-2xl font-semibold capitalize leading-tight text-foreground">
-              {details.titleEng}
-            </h1>
-            <p className="mt-1 text-muted-foreground text-sm">
-              {hp} hp · {details.courseCode}
-              {details.department ? ` · ${details.department}` : ""}
-            </p>
-          </div>
-          <div className="flex shrink-0 flex-col gap-2 sm:flex-row sm:items-center">
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-9 gap-2 text-sm"
-              asChild
-            >
+      <Card>
+        <CardHeader>
+          <CardTitle className="capitalize">{details.titleEng}</CardTitle>
+          <CardDescription>
+            {hp} hp · {details.courseCode}
+            {details.department ? ` · ${details.department}` : ""}
+          </CardDescription>
+          <CardAction>
+            <Button variant="outline" size="sm" asChild>
               <a href={kthUrl} target="_blank" rel="noopener noreferrer">
-                <ExternalLink className="h-4 w-4 shrink-0 text-muted-foreground" />
+                <ExternalLink data-icon="inline-start" />
                 Open on KTH.se
               </a>
             </Button>
-          </div>
-        </div>
-      </div>
+          </CardAction>
+        </CardHeader>
+      </Card>
 
-      <section className="rounded-lg border border-border bg-card p-5 shadow-sm">
-        <div className="flex flex-col gap-6">
+      <Card>
+        <CardContent className="flex flex-col gap-6">
           <div>
             <SectionTitle id="course-goals">Goals</SectionTitle>
             <div
@@ -98,7 +104,7 @@ export async function Course({
               }}
             />
           </div>
-          <div className="h-px bg-border" />
+          <Separator />
           <div>
             <SectionTitle id="course-content">Course content</SectionTitle>
             <div
@@ -109,65 +115,75 @@ export async function Course({
               }}
             />
           </div>
-        </div>
-      </section>
+        </CardContent>
+      </Card>
 
       {details.rounds.length > 0 && (
-        <section className="rounded-lg border border-border bg-card p-5 shadow-sm">
-          <SectionTitle>Course offerings</SectionTitle>
-          <ul className="mt-3 flex flex-col gap-2 text-sm">
-            {details.rounds.map((r, idx) => (
-              <li
-                key={`${r.startTerm}-${r.formattedPeriodsAndCredits ?? ""}-${idx}`}
-                className="flex flex-wrap items-center gap-2 text-foreground"
-              >
-                <span className="font-medium">{formatTerm(r.startTerm)}</span>
-                {r.formattedPeriodsAndCredits && (
-                  <span className="text-muted-foreground">
-                    · {r.formattedPeriodsAndCredits}
-                  </span>
-                )}
-                {r.language && (
-                  <span className="text-muted-foreground">· {r.language}</span>
-                )}
-                {r.tutoringForm && (
-                  <span className="text-muted-foreground">
-                    · {r.tutoringForm}
-                  </span>
-                )}
-              </li>
-            ))}
-          </ul>
-        </section>
+        <Card>
+          <CardHeader>
+            <SectionTitle>Course offerings</SectionTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="flex flex-col gap-2 text-sm">
+              {details.rounds.map((r, idx) => (
+                <li
+                  key={`${r.startTerm}-${r.formattedPeriodsAndCredits ?? ""}-${idx}`}
+                  className="flex flex-wrap items-center gap-2 text-foreground"
+                >
+                  <span className="font-medium">{formatTerm(r.startTerm)}</span>
+                  {r.formattedPeriodsAndCredits && (
+                    <span className="text-muted-foreground">
+                      · {r.formattedPeriodsAndCredits}
+                    </span>
+                  )}
+                  {r.language && (
+                    <span className="text-muted-foreground">
+                      · {r.language}
+                    </span>
+                  )}
+                  {r.tutoringForm && (
+                    <span className="text-muted-foreground">
+                      · {r.tutoringForm}
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
       )}
 
       {details.examinations.length > 0 && (
-        <section className="rounded-lg border border-border bg-card p-5 shadow-sm">
-          <SectionTitle>Examinations</SectionTitle>
-          <ul className="mt-3 flex flex-col gap-2 text-sm">
-            {details.examinations.map((e: ExamRoundSummary) => (
-              <li
-                key={e.examCode}
-                className="flex flex-wrap items-center gap-2 text-foreground"
-              >
-                <span className="font-medium">{e.examCode}</span>
-                {e.title && (
-                  <span className="text-muted-foreground">· {e.title}</span>
-                )}
-                {e.credits != null && (
-                  <span className="text-muted-foreground">
-                    · {e.credits} hp
-                  </span>
-                )}
-                {e.gradeScaleCode && (
-                  <span className="text-muted-foreground">
-                    · {e.gradeScaleCode}
-                  </span>
-                )}
-              </li>
-            ))}
-          </ul>
-        </section>
+        <Card>
+          <CardHeader>
+            <SectionTitle>Examinations</SectionTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="flex flex-col gap-2 text-sm">
+              {details.examinations.map((e: ExamRoundSummary) => (
+                <li
+                  key={e.examCode}
+                  className="flex flex-wrap items-center gap-2 text-foreground"
+                >
+                  <span className="font-medium">{e.examCode}</span>
+                  {e.title && (
+                    <span className="text-muted-foreground">· {e.title}</span>
+                  )}
+                  {e.credits != null && (
+                    <span className="text-muted-foreground">
+                      · {e.credits} hp
+                    </span>
+                  )}
+                  {e.gradeScaleCode && (
+                    <span className="text-muted-foreground">
+                      · {e.gradeScaleCode}
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
       )}
 
       <section aria-labelledby="reviews-heading">
@@ -177,7 +193,7 @@ export async function Course({
         >
           Student reviews
         </h2>
-        <p className="mb-4 text-muted-foreground text-sm">
+        <p className="mb-4 text-sm text-muted-foreground">
           Here are review insights and student comments about the course.
         </p>
         <Review courseCode={details.courseCode} openOnLoad={openReviewOnLoad} />
@@ -186,7 +202,7 @@ export async function Course({
             reviews.map((review) => (
               <Post
                 key={review.id}
-                className="w-full max-w-full border border-border bg-card shadow-sm"
+                className="w-full max-w-full"
                 courseCode={details.courseCode}
                 wouldRecommend={review.wouldRecommend}
                 content={review.content}
@@ -200,9 +216,17 @@ export async function Course({
               />
             ))
           ) : (
-            <div className="rounded-lg border border-dashed border-border bg-muted/20 px-6 py-12 text-center text-muted-foreground text-sm">
-              No reviews yet. Be the first to add a review for this course.
-            </div>
+            <Empty className="border">
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <MessageSquare />
+                </EmptyMedia>
+                <EmptyTitle>No reviews yet</EmptyTitle>
+                <EmptyDescription>
+                  Be the first to add a review for this course.
+                </EmptyDescription>
+              </EmptyHeader>
+            </Empty>
           )}
         </div>
       </section>

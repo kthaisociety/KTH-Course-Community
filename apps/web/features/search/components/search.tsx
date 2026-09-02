@@ -2,17 +2,32 @@
 
 import { SearchIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupInput,
+} from "@/components/ui/input-group";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
 import { Rating, RatingButton } from "@/components/ui/shadcn-io/rating";
-import { Spinner } from "@/components/ui/shadcn-io/spinner";
+import { Spinner } from "@/components/ui/spinner";
 import {
   getMockChartData,
   getMockCourseStats,
@@ -210,19 +225,28 @@ export function Search() {
         onSubmit={onSubmit}
         className="flex shrink-0 items-center justify-center gap-4 px-6 pb-6"
       >
-        <input
-          className="rounded-md outline p-2 w-64 text-center"
-          type="text"
-          value={localQuery}
-          onChange={(e) => setLocalQuery(e.target.value)}
-          placeholder="Search course..."
-        />
-        <Button variant="outline" className="h-10 w-10 p-0">
-          {isLoading ? <Spinner variant="ring" /> : <SearchIcon />}
-        </Button>
+        <InputGroup className="w-72">
+          <InputGroupInput
+            type="text"
+            value={localQuery}
+            onChange={(e) => setLocalQuery(e.target.value)}
+            placeholder="Search course..."
+          />
+          <InputGroupAddon align="inline-end">
+            <InputGroupButton type="submit" size="icon-xs" aria-label="Search">
+              {isLoading ? <Spinner /> : <SearchIcon />}
+            </InputGroupButton>
+          </InputGroupAddon>
+        </InputGroup>
       </form>
       {error && (
-        <p className="shrink-0 pb-4 text-center text-red-600">Error: {error}</p>
+        <Alert
+          variant="destructive"
+          className="mx-auto mb-4 max-w-4xl shrink-0"
+        >
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
       )}
 
       <div className="flex min-h-0 flex-1 w-full pb-6 pr-4">
@@ -241,11 +265,13 @@ export function Search() {
                   <SelectValue placeholder="School..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="EECS">EECS</SelectItem>
-                  <SelectItem value="ABE">ABE</SelectItem>
-                  <SelectItem value="CBH">CBH</SelectItem>
-                  <SelectItem value="ITM">ITM</SelectItem>
-                  <SelectItem value="SCI">SCI</SelectItem>
+                  <SelectGroup>
+                    <SelectItem value="EECS">EECS</SelectItem>
+                    <SelectItem value="ABE">ABE</SelectItem>
+                    <SelectItem value="CBH">CBH</SelectItem>
+                    <SelectItem value="ITM">ITM</SelectItem>
+                    <SelectItem value="SCI">SCI</SelectItem>
+                  </SelectGroup>
                 </SelectContent>
               </Select>
 
@@ -261,26 +287,25 @@ export function Search() {
                   <SelectValue placeholder="Minimum Rating..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {Array.from({ length: 5 }).map((_, ratingValue) => {
-                    const value = ratingValue + 1;
-                    return (
-                      <SelectItem
-                        key={`selectitem-${value}`}
-                        value={value.toString()}
-                      >
-                        <Rating value={value} readOnly>
-                          {(
-                            ["one", "two", "three", "four", "five"] as const
-                          ).map((starId) => (
-                            <RatingButton
-                              key={`star-${value}-${starId}`}
-                              className="text-yellow-600"
-                            />
-                          ))}
-                        </Rating>
-                      </SelectItem>
-                    );
-                  })}
+                  <SelectGroup>
+                    {Array.from({ length: 5 }).map((_, ratingValue) => {
+                      const value = ratingValue + 1;
+                      return (
+                        <SelectItem
+                          key={`selectitem-${value}`}
+                          value={value.toString()}
+                        >
+                          <Rating value={value} readOnly>
+                            {(
+                              ["one", "two", "three", "four", "five"] as const
+                            ).map((starId) => (
+                              <RatingButton key={`star-${value}-${starId}`} />
+                            ))}
+                          </Rating>
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectGroup>
                 </SelectContent>
               </Select>
 
@@ -303,6 +328,20 @@ export function Search() {
                   </li>
                 ))}
               </ul>
+            )}
+
+            {!isLoading && results.length === 0 && (
+              <Empty className="border">
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    <SearchIcon />
+                  </EmptyMedia>
+                  <EmptyTitle>No courses found</EmptyTitle>
+                  <EmptyDescription>
+                    Try a different search or clear filters.
+                  </EmptyDescription>
+                </EmptyHeader>
+              </Empty>
             )}
 
             <ul className="flex flex-col gap-4">
@@ -378,17 +417,14 @@ export function Search() {
         )}
       </div>
 
-      <Dialog
+      <Drawer
         open={showDrawer}
         onOpenChange={(open) => {
           if (!open) onCloseDetails();
         }}
       >
-        <DialogContent
-          showCloseButton={false}
-          className="h-[90vh] max-w-[calc(100%-1rem)] p-0 overflow-hidden gap-0"
-        >
-          <DialogTitle className="sr-only">Course details</DialogTitle>
+        <DrawerContent className="h-[90vh] overflow-hidden">
+          <DrawerTitle className="sr-only">Course details</DrawerTitle>
           {selectedCode && (
             <CourseDetailsSidebar
               courseCode={selectedCode}
@@ -398,8 +434,8 @@ export function Search() {
               onClose={onCloseDetails}
             />
           )}
-        </DialogContent>
-      </Dialog>
+        </DrawerContent>
+      </Drawer>
     </div>
   );
 }

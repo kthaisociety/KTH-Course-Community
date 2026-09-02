@@ -1,12 +1,18 @@
 "use client";
 
-import { ErrorMessage, Field, Form, Formik } from "formik";
+import { ErrorMessage, Form, Formik, Field as FormikField } from "formik";
 import { Send } from "lucide-react";
 import { toast } from "sonner";
-import { Textarea } from "@/components/Textarea";
 import { Button } from "@/components/ui/button";
+import {
+  Field,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Spinner } from "@/components/ui/spinner";
+import { Textarea } from "@/components/ui/textarea";
 import { useSubmitFeedback } from "../api/mutations";
 
 export function FeedbackForm() {
@@ -41,59 +47,67 @@ export function FeedbackForm() {
         }
       }}
     >
-      {({ isSubmitting }) => (
-        <Form className="space-y-6">
-          <div>
-            <Label htmlFor="name">Name</Label>
-            <Field as={Input} id="name" name="name" placeholder="Your name" />
-            <ErrorMessage
-              name="name"
-              component="p"
-              className="text-sm text-destructive mt-1"
-            />
-          </div>
+      {({ isSubmitting, errors, touched }) => (
+        <Form>
+          <FieldGroup>
+            <Field data-invalid={Boolean(errors.name && touched.name)}>
+              <FieldLabel htmlFor="name">Name</FieldLabel>
+              <FormikField
+                as={Input}
+                id="name"
+                name="name"
+                placeholder="Your name"
+                aria-invalid={Boolean(errors.name && touched.name)}
+              />
+              <ErrorMessage name="name">
+                {(msg) => <FieldError>{msg}</FieldError>}
+              </ErrorMessage>
+            </Field>
 
-          <div>
-            <Label htmlFor="email">Email</Label>
-            <Field
-              as={Input}
-              id="email"
-              name="email"
-              type="email"
-              placeholder="your.email@kth.se"
-            />
-            <ErrorMessage
-              name="email"
-              component="p"
-              className="text-sm text-destructive mt-1"
-            />
-          </div>
+            <Field data-invalid={Boolean(errors.email && touched.email)}>
+              <FieldLabel htmlFor="email">Email</FieldLabel>
+              <FormikField
+                as={Input}
+                id="email"
+                name="email"
+                type="email"
+                placeholder="your.email@kth.se"
+                aria-invalid={Boolean(errors.email && touched.email)}
+              />
+              <ErrorMessage name="email">
+                {(msg) => <FieldError>{msg}</FieldError>}
+              </ErrorMessage>
+            </Field>
 
-          <div>
-            <Label htmlFor="message">Message</Label>
-            <Field
-              as={Textarea}
-              id="message"
-              name="message"
-              rows={6}
-              placeholder="Tell us what's on your mind..."
-            />
-            <ErrorMessage
-              name="message"
-              component="p"
-              className="text-sm text-destructive mt-1"
-            />
-          </div>
+            <Field data-invalid={Boolean(errors.message && touched.message)}>
+              <FieldLabel htmlFor="message">Message</FieldLabel>
+              <FormikField
+                as={Textarea}
+                id="message"
+                name="message"
+                rows={6}
+                placeholder="Tell us what's on your mind..."
+                aria-invalid={Boolean(errors.message && touched.message)}
+              />
+              <ErrorMessage name="message">
+                {(msg) => <FieldError>{msg}</FieldError>}
+              </ErrorMessage>
+            </Field>
 
-          <Button
-            type="submit"
-            disabled={isSubmitting}
-            className="w-full"
-            size="lg"
-          >
-            <Send className="w-4 h-4 mr-2" />
-            Send Message
-          </Button>
+            <Button
+              type="submit"
+              disabled={isSubmitting}
+              className="w-full"
+              size="lg"
+            >
+              {isSubmitting ? (
+                <Spinner data-icon="inline-start" />
+              ) : (
+                <Send data-icon="inline-start" />
+              )}
+              Send Message
+            </Button>
+          </FieldGroup>
         </Form>
       )}
     </Formik>

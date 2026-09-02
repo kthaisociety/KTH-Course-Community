@@ -2,37 +2,27 @@
 import parse from "html-react-parser";
 import DOMPurify from "isomorphic-dompurify";
 import { useState } from "react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+} from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { useReviewVotes } from "../hooks/use-review-votes";
 import PostActionBar from "./post-action-bar";
 
 const MAX_COLLAPSED_CHARS = 280;
 
-type RatingScaleEntry = {
-  min: number;
-  label: string;
-  className: string;
-};
-
-const RATING_SCALE: RatingScaleEntry[] = [
-  { min: 5, label: "Excellent", className: "bg-emerald-600 text-white" },
-  { min: 4, label: "Good", className: "bg-emerald-400 text-black/80" },
-  { min: 3, label: "Average", className: "bg-amber-400 text-black/80" },
-  { min: 2, label: "Poor", className: "bg-orange-400 text-black/80" },
-  { min: 1, label: "Bad", className: "bg-rose-400 text-black/80" },
-  { min: 0, label: "Terrible", className: "bg-rose-700 text-white" },
-];
-
 function truncateHtmlAtWord(html: string, max: number) {
   if (html.length <= max) return html;
 
-  // Create a temporary DOM element to parse HTML
   const tempDiv = document.createElement("div");
   tempDiv.innerHTML = html;
 
-  // Get text content to find the truncation point
   const textContent = tempDiv.textContent || "";
   if (textContent.length <= max) return html;
 
@@ -40,7 +30,6 @@ function truncateHtmlAtWord(html: string, max: number) {
   const lastSpace = slice.lastIndexOf(" ");
   const truncateAt = lastSpace > 0 ? lastSpace : max;
 
-  // Now we need to truncate the HTML while preserving structure
   let currentLength = 0;
   let result = "";
 
@@ -64,13 +53,11 @@ function truncateHtmlAtWord(html: string, max: number) {
       const tagName = element.tagName.toLowerCase();
       result += `<${tagName}`;
 
-      // Add attributes
       for (const attr of Array.from(element.attributes)) {
         result += ` ${attr.name}="${attr.value}"`;
       }
       result += ">";
 
-      // Process children
       for (const child of Array.from(element.childNodes)) {
         if (!processNode(child)) {
           break;
@@ -98,14 +85,21 @@ function normalizeRating(r: number | undefined | null) {
   return Math.min(5, Math.max(0, Math.round(r)));
 }
 
-function ratingToStyle(rating: number | null) {
-  if (rating === null)
-    return { label: "N/A", className: "bg-neutral-200 text-neutral-700" };
-  for (const entry of RATING_SCALE) {
-    if (rating >= entry.min)
-      return { label: entry.label, className: entry.className };
-  }
-  return { label: "N/A", className: "bg-neutral-200 text-neutral-700" };
+function ratingLabel(rating: number | null) {
+  if (rating === null) return "N/A";
+  if (rating >= 5) return "Excellent";
+  if (rating >= 4) return "Good";
+  if (rating >= 3) return "Average";
+  if (rating >= 2) return "Poor";
+  if (rating >= 1) return "Bad";
+  return "Terrible";
+}
+
+function ratingVariant(rating: number | null) {
+  if (rating === null) return "secondary" as const;
+  if (rating >= 4) return "default" as const;
+  if (rating >= 3) return "outline" as const;
+  return "destructive" as const;
 }
 
 type RatingPillProps = {
@@ -114,24 +108,17 @@ type RatingPillProps = {
 };
 
 function RatingPill({ name, rating }: Readonly<RatingPillProps>) {
-  const style = ratingToStyle(rating);
+  const label = ratingLabel(rating);
   const value = rating ?? "-";
   const aria =
     rating === null
       ? `${name}: not available`
-      : `${name}: ${value} out of 5 (${style.label})`;
+      : `${name}: ${value} out of 5 (${label})`;
 
   return (
     <div className="flex items-center gap-2" title={aria}>
-      <span className="text-sm text-muted-foreground w-20">{name}</span>
-      <div
-        className={cn(
-          "inline-flex h-8 min-w-8 items-center justify-center rounded-md px-2 text-sm font-medium",
-          style.className,
-        )}
-      >
-        {value}
-      </div>
+      <span className="w-20 text-sm text-muted-foreground">{name}</span>
+      <Badge variant={ratingVariant(rating)}>{value}</Badge>
     </div>
   );
 }
@@ -143,20 +130,12 @@ type RecommendChipProps = {
 function RecommendChip(props: Readonly<RecommendChipProps>) {
   const label = props.wouldRecommend ? "Yes" : "No";
   const aria = `Would recommend: ${label}`;
-  const style = props.wouldRecommend
-    ? "bg-sky-600 text-white"
-    : "bg-neutral-200 text-neutral-700";
   return (
     <div className="flex items-center gap-2" title={aria}>
-      <span className="text-sm text-muted-foreground w-20">Recommend</span>
-      <div
-        className={cn(
-          "inline-flex h-8 items-center justify-center rounded-md px-2 text-sm font-medium",
-          style,
-        )}
-      >
+      <span className="w-20 text-sm text-muted-foreground">Recommend</span>
+      <Badge variant={props.wouldRecommend ? "default" : "secondary"}>
         {label}
-      </div>
+      </Badge>
     </div>
   );
 }
@@ -194,7 +173,7 @@ export function Post(props: Readonly<PostProps>) {
 
   return (
     <Card className={cn("w-[48rem] max-w-full", props.className)}>
-      <CardContent className="flex flex-col gap-4">
+      <CardHeader>
         <div className="grid grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-5">
           <RatingPill name="Exam methods" rating={examinationMethods} />
           <RatingPill name="Theory vs applied" rating={theoreticalVsApplied} />
@@ -202,15 +181,16 @@ export function Post(props: Readonly<PostProps>) {
           <RatingPill name="Learning exp." rating={learningExperience} />
           <RecommendChip wouldRecommend={props.wouldRecommend} />
         </div>
+      </CardHeader>
 
-        <div className="h-px bg-border/60" />
+      <Separator />
 
-        <div className="prose prose-sm md:prose-base max-w-none">
+      <CardContent>
+        <div className="prose prose-sm max-w-none md:prose-base">
           <div>{parse(DOMPurify.sanitize(displayContent))}</div>
           {isLong && (
             <Button
               variant="link"
-              className="inline text-sm text-primary hover:underline"
               onClick={() => setExpanded((v) => !v)}
               aria-expanded={expanded}
             >
@@ -218,8 +198,10 @@ export function Post(props: Readonly<PostProps>) {
             </Button>
           )}
         </div>
+      </CardContent>
 
-        {props.postId && (
+      {props.postId && (
+        <CardFooter className="justify-end">
           <PostActionBar
             postId={props.postId}
             likeCount={props.likeCount || 0}
@@ -228,8 +210,8 @@ export function Post(props: Readonly<PostProps>) {
             onPostLike={like}
             onPostDislike={dislike}
           />
-        )}
-      </CardContent>
+        </CardFooter>
+      )}
     </Card>
   );
 }
