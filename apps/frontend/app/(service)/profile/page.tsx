@@ -1,5 +1,5 @@
-import ProfileController from "@/controllers/ProfileController";
+import { ProfileScreen } from "@/features/profile";
 
 export default function ProfilePage() {
-  return <ProfileController />;
+  return <ProfileScreen />;
 }

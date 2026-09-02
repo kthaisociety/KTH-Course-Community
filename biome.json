@@ -66,16 +66,6 @@
       "linter": {
         "enabled": false
       }
-    },
-    {
-      "includes": ["apps/frontend/views/ProfileView.tsx"],
-      "linter": {
-        "rules": {
-          "performance": {
-            "noImgElement": "off"
-          }
-        }
-      }
     }
   ]
 }

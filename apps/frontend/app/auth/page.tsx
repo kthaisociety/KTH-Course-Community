@@ -1,5 +1,5 @@
-import AuthController from "@/controllers/AuthController";
+import { AuthScreen } from "@/features/auth/components/auth-screen";
 
 export default function AuthPage() {
-  return <AuthController />;
+  return <AuthScreen />;
 }

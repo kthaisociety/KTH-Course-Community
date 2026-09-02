@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import Navbar from "@/components/Navbar";
 import Topbar from "@/components/Topbar";
-import { useSessionData } from "@/hooks/sessionHooks";
+import { useSessionData } from "@/features/auth";
 
 export default function PublicLayout({ children }: { children: ReactNode }) {
   const { isAuthenticated } = useSessionData();

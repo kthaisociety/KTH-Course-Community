@@ -1,5 +1,5 @@
-import HomeController from "@/controllers/HomeController";
+import { LandingScreen } from "@/features/landing";
 
 export default function Home() {
-  return <HomeController />;
+  return <LandingScreen />;
 }

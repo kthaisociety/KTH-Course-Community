@@ -17,8 +17,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useSessionData } from "@/hooks/sessionHooks";
-import { useLogout } from "@/hooks/useLogout";
+import { useLogout, useSessionData } from "@/features/auth";
 
 export default function Navbar() {
   const pathname = usePathname();

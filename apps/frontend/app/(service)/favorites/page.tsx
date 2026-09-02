@@ -1,5 +1,5 @@
-import UserCoursesController from "../../../controllers/UserCoursesController";
+import { FavoritesScreen } from "@/features/favorites/components/favorites-screen";
 
 export default function Page() {
-  return <UserCoursesController />;
+  return <FavoritesScreen />;
 }

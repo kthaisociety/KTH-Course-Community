@@ -1,8 +1,5 @@
-"use client";
-import CourseController from "@/controllers/CourseController";
+import { CourseScreen } from "@/features/courses/components/course-screen";
 
-const CourseView = () => {
-  return <CourseController />;
-};
-
-export default CourseView;
+export default function Page() {
+  return <CourseScreen />;
+}
