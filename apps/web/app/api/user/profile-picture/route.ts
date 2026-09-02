@@ -1,7 +1,6 @@
 import { put } from "@vercel/blob";
 import { getAuth } from "@/server/auth";
-import { getDb } from "@/server/db";
-import { updateImage } from "@/server/user";
+import { updateImage } from "@/server/services/user";
 
 export const runtime = "nodejs";
 
@@ -39,6 +38,6 @@ export async function POST(request: Request) {
     access: "public",
     addRandomSuffix: true,
   });
-  await updateImage(getDb(), session.user.id, blob.url);
+  await updateImage(session.user.id, blob.url);
   return Response.json({ url: blob.url });
 }

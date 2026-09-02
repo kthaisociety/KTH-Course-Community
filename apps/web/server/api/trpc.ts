@@ -1,12 +1,10 @@
 import { initTRPC, TRPCError } from "@trpc/server";
 import { getAuth } from "@/server/auth";
-import { getDb } from "@/server/db";
 import { ForbiddenError, NotFoundError } from "@/server/errors";
 
 export const createTRPCContext = async (opts: { headers: Headers }) => {
   const session = await getAuth().api.getSession({ headers: opts.headers });
   return {
-    db: getDb(),
     session,
     headers: opts.headers,
   };

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { getDepartments, searchCourses } from "@/server/search";
+import { getDepartments, searchCourses } from "@/server/services/search";
 import { baseProcedure, createTRPCRouter } from "../trpc";
 
 export const searchRouter = createTRPCRouter({
@@ -13,10 +13,10 @@ export const searchRouter = createTRPCRouter({
         minRating: z.number().optional(),
       }),
     )
-    .query(async ({ ctx, input }) => {
+    .query(async ({ input }) => {
       const page = input.page && input.page > 0 ? input.page : 1;
       const pageSize = input.size ?? 10;
-      const results = await searchCourses(ctx.db, input.q, pageSize, {
+      const results = await searchCourses(input.q, pageSize, {
         department: input.department,
         minRating: input.minRating,
       });
@@ -27,8 +27,8 @@ export const searchRouter = createTRPCRouter({
         pageSize,
       };
     }),
-  departments: baseProcedure.query(async ({ ctx }) => {
-    const departments = await getDepartments(ctx.db);
+  departments: baseProcedure.query(async () => {
+    const departments = await getDepartments();
     return { departmentCount: departments.length, departments };
   }),
 });

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { submitFeedback } from "@/server/feedback";
+import { submitFeedback } from "@/server/services/feedback";
 import { baseProcedure, createTRPCRouter } from "../trpc";
 
 export const feedbackRouter = createTRPCRouter({
@@ -11,5 +11,5 @@ export const feedbackRouter = createTRPCRouter({
         message: z.string().min(1),
       }),
     )
-    .mutation(({ ctx, input }) => submitFeedback(ctx.db, input)),
+    .mutation(({ input }) => submitFeedback(input)),
 });

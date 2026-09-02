@@ -6,7 +6,7 @@ import {
   removeReview,
   toggleVote,
   updateReview,
-} from "@/server/reviews";
+} from "@/server/services/reviews";
 import { baseProcedure, createTRPCRouter, protectedProcedure } from "../trpc";
 
 const reviewInput = z.object({
@@ -22,31 +22,29 @@ export const reviewsRouter = createTRPCRouter({
   list: baseProcedure
     .input(z.object({ courseCode: z.string().optional() }))
     .query(({ ctx, input }) =>
-      findAllReviews(ctx.db, input.courseCode, ctx.session?.user.id),
+      findAllReviews(input.courseCode, ctx.session?.user.id),
     ),
   byId: baseProcedure
     .input(z.object({ id: z.string().min(1) }))
-    .query(({ ctx, input }) => findOneReview(ctx.db, input.id)),
+    .query(({ input }) => findOneReview(input.id)),
   create: protectedProcedure
     .input(reviewInput.extend({ courseCode: z.string().min(1) }))
     .mutation(({ ctx, input }) => {
       const { courseCode, ...reviewData } = input;
-      return createReview(ctx.db, courseCode, ctx.session.user.id, reviewData);
+      return createReview(courseCode, ctx.session.user.id, reviewData);
     }),
   update: protectedProcedure
     .input(reviewInput.extend({ id: z.string().min(1) }))
     .mutation(({ ctx, input }) => {
       const { id, ...reviewData } = input;
-      return updateReview(ctx.db, id, ctx.session.user.id, reviewData);
+      return updateReview(id, ctx.session.user.id, reviewData);
     }),
   delete: protectedProcedure
     .input(z.object({ id: z.string().min(1) }))
-    .mutation(({ ctx, input }) =>
-      removeReview(ctx.db, input.id, ctx.session.user.id),
-    ),
+    .mutation(({ ctx, input }) => removeReview(input.id, ctx.session.user.id)),
   like: protectedProcedure
     .input(z.object({ id: z.string().min(1) }))
     .mutation(({ ctx, input }) =>
-      toggleVote(ctx.db, input.id, ctx.session.user.id, "like"),
+      toggleVote(input.id, ctx.session.user.id, "like"),
     ),
 });

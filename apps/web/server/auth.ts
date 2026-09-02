@@ -1,13 +1,13 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { magicLink } from "better-auth/plugins/magic-link";
-import { getDb } from "./db";
+import { db } from "./db";
 import * as schema from "./db/schema";
 import { sendMagicLinkEmail } from "./email/send";
 
 function createAuth() {
   return betterAuth({
-    database: drizzleAdapter(getDb(), {
+    database: drizzleAdapter(db, {
       provider: "pg",
       schema,
       usePlural: true,

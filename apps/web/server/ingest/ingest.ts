@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { inArray, sql } from "drizzle-orm";
 import type { z } from "zod";
 import { embedBatch } from "../ai";
-import type { Database } from "../db";
+import { db } from "../db";
 import {
   courseExaminations as courseExaminationsTable,
   courseRounds as courseRoundsTable,
@@ -58,7 +58,6 @@ async function mapWithConcurrency<T, R>(
 }
 
 export async function runNeonIngest(
-  db: Database,
   coursesInput?: z.infer<typeof CoursesSchema>,
 ) {
   if (status.running) {
@@ -89,12 +88,12 @@ export async function runNeonIngest(
     );
 
     console.log("Upserting courses to database...");
-    await upsertCourses(db, converted);
-    await upsertRounds(db, rounds);
-    await upsertExaminations(db, examinations);
+    await upsertCourses(converted);
+    await upsertRounds(rounds);
+    await upsertExaminations(examinations);
 
     console.log("Generating embeddings for courses...");
-    await generateAndStoreEmbeddings(db, converted);
+    await generateAndStoreEmbeddings(converted);
     console.log("Embeddings stored successfully");
 
     status.lastCompleted = new Date();
@@ -108,7 +107,7 @@ export async function runNeonIngest(
   }
 }
 
-export async function runNeonTest(db: Database) {
+export async function runNeonTest() {
   console.log("Starting Neon test process...");
   const courses = await getCourses();
   const sample = courses
@@ -116,7 +115,7 @@ export async function runNeonTest(db: Database) {
     .sort(() => Math.random() - 0.5)
     .slice(0, 10);
   console.log(`Sampled ${sample.length} courses`);
-  await runNeonIngest(db, sample);
+  await runNeonIngest(sample);
 }
 
 async function convertCourses(courses: z.infer<typeof CoursesSchema>): Promise<{
@@ -205,7 +204,7 @@ async function convertCourses(courses: z.infer<typeof CoursesSchema>): Promise<{
   };
 }
 
-async function upsertCourses(db: Database, courses: InsertCourse[]) {
+async function upsertCourses(courses: InsertCourse[]) {
   const chunkSize = 1000;
   for (let i = 0; i < courses.length; i += chunkSize) {
     const chunk = courses.slice(i, i + chunkSize);
@@ -234,7 +233,7 @@ async function upsertCourses(db: Database, courses: InsertCourse[]) {
   }
 }
 
-async function upsertRounds(db: Database, rounds: InsertCourseRound[]) {
+async function upsertRounds(rounds: InsertCourseRound[]) {
   if (!rounds.length) return;
   const courseCodes = [...new Set(rounds.map((r) => r.courseCode))];
   await db
@@ -246,10 +245,7 @@ async function upsertRounds(db: Database, rounds: InsertCourseRound[]) {
   }
 }
 
-async function upsertExaminations(
-  db: Database,
-  examinations: InsertCourseExamination[],
-) {
+async function upsertExaminations(examinations: InsertCourseExamination[]) {
   const chunkSize = 1000;
   for (let i = 0; i < examinations.length; i += chunkSize) {
     const chunk = examinations.slice(i, i + chunkSize);
@@ -270,10 +266,7 @@ async function upsertExaminations(
   }
 }
 
-async function generateAndStoreEmbeddings(
-  db: Database,
-  courses: InsertCourse[],
-) {
+async function generateAndStoreEmbeddings(courses: InsertCourse[]) {
   const BATCH_SIZE = 100;
 
   for (let i = 0; i < courses.length; i += BATCH_SIZE) {

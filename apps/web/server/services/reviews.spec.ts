@@ -1,8 +1,9 @@
-import { describe, expect, it } from "vitest";
-import type { Database } from "./db";
-import { ForbiddenError, NotFoundError } from "./errors";
+import { describe, expect, it, vi } from "vitest";
+import { ForbiddenError, NotFoundError } from "../errors";
+import * as reviewsRepo from "../repositories/reviews";
 import { findOneReview, updateReview } from "./reviews";
-import { createMockDb } from "./testing/mock-db";
+
+vi.mock("../repositories/reviews");
 
 const review = {
   id: "review-123",
@@ -20,20 +21,18 @@ const review = {
 
 describe("reviews", () => {
   it("findOneReview throws when missing", async () => {
-    const db = createMockDb();
-    db.queueResult([]);
+    vi.mocked(reviewsRepo.findById).mockResolvedValue(undefined);
 
-    await expect(
-      findOneReview(db as unknown as Database, "missing"),
-    ).rejects.toBeInstanceOf(NotFoundError);
+    await expect(findOneReview("missing")).rejects.toBeInstanceOf(
+      NotFoundError,
+    );
   });
 
   it("updateReview forbids a non-author", async () => {
-    const db = createMockDb();
-    db.queueResult([review]);
+    vi.mocked(reviewsRepo.findById).mockResolvedValue(review);
 
     await expect(
-      updateReview(db as unknown as Database, "review-123", "other-user", {
+      updateReview("review-123", "other-user", {
         examinationMethods: 1,
         theoreticalVsApplied: 1,
         workload: 1,

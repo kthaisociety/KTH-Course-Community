@@ -1,14 +1,13 @@
-import { sql } from "drizzle-orm";
-import type { Database } from "./db";
+import { ping } from "../repositories/health";
 
 type HealthCheckResult = {
   ok: boolean;
   [key: string]: unknown;
 };
 
-async function checkDb(db: Database) {
+async function checkDb() {
   const start = Date.now();
-  await db.execute(sql`select 1`);
+  await ping();
   return { ok: true, ms: Date.now() - start };
 }
 
@@ -39,8 +38,8 @@ function format(
   return res.status === "fulfilled" ? res.value : serializeError(res.reason);
 }
 
-export async function testAll(db: Database) {
-  const results = await Promise.allSettled([checkDb(db), checkKthApi()]);
+export async function testAll() {
+  const results = await Promise.allSettled([checkDb(), checkKthApi()]);
   const [dbRes, kthRes] = results;
   const database = format(dbRes);
   const kth = format(kthRes);

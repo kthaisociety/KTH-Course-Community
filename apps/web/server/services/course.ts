@@ -1,47 +1,25 @@
-import { eq, inArray } from "drizzle-orm";
 import type {
   CourseDetails,
   CourseRoundSummary,
   CourseSummary,
   ExamRoundSummary,
 } from "@/types";
-import type { Database } from "./db";
-import {
-  courseExaminations,
-  courseRounds,
-  courses,
-  type SelectCourse,
-} from "./db/schema";
+import type { SelectCourse } from "../db/schema";
+import * as courseRepo from "../repositories/course";
 
-export async function getCourse(
-  db: Database,
+export function getCourse(
   courseCode: string,
 ): Promise<SelectCourse | undefined> {
-  const [course] = await db
-    .select()
-    .from(courses)
-    .where(eq(courses.code, courseCode))
-    .limit(1);
-  return course;
+  return courseRepo.findByCode(courseCode);
 }
 
 export async function getSummary(
-  db: Database,
   courseCode: string,
 ): Promise<CourseSummary | null> {
   const [course, rounds, exams] = await Promise.all([
-    getCourse(db, courseCode),
-    db
-      .select({
-        startTerm: courseRounds.startTerm,
-        language: courseRounds.language,
-      })
-      .from(courseRounds)
-      .where(eq(courseRounds.courseCode, courseCode)),
-    db
-      .select({ examCode: courseExaminations.examCode })
-      .from(courseExaminations)
-      .where(eq(courseExaminations.courseCode, courseCode)),
+    courseRepo.findByCode(courseCode),
+    courseRepo.findRoundSummaries(courseCode),
+    courseRepo.findExamCodes(courseCode),
   ]);
 
   if (!course) return null;
@@ -69,28 +47,14 @@ export async function getSummary(
 }
 
 export async function getSummariesByCodes(
-  db: Database,
   codes: string[],
 ): Promise<CourseSummary[]> {
   if (codes.length === 0) return [];
 
   const [courseRows, roundRows, examRows] = await Promise.all([
-    db.select().from(courses).where(inArray(courses.code, codes)),
-    db
-      .select({
-        courseCode: courseRounds.courseCode,
-        startTerm: courseRounds.startTerm,
-        language: courseRounds.language,
-      })
-      .from(courseRounds)
-      .where(inArray(courseRounds.courseCode, codes)),
-    db
-      .select({
-        courseCode: courseExaminations.courseCode,
-        examCode: courseExaminations.examCode,
-      })
-      .from(courseExaminations)
-      .where(inArray(courseExaminations.courseCode, codes)),
+    courseRepo.findByCodes(codes),
+    courseRepo.findRoundSummariesByCodes(codes),
+    courseRepo.findExamCodesByCodes(codes),
   ]);
 
   const roundsByCode = new Map<string, typeof roundRows>();
@@ -141,33 +105,12 @@ export async function getSummariesByCodes(
 }
 
 export async function getDetails(
-  db: Database,
   courseCode: string,
 ): Promise<CourseDetails | null> {
   const [course, rounds, exams] = await Promise.all([
-    getCourse(db, courseCode),
-    db
-      .select({
-        startTerm: courseRounds.startTerm,
-        formattedPeriodsAndCredits: courseRounds.formattedPeriodsAndCredits,
-        studyPace: courseRounds.studyPace,
-        language: courseRounds.language,
-        tutoringForm: courseRounds.tutoringForm,
-        tutoringTimeOfDay: courseRounds.tutoringTimeOfDay,
-        isPU: courseRounds.isPU,
-        schemaUrl: courseRounds.schemaUrl,
-      })
-      .from(courseRounds)
-      .where(eq(courseRounds.courseCode, courseCode)),
-    db
-      .select({
-        examCode: courseExaminations.examCode,
-        title: courseExaminations.title,
-        credits: courseExaminations.credits,
-        gradeScaleCode: courseExaminations.gradeScaleCode,
-      })
-      .from(courseExaminations)
-      .where(eq(courseExaminations.courseCode, courseCode)),
+    courseRepo.findByCode(courseCode),
+    courseRepo.findRoundDetails(courseCode),
+    courseRepo.findExamDetails(courseCode),
   ]);
 
   if (!course) return null;

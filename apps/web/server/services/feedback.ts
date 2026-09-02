@@ -1,11 +1,10 @@
-import type { Database } from "./db";
-import { feedback_form, type InsertFeedbackForm } from "./db/schema";
+import type { InsertFeedbackForm } from "../db/schema";
+import { insertFeedback } from "../repositories/feedback";
 
 export async function submitFeedback(
-  db: Database,
   data: Omit<InsertFeedbackForm, "id" | "createdAt">,
 ) {
-  await db.insert(feedback_form).values({
+  await insertFeedback({
     id: crypto.randomUUID(),
     ...data,
   });

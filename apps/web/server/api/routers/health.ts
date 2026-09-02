@@ -1,6 +1,6 @@
-import { testAll } from "@/server/health";
+import { testAll } from "@/server/services/health";
 import { baseProcedure, createTRPCRouter } from "../trpc";
 
 export const healthRouter = createTRPCRouter({
-  check: baseProcedure.query(({ ctx }) => testAll(ctx.db)),
+  check: baseProcedure.query(() => testAll()),
 });
