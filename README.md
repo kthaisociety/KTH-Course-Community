@@ -96,8 +96,8 @@ apps/frontend/
     hooks/                     # feature-local UI state
     index.ts                   # hooks and shared UI for other features
   server/
-    <name>.ts                  # domain logic (Drizzle)
-    db/schema.ts               # tables
+    <name>.ts                  # domain logic
+    db/                        # schema, client, drizzle-kit, migrations
     api/routers/<name>.ts      # procedures
     api/root.ts                # register the router
   trpc/                        # client + QueryClient
