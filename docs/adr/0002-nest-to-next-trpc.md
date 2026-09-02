@@ -43,5 +43,5 @@ Better Auth; protected procedures fail closed, same as the old global
 - **Frontend route protection is still optimistic.** `proxy.ts` only checks that
   a session cookie exists. `protectedProcedure` is the real enforcement.
 - **ADR 0001 still holds** for identity (one Better Auth user id, plural tables,
-  Neon `transaction: false`, Google only). Only the mount point changed: Next
-  instead of Nest.
+  Neon `transaction: false`). Sign-in is Google OAuth or a magic-link email.
+  Only the mount point changed: Next instead of Nest.

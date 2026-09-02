@@ -19,7 +19,11 @@
     "add:web:dev": "bun add -d --filter=kth-course-community-web",
     "rm:web": "bun remove --filter=kth-course-community-web",
     "docker:web:build": "bun run --filter kth-course-community-web build",
-    "ingest": "bun run --filter kth-course-community-web ingest"
+    "ingest": "bun run --filter kth-course-community-web ingest",
+    "db:push": "bun run --filter kth-course-community-web db:push",
+    "db:generate": "bun run --filter kth-course-community-web db:generate",
+    "db:migrate": "bun run --filter kth-course-community-web db:migrate",
+    "db:studio": "bun run --filter kth-course-community-web db:studio"
   },
   "repository": {
     "type": "git",
@@ -41,6 +45,8 @@
     "zod": "^3.23.8"
   },
   "dependencies": {
+    "@aws-sdk/client-ses": "^3.1125.0",
+    "@tanstack/react-form": "^1.33.5",
     "better-auth": "^1.7.2",
     "drizzle-orm": "0.45.2"
   }

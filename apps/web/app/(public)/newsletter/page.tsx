@@ -1,6 +1,8 @@
 "use client";
 
+import { useForm } from "@tanstack/react-form";
 import { BookOpen, Briefcase, CalendarDays, Lightbulb } from "lucide-react";
+import { z } from "zod";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,8 +13,72 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Field,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
+import { Spinner } from "@/components/ui/spinner";
+
+const subscribeSchema = z.object({
+  email: z.string().email("Enter a valid email address."),
+});
+
+function NewsletterSubscribeForm() {
+  const form = useForm({
+    defaultValues: { email: "" },
+    validators: { onSubmit: subscribeSchema },
+    onSubmit: async () => {},
+  });
+
+  return (
+    <form
+      onSubmit={(event) => {
+        event.preventDefault();
+        void form.handleSubmit();
+      }}
+    >
+      <FieldGroup>
+        <form.Field name="email">
+          {(field) => {
+            const isInvalid =
+              field.state.meta.isTouched && !field.state.meta.isValid;
+            return (
+              <Field data-invalid={isInvalid}>
+                <FieldLabel htmlFor={field.name} className="sr-only">
+                  Email
+                </FieldLabel>
+                <Input
+                  id={field.name}
+                  name={field.name}
+                  type="email"
+                  autoComplete="email"
+                  placeholder="your@kth.se"
+                  value={field.state.value}
+                  onBlur={field.handleBlur}
+                  onChange={(event) => field.handleChange(event.target.value)}
+                  aria-invalid={isInvalid}
+                />
+                {isInvalid && <FieldError errors={field.state.meta.errors} />}
+              </Field>
+            );
+          }}
+        </form.Field>
+        <form.Subscribe selector={(state) => state.isSubmitting}>
+          {(isSubmitting) => (
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? <Spinner data-icon="inline-start" /> : null}
+              Subscribe
+            </Button>
+          )}
+        </form.Subscribe>
+      </FieldGroup>
+    </form>
+  );
+}
 
 const issues = [
   {
@@ -86,17 +152,7 @@ export default function NewsletterPage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <form
-                    className="flex flex-col sm:flex-row gap-3"
-                    onSubmit={(e) => e.preventDefault()}
-                  >
-                    <Input
-                      type="email"
-                      placeholder="your@kth.se"
-                      className="flex-1"
-                    />
-                    <Button type="submit">Subscribe</Button>
-                  </form>
+                  <NewsletterSubscribeForm />
                 </CardContent>
               </Card>
 

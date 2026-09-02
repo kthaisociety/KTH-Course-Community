@@ -92,8 +92,8 @@ backfill, email-relinking or compatibility shim was written.
 - **Frontend route protection is optimistic.** `apps/web/proxy.ts` checks for the
   *existence* of the session cookie and redirects to `/auth` when it is absent; it
   never validates. The backend guards remain the real enforcement.
-- **Google is the sole provider.** The UI stubs for other providers keep their
-  "not supported yet" behaviour.
+- **Google and magic link.** Email sign-in is a magic link sent through Amazon
+  SES. The UI stubs for other OAuth providers keep their previous behaviour.
 
 This ADR is the intended long-term home for the name "SuperTokens": once the
 remnant purge is finished it should be the only place in the repo that mentions

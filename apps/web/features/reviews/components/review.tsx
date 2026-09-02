@@ -1,7 +1,8 @@
 "use client";
 
+import { useForm } from "@tanstack/react-form";
 import { useEffect, useState } from "react";
-import { toast } from "sonner";
+import { z } from "zod";
 import { RichTextEditor } from "@/components/RichEditor";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,6 +18,7 @@ import {
 import {
   Field,
   FieldDescription,
+  FieldError,
   FieldGroup,
   FieldLabel,
   FieldLegend,
@@ -37,6 +39,31 @@ export type ReviewFormData = {
   learningExperience: number;
 };
 
+const ratingSchema = z.number().int().min(1, "Select a rating.");
+
+const formSchema = z.object({
+  wouldRecommend: z.boolean(),
+  content: z
+    .string()
+    .refine(
+      (html) => html.replace(/<[^>]*>/g, "").trim().length > 0,
+      "Write a review.",
+    ),
+  examinationMethods: ratingSchema,
+  theoreticalVsApplied: ratingSchema,
+  workload: ratingSchema,
+  learningExperience: ratingSchema,
+});
+
+const defaultValues: ReviewFormData = {
+  wouldRecommend: false,
+  content: "",
+  examinationMethods: 0,
+  theoreticalVsApplied: 0,
+  workload: 0,
+  learningExperience: 0,
+};
+
 type ReviewProps = {
   courseCode: string;
   openOnLoad?: boolean;
@@ -48,42 +75,18 @@ export function Review({
 }: Readonly<ReviewProps>) {
   const { userId, isLoading } = useMe();
   const addReview = useAddReview();
-  const [reviewForm, setReviewForm] = useState<ReviewFormData>({
-    wouldRecommend: false,
-    content: "",
-    examinationMethods: 0,
-    theoreticalVsApplied: 0,
-    workload: 0,
-    learningExperience: 0,
-  });
-
-  const [isSubmittingReviewForm, setIsSubmittingReviewForm] = useState(false);
   const [dialogIsOpen, setDialogIsOpen] = useState(openOnLoad);
-
-  const isFormInvalid =
-    !reviewForm.content ||
-    reviewForm.content.replace(/<[^>]*>/g, "").trim() === "" ||
-    reviewForm.examinationMethods === 0 ||
-    reviewForm.theoreticalVsApplied === 0 ||
-    reviewForm.workload === 0 ||
-    reviewForm.learningExperience === 0;
-
-  const handleAddReview = async () => {
-    setIsSubmittingReviewForm(true);
-    try {
-      const success = await addReview(courseCode, reviewForm);
+  const form = useForm({
+    defaultValues,
+    validators: { onSubmit: formSchema },
+    onSubmit: async ({ value }) => {
+      const success = await addReview(courseCode, value);
       if (success) {
         setDialogIsOpen(false);
+        form.reset();
       }
-    } catch (error) {
-      console.error(error);
-      toast.error("Failed to add review", {
-        description: "Try again later",
-      });
-    } finally {
-      setIsSubmittingReviewForm(false);
-    }
-  };
+    },
+  });
 
   useEffect(() => {
     if (!openOnLoad || !userId) return;
@@ -97,7 +100,13 @@ export function Review({
 
   return (
     <div className="mb-4">
-      <Dialog open={dialogIsOpen} onOpenChange={setDialogIsOpen}>
+      <Dialog
+        open={dialogIsOpen}
+        onOpenChange={(open) => {
+          setDialogIsOpen(open);
+          if (!open) form.reset();
+        }}
+      >
         <DialogTrigger asChild>
           <Button className="flex-1" type="button" aria-label="Add review">
             Add Review
@@ -111,135 +120,195 @@ export function Review({
             </DialogDescription>
           </DialogHeader>
 
-          <FieldGroup className="py-6">
-            <FieldSet>
-              <FieldLegend>Rate the Course</FieldLegend>
-              <FieldGroup>
-                <Field orientation="horizontal">
-                  <FieldLabel>Examination methods</FieldLabel>
-                  <Rating
-                    value={reviewForm.examinationMethods}
-                    onValueChange={(value) =>
-                      setReviewForm({
-                        ...reviewForm,
-                        examinationMethods: value,
-                      })
-                    }
-                  >
-                    {Array.from({ length: 5 }, (_, i) => (
-                      <RatingButton key={`difficulty-star-${i + 1}`} />
-                    ))}
-                  </Rating>
-                </Field>
+          <form
+            id="add-review-form"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void form.handleSubmit();
+            }}
+          >
+            <FieldGroup className="py-6">
+              <FieldSet>
+                <FieldLegend>Rate the Course</FieldLegend>
+                <FieldGroup>
+                  <form.Field name="examinationMethods">
+                    {(field) => {
+                      const isInvalid =
+                        field.state.meta.isTouched && !field.state.meta.isValid;
+                      return (
+                        <Field
+                          orientation="horizontal"
+                          data-invalid={isInvalid}
+                        >
+                          <FieldLabel>Examination methods</FieldLabel>
+                          <Rating
+                            value={field.state.value}
+                            onValueChange={(value) => field.handleChange(value)}
+                          >
+                            {Array.from({ length: 5 }, (_, i) => (
+                              <RatingButton key={`difficulty-star-${i + 1}`} />
+                            ))}
+                          </Rating>
+                          {isInvalid && (
+                            <FieldError errors={field.state.meta.errors} />
+                          )}
+                        </Field>
+                      );
+                    }}
+                  </form.Field>
 
-                <Field orientation="horizontal">
-                  <FieldLabel>Theory vs applied</FieldLabel>
-                  <Rating
-                    value={reviewForm.theoreticalVsApplied}
-                    onValueChange={(value) =>
-                      setReviewForm({
-                        ...reviewForm,
-                        theoreticalVsApplied: value,
-                      })
-                    }
-                  >
-                    {Array.from({ length: 5 }, (_, i) => (
-                      <RatingButton key={`usefulness-star-${i + 1}`} />
-                    ))}
-                  </Rating>
-                </Field>
+                  <form.Field name="theoreticalVsApplied">
+                    {(field) => {
+                      const isInvalid =
+                        field.state.meta.isTouched && !field.state.meta.isValid;
+                      return (
+                        <Field
+                          orientation="horizontal"
+                          data-invalid={isInvalid}
+                        >
+                          <FieldLabel>Theory vs applied</FieldLabel>
+                          <Rating
+                            value={field.state.value}
+                            onValueChange={(value) => field.handleChange(value)}
+                          >
+                            {Array.from({ length: 5 }, (_, i) => (
+                              <RatingButton key={`usefulness-star-${i + 1}`} />
+                            ))}
+                          </Rating>
+                          {isInvalid && (
+                            <FieldError errors={field.state.meta.errors} />
+                          )}
+                        </Field>
+                      );
+                    }}
+                  </form.Field>
 
-                <Field orientation="horizontal">
-                  <FieldLabel>Workload</FieldLabel>
-                  <Rating
-                    value={reviewForm.workload}
-                    onValueChange={(value) =>
-                      setReviewForm({
-                        ...reviewForm,
-                        workload: value,
-                      })
-                    }
-                  >
-                    {Array.from({ length: 5 }, (_, i) => (
-                      <RatingButton key={`workload-star-${i + 1}`} />
-                    ))}
-                  </Rating>
-                </Field>
+                  <form.Field name="workload">
+                    {(field) => {
+                      const isInvalid =
+                        field.state.meta.isTouched && !field.state.meta.isValid;
+                      return (
+                        <Field
+                          orientation="horizontal"
+                          data-invalid={isInvalid}
+                        >
+                          <FieldLabel>Workload</FieldLabel>
+                          <Rating
+                            value={field.state.value}
+                            onValueChange={(value) => field.handleChange(value)}
+                          >
+                            {Array.from({ length: 5 }, (_, i) => (
+                              <RatingButton key={`workload-star-${i + 1}`} />
+                            ))}
+                          </Rating>
+                          {isInvalid && (
+                            <FieldError errors={field.state.meta.errors} />
+                          )}
+                        </Field>
+                      );
+                    }}
+                  </form.Field>
 
-                <Field orientation="horizontal">
-                  <FieldLabel>Learning experience</FieldLabel>
-                  <Rating
-                    value={reviewForm.learningExperience}
-                    onValueChange={(value) =>
-                      setReviewForm({
-                        ...reviewForm,
-                        learningExperience: value,
-                      })
-                    }
-                  >
-                    {Array.from({ length: 5 }, (_, i) => (
-                      <RatingButton key={`learning-star-${i + 1}`} />
-                    ))}
-                  </Rating>
-                </Field>
-              </FieldGroup>
-            </FieldSet>
+                  <form.Field name="learningExperience">
+                    {(field) => {
+                      const isInvalid =
+                        field.state.meta.isTouched && !field.state.meta.isValid;
+                      return (
+                        <Field
+                          orientation="horizontal"
+                          data-invalid={isInvalid}
+                        >
+                          <FieldLabel>Learning experience</FieldLabel>
+                          <Rating
+                            value={field.state.value}
+                            onValueChange={(value) => field.handleChange(value)}
+                          >
+                            {Array.from({ length: 5 }, (_, i) => (
+                              <RatingButton key={`learning-star-${i + 1}`} />
+                            ))}
+                          </Rating>
+                          {isInvalid && (
+                            <FieldError errors={field.state.meta.errors} />
+                          )}
+                        </Field>
+                      );
+                    }}
+                  </form.Field>
+                </FieldGroup>
+              </FieldSet>
 
-            <FieldSet>
-              <FieldLegend>Recommendation</FieldLegend>
-              <Field orientation="horizontal">
-                <Switch
-                  id="recommendation"
-                  checked={reviewForm.wouldRecommend}
-                  onCheckedChange={(checked) =>
-                    setReviewForm({
-                      ...reviewForm,
-                      wouldRecommend: checked,
-                    })
-                  }
-                />
-                <FieldLabel htmlFor="recommendation">
-                  I would recommend this course
-                </FieldLabel>
-              </Field>
-            </FieldSet>
+              <FieldSet>
+                <FieldLegend>Recommendation</FieldLegend>
+                <form.Field name="wouldRecommend">
+                  {(field) => (
+                    <Field orientation="horizontal">
+                      <Switch
+                        id={field.name}
+                        name={field.name}
+                        checked={field.state.value}
+                        onCheckedChange={(checked) =>
+                          field.handleChange(checked)
+                        }
+                      />
+                      <FieldLabel htmlFor={field.name}>
+                        I would recommend this course
+                      </FieldLabel>
+                    </Field>
+                  )}
+                </form.Field>
+              </FieldSet>
 
-            <FieldSet>
-              <FieldLegend>Your Review</FieldLegend>
-              <Field>
-                <RichTextEditor
-                  onContentChange={(content) =>
-                    setReviewForm({
-                      ...reviewForm,
-                      content: content,
-                    })
-                  }
-                />
-                <FieldDescription>
-                  Be constructive and respectful
-                </FieldDescription>
-              </Field>
-            </FieldSet>
-          </FieldGroup>
+              <FieldSet>
+                <FieldLegend>Your Review</FieldLegend>
+                <form.Field name="content">
+                  {(field) => {
+                    const isInvalid =
+                      field.state.meta.isTouched && !field.state.meta.isValid;
+                    return (
+                      <Field data-invalid={isInvalid}>
+                        <RichTextEditor
+                          onContentChange={(content) =>
+                            field.handleChange(content)
+                          }
+                        />
+                        <FieldDescription>
+                          Be constructive and respectful
+                        </FieldDescription>
+                        {isInvalid && (
+                          <FieldError errors={field.state.meta.errors} />
+                        )}
+                      </Field>
+                    );
+                  }}
+                </form.Field>
+              </FieldSet>
+            </FieldGroup>
+          </form>
 
           <DialogFooter>
-            <DialogClose asChild>
-              <Button
-                type="button"
-                variant="outline"
-                disabled={isSubmittingReviewForm}
-              >
-                Cancel
-              </Button>
-            </DialogClose>
-            <Button
-              type="button"
-              onClick={handleAddReview}
-              disabled={isFormInvalid || isSubmittingReviewForm}
-            >
-              {isSubmittingReviewForm && <Spinner data-icon="inline-start" />}
-              {isSubmittingReviewForm ? "Submitting..." : "Submit Review"}
-            </Button>
+            <form.Subscribe selector={(state) => state.isSubmitting}>
+              {(isSubmitting) => (
+                <>
+                  <DialogClose asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={isSubmitting}
+                    >
+                      Cancel
+                    </Button>
+                  </DialogClose>
+                  <Button
+                    type="submit"
+                    form="add-review-form"
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? <Spinner data-icon="inline-start" /> : null}
+                    Submit Review
+                  </Button>
+                </>
+              )}
+            </form.Subscribe>
           </DialogFooter>
         </DialogContent>
       </Dialog>

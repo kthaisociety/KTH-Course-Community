@@ -46,10 +46,15 @@ Copy `apps/web/.env.example` to `apps/web/.env.local` and fill in:
 - `BETTER_AUTH_URL` (the public site origin, e.g. `http://localhost:3000`)
 - `BETTER_AUTH_SECRET`
 - `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`
+- `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET`
+- `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` / `AWS_REGION` (SES magic-link email)
+- `SES_SENDER` / `SES_REPLY_TO`
 - `AI_GATEWAY_API_KEY` (embeddings for search/ingest)
 - `BLOB_READ_WRITE_TOKEN` (profile pictures)
 
 Google OAuth authorised redirect URI: `${BETTER_AUTH_URL}/api/auth/callback/google`.
+GitHub OAuth authorised callback URL: `${BETTER_AUTH_URL}/api/auth/callback/github`.
+Magic-link sign-in sends mail through Amazon SES from `SES_SENDER`.
 
 ### 4. Set Up the Database
 
