@@ -1,6 +1,6 @@
 import { nestHttpUrl } from "@/lib/nest-http";
 import type { Dispatch } from "@/state/store";
-import { clearUser, setProfilePicture, setUser } from "./userSlice";
+import { clearUser, setImage, setUser } from "./userSlice";
 
 export function getUser() {
   return async (dispatch: Dispatch) => {
@@ -14,7 +14,7 @@ export function getUser() {
         setUser({
           name: data.name,
           email: data.email,
-          profilePicture: data.profilePicture ?? null,
+          image: data.image ?? null,
           userFavorites: data.userFavorites ?? [],
         }),
       );
@@ -31,7 +31,7 @@ export function getUser() {
 }
 
 // Uploading profile picture
-export function uploadProfilePicture(file: File) {
+export function uploadImage(file: File) {
   return async (dispatch: Dispatch) => {
     try {
       const formData = new FormData();
@@ -54,7 +54,7 @@ export function uploadProfilePicture(file: File) {
       }
 
       const data = await res.json();
-      dispatch(setProfilePicture(data.url));
+      dispatch(setImage(data.url));
       return { success: true, url: data.url };
     } catch (err) {
       if (err instanceof Error) {

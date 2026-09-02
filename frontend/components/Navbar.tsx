@@ -150,9 +150,9 @@ export default function Navbar() {
       <DropdownMenu>
         <DropdownMenuTrigger className="w-full mb-10 h-auto rounded-md text-sm font-medium transition-all gap-2 py-2 pl-2 pr-2 justify-start whitespace-normal cursor-pointer flex items-center group hover:bg-primary-light">
           <Avatar className="w-10 h-10">
-            {user.profilePicture ? (
+            {user.image ? (
               <AvatarImage
-                src={user.profilePicture}
+                src={user.image}
                 alt="Profile"
                 className="rounded-full object-cover"
               />

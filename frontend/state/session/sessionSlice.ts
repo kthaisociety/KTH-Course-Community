@@ -1,5 +1,4 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
-import Session from "supertokens-auth-react/recipe/session";
 import { nestHttpUrl } from "@/lib/nest-http";
 import { clearUser, setUser } from "../user/userSlice";
 
@@ -36,7 +35,7 @@ export const getSession = createAsyncThunk(
             name: userData.name ?? "",
             email: userData.email,
             userFavorites: userData.userFavorites ?? [],
-            profilePicture: userData.profilePicture ?? null,
+            image: userData.image ?? null,
           }),
         );
 
@@ -70,7 +69,7 @@ export const logout = createAsyncThunk(
         name: "",
         email: "",
         userFavorites: [],
-        profilePicture: null,
+        image: null,
       }),
     );
     // Redirect to home page
