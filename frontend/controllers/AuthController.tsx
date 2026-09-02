@@ -2,20 +2,12 @@
 "use client";
 
 import type { OauthProvider } from "@shared/types";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
-import ThirdParty from "supertokens-auth-react/recipe/thirdparty";
-import { initST } from "../lib/supertokens.client";
 import AuthView from "../views/AuthView";
+import { authClient } from "@/lib/auth-client";
 
 function AuthController() {
-  const router = useRouter();
-
-  useEffect(() => {
-    initST();
-  }, []);
-
   const [isLoading, setIsLoading] = useState(false);
   const [providerClicked, setProviderClicked] = useState<OauthProvider | null>(
     null,
@@ -26,17 +18,13 @@ function AuthController() {
     setProviderClicked(provider);
     try {
       // Build callback like /auth/callback/google, /auth/callback/github, etc.
-      const frontendRedirectURI = `${location.origin}/auth/callback/${provider}`;
-      // Fix later, only implement google for now
-      if (provider === "google") {
-        const url =
-          await ThirdParty.getAuthorisationURLWithQueryParamsAndSetState({
-            thirdPartyId: provider,
-            frontendRedirectURI,
-          });
-        router.push(url);
-      } else {
-        toast.error(`${provider} is not supported yet`);
+      // Only Google works for now, will throw error on everything else. 
+      const { error } = await authClient.signIn.social({
+        provider, 
+        callbackURL: "/search" // where we route to after the login
+      });
+      if (error) { // if no error, only redirect happens. 
+        toast.error(`Failed to sign in`);
       }
     } catch (error) {
       console.error(error);
