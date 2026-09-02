@@ -24,5 +24,7 @@ Monorepo for a KTH course community app with a Next.js frontend and a NestJS bac
 
 - `CLAUDE.md`: concise repo guidance for Claude-oriented workflows
 - `AGENTS.md`: same project guidance for OpenAI/Codex-style agents
+- `CONTEXT.md`: the project's domain language — the words to use for the people it serves
+- `docs/adr/`: architecture decision records, numbered `NNNN-slug.md`
 - Repo-local skills live under `.agents/skills/`
 - Current repo-local skill: `.agents/skills/ai-sdk/SKILL.md`

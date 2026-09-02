@@ -54,10 +54,15 @@ Create a file at `backend-nest/.env` and add the following variables.
 # PostgreSQL database connection string
 DATABASE_URL=postgresql://user:password@host:port/database
 
-# Auth
-# BETTER_AUTH_URL is the frontend/site URL because /api/auth is proxied by Next.
+# Auth (Better Auth, mounted inside Nest at /api/auth)
+# BETTER_AUTH_URL is the frontend/site URL, not this API's, because /api/auth/* is
+# proxied there by Next. Pointing it at the API sets the session cookie on a host
+# the browser never talks to directly, and sign-in silently stops working.
 BETTER_AUTH_URL=http://localhost:3000
 BETTER_AUTH_SECRET= # Generate with: openssl rand -base64 32
+
+# Google OAuth credentials: https://console.cloud.google.com/apis/credentials
+# Add ${BETTER_AUTH_URL}/api/auth/callback/google as an authorised redirect URI.
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
 
@@ -69,15 +74,33 @@ ELASTICSEARCH_PASSWORD= # The password you get after starting ElasticSearch
 # Application URLs and Port
 PORT=8080
 WEBSITE_DOMAIN=http://localhost:3000
+API_DOMAIN=http://localhost:8080
+
+# Extra CORS origins (comma-separated). WEBSITE_DOMAIN is always included.
+# This list is also Better Auth's trustedOrigins, so an origin missing here is
+# rejected as a post-sign-in redirect target.
+CORS_ORIGINS=
 ```
+
+See `backend-nest/.env.example` for the full list, including the ingestion and AI
+variables used later in this guide.
 
 **Frontend (`frontend/.env`)**
 
 Create a file at `frontend/.env` and add the following variables.
 
 ```env
+# What the browser calls: REST base URL and the Socket.IO origin.
 NEXT_PUBLIC_BACKEND_DOMAIN=http://localhost:8080
 NEXT_PUBLIC_WEBSITE_DOMAIN=http://localhost:3000
+
+# Server-side only, and read by `next.config.ts` at build time. It is the target
+# of the rewrites that put the backend on the site origin:
+#   /api/auth/* -> Better Auth on the Nest host (so the session cookie is set on
+#                  the origin the browser is already on)
+#   /api/nest/* -> every other Nest route, same-origin, so the cookie is sent
+# Without it there are no rewrites and sign-in cannot complete.
+BACKEND_DOMAIN=http://localhost:8080
 ```
 
 ### 4. Set Up the Database
