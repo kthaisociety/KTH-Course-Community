@@ -3,36 +3,54 @@
 import type { CourseWithUserInfo } from "@shared/types";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
-import { useUser } from "@/hooks/userHooks";
-import { toggleUserFavorite } from "@/lib/user";
-import { fetchCourseDetails } from "@/state/course/courseThunk";
-import { executeSearch } from "@/state/search/executeSearchThunk";
-import {
-  filtersChanged,
-  pageChanged,
-  queryChanged,
-} from "@/state/search/searchSlice";
-import type { Dispatch, RootState } from "@/state/store";
-import { toggleFavoriteSuccess } from "@/state/user/userSlice";
+import { useCourseDetails } from "@/hooks/useCourseDetails";
+import { useMe } from "@/hooks/useMe";
+import { useSearchCourses } from "@/hooks/useSearchCourses";
+import { useToggleFavorite } from "@/hooks/useToggleFavorite";
 import SearchView from "@/views/SearchView";
 
+const DEFAULT_QUERY = "interaction programming";
+
 export default function SearchController() {
-  // Access state
-  const { query, filters, results, isLoading, error } = useSelector(
-    (s: RootState) => s.search,
-  );
-  const { userFavorites } = useUser(); // useUser hook to fetch from Redux
-  const dispatch = useDispatch<Dispatch>(); // connect between redux and the component
+  const { user } = useMe();
+  const userFavorites = user?.userFavorites ?? [];
+  const toggleFavorite = useToggleFavorite();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const selectedCode = searchParams.get("selected");
 
-  // Sidebar course details (Redux-backed)
-  const courseDetails = useSelector((s: RootState) => s.course.courseDetails);
-  const courseDetailsLoading = useSelector((s: RootState) => s.course.loading);
-  const courseDetailsError = useSelector((s: RootState) => s.course.error);
+  const [localQuery, setLocalQuery] = useState(DEFAULT_QUERY);
+  const [debouncedQuery, setDebouncedQuery] = useState(DEFAULT_QUERY);
+  const [filters, setFilters] = useState<Record<string, string | string[]>>({});
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+    }
+    debounceRef.current = setTimeout(() => {
+      setDebouncedQuery(localQuery);
+    }, 300);
+    return () => {
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+      }
+    };
+  }, [localQuery]);
+
+  const {
+    data: searchData,
+    isLoading,
+    error: searchError,
+  } = useSearchCourses(debouncedQuery, filters);
+
+  const {
+    data: courseDetails,
+    isLoading: courseDetailsLoading,
+    error: courseDetailsQueryError,
+  } = useCourseDetails(selectedCode);
+
   const selectedCourseDetails =
     selectedCode &&
     courseDetails &&
@@ -40,75 +58,37 @@ export default function SearchController() {
       ? courseDetails
       : null;
 
-  const [localQuery, setLocalQuery] = useState(
-    query || "interaction programming",
-  ); // redux synced
-  const [resultsFull, setResultsFull] = useState<CourseWithUserInfo[]>([]);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null); // useRef is used to store the timeout id
+  const resultsFull: CourseWithUserInfo[] = (searchData?.results ?? []).map(
+    (result) => ({
+      ...result,
+      isUserFavorite: userFavorites.includes(result.courseCode),
+    }),
+  );
 
-  useEffect(() => {
-    if (debounceRef.current) {
-      clearTimeout(debounceRef.current);
-    }
-    debounceRef.current = setTimeout(() => {
-      if (localQuery !== query) {
-        dispatch(queryChanged(localQuery));
-        dispatch(executeSearch());
-      }
-    }, 300);
-    return () => {
-      if (debounceRef.current) {
-        // debounceRef is used to clear the timeout id
-        clearTimeout(debounceRef.current); // timeout is for debouncing the search (so double clicks don't trigger multiple searches)
-      }
-    };
-  }, [localQuery, query, dispatch]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Augment search results with per-user info (favorites).
-  useEffect(() => {
-    setResultsFull(
-      results.map((result) => ({
-        ...result,
-        isUserFavorite: (userFavorites ?? []).includes(result.courseCode),
-      })),
-    );
-  }, [results, userFavorites]);
-
-  // When ?selected= changes, pull full course details for the sidebar.
-  useEffect(() => {
-    if (!selectedCode) return;
-    if (
-      courseDetails &&
-      courseDetails.courseCode.toUpperCase() === selectedCode.toUpperCase()
-    ) {
-      return; // already cached
-    }
-    dispatch(fetchCourseDetails(selectedCode));
-  }, [selectedCode, courseDetails, dispatch]);
+  const error = searchError
+    ? searchError instanceof Error
+      ? searchError.message
+      : "Search failed"
+    : undefined;
+  const courseDetailsError = courseDetailsQueryError
+    ? courseDetailsQueryError instanceof Error
+      ? courseDetailsQueryError.message
+      : "Failed to load course"
+    : null;
 
   const onSubmit = useCallback(
     (e?: React.FormEvent) => {
       e?.preventDefault?.();
-      dispatch(queryChanged(localQuery));
-      dispatch(executeSearch());
+      setDebouncedQuery(localQuery);
     },
-    [localQuery, dispatch], // eslint-disable-line react-hooks/exhaustive-deps
+    [localQuery],
   );
 
-  const _onPageChange = useCallback(
-    (nextPage: number) => {
-      dispatch(pageChanged(nextPage));
-      dispatch(executeSearch());
+  const onFiltersChange = useCallback(
+    (next: Record<string, string | string[]>) => {
+      setFilters(next);
     },
-    [dispatch], // eslint-disable-line react-hooks/exhaustive-deps
-  );
-
-  const _onFiltersChange = useCallback(
-    (next: typeof filters) => {
-      dispatch(filtersChanged(next));
-      dispatch(executeSearch());
-    },
-    [dispatch], // eslint-disable-line react-hooks/exhaustive-deps
+    [],
   );
 
   const onCardClick = useCallback(
@@ -140,30 +120,11 @@ export default function SearchController() {
     [router],
   );
 
-  const onAddToComparison = useCallback((_courseCode: string) => {
-    // TODO: add to comparison state / API
-  }, []);
+  const onAddToComparison = useCallback((_courseCode: string) => {}, []);
 
   async function onToggleFavorite(courseCode: string) {
     try {
-      const res = await toggleUserFavorite(courseCode);
-
-      // Update Redux
-      dispatch(
-        toggleFavoriteSuccess({
-          courseCode,
-          action: res.action,
-        }),
-      );
-
-      // Update local state immediately for fast rUI updates
-      setResultsFull((prev) =>
-        prev.map((course) =>
-          course.courseCode === courseCode
-            ? { ...course, isUserFavorite: res.action === "added" }
-            : course,
-        ),
-      );
+      await toggleFavorite.mutateAsync(courseCode);
     } catch (err) {
       console.error("Failed to toggle favorite:", err);
     }
@@ -178,7 +139,7 @@ export default function SearchController() {
       error={error}
       results={resultsFull}
       filters={filters}
-      onFiltersChange={_onFiltersChange}
+      onFiltersChange={onFiltersChange}
       onCardClick={onCardClick}
       onWriteReview={onWriteReview}
       onToggleFavorite={onToggleFavorite}

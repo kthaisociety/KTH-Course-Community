@@ -1,60 +1,59 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useDispatch, useSelector } from "react-redux";
+import { useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import { toast } from "sonner";
-import Session from "supertokens-auth-react/recipe/session";
-import type { Dispatch, RootState } from "@/state/store";
-import { setProfilePicture } from "@/state/user/userSlice";
-import {
-  deleteAccount,
-  getUser,
-  uploadProfilePicture,
-} from "@/state/user/userThunk";
+import { useLogout } from "@/hooks/useLogout";
+import { useMe } from "@/hooks/useMe";
+import { queryKeys } from "@/lib/query-keys";
+import { deleteAccount, type Me, uploadProfilePicture } from "@/lib/user";
 import ProfileView from "@/views/ProfileView";
 
 export default function ProfileController() {
-  const router = useRouter();
-  const dispatch = useDispatch<Dispatch>();
-  const { name, email, profilePicture } = useSelector(
-    (state: RootState) => state.user,
-  );
+  const queryClient = useQueryClient();
+  const logout = useLogout();
+  const { user } = useMe();
+  const [preview, setPreview] = useState<string | null>(null);
 
-  // Handle file upload
+  const name = user?.name ?? "";
+  const email = user?.email ?? "";
+  const profilePicture = preview ?? user?.profilePicture ?? null;
+
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const localPreview = URL.createObjectURL(file);
-      dispatch(setProfilePicture(localPreview));
+    if (!file) return;
 
-      // Await the resolved return value of the thunk, which is always {success, error?}
-      const result: {
-        success: boolean;
-        url?: string;
-        error?: string;
-        message?: string;
-      } = await dispatch(uploadProfilePicture(file));
-      if (!result.success) {
-        toast.error(result.error || result.message || "Image upload failed.");
-        if (profilePicture) dispatch(setProfilePicture(profilePicture));
-        URL.revokeObjectURL(localPreview);
-        return;
-      }
-      await dispatch(getUser());
+    const localPreview = URL.createObjectURL(file);
+    setPreview(localPreview);
+
+    const result = await uploadProfilePicture(file);
+    if (!result.success) {
+      toast.error(result.error || "Image upload failed.");
+      setPreview(null);
       URL.revokeObjectURL(localPreview);
+      return;
     }
+
+    queryClient.setQueryData<Me | null>(queryKeys.me, (current) =>
+      current ? { ...current, profilePicture: result.url } : current,
+    );
+    await queryClient.invalidateQueries({ queryKey: queryKeys.me });
+    setPreview(null);
+    URL.revokeObjectURL(localPreview);
   };
 
-  // Handle account deletion
   const handleDeleteAccount = async () => {
     if (
       confirm(
         "Are you sure you want to delete your account? This can't be undone.",
       )
     ) {
-      await dispatch(deleteAccount());
-      await Session.signOut();
-      router.push("/");
+      try {
+        await deleteAccount();
+      } catch (err) {
+        console.error("Deletion failed:", err);
+      }
+      await logout();
     }
   };
 

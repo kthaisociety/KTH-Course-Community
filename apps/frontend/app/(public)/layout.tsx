@@ -1,29 +1,20 @@
 "use client";
 
-import { type ReactNode, useEffect } from "react";
-import { useDispatch, useSelector } from "react-redux";
+import type { ReactNode } from "react";
 import Navbar from "@/components/Navbar";
 import Topbar from "@/components/Topbar";
-import { getSession } from "@/state/session/sessionSlice";
-import type { Dispatch, RootState } from "@/state/store";
+import { useMe } from "@/hooks/useMe";
 
 export default function PublicLayout({ children }: { children: ReactNode }) {
-  const dispatch = useDispatch<Dispatch>();
-  const { isAuthenticated } = useSelector((state: RootState) => state.session);
-
-  useEffect(() => {
-    dispatch(getSession());
-  }, [dispatch]);
+  const { isAuthenticated } = useMe();
 
   return (
     <div className="min-h-screen flex">
       {isAuthenticated ? (
-        // Authenticated, routed from (service), or pages with sidebar
         <aside className="xl:w-80 md:w-50 w-50 fixed h-full">
           <Navbar />
         </aside>
       ) : (
-        // Not authenticated, routed from landing page
         <Topbar />
       )}
       <main

@@ -15,6 +15,5 @@ export default function AuthProvider({
 }: {
   children: React.ReactNode;
 }) {
-  // SessionAuth and ReduxProvider must be in a client component
   return <SessionAuth requireAuth>{children}</SessionAuth>;
 }

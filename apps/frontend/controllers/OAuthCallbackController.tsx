@@ -1,18 +1,18 @@
 "use client";
 
+import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { useDispatch } from "react-redux";
 import ThirdParty from "supertokens-auth-react/recipe/thirdparty";
+import { queryKeys } from "@/lib/query-keys";
 import { initST } from "@/lib/supertokens.client";
-import type { Dispatch } from "@/state/store";
-import { clearUser } from "@/state/user/userSlice";
-import { getUser } from "@/state/user/userThunk";
+import { getMe } from "@/lib/user";
 import OAuthCallbackView from "@/views/OAuthCallbackView";
 
 export default function OAuthCallbackController() {
   const router = useRouter();
-  const dispatch = useDispatch<Dispatch>();
+  const queryClient = useQueryClient();
+
   useEffect(() => {
     initST();
     (async () => {
@@ -20,27 +20,35 @@ export default function OAuthCallbackController() {
         const result = await ThirdParty.signInAndUp();
         if (result.status === "OK") {
           await ThirdParty.getStateAndOtherInfoFromStorage();
-          const userResult = await dispatch(getUser());
-          if (!userResult?.success) {
-            dispatch(clearUser());
+          try {
+            const user = await queryClient.fetchQuery({
+              queryKey: queryKeys.me,
+              queryFn: getMe,
+            });
+            if (!user) {
+              queryClient.removeQueries({ queryKey: queryKeys.me });
+              router.replace("/auth?error=user");
+              return;
+            }
+            router.replace("/search");
+            return;
+          } catch {
+            queryClient.removeQueries({ queryKey: queryKeys.me });
             router.replace("/auth?error=user");
             return;
           }
-          router.replace("/search");
-          return;
         }
-        // Todo add a toaster to show the error to the user
-        dispatch(clearUser());
+        queryClient.removeQueries({ queryKey: queryKeys.me });
         router.replace("/auth?error=oauth");
-      } catch (_error) {
-        dispatch(clearUser());
+      } catch {
+        queryClient.removeQueries({ queryKey: queryKeys.me });
         router.replace("/auth?error=oauth");
       }
     })().catch(() => {
-      dispatch(clearUser());
+      queryClient.removeQueries({ queryKey: queryKeys.me });
       router.replace("/auth?error=oauth");
     });
-  }, [router, dispatch]);
+  }, [router, queryClient]);
 
   return <OAuthCallbackView />;
 }

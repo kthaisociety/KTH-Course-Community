@@ -1,15 +1,15 @@
 "use client";
 
+import { useQueryClient } from "@tanstack/react-query";
 import profoundWords from "profane-words";
 import { useCallback } from "react";
-import { useDispatch } from "react-redux";
 import { toast } from "sonner";
 import type { ReviewFormData } from "@/components/review";
-import { fetchCourseReviews, submitReview } from "@/state/reviews/reviewThunk";
-import type { Dispatch } from "@/state/store";
+import { queryKeys } from "@/lib/query-keys";
+import { createReview } from "@/lib/reviews";
 
 export function useAddReview() {
-  const dispatch = useDispatch<Dispatch>();
+  const queryClient = useQueryClient();
 
   return useCallback(
     async (
@@ -34,17 +34,17 @@ export function useAddReview() {
         return false;
       }
       try {
-        await dispatch(
-          submitReview({ courseCode, userId, reviewForm }),
-        ).unwrap();
+        await createReview(courseCode, userId, reviewForm);
         toast.success("Review added successfully!");
-        dispatch(fetchCourseReviews({ courseCode, userId }));
+        await queryClient.invalidateQueries({
+          queryKey: queryKeys.reviews(courseCode),
+        });
         return true;
       } catch {
         toast.error("Failed to add review", { description: "Try again later" });
         return false;
       }
     },
-    [dispatch],
+    [queryClient],
   );
 }

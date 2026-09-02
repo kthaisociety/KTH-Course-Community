@@ -1,31 +1,31 @@
 "use client";
 
+import { useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
-import { useDispatch, useSelector } from "react-redux";
 import { toast } from "sonner";
-import {
-  fetchCourseReviews,
-  likeCourseReview,
-} from "@/state/reviews/reviewThunk";
-import type { Dispatch, RootState } from "@/state/store";
+import { useMe } from "@/hooks/useMe";
+import { queryKeys } from "@/lib/query-keys";
+import { likeReview } from "@/lib/reviews";
 
 export function useReviewVotes(courseCode: string) {
-  const dispatch = useDispatch<Dispatch>();
-  const userId = useSelector((s: RootState) => s.session.userId);
+  const queryClient = useQueryClient();
+  const { userId } = useMe();
 
   const like = useCallback(
     async (postId: string) => {
       if (!userId) return;
       try {
-        await dispatch(likeCourseReview({ reviewId: postId, userId })).unwrap();
-        dispatch(fetchCourseReviews({ courseCode, userId }));
+        await likeReview(postId, userId);
+        await queryClient.invalidateQueries({
+          queryKey: queryKeys.reviews(courseCode),
+        });
       } catch {
         toast.error("Failed to update vote", {
           description: "Try again later",
         });
       }
     },
-    [dispatch, userId, courseCode],
+    [queryClient, userId, courseCode],
   );
 
   const dislike = useCallback(

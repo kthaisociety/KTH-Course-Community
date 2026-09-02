@@ -1,51 +1,51 @@
 "use client";
 
+import { useQueryClient } from "@tanstack/react-query";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useEffect } from "react";
-import { useDispatch, useSelector } from "react-redux";
 import { CoursePageSkeleton } from "@/components/CoursePageSkeleton";
 import type { PostProps } from "@/components/Post";
 import { Review } from "@/components/review";
-import { useSessionData } from "@/hooks/sessionHooks";
 import { useAddReview } from "@/hooks/useAddReview";
+import { useCourseDetails } from "@/hooks/useCourseDetails";
+import { useCourseReviews } from "@/hooks/useCourseReviews";
+import { useMe } from "@/hooks/useMe";
+import { queryKeys } from "@/lib/query-keys";
 import { getReviewsSocket } from "@/lib/realtime";
-import { fetchCourseDetails } from "@/state/course/courseThunk";
-import { fetchCourseReviews } from "@/state/reviews/reviewThunk";
-import type { Dispatch, RootState } from "@/state/store";
 import CourseView from "@/views/CourseView";
 
 export default function CourseController() {
   const params = useParams<{ courseCode: string }>();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const dispatch = useDispatch<Dispatch>();
-  const { userId } = useSessionData();
+  const queryClient = useQueryClient();
+  const { userId } = useMe();
   const fromSaved = searchParams.get("from") === "saved";
   const openReviewOnLoad = searchParams.get("writeReview") === "1";
   const addReview = useAddReview();
   const backHref = fromSaved ? "/favorites" : "/search";
   const backLabel = fromSaved ? "Back to saved courses" : "Back to explore";
 
-  // Select from Redux
-  const courseDetails = useSelector((s: RootState) => s.course.courseDetails);
-  const courseLoading = useSelector((s: RootState) => s.course.loading);
-  const reviews = useSelector((s: RootState) => s.reviews.reviews);
-  const reviewsLoading = useSelector((s: RootState) => s.reviews.loading);
-  const courseError = useSelector((s: RootState) => s.course.error);
+  const courseCode = params?.courseCode;
+  const {
+    data: courseDetails,
+    isLoading: courseLoading,
+    error: courseQueryError,
+  } = useCourseDetails(courseCode);
+  const { data: reviews, isLoading: reviewsLoading } = useCourseReviews(
+    courseCode,
+    userId || undefined,
+  );
+  const courseError = courseQueryError
+    ? courseQueryError instanceof Error
+      ? courseQueryError.message
+      : "Failed to load course"
+    : null;
 
-  // Validate route param
   useEffect(() => {
     if (!params?.courseCode) router.push("/search");
   }, [params?.courseCode, router]);
 
-  // Initial fetch
-  useEffect(() => {
-    if (!params?.courseCode) return;
-    dispatch(fetchCourseDetails(params.courseCode));
-    dispatch(fetchCourseReviews({ courseCode: params.courseCode, userId }));
-  }, [params.courseCode, userId, dispatch]);
-
-  // Websocket: Live update on review changes
   useEffect(() => {
     if (!params.courseCode || !userId) return;
     const socket = getReviewsSocket();
@@ -53,15 +53,17 @@ export default function CourseController() {
       socket.emit("joinCourse", { courseCode: params.courseCode });
     if (socket.connected) doJoin();
     else socket.once("connect", doJoin);
-    const handler = async () => {
-      dispatch(fetchCourseReviews({ courseCode: params.courseCode, userId }));
+    const handler = () => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.reviews(params.courseCode),
+      });
     };
     socket.on("reviews.changed", handler);
     return () => {
       socket.off("reviews.changed", handler);
       socket.off("connect", doJoin);
     };
-  }, [params.courseCode, userId, dispatch]);
+  }, [params.courseCode, userId, queryClient]);
 
   const posts: (PostProps & { postId: string })[] = Array.isArray(reviews)
     ? reviews.map((review) => ({ ...review, postId: review.id }))
@@ -89,26 +91,7 @@ export default function CourseController() {
     );
   }
 
-  const routeCode = params.courseCode?.toUpperCase() ?? "";
-  const loadedInfoCode = courseDetails?.courseCode.toUpperCase() ?? null;
-  /** Avoid flashing previous course while Redux still holds last route's data. */
-  const courseInfoStale =
-    Boolean(courseDetails) &&
-    Boolean(loadedInfoCode) &&
-    loadedInfoCode !== routeCode;
-  const reviewsStale =
-    Array.isArray(reviews) &&
-    reviews.length > 0 &&
-    reviews[0].courseCode?.toUpperCase() !== routeCode;
-
-  if (
-    courseLoading ||
-    reviewsLoading ||
-    reviews === null ||
-    !courseDetails ||
-    courseInfoStale ||
-    reviewsStale
-  ) {
+  if (courseLoading || reviewsLoading || reviews == null || !courseDetails) {
     return (
       <CoursePageSkeleton
         courseCode={params.courseCode}
