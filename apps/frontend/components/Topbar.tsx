@@ -8,7 +8,10 @@ export default function Topbar() {
   return (
     <div className="flex w-full fixed z-50 p-5 bg-primary items-center justify-between">
       <Link href="/">
-        <Button variant="nav" className="w-full justify-start hover:bg-primary">
+        <Button
+          variant="ghost"
+          className="w-full !h-auto justify-start !p-2 whitespace-normal tracking-normal hover:bg-primary hover:font-bold hover:tracking-wider cursor-pointer"
+        >
           <img
             src="/ais-symbol-white.png"
             alt="KTH AI Society"

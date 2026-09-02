@@ -29,6 +29,9 @@ export default function Navbar() {
     void logout();
   };
 
+  const navButtonClassName =
+    "w-full !h-auto justify-start !p-2 whitespace-normal tracking-normal hover:font-bold hover:tracking-wider cursor-pointer hover:bg-white/10";
+
   const getInitials = (name: string, email: string) => {
     if (name?.trim()) {
       return name
@@ -46,8 +49,8 @@ export default function Navbar() {
       <div className="self-center pt-2">
         <Link href="/">
           <Button
-            variant="nav"
-            className="w-full justify-start hover:bg-primary"
+            variant="ghost"
+            className={`${navButtonClassName} hover:bg-primary`}
           >
             <img
               src="/ais-symbol-white.png"
@@ -69,7 +72,7 @@ export default function Navbar() {
       <ul className="space-y-2 w-full mt-10">
         <li>
           <Link href="/search">
-            <Button variant="nav" className="w-full justify-start">
+            <Button variant="ghost" className={navButtonClassName}>
               <Search
                 className="text-white !h-4 !w-4 shrink-0"
                 strokeWidth={pathname === "/search" ? 2.75 : 2}
@@ -81,7 +84,7 @@ export default function Navbar() {
         </li>
         <li>
           <Link href="/favorites">
-            <Button variant="nav" className="w-full justify-start">
+            <Button variant="ghost" className={navButtonClassName}>
               <Bookmark
                 className={
                   pathname === "/favorites"
@@ -97,7 +100,7 @@ export default function Navbar() {
         {/*
         <li>
           <Link href="/reviews">
-            <Button variant="nav" className="w-full justify-start">
+            <Button variant="ghost" className={navButtonClassName}>
               {pathname === "/reviews" ? (
                 <RiStarFill className="text-white !w-4 !h-4" />
               ) : (
@@ -114,7 +117,7 @@ export default function Navbar() {
       <ul className="space-y-1 w-full mt-auto">
         <li>
           <Link href="/about">
-            <Button variant="nav" className="w-full justify-start">
+            <Button variant="ghost" className={navButtonClassName}>
               {pathname === "/about" ? (
                 <RiBookOpenFill className="text-white !w-4 !h-4" />
               ) : (
@@ -126,7 +129,7 @@ export default function Navbar() {
         </li>
         <li>
           <Link href="/contact">
-            <Button variant="nav" className="w-full justify-start">
+            <Button variant="ghost" className={navButtonClassName}>
               {pathname === "/contact" ? (
                 <MdContactSupport className="text-white !w-4 !h-4" />
               ) : (
@@ -140,7 +143,7 @@ export default function Navbar() {
 
       {/* PROFILE CARD */}
       <DropdownMenu>
-        <DropdownMenuTrigger className="w-full mb-10 h-auto rounded-md text-sm font-medium transition-all gap-2 py-2 pl-2 pr-2 justify-start whitespace-normal cursor-pointer flex items-center group hover:bg-primary-light">
+        <DropdownMenuTrigger className="w-full mb-10 h-auto rounded-md text-sm font-medium transition-all gap-2 py-2 pl-2 pr-2 justify-start whitespace-normal cursor-pointer flex items-center group hover:bg-white/10">
           <Avatar className="w-10 h-10">
             {user?.image ? (
               <AvatarImage
@@ -149,7 +152,7 @@ export default function Navbar() {
                 className="rounded-full object-cover"
               />
             ) : null}
-            <AvatarFallback className="bg-primary-light text-white font-semibold">
+            <AvatarFallback className="bg-white/20 text-white font-semibold">
               {getInitials(user?.name ?? "", user?.email ?? "")}
             </AvatarFallback>
           </Avatar>

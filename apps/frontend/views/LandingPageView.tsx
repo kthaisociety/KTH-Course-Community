@@ -131,7 +131,13 @@ export default function LandingPageView(props: LandingPageViewProps) {
         }}
         className="flex relative z-10 w-full pt-8"
       >
-        <Button asChild size="larger" variant="default" onClick={handleClick}>
+        <Button
+          asChild
+          size="lg"
+          variant="default"
+          className="h-15 text-lg px-9"
+          onClick={handleClick}
+        >
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}

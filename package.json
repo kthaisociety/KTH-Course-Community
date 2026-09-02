@@ -41,6 +41,8 @@
   },
   "homepage": "https://github.com/Tegelstenen/course-compass#readme",
   "overrides": {
+    "@nestjs/common": "11.2.3",
+    "@nestjs/core": "11.2.3",
     "lodash": "^4.18.1",
     "@angular-devkit/core": {
       "picomatch": "^4.0.4"
