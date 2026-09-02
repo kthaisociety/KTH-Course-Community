@@ -1,19 +1,22 @@
 "use client";
 
-import { useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useRequireSession } from "@/hooks/sessionHooks";
 import { useLogout } from "@/hooks/useLogout";
-import { queryKeys } from "@/lib/query-keys";
-import { deleteAccount, type Me, uploadProfilePicture } from "@/lib/user";
+import { type Me, uploadProfilePicture } from "@/lib/user";
+import { useTRPC } from "@/trpc/client";
 import ProfileView from "@/views/ProfileView";
 
 export default function ProfileController() {
+  const trpc = useTRPC();
   const queryClient = useQueryClient();
   const logout = useLogout();
   const { user, refetch } = useRequireSession();
   const [preview, setPreview] = useState<string | null>(null);
+  const deleteAccount = useMutation(trpc.user.delete.mutationOptions());
+  const meKey = trpc.user.me.queryKey();
 
   const name = user?.name ?? "";
   const email = user?.email ?? "";
@@ -34,10 +37,10 @@ export default function ProfileController() {
       return;
     }
 
-    queryClient.setQueryData<Me | null>(queryKeys.me, (current) =>
+    queryClient.setQueryData<Me | null>(meKey, (current) =>
       current ? { ...current, image: result.url } : current,
     );
-    await queryClient.invalidateQueries({ queryKey: queryKeys.me });
+    await queryClient.invalidateQueries({ queryKey: meKey });
     await refetch();
     setPreview(null);
     URL.revokeObjectURL(localPreview);
@@ -50,7 +53,7 @@ export default function ProfileController() {
       )
     ) {
       try {
-        await deleteAccount();
+        await deleteAccount.mutateAsync();
       } catch (err) {
         console.error("Deletion failed:", err);
       }

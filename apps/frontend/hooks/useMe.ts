@@ -1,13 +1,12 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { queryKeys } from "@/lib/query-keys";
-import { getMe } from "@/lib/user";
+import { useTRPC } from "@/trpc/client";
 
 export function useMe() {
+  const trpc = useTRPC();
   const query = useQuery({
-    queryKey: queryKeys.me,
-    queryFn: getMe,
+    ...trpc.user.me.queryOptions(),
     retry: false,
   });
 

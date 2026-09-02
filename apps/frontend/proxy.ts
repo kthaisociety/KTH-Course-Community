@@ -9,8 +9,8 @@ import { type NextRequest, NextResponse } from "next/server";
  *
  * This is Better Auth's documented *optimistic* check (D12): it tests for the
  * presence of the session cookie and never validates it. A stale or forged
- * cookie passes here and is rejected by the Nest `AuthGuard`, which is the real
- * enforcement. Do not mistake this for authorisation.
+ * cookie passes here and is rejected by tRPC `protectedProcedure`, which is the
+ * real enforcement. Do not mistake this for authorisation.
  */
 export function proxy(request: NextRequest) {
   if (!getSessionCookie(request)) {
@@ -20,9 +20,5 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // Explicit paths only. The proxy runs *before* rewrites, so a broader pattern
-  // that caught `/api/*` would intercept `/api/auth/*` and break the proxy to
-  // Nest. The rest of the `(service)` group is intentionally public: /search,
-  // /course and /reviews are `@AllowAnonymous` on the backend.
   matcher: ["/profile/:path*", "/favorites/:path*"],
 };

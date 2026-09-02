@@ -7,12 +7,12 @@ import { useCallback } from "react";
 import { useRequireSession } from "@/hooks/sessionHooks";
 import { useMe } from "@/hooks/useMe";
 import { useToggleFavorite } from "@/hooks/useToggleFavorite";
-import { getCourseSummary } from "@/lib/courses";
-import { queryKeys } from "@/lib/query-keys";
+import { useTRPC } from "@/trpc/client";
 import UserCoursesView from "@/views/UserCoursesView";
 
 export default function UserCoursesController() {
   useRequireSession();
+  const trpc = useTRPC();
   const { user, isLoading: isSessionLoading } = useMe();
   const toggleFavorite = useToggleFavorite();
   const router = useRouter();
@@ -20,8 +20,7 @@ export default function UserCoursesController() {
 
   const summaryQueries = useQueries({
     queries: codes.map((courseCode) => ({
-      queryKey: queryKeys.courseSummary(courseCode),
-      queryFn: () => getCourseSummary(courseCode),
+      ...trpc.course.summary.queryOptions({ courseCode }),
       enabled: !isSessionLoading,
     })),
   });
@@ -52,7 +51,7 @@ export default function UserCoursesController() {
 
   async function onToggleFavorite(courseCode: string) {
     try {
-      await toggleFavorite.mutateAsync(courseCode);
+      await toggleFavorite.mutateAsync({ courseCode });
     } catch (err) {
       console.error("Failed to toggle favorite:", err);
     }

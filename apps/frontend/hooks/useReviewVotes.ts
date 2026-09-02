@@ -1,23 +1,24 @@
 "use client";
 
-import { useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 import { toast } from "sonner";
 import { useSessionData } from "@/hooks/sessionHooks";
-import { queryKeys } from "@/lib/query-keys";
-import { likeReview } from "@/lib/reviews";
+import { useTRPC } from "@/trpc/client";
 
 export function useReviewVotes(courseCode: string) {
+  const trpc = useTRPC();
   const queryClient = useQueryClient();
   const { userId } = useSessionData();
+  const likeMutation = useMutation(trpc.reviews.like.mutationOptions());
 
   const like = useCallback(
     async (postId: string) => {
       if (!userId) return;
       try {
-        await likeReview(postId);
+        await likeMutation.mutateAsync({ id: postId });
         await queryClient.invalidateQueries({
-          queryKey: queryKeys.reviews(courseCode),
+          queryKey: trpc.reviews.list.queryKey({ courseCode }),
         });
       } catch {
         toast.error("Failed to update vote", {
@@ -25,7 +26,7 @@ export function useReviewVotes(courseCode: string) {
         });
       }
     },
-    [queryClient, userId, courseCode],
+    [likeMutation, queryClient, trpc, userId, courseCode],
   );
 
   const dislike = useCallback(

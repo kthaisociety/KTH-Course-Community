@@ -124,7 +124,7 @@ export default function SearchController() {
 
   async function onToggleFavorite(courseCode: string) {
     try {
-      await toggleFavorite.mutateAsync(courseCode);
+      await toggleFavorite.mutateAsync({ courseCode });
     } catch (err) {
       console.error("Failed to toggle favorite:", err);
     }

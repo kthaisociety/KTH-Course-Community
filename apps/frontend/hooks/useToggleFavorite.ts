@@ -1,35 +1,38 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { queryKeys } from "@/lib/query-keys";
-import { type Me, toggleUserFavorite } from "@/lib/user";
+import type { Me } from "@/lib/user";
+import { useTRPC } from "@/trpc/client";
 
 export function useToggleFavorite() {
+  const trpc = useTRPC();
   const queryClient = useQueryClient();
+  const meKey = trpc.user.me.queryKey();
 
-  return useMutation({
-    mutationFn: toggleUserFavorite,
-    onMutate: async (courseCode: string) => {
-      await queryClient.cancelQueries({ queryKey: queryKeys.me });
-      const previous = queryClient.getQueryData<Me | null>(queryKeys.me);
-      if (previous) {
-        const has = previous.userFavorites.includes(courseCode);
-        queryClient.setQueryData<Me>(queryKeys.me, {
-          ...previous,
-          userFavorites: has
-            ? previous.userFavorites.filter((code) => code !== courseCode)
-            : [...previous.userFavorites, courseCode],
-        });
-      }
-      return { previous };
-    },
-    onError: (_err, _courseCode, context) => {
-      if (context?.previous !== undefined) {
-        queryClient.setQueryData(queryKeys.me, context.previous);
-      }
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.me });
-    },
-  });
+  return useMutation(
+    trpc.user.toggleFavorite.mutationOptions({
+      onMutate: async ({ courseCode }) => {
+        await queryClient.cancelQueries({ queryKey: meKey });
+        const previous = queryClient.getQueryData<Me | null>(meKey);
+        if (previous) {
+          const has = previous.userFavorites.includes(courseCode);
+          queryClient.setQueryData<Me>(meKey, {
+            ...previous,
+            userFavorites: has
+              ? previous.userFavorites.filter((code) => code !== courseCode)
+              : [...previous.userFavorites, courseCode],
+          });
+        }
+        return { previous };
+      },
+      onError: (_err, _input, context) => {
+        if (context?.previous !== undefined) {
+          queryClient.setQueryData(meKey, context.previous);
+        }
+      },
+      onSettled: () => {
+        queryClient.invalidateQueries({ queryKey: meKey });
+      },
+    }),
+  );
 }

@@ -6,7 +6,7 @@ on:
 
 jobs:
   build-and-push:
-    name: Build and Push Docker Images
+    name: Build and Push Docker Image
     runs-on: ubuntu-latest
 
     steps:
@@ -37,38 +37,6 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build and push backend image
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
-        with:
-          context: .
-          file: Dockerfile.backend
-          push: true
-          platforms: linux/amd64
-          tags: |
-            tegelsten/course-compass-backend:latest
-            tegelsten/course-compass-backend:${{ steps.meta.outputs.SHORT_SHA }}
-          cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,dest=/tmp/.buildx-cache,mode=max
-
-      - name: Validate frontend build domains
-        env:
-          NEXT_PUBLIC_BACKEND_DOMAIN: ${{ vars.NEXT_PUBLIC_BACKEND_DOMAIN }}
-          NEXT_PUBLIC_WEBSITE_DOMAIN: ${{ vars.NEXT_PUBLIC_WEBSITE_DOMAIN }}
-          BACKEND_DOMAIN: ${{ vars.BACKEND_DOMAIN }}
-        run: |
-          if [ -z "$NEXT_PUBLIC_BACKEND_DOMAIN" ]; then
-            echo "Missing repository variable: NEXT_PUBLIC_BACKEND_DOMAIN"
-            exit 1
-          fi
-          if [ -z "$NEXT_PUBLIC_WEBSITE_DOMAIN" ]; then
-            echo "Missing repository variable: NEXT_PUBLIC_WEBSITE_DOMAIN"
-            exit 1
-          fi
-          if [ -z "$BACKEND_DOMAIN" ]; then
-            echo "Missing repository variable: BACKEND_DOMAIN"
-            exit 1
-          fi
-
       - name: Build and push frontend image
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
         with:
@@ -79,9 +47,5 @@ jobs:
           tags: |
             tegelsten/course-compass-frontend:latest
             tegelsten/course-compass-frontend:${{ steps.meta.outputs.SHORT_SHA }}
-          build-args: |
-            NEXT_PUBLIC_BACKEND_DOMAIN=${{ vars.NEXT_PUBLIC_BACKEND_DOMAIN }}
-            NEXT_PUBLIC_WEBSITE_DOMAIN=${{ vars.NEXT_PUBLIC_WEBSITE_DOMAIN }}
-            BACKEND_DOMAIN=${{ vars.BACKEND_DOMAIN }}
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache,mode=max

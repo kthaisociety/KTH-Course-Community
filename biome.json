@@ -14,7 +14,8 @@
       "!dist",
       "!build",
       "!types",
-      "!migrations"
+      "!migrations",
+      "!drizzle"
     ]
   },
   "formatter": {
@@ -64,20 +65,6 @@
       "includes": ["apps/frontend/components/ui/**"],
       "linter": {
         "enabled": false
-      }
-    },
-    {
-      "includes": [
-        "apps/backend-nest/src/**/*.service.ts",
-        "apps/backend-nest/src/**/*.controller.ts",
-        "apps/backend-nest/src/**/*.module.ts"
-      ],
-      "linter": {
-        "rules": {
-          "style": {
-            "useImportType": "off"
-          }
-        }
       }
     },
     {

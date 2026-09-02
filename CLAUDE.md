@@ -1,24 +1,21 @@
 # KTH-Course-Community
 
-Monorepo for a KTH course community app with a Next.js frontend and a NestJS backend.
+Monorepo for a KTH course community app. Next.js hosts the UI, Better Auth, Drizzle/Neon, and the tRPC API.
 
 ## Quick Reference
 
 - Package manager: `bun` workspaces
-- Frontend: `apps/frontend`
-- Backend: `apps/backend-nest`
+- App: `apps/frontend`
 - Shared types: `packages/shared`
 - Install: `bun i`
-- Run both: `bun run dev`
-- Run frontend: `bun run dev:fe`
-- Run backend: `bun run dev:be`
-- Backend tests: `bun run test:be`
-- Frontend tests: `bun run test:fe`
+- Run: `bun run dev`
+- Tests: `bun run test:fe`
+- Ingest: `bun run ingest`
 
 ## Project Notes
 
-- Embedding helpers live in `apps/backend-nest/src/ai` (used by search/ingest).
-- Frontend talks to the backend using `NEXT_PUBLIC_BACKEND_DOMAIN`.
+- Embedding helpers live in `apps/frontend/server/ai.ts` (used by search/ingest).
+- Browser calls same-origin `/api/trpc` and `/api/auth`.
 - Prefer documenting real behavior from code, not intended behavior.
 
 ## Repo Agent Files

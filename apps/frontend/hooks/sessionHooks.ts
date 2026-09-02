@@ -28,8 +28,8 @@ export function useSessionData() {
  * during the initial session fetch. `replace` rather than `push` keeps the
  * page the user could not see out of the back-button history.
  *
- * This is still not authorisation. The Nest `AuthGuard` remains the only real
- * enforcement; this exists so the user lands on sign-in instead of an empty page.
+ * This is still not authorisation. tRPC `protectedProcedure` remains the only
+ * real enforcement; this exists so the user lands on sign-in instead of an empty page.
  */
 export function useRequireSession() {
   const session = useSessionData();

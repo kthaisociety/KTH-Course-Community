@@ -1,6 +1,5 @@
 "use client";
 
-import { useQueryClient } from "@tanstack/react-query";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useEffect } from "react";
 import { CoursePageSkeleton } from "@/components/CoursePageSkeleton";
@@ -10,15 +9,12 @@ import { useAddReview } from "@/hooks/useAddReview";
 import { useCourseDetails } from "@/hooks/useCourseDetails";
 import { useCourseReviews } from "@/hooks/useCourseReviews";
 import { useMe } from "@/hooks/useMe";
-import { queryKeys } from "@/lib/query-keys";
-import { getReviewsSocket } from "@/lib/realtime";
 import CourseView from "@/views/CourseView";
 
 export default function CourseController() {
   const params = useParams<{ courseCode: string }>();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const queryClient = useQueryClient();
   const { userId } = useMe();
   const fromSaved = searchParams.get("from") === "saved";
   const openReviewOnLoad = searchParams.get("writeReview") === "1";
@@ -36,7 +32,7 @@ export default function CourseController() {
     data: reviews,
     isLoading: reviewsLoading,
     isError: reviewsError,
-  } = useCourseReviews(courseCode, userId || undefined);
+  } = useCourseReviews(courseCode);
   const courseError = courseQueryError
     ? courseQueryError instanceof Error
       ? courseQueryError.message
@@ -46,25 +42,6 @@ export default function CourseController() {
   useEffect(() => {
     if (!params?.courseCode) router.push("/search");
   }, [params?.courseCode, router]);
-
-  useEffect(() => {
-    if (!params.courseCode || !userId) return;
-    const socket = getReviewsSocket();
-    const doJoin = () =>
-      socket.emit("joinCourse", { courseCode: params.courseCode });
-    if (socket.connected) doJoin();
-    else socket.once("connect", doJoin);
-    const handler = () => {
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.reviews(params.courseCode),
-      });
-    };
-    socket.on("reviews.changed", handler);
-    return () => {
-      socket.off("reviews.changed", handler);
-      socket.off("connect", doJoin);
-    };
-  }, [params.courseCode, userId, queryClient]);
 
   const posts: (PostProps & { postId: string })[] = Array.isArray(reviews)
     ? reviews.map((review) => ({ ...review, postId: review.id }))

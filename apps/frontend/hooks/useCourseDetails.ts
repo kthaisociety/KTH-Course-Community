@@ -1,13 +1,12 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { getCourseDetails } from "@/lib/courses";
-import { queryKeys } from "@/lib/query-keys";
+import { useTRPC } from "@/trpc/client";
 
 export function useCourseDetails(courseCode: string | null | undefined) {
+  const trpc = useTRPC();
   return useQuery({
-    queryKey: queryKeys.courseDetails(courseCode ?? ""),
-    queryFn: () => getCourseDetails(courseCode as string),
+    ...trpc.course.details.queryOptions({ courseCode: courseCode ?? "" }),
     enabled: Boolean(courseCode),
   });
 }

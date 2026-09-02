@@ -1,7 +1,5 @@
 "use client";
 
-import { nestHttpUrl } from "@/lib/nest-http";
-
 export type Me = {
   userId: string;
   name: string;
@@ -10,44 +8,6 @@ export type Me = {
   image: string | null;
 };
 
-export async function getMe(): Promise<Me | null> {
-  const res = await fetch(nestHttpUrl("/user/me"));
-  if (res.status === 401) return null;
-  if (!res.ok) {
-    throw new Error(`Failed to fetch user: HTTP ${res.status}`);
-  }
-
-  const data = await res.json();
-  if (!data?.userId || !data?.email) {
-    throw new Error("Invalid user response from /user/me");
-  }
-
-  return {
-    userId: data.userId,
-    name: data.name ?? "",
-    email: data.email,
-    userFavorites: data.userFavorites ?? [],
-    image: data.image ?? null,
-  };
-}
-
-export async function toggleUserFavorite(
-  courseCode: string,
-): Promise<{ action: "added" | "removed" }> {
-  const res = await fetch(nestHttpUrl("/user/toggle-favorite"), {
-    cache: "no-store",
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ courseCode }),
-  });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-
-  const data = (await res.json()) as { action: "added" | "removed" };
-  return data;
-}
-
 export async function uploadProfilePicture(
   file: File,
 ): Promise<{ success: true; url: string } | { success: false; error: string }> {
@@ -55,7 +15,7 @@ export async function uploadProfilePicture(
     const formData = new FormData();
     formData.append("file", file);
 
-    const res = await fetch(nestHttpUrl("/user/profile-picture"), {
+    const res = await fetch("/api/user/profile-picture", {
       method: "POST",
       body: formData,
     });
@@ -88,11 +48,4 @@ export async function uploadProfilePicture(
     }
     return { success: false, error: "Unknown upload error" };
   }
-}
-
-export async function deleteAccount(): Promise<void> {
-  const res = await fetch(nestHttpUrl("/user"), {
-    method: "DELETE",
-  });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
 }

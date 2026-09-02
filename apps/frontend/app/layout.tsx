@@ -4,7 +4,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
 // For authentication
 import { Toaster } from "@/components/ui/sonner";
-import QueryProvider from "@/providers/QueryProvider";
+import { TRPCReactProvider } from "@/trpc/client";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -35,7 +35,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background`}
       >
-        <QueryProvider>
+        <TRPCReactProvider>
           <ThemeProvider
             attribute="class"
             defaultTheme="system"
@@ -45,7 +45,7 @@ export default function RootLayout({
             <Toaster />
             {children}
           </ThemeProvider>
-        </QueryProvider>
+        </TRPCReactProvider>
       </body>
     </html>
   );

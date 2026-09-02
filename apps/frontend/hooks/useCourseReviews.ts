@@ -1,16 +1,12 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { queryKeys } from "@/lib/query-keys";
-import { findAllReviews } from "@/lib/reviews";
+import { useTRPC } from "@/trpc/client";
 
-export function useCourseReviews(
-  courseCode: string | null | undefined,
-  userId?: string,
-) {
+export function useCourseReviews(courseCode: string | null | undefined) {
+  const trpc = useTRPC();
   return useQuery({
-    queryKey: [...queryKeys.reviews(courseCode ?? ""), userId ?? ""] as const,
-    queryFn: () => findAllReviews(courseCode as string),
+    ...trpc.reviews.list.queryOptions({ courseCode: courseCode ?? "" }),
     enabled: Boolean(courseCode),
   });
 }
