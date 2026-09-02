@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
 import { searchCourses } from "@/lib/search";
 
@@ -12,5 +12,6 @@ export function useSearchCourses(
     queryKey: queryKeys.search(query, filters),
     queryFn: () => searchCourses(query, filters),
     enabled: Boolean(query.trim()),
+    placeholderData: keepPreviousData,
   });
 }

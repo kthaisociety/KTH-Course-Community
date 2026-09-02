@@ -58,12 +58,12 @@ export default function SearchController() {
       ? courseDetails
       : null;
 
-  const resultsFull: CourseWithUserInfo[] = (searchData?.results ?? []).map(
-    (result) => ({
-      ...result,
-      isUserFavorite: userFavorites.includes(result.courseCode),
-    }),
-  );
+  const resultsFull: CourseWithUserInfo[] = (
+    debouncedQuery.trim() ? (searchData?.results ?? []) : []
+  ).map((result) => ({
+    ...result,
+    isUserFavorite: userFavorites.includes(result.courseCode),
+  }));
 
   const error = searchError
     ? searchError instanceof Error

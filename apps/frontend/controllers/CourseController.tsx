@@ -32,10 +32,11 @@ export default function CourseController() {
     isLoading: courseLoading,
     error: courseQueryError,
   } = useCourseDetails(courseCode);
-  const { data: reviews, isLoading: reviewsLoading } = useCourseReviews(
-    courseCode,
-    userId || undefined,
-  );
+  const {
+    data: reviews,
+    isLoading: reviewsLoading,
+    isError: reviewsError,
+  } = useCourseReviews(courseCode, userId || undefined);
   const courseError = courseQueryError
     ? courseQueryError instanceof Error
       ? courseQueryError.message
@@ -91,7 +92,11 @@ export default function CourseController() {
     );
   }
 
-  if (courseLoading || reviewsLoading || reviews == null || !courseDetails) {
+  if (
+    courseLoading ||
+    !courseDetails ||
+    (reviewsLoading && reviews == null && !reviewsError)
+  ) {
     return (
       <CoursePageSkeleton
         courseCode={params.courseCode}
