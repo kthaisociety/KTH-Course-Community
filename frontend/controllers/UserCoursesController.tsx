@@ -3,27 +3,29 @@
 import type { CourseWithUserInfo } from "@shared/types";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
-import { useDispatch } from "react-redux";
-import { useSessionData } from "@/hooks/sessionHooks";
-import { useUser } from "@/hooks/userHooks";
+import { useRequireSession } from "@/hooks/sessionHooks";
+import { useFavorites } from "@/hooks/userHooks";
 import { getCourseSummary } from "@/lib/courses";
-import { toggleUserFavorite } from "@/lib/user";
-import type { Dispatch } from "@/state/store";
-import { toggleFavoriteSuccess } from "@/state/user/userSlice";
 import UserCoursesView from "@/views/UserCoursesView";
 
 export default function UserCoursesController() {
-  const { isLoading: isSessionLoading } = useSessionData();
-  const userData = useUser();
+  // Redirects to /auth if the session resolves to null. `useFavorites`
+  // reads the session too, but only to decide whether to fetch; nothing
+  // here sends the user away when it is missing.
+  useRequireSession();
+  const {
+    favorites,
+    isLoading: isFavoritesLoading,
+    toggle: toggleFavorite,
+  } = useFavorites();
   const [userFavoriteCourses, setUserFavoriteCourses] = useState<
     CourseWithUserInfo[]
   >([]);
   const [isLoadingFavorites, setIsLoadingFavorites] = useState(true);
 
   const router = useRouter();
-  const dispatch = useDispatch<Dispatch>();
 
-  const isListLoading = isSessionLoading || isLoadingFavorites;
+  const isListLoading = isFavoritesLoading || isLoadingFavorites;
 
   const onCardClick = useCallback(
     (courseCode: string) => {
@@ -45,14 +47,7 @@ export default function UserCoursesController() {
 
   async function onToggleFavorite(courseCode: string) {
     try {
-      const res = await toggleUserFavorite(courseCode);
-
-      dispatch(
-        toggleFavoriteSuccess({
-          courseCode: courseCode,
-          action: res.action,
-        }),
-      );
+      const res = await toggleFavorite(courseCode);
 
       if (res.action === "added") {
         const course = await getCourseSummary(courseCode);
@@ -73,14 +68,14 @@ export default function UserCoursesController() {
   }
 
   useEffect(() => {
-    if (isSessionLoading) return;
+    if (isFavoritesLoading) return;
 
     let cancelled = false;
 
     async function fetchCourses() {
       setIsLoadingFavorites(true);
       try {
-        const codes = userData.userFavorites ?? [];
+        const codes = favorites;
         const results = await Promise.allSettled(
           codes.map((courseCode) => getCourseSummary(courseCode)),
         );
@@ -102,7 +97,7 @@ export default function UserCoursesController() {
     return () => {
       cancelled = true;
     };
-  }, [userData, isSessionLoading]);
+  }, [favorites, isFavoritesLoading]);
 
   return (
     <UserCoursesView

@@ -1,17 +1,18 @@
 "use client";
 
 import { useCallback } from "react";
-import { useDispatch, useSelector } from "react-redux";
+import { useDispatch } from "react-redux";
 import { toast } from "sonner";
+import { useSessionData } from "@/hooks/sessionHooks";
 import {
   fetchCourseReviews,
   likeCourseReview,
 } from "@/state/reviews/reviewThunk";
-import type { Dispatch, RootState } from "@/state/store";
+import type { Dispatch } from "@/state/store";
 
 export function useReviewVotes(courseCode: string) {
   const dispatch = useDispatch<Dispatch>();
-  const userId = useSelector((s: RootState) => s.session.userId);
+  const { userId } = useSessionData();
 
   const like = useCallback(
     async (postId: string) => {

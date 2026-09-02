@@ -1,6 +1,7 @@
 import { Body, Controller, Post } from "@nestjs/common";
+import { AllowAnonymous } from "@thallesp/nestjs-better-auth";
 import { FeedbackService } from "./feedback.service";
-
+@AllowAnonymous()
 @Controller("feedback")
 export class FeedbackController {
   constructor(private readonly feedbackService: FeedbackService) {}

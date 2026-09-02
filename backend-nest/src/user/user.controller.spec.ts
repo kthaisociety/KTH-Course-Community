@@ -1,128 +1,178 @@
-import { Readable } from "node:stream";
-import { Test, type TestingModule } from "@nestjs/testing";
-import type { SessionContainer } from "supertokens-node/recipe/session";
+import request from "supertest";
+import { DRIZZLE } from "../db/drizzle.module";
+import {
+  type AuthTestApp,
+  createAuthTestApp,
+  SESSION_USER,
+} from "../testing/better-auth-test-app";
+import { createMockDb, type MockDb } from "../testing/mock-db";
 import { UserController } from "./user.controller";
-import { UserService, type UserWithFavorites } from "./user.service";
+import { UserService } from "./user.service";
 
-type MockSession = Pick<SessionContainer, "getUserId">;
+jest.mock("@vercel/blob", () => ({
+  put: jest.fn().mockResolvedValue({
+    url: "https://blob.example.com/profile-abc123.jpg",
+  }),
+}));
 
-describe("UserController", () => {
-  let userController: UserController;
-  let userService: UserService;
-  let mockSession: jest.Mocked<MockSession>;
+const { put } = jest.requireMock("@vercel/blob") as { put: jest.Mock };
 
-  const mockUser: UserWithFavorites = {
-    id: "user-123",
-    email: "Sven@kth.se",
-    name: "Sven",
-    profilePicture: null,
-    createdAt: new Date("2023-10-15"),
-    updatedAt: new Date("2023-10-15"),
-    userFavorites: ["SF1625", "SF1624"],
-  };
-
-  // For testing profile image later when functionality fixed
-  const _mockFile: Express.Multer.File = {
-    fieldname: "file",
-    originalname: "profile.jpg",
-    encoding: "7bit",
-    mimetype: "image/jpeg",
-    size: 1024,
-    buffer: Buffer.from("mock file content"),
-    destination: "",
-    filename: "",
-    path: "",
-    stream: Readable.from(Buffer.from("mock file content")),
-  };
+/**
+ * The user routes under the Better Auth session shape.
+ *
+ * There is one id now: the id on the session's user is the app user id, so the
+ * controller reaches the database with it directly. Nothing resolves one id
+ * into another, and no route is reachable without a session.
+ */
+describe("UserController (HTTP)", () => {
+  let testApp: AuthTestApp;
+  let mockDb: MockDb;
 
   beforeEach(async () => {
-    const mockUserService = {
-      resolveAppUserId: jest.fn(),
-      getUser: jest.fn(),
-      deleteUser: jest.fn(),
-    };
-
-    mockSession = {
-      getUserId: jest.fn(),
-    };
-
-    const module: TestingModule = await Test.createTestingModule({
+    mockDb = createMockDb();
+    testApp = await createAuthTestApp({
       controllers: [UserController],
-      providers: [
-        {
-          provide: UserService,
-          useValue: mockUserService,
-        },
-      ],
-    }).compile();
-
-    userController = module.get<UserController>(UserController);
-    userService = module.get<UserService>(UserService);
+      providers: [UserService, { provide: DRIZZLE, useValue: mockDb }],
+    });
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    await testApp.app.close();
     jest.clearAllMocks();
   });
 
-  it("should be defined", () => {
-    expect(userController).toBeDefined();
-  });
+  const http = () => request(testApp.app.getHttpServer());
 
-  describe("getMe", () => {
-    it("should return user data when user exists", async () => {
-      mockSession.getUserId.mockReturnValue("user-123");
-      jest.spyOn(userService, "resolveAppUserId").mockResolvedValue("user-123");
-      jest.spyOn(userService, "getUser").mockResolvedValue(mockUser);
+  describe("GET /user/me", () => {
+    it("returns the signed-in user's profile", async () => {
+      testApp.signInAs();
+      mockDb.queueResult([
+        { favoriteCourse: "SF1625" },
+        { favoriteCourse: "SF1624" },
+      ]);
 
-      const result = await userController.getMe(
-        mockSession as unknown as SessionContainer,
-      );
+      const response = await http().get("/user/me").expect(200);
 
-      expect(userService.getUser).toHaveBeenCalledWith("user-123");
-      expect(result).toEqual({
-        userId: "user-123",
-        name: "Sven",
-        email: "Sven@kth.se",
-        profilePicture: null,
-        userFavorites: mockUser.userFavorites,
+      expect(response.body).toEqual({
+        userId: SESSION_USER.id,
+        name: SESSION_USER.name,
+        email: SESSION_USER.email,
+        userFavorites: ["SF1625", "SF1624"],
+        image: null,
       });
     });
-  });
 
-  describe("deleteAccount", () => {
-    it("should delete user account successfully", async () => {
-      mockSession.getUserId.mockReturnValue("user-123");
-      jest.spyOn(userService, "resolveAppUserId").mockResolvedValue("user-123");
-      jest.spyOn(userService, "deleteUser").mockResolvedValue(undefined);
+    it("rejects anonymous callers", async () => {
+      testApp.signOut();
 
-      const result = await userController.deleteAccount(
-        mockSession as unknown as SessionContainer,
-      );
-
-      expect(userService.deleteUser).toHaveBeenCalledWith("user-123");
-      expect(result).toEqual({ success: true });
+      await http().get("/user/me").expect(401);
     });
   });
 
-  // We have not implemented blob storage for images yet
-  /*
-  describe("uploadProfilePicture", () => {
-    it("should upload profile picture and return URL", async () => {
-      mockSession.getUserId.mockReturnValue("user-123");
-      const consoleSpy = jest.spyOn(console, "log").mockImplementation();
+  describe("GET /user/favorites", () => {
+    it("returns the signed-in user's favourite course codes", async () => {
+      testApp.signInAs();
+      mockDb.queueResult([
+        { favoriteCourse: "SF1625" },
+        { favoriteCourse: "SF1624" },
+      ]);
 
-      const result = await userController.updateProfilePicture(
-        mockSession,
-        ur
-      );
+      await http().get("/user/favorites").expect(200, ["SF1625", "SF1624"]);
+    });
 
-      expect(consoleSpy).toHaveBeenCalledWith("Uploaded file:", mockFile);
-      expect(result).toEqual({
-        url: "http://localhost:8080/uploads/profile.jpg",
-      });
+    it("rejects anonymous callers", async () => {
+      testApp.signOut();
 
-      consoleSpy.mockRestore();
+      await http().get("/user/favorites").expect(401);
     });
   });
-  */
+
+  describe("POST /user/toggle-favorite", () => {
+    it("adds a course that is not yet a favourite", async () => {
+      testApp.signInAs();
+      mockDb.queueResult([]);
+
+      await http()
+        .post("/user/toggle-favorite")
+        .send({ courseCode: "SF1625" })
+        .expect(201, { success: true, action: "added" });
+
+      expect(mockDb.values).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: SESSION_USER.id,
+          favoriteCourse: "SF1625",
+        }),
+      );
+    });
+
+    it("removes a course that is already a favourite", async () => {
+      testApp.signInAs();
+      mockDb.queueResult([
+        { userId: SESSION_USER.id, favoriteCourse: "SF1625" },
+      ]);
+
+      await http()
+        .post("/user/toggle-favorite")
+        .send({ courseCode: "SF1625" })
+        .expect(201, { success: true, action: "removed" });
+    });
+
+    it("rejects anonymous callers", async () => {
+      testApp.signOut();
+
+      await http()
+        .post("/user/toggle-favorite")
+        .send({ courseCode: "SF1625" })
+        .expect(401);
+    });
+  });
+
+  describe("POST /user/profile-picture", () => {
+    it("stores the uploaded picture and returns its URL", async () => {
+      testApp.signInAs();
+
+      await http()
+        .post("/user/profile-picture")
+        .attach("file", Buffer.from("a picture"), "profile.jpg")
+        .expect(201, { url: "https://blob.example.com/profile-abc123.jpg" });
+
+      expect(put).toHaveBeenCalled();
+      expect(mockDb.set).toHaveBeenCalledWith(
+        expect.objectContaining({
+          image: "https://blob.example.com/profile-abc123.jpg",
+        }),
+      );
+    });
+
+    it("rejects a request with no file", async () => {
+      testApp.signInAs();
+
+      await http().post("/user/profile-picture").expect(400);
+    });
+
+    it("rejects anonymous callers", async () => {
+      testApp.signOut();
+
+      await http()
+        .post("/user/profile-picture")
+        .attach("file", Buffer.from("a picture"), "profile.jpg")
+        .expect(401);
+    });
+  });
+
+  describe("DELETE /user", () => {
+    it("deletes the signed-in user's account", async () => {
+      testApp.signInAs();
+
+      await http().delete("/user").expect(200, { success: true });
+
+      expect(mockDb.delete).toHaveBeenCalled();
+    });
+
+    it("rejects anonymous callers", async () => {
+      testApp.signOut();
+
+      await http().delete("/user").expect(401);
+    });
+  });
 });

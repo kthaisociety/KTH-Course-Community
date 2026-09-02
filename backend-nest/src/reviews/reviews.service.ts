@@ -1,4 +1,9 @@
-import { Inject, Injectable, NotFoundException } from "@nestjs/common";
+import {
+  ForbiddenException,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from "@nestjs/common";
 import { and, eq, sql } from "drizzle-orm";
 import type { NeonHttpDatabase } from "drizzle-orm/neon-http";
 import { nanoid } from "nanoid"; // for generating unique review ids
@@ -104,6 +109,7 @@ export class ReviewsService {
 
   async update(
     id: string,
+    userId: string,
     reviewData: {
       examinationMethods: number;
       theoreticalVsApplied: number;
@@ -113,6 +119,8 @@ export class ReviewsService {
       content: string;
     },
   ) {
+    await this.assertAuthor(id, userId);
+
     const [updated] = await this.db
       .update(schema.reviews)
       .set({
@@ -133,7 +141,9 @@ export class ReviewsService {
   }
 
   // delete a review
-  async remove(id: string) {
+  async remove(id: string, userId: string) {
+    await this.assertAuthor(id, userId);
+
     const [deleted] = await this.db
       .delete(schema.reviews)
       .where(eq(schema.reviews.id, id))
@@ -216,6 +226,21 @@ export class ReviewsService {
     const review = await this.getReview(reviewId);
     if (review) this.reviewsGateway.emitCourseChanged(review.courseCode);
     return { action: "removed", voteType: null };
+  }
+
+  /**
+   * A review may only be changed by the person who wrote it.
+   *
+   * The lookup doubles as an existence check: `findOne` reports a missing
+   * review as a 404, so only a review that exists and belongs to someone else
+   * reaches the 403.
+   */
+  private async assertAuthor(reviewId: string, userId: string) {
+    const review = await this.findOne(reviewId);
+
+    if (review.userId !== userId) {
+      throw new ForbiddenException("You can only change your own review");
+    }
   }
 
   private async getReview(reviewId: string) {

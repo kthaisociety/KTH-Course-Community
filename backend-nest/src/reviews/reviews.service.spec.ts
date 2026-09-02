@@ -1,3 +1,4 @@
+import { ForbiddenException } from "@nestjs/common";
 import { Test, type TestingModule } from "@nestjs/testing";
 import { DRIZZLE } from "../db/drizzle.module";
 import { ReviewsGateway } from "./reviews.gateway";
@@ -118,23 +119,50 @@ describe("ReviewsService", () => {
   });
 
   describe("update", () => {
-    it("should update review", async () => {
+    it("should update the author's own review", async () => {
       const updatedReview = { ...mockInsertedReview, ...mockReviewData };
+      mockDb.limit.mockResolvedValue([mockInsertedReview]); // the author check
       mockDb.returning.mockResolvedValue([updatedReview]);
 
-      const result = await reviewsService.update("review-123", mockReviewData);
+      const result = await reviewsService.update(
+        "review-123",
+        mockInsertedReview.userId,
+        mockReviewData,
+      );
 
       expect(result).toEqual(updatedReview);
+    });
+
+    it("should reject a caller who did not write the review", async () => {
+      mockDb.limit.mockResolvedValue([mockInsertedReview]);
+
+      await expect(
+        reviewsService.update("review-123", "someone-else", mockReviewData),
+      ).rejects.toThrow(ForbiddenException);
+      expect(mockDb.update).not.toHaveBeenCalled();
     });
   });
 
   describe("remove", () => {
-    it("should delete review", async () => {
+    it("should delete the author's own review", async () => {
+      mockDb.limit.mockResolvedValue([mockInsertedReview]); // the author check
       mockDb.returning.mockResolvedValue([mockInsertedReview]);
 
-      const result = await reviewsService.remove("review-123");
+      const result = await reviewsService.remove(
+        "review-123",
+        mockInsertedReview.userId,
+      );
 
       expect(result).toEqual(mockInsertedReview);
+    });
+
+    it("should reject a caller who did not write the review", async () => {
+      mockDb.limit.mockResolvedValue([mockInsertedReview]);
+
+      await expect(
+        reviewsService.remove("review-123", "someone-else"),
+      ).rejects.toThrow(ForbiddenException);
+      expect(mockDb.delete).not.toHaveBeenCalled();
     });
   });
 

@@ -1,29 +1,33 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
-import { clearSession, getSession } from "../session/sessionSlice";
 
+/**
+ * Server state for the signed-in user that Better Auth does *not* carry.
+ * `name`, `email` and `image` live on the Better Auth session — read them via
+ * `useSessionData()` instead of duplicating them here.
+ *
+ * This slice is a stand-in for a query cache and is meant to be replaced by
+ * TanStack Query; `useFavorites()` is the seam that makes that a body swap.
+ */
 export interface UserState {
-  name: string;
-  email: string;
   userFavorites: string[];
-  profilePicture: string | null;
+  status: "idle" | "loading" | "ready";
 }
 
 const initialState: UserState = {
-  name: "",
-  email: "",
   userFavorites: [],
-  profilePicture: null,
+  status: "idle",
 };
 
 const userSlice = createSlice({
   name: "user",
   initialState,
   reducers: {
-    setUser: (state, action: PayloadAction<UserState>) => {
-      state.name = action.payload.name;
-      state.email = action.payload.email;
-      state.userFavorites = action.payload.userFavorites;
-      state.profilePicture = action.payload.profilePicture ?? null;
+    favoritesLoading: (state) => {
+      state.status = "loading";
+    },
+    favoritesLoaded: (state, action: PayloadAction<string[]>) => {
+      state.userFavorites = action.payload;
+      state.status = "ready";
     },
     toggleFavoriteSuccess: (
       state,
@@ -46,33 +50,19 @@ const userSlice = createSlice({
         );
       }
     },
-    setProfilePicture: (state, action: PayloadAction<string>) => {
-      state.profilePicture = action.payload;
-    },
+    // Back to "idle" so the next signed-in user refetches instead of reading
+    // the previous user's favorites.
     clearUser: (state) => {
-      state.name = "";
-      state.email = "";
       state.userFavorites = [];
-      state.profilePicture = null;
+      state.status = "idle";
     },
-  },
-  extraReducers: (builder) => {
-    builder
-      .addCase(getSession.rejected, (state) => {
-        state.name = "";
-        state.email = "";
-        state.userFavorites = [];
-        state.profilePicture = null;
-      })
-      .addCase(clearSession, (state) => {
-        state.name = "";
-        state.email = "";
-        state.userFavorites = [];
-        state.profilePicture = null;
-      });
   },
 });
 
-export const { setUser, toggleFavoriteSuccess, setProfilePicture, clearUser } =
-  userSlice.actions;
+export const {
+  favoritesLoading,
+  favoritesLoaded,
+  toggleFavoriteSuccess,
+  clearUser,
+} = userSlice.actions;
 export default userSlice.reducer;

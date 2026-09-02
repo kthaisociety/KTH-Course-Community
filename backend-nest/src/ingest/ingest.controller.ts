@@ -1,7 +1,39 @@
 // src/ingest/ingest.controller.ts
-import { Controller, Get, HttpCode, Post } from "@nestjs/common";
+
+import { createHash, timingSafeEqual } from "node:crypto";
+import {
+  CanActivate,
+  Controller,
+  ExecutionContext,
+  Get,
+  HttpCode,
+  Post,
+  UnauthorizedException,
+  UseGuards,
+} from "@nestjs/common";
+import { AllowAnonymous } from "@thallesp/nestjs-better-auth";
 import { IngestService } from "./ingest.service";
 
+// IngestKeyGuard is used to authenticate by INGEST_SECRET
+class IngestKeyGuard implements CanActivate {
+  canActivate(ctx: ExecutionContext): boolean {
+    const expected = process.env.INGEST_SECRET;
+    // Fail closed: an unset secret locks the door rather than removing it.
+    if (!expected) throw new UnauthorizedException();
+
+    const provided = ctx.switchToHttp().getRequest().headers["x-ingest-key"];
+    if (typeof provided !== "string") throw new UnauthorizedException();
+
+    // sha256 equalises length, so timingSafeEqual can't throw on a mismatch.
+    const a = createHash("sha256").update(provided).digest();
+    const b = createHash("sha256").update(expected).digest();
+    if (!timingSafeEqual(a, b)) throw new UnauthorizedException();
+    return true;
+  }
+}
+
+@AllowAnonymous() // we do check by INGEST_SECRET
+@UseGuards(IngestKeyGuard)
 @Controller("ingest")
 export class IngestController {
   constructor(private readonly ingest: IngestService) {}
