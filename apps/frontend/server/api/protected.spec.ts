@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Database } from "@/server/db";
 import { createMockDb } from "@/server/testing/mock-db";
-import { appRouter } from "./routers/_app";
+import { appRouter } from "./root";
 
 function caller(session: { user: { id: string } } | null) {
   return appRouter.createCaller({

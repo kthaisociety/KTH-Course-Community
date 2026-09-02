@@ -4,7 +4,7 @@ import {
   getUserFavorites,
   toggleUserFavorite,
 } from "@/server/user";
-import { baseProcedure, createTRPCRouter, protectedProcedure } from "../init";
+import { baseProcedure, createTRPCRouter, protectedProcedure } from "../trpc";
 
 export const userRouter = createTRPCRouter({
   me: baseProcedure.query(async ({ ctx }) => {

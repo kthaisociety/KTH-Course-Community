@@ -14,6 +14,7 @@ Monorepo for a KTH course community app. Next.js hosts the UI, Better Auth, Driz
 
 ## Project Notes
 
+- Drizzle lives in `apps/frontend/server/db`; tRPC server in `apps/frontend/server/api`; browser tRPC client in `apps/frontend/trpc`.
 - Embedding helpers live in `apps/frontend/server/ai.ts` (used by search/ingest).
 - Browser calls same-origin `/api/trpc` and `/api/auth`.
 - Prefer documenting real behavior from code, not intended behavior.

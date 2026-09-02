@@ -7,7 +7,7 @@ import {
   toggleVote,
   updateReview,
 } from "@/server/reviews";
-import { baseProcedure, createTRPCRouter, protectedProcedure } from "../init";
+import { baseProcedure, createTRPCRouter, protectedProcedure } from "../trpc";
 
 const reviewInput = z.object({
   examinationMethods: z.number().int(),

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { getDepartments, searchCourses } from "@/server/search";
-import { baseProcedure, createTRPCRouter } from "../init";
+import { baseProcedure, createTRPCRouter } from "../trpc";
 
 export const searchRouter = createTRPCRouter({
   courses: baseProcedure

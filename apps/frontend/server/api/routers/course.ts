@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { getDetails, getSummary } from "@/server/course";
 import { NotFoundError } from "@/server/errors";
-import { baseProcedure, createTRPCRouter } from "../init";
+import { baseProcedure, createTRPCRouter } from "../trpc";
 
 export const courseRouter = createTRPCRouter({
   summary: baseProcedure
