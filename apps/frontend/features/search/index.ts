@@ -1,1 +1,1 @@
-export { SearchScreen } from "./components/search-screen";
+export { Search } from "./components/search";

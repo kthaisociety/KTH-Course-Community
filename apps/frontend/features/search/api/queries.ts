@@ -1,6 +1,9 @@
 "use client";
 
-import { useTRPC } from "@/trpc/client";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { type RouterOutputs, useTRPC } from "@/trpc/client";
+
+export type SearchCourses = RouterOutputs["search"]["courses"];
 
 function firstString(value: string | string[] | undefined): string | undefined {
   if (Array.isArray(value)) return value[0];
@@ -21,11 +24,16 @@ export function toSearchCoursesInput(
   };
 }
 
-export function useSearchQueries() {
+export function useSearchCourses(input: {
+  q: string;
+  department?: string;
+  minRating?: number;
+}) {
   const trpc = useTRPC();
-
-  return {
-    courses: (input: { q: string; department?: string; minRating?: number }) =>
-      trpc.search.courses.queryOptions(input),
-  };
+  return useQuery(
+    trpc.search.courses.queryOptions(input, {
+      enabled: Boolean(input.q.trim()),
+      placeholderData: keepPreviousData,
+    }),
+  );
 }

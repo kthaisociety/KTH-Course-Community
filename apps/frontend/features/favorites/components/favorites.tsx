@@ -1,6 +1,8 @@
 "use client";
 
 import type { CourseWithUserInfo } from "@shared/types";
+import { useRouter } from "next/navigation";
+import { useCallback } from "react";
 import {
   getMockChartData,
   getMockCourseStats,
@@ -8,27 +10,56 @@ import {
   getMockPrerequisites,
   getMockSummary,
 } from "@/data/courseCardMockData";
-import { CourseCardWithCharts, CourseItemSkeleton } from "@/features/courses";
+import { useMe, useRequireSession } from "@/features/auth";
+import {
+  CourseCardWithCharts,
+  CourseItemSkeleton,
+  useCourseSummaries,
+} from "@/features/courses";
+import { useToggleFavorite } from "../api/mutations";
 
 const SKELETON_KEYS = ["f0", "f1", "f2", "f3", "f4"] as const;
 
-interface FavoritesViewProps {
-  userFavoriteCourses: CourseWithUserInfo[];
-  isListLoading: boolean;
-  onCardClick: (courseCode: string) => void;
-  onWriteReview: (courseCode: string) => void;
-  onToggleFavorite: (courseCode: string) => void;
-  onAddToComparison: (courseCode: string) => void;
-}
+export function Favorites() {
+  useRequireSession();
+  const { user, isLoading: isSessionLoading } = useMe();
+  const toggleFavorite = useToggleFavorite();
+  const router = useRouter();
+  const codes = user?.userFavorites ?? [];
+  const summaryQueries = useCourseSummaries(codes, !isSessionLoading);
 
-export function FavoritesView({
-  userFavoriteCourses,
-  isListLoading,
-  onCardClick,
-  onWriteReview,
-  onToggleFavorite,
-  onAddToComparison,
-}: FavoritesViewProps) {
+  const isLoadingFavorites =
+    codes.length > 0 && summaryQueries.some((query) => query.isPending);
+  const isListLoading = isSessionLoading || isLoadingFavorites;
+
+  const userFavoriteCourses: CourseWithUserInfo[] = summaryQueries.flatMap(
+    (query) => (query.data ? [{ ...query.data, isUserFavorite: true }] : []),
+  );
+
+  const onCardClick = useCallback(
+    (courseCode: string) => {
+      router.push(`/course/${courseCode}?from=saved`);
+    },
+    [router],
+  );
+
+  const onWriteReview = useCallback(
+    (courseCode: string) => {
+      router.push(`/course/${courseCode}?writeReview=1&from=saved`);
+    },
+    [router],
+  );
+
+  const onAddToComparison = useCallback((_courseCode: string) => {}, []);
+
+  async function onToggleFavorite(courseCode: string) {
+    try {
+      await toggleFavorite.mutateAsync({ courseCode });
+    } catch (err) {
+      console.error("Failed to toggle favorite:", err);
+    }
+  }
+
   return (
     <div className="centered flex w-full flex-col items-center gap-8 pb-12">
       <div className="w-full max-w-4xl px-4 pt-6">

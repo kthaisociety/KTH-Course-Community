@@ -1,5 +1,5 @@
-import { FavoritesScreen } from "@/features/favorites/components/favorites-screen";
+import { Favorites } from "@/features/favorites/components/favorites";
 
 export default function Page() {
-  return <FavoritesScreen />;
+  return <Favorites />;
 }

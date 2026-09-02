@@ -1,12 +1,32 @@
 "use client";
 
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTRPC } from "@/trpc/client";
 
-export function useReviewMutations() {
+export function useCreateReview() {
   const trpc = useTRPC();
+  const queryClient = useQueryClient();
+  return useMutation(
+    trpc.reviews.create.mutationOptions({
+      onSuccess: (_data, { courseCode }) => {
+        void queryClient.invalidateQueries({
+          queryKey: trpc.reviews.list.queryKey({ courseCode }),
+        });
+      },
+    }),
+  );
+}
 
-  return {
-    create: () => trpc.reviews.create.mutationOptions(),
-    like: () => trpc.reviews.like.mutationOptions(),
-  };
+export function useLikeReview(courseCode: string) {
+  const trpc = useTRPC();
+  const queryClient = useQueryClient();
+  return useMutation(
+    trpc.reviews.like.mutationOptions({
+      onSuccess: () => {
+        void queryClient.invalidateQueries({
+          queryKey: trpc.reviews.list.queryKey({ courseCode }),
+        });
+      },
+    }),
+  );
 }

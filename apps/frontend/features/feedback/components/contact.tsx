@@ -2,22 +2,38 @@
 
 import { ErrorMessage, Field, Form, Formik } from "formik";
 import { MessageSquare, Send, Users } from "lucide-react";
+import { toast } from "sonner";
 import { Textarea } from "@/components/Textarea";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useSubmitFeedback } from "../api/mutations";
 
-type ContactViewProps = {
-  onSubmit: (
+export function Contact() {
+  const submitFeedback = useSubmitFeedback();
+
+  const handleSubmit = async (
     values: { name: string; email: string; message: string },
-    formikHelpers: {
+    {
+      setSubmitting,
+      resetForm,
+    }: {
       setSubmitting: (isSubmitting: boolean) => void;
       resetForm: () => void;
     },
-  ) => Promise<void>;
-};
+  ) => {
+    try {
+      await submitFeedback.mutateAsync(values);
+      toast.success("Message sent successfully!");
+      resetForm();
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to send message.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
-export function ContactView({ onSubmit }: ContactViewProps) {
   return (
     <div className="min-h-screen bg-background">
       <main className="container mx-auto px-6 py-12 pt-32">
@@ -32,9 +48,7 @@ export function ContactView({ onSubmit }: ContactViewProps) {
             </p>
           </div>
 
-          {/* Info Boxes */}
           <div className="grid md:grid-cols-2 gap-6 mb-12">
-            {/* About Us Box */}
             <div className="bg-card p-6 rounded-lg shadow-sm border border-border">
               <div className="flex items-start gap-4">
                 <div className="p-3 bg-primary/10 rounded-lg">
@@ -52,7 +66,6 @@ export function ContactView({ onSubmit }: ContactViewProps) {
               </div>
             </div>
 
-            {/* Feedback Box */}
             <div className="bg-card p-6 rounded-lg shadow-sm border border-border">
               <div className="flex items-start gap-4">
                 <div className="p-3 bg-primary/10 rounded-lg">
@@ -71,7 +84,6 @@ export function ContactView({ onSubmit }: ContactViewProps) {
             </div>
           </div>
 
-          {/* Contact Form using Formik */}
           <div className="bg-card p-8 rounded-lg shadow-md border border-border">
             <h2 className="text-2xl font-bold text-card-foreground mb-6">
               Send us a Message
@@ -93,7 +105,7 @@ export function ContactView({ onSubmit }: ContactViewProps) {
                   errors.message = "Message is required";
                 return errors;
               }}
-              onSubmit={onSubmit}
+              onSubmit={handleSubmit}
             >
               {({ isSubmitting }) => (
                 <Form className="space-y-6">

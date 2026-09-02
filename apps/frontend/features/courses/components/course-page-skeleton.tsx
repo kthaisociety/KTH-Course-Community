@@ -19,7 +19,7 @@ function SectionLabel({ children }: { children: string }) {
 
 /**
  * Course detail loading state: same pulsing {@link Skeleton} treatment as search placeholders,
- * shaped like {@link CourseView} (not search result cards).
+ * shaped like {@link Course} (not search result cards).
  */
 export function CoursePageSkeleton({
   courseCode,
@@ -42,7 +42,7 @@ export function CoursePageSkeleton({
         {backLabel}
       </Link>
 
-      {/* Hero — matches CourseView hero */}
+      {/* Hero — matches Course hero */}
       <div className="overflow-hidden rounded-lg border border-border bg-card shadow-sm">
         <div className="flex flex-col gap-4 p-5 md:flex-row md:items-start md:justify-between">
           <div className="min-w-0 flex-1 space-y-3">

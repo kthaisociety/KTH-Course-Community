@@ -1,3 +1,8 @@
+"use client";
+
+import { useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -9,24 +14,65 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useLogout, useRequireSession } from "@/features/auth";
+import { type Me, uploadProfilePicture } from "@/lib/user";
+import { useTRPC } from "@/trpc/client";
+import { useDeleteAccount } from "../api/mutations";
 
-type ProfileViewProps = {
-  name: string;
-  email: string;
-  preview: string | null;
-  handleFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  handleDeleteAccount: () => void;
-};
+export function Profile() {
+  const trpc = useTRPC();
+  const queryClient = useQueryClient();
+  const logout = useLogout();
+  const { user, refetch } = useRequireSession();
+  const [preview, setPreview] = useState<string | null>(null);
+  const deleteAccount = useDeleteAccount();
+  const meKey = trpc.user.me.queryKey();
 
-export function ProfileView({
-  name,
-  email,
-  preview,
-  handleFileChange,
-  handleDeleteAccount,
-}: ProfileViewProps) {
-  const getInitials = (name: string) =>
-    name
+  const name = user?.name ?? "";
+  const email = user?.email ?? "";
+  const image = preview ?? user?.image ?? null;
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const localPreview = URL.createObjectURL(file);
+    setPreview(localPreview);
+
+    const result = await uploadProfilePicture(file);
+    if (!result.success) {
+      toast.error(result.error || "Image upload failed.");
+      setPreview(null);
+      URL.revokeObjectURL(localPreview);
+      return;
+    }
+
+    queryClient.setQueryData<Me | null>(meKey, (current) =>
+      current ? { ...current, image: result.url } : current,
+    );
+    await queryClient.invalidateQueries({ queryKey: meKey });
+    await refetch();
+    setPreview(null);
+    URL.revokeObjectURL(localPreview);
+  };
+
+  const handleDeleteAccount = async () => {
+    if (
+      confirm(
+        "Are you sure you want to delete your account? This can't be undone.",
+      )
+    ) {
+      try {
+        await deleteAccount.mutateAsync();
+      } catch (err) {
+        console.error("Deletion failed:", err);
+      }
+      await logout();
+    }
+  };
+
+  const getInitials = (value: string) =>
+    value
       .split(" ")
       .map((n) => n[0])
       .join("")
@@ -41,7 +87,6 @@ export function ProfileView({
       </p>
 
       <div className="space-y-8">
-        {/* Profile Info Card */}
         <Card>
           <CardHeader>
             <CardTitle>Profile Information</CardTitle>
@@ -50,12 +95,11 @@ export function ProfileView({
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            {/* Profile picture */}
             <div className="flex items-center gap-6">
               <Avatar className="w-24 h-24 border-4 border-primary/10">
-                {preview ? (
+                {image ? (
                   <AvatarImage
-                    src={preview}
+                    src={image}
                     alt={name}
                     className="w-full h-full object-cover"
                   />
@@ -88,7 +132,6 @@ export function ProfileView({
               </div>
             </div>
 
-            {/* Full Name (read-only) */}
             <div>
               <Label htmlFor="name">Full Name</Label>
               <Input
@@ -101,7 +144,6 @@ export function ProfileView({
           </CardContent>
         </Card>
 
-        {/* Delete Account */}
         <Card className="border-destructive/50">
           <CardHeader>
             <CardTitle className="text-destructive">Delete Account</CardTitle>

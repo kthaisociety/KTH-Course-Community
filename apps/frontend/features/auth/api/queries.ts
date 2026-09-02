@@ -1,11 +1,14 @@
 "use client";
 
-import { useTRPC } from "@/trpc/client";
+import { useQuery } from "@tanstack/react-query";
+import { type RouterOutputs, useTRPC } from "@/trpc/client";
 
-export function useUserQueries() {
+export type Me = RouterOutputs["user"]["me"];
+
+export function useMeQuery() {
   const trpc = useTRPC();
-
-  return {
-    me: () => trpc.user.me.queryOptions(),
-  };
+  return useQuery({
+    ...trpc.user.me.queryOptions(),
+    retry: false,
+  });
 }

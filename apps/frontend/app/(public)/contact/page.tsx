@@ -1,5 +1,5 @@
-import { ContactScreen } from "@/features/feedback";
+import { Contact } from "@/features/feedback";
 
 export default function ContactPage() {
-  return <ContactScreen />;
+  return <Contact />;
 }

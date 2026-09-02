@@ -1,5 +1,5 @@
-import { CourseScreen } from "@/features/courses/components/course-screen";
+import { Course } from "@/features/courses/components/course";
 
 export default function Page() {
-  return <CourseScreen />;
+  return <Course />;
 }

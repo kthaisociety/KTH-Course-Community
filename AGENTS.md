@@ -14,7 +14,7 @@ Monorepo for a KTH course community app. Next.js hosts the UI, Better Auth, Driz
 
 ## Project Notes
 
-- Product UI lives in `apps/frontend/features/<name>`. `app/` only routes. Feature `index.ts` is the cross-feature API (hooks, shared UI); pages import from `features/<name>/components`. tRPC routers stay in `server/api/routers`.
+- Product UI lives in `apps/frontend/features/<name>`. `app/` only routes. Feature `index.ts` is the cross-feature API (hooks, shared UI); pages import from `features/<name>/components`. A feature route is one component (data + layout). Split a child only when it has its own name (`CourseCard`, `Review`), not a Screen/View pair. tRPC routers stay in `server/api/routers`.
 - Drizzle (schema, client, kit config, migrations) lives in `apps/frontend/server/db`; tRPC server in `apps/frontend/server/api`; browser tRPC client in `apps/frontend/trpc`.
 - Embedding helpers live in `apps/frontend/server/ai.ts` (used by search/ingest).
 - Browser calls same-origin `/api/trpc` and `/api/auth`.

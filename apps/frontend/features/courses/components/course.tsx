@@ -1,33 +1,22 @@
 "use client";
 
-import type { CourseRoundSummary, ExamRoundSummary } from "@shared/types";
+import type { ExamRoundSummary } from "@shared/types";
 import { ArrowLeft, ExternalLink } from "lucide-react";
 import Link from "next/link";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { type ReactNode, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Post, type PostProps } from "@/features/reviews";
+import { useMe } from "@/features/auth";
+import {
+  Post,
+  type PostProps,
+  Review,
+  useAddReview,
+  useReviewList,
+} from "@/features/reviews";
 import { kthCourseUrl as kthCoursePageUrl } from "@/lib/kth";
-
-export type CourseViewProps = {
-  courseCode: string;
-  courseTitle: string;
-  credits: number | null;
-  department: string;
-  goalsHtml: string;
-  contentHtml: string;
-  rounds: CourseRoundSummary[];
-  examinations: ExamRoundSummary[];
-  posts: (PostProps & { postId: string })[];
-  /** Precomputed; defaults to `kthCourseUrl(courseCode)` if omitted */
-  kthCourseUrl?: string;
-  /** Top nav link; default explore */
-  backHref?: string;
-  backLabel?: string;
-  /** If true, scroll user to reviews section on initial render. */
-  openReviewOnLoad?: boolean;
-  /** Optional write-review control rendered above the posts list. */
-  reviewComposer?: ReactNode;
-};
+import { useCourseDetails } from "../api/queries";
+import { CoursePageSkeleton } from "./course-page-skeleton";
 
 function SectionTitle({ children, id }: { children: ReactNode; id?: string }) {
   return (
@@ -41,32 +30,109 @@ function SectionTitle({ children, id }: { children: ReactNode; id?: string }) {
 }
 
 function formatTerm(startTerm: number): string {
-  // KOPPS encodes terms as YYYYN where N=1 (spring) or 2 (autumn).
   const year = Math.floor(startTerm / 10);
   const half = startTerm % 10;
   const prefix = half === 1 ? "VT" : half === 2 ? "HT" : "";
   return prefix ? `${prefix}${String(year).slice(-2)}` : String(startTerm);
 }
 
-export function CourseView(props: CourseViewProps) {
-  const backHref = props.backHref ?? "/search";
-  const backLabel = props.backLabel ?? "Back to explore";
-  const kthUrl = props.kthCourseUrl ?? kthCoursePageUrl(props.courseCode);
-  const hp =
-    props.credits != null && Number.isFinite(props.credits)
-      ? Number.isInteger(props.credits)
-        ? String(props.credits)
-        : props.credits.toFixed(1)
-      : "—";
+export function Course() {
+  const params = useParams<{ courseCode: string }>();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { userId } = useMe();
+  const fromSaved = searchParams.get("from") === "saved";
+  const openReviewOnLoad = searchParams.get("writeReview") === "1";
+  const addReview = useAddReview();
+  const backHref = fromSaved ? "/favorites" : "/search";
+  const backLabel = fromSaved ? "Back to saved courses" : "Back to explore";
+
+  const courseCode = params?.courseCode;
+  const {
+    data: courseDetails,
+    isLoading: courseLoading,
+    error: courseQueryError,
+  } = useCourseDetails(courseCode);
+  const {
+    data: reviews,
+    isLoading: reviewsLoading,
+    isError: reviewsError,
+  } = useReviewList(courseCode);
+  const courseError = courseQueryError
+    ? courseQueryError instanceof Error
+      ? courseQueryError.message
+      : "Failed to load course"
+    : null;
+
+  useEffect(() => {
+    if (!params?.courseCode) router.push("/search");
+  }, [params?.courseCode, router]);
+
+  const posts: (PostProps & { postId: string })[] = Array.isArray(reviews)
+    ? reviews.map((review) => ({ ...review, postId: review.id }))
+    : [];
+
   const reviewsHeadingRef = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
-    if (!props.openReviewOnLoad) return;
+    if (!openReviewOnLoad || !courseDetails) return;
     reviewsHeadingRef.current?.scrollIntoView({
       behavior: "smooth",
       block: "start",
     });
-  }, [props.openReviewOnLoad]);
+  }, [openReviewOnLoad, courseDetails]);
+
+  if (!params.courseCode) {
+    return <CoursePageSkeleton backHref={backHref} backLabel={backLabel} />;
+  }
+
+  if (courseError && !courseLoading) {
+    return (
+      <div className="mx-auto max-w-4xl px-4 py-16 text-center">
+        <p className="text-destructive text-lg font-medium">
+          Could not load this course.
+        </p>
+        <p className="mt-2 text-muted-foreground text-sm">{courseError}</p>
+        <button
+          type="button"
+          className="mt-6 text-primary text-sm underline"
+          onClick={() => router.push(backHref)}
+        >
+          {backLabel}
+        </button>
+      </div>
+    );
+  }
+
+  if (
+    courseLoading ||
+    !courseDetails ||
+    (reviewsLoading && reviews == null && !reviewsError)
+  ) {
+    return (
+      <CoursePageSkeleton
+        courseCode={params.courseCode}
+        backHref={backHref}
+        backLabel={backLabel}
+      />
+    );
+  }
+
+  const kthUrl = kthCoursePageUrl(courseDetails.courseCode);
+  const hp =
+    courseDetails.credits != null && Number.isFinite(courseDetails.credits)
+      ? Number.isInteger(courseDetails.credits)
+        ? String(courseDetails.credits)
+        : courseDetails.credits.toFixed(1)
+      : "—";
+  const reviewComposer = userId ? (
+    <Review
+      courseCode={courseDetails.courseCode}
+      userId={userId}
+      onAddReview={addReview}
+      openOnLoad={openReviewOnLoad}
+    />
+  ) : null;
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-4 pb-16 pt-6">
@@ -78,16 +144,15 @@ export function CourseView(props: CourseViewProps) {
         {backLabel}
       </Link>
 
-      {/* Hero */}
       <div className="overflow-hidden rounded-lg border border-border bg-card shadow-sm">
         <div className="flex flex-col gap-4 p-5 md:flex-row md:items-start md:justify-between">
           <div className="min-w-0 flex-1">
             <h1 className="text-2xl font-semibold capitalize leading-tight text-foreground">
-              {props.courseTitle}
+              {courseDetails.titleEng}
             </h1>
             <p className="mt-1 text-muted-foreground text-sm">
-              {hp} hp · {props.courseCode}
-              {props.department ? ` · ${props.department}` : ""}
+              {hp} hp · {courseDetails.courseCode}
+              {courseDetails.department ? ` · ${courseDetails.department}` : ""}
             </p>
           </div>
           <div className="flex shrink-0 flex-col gap-2 sm:flex-row sm:items-center">
@@ -106,7 +171,6 @@ export function CourseView(props: CourseViewProps) {
         </div>
       </div>
 
-      {/* Goals & content */}
       <section className="rounded-lg border border-border bg-card p-5 shadow-sm">
         <div className="flex flex-col gap-6">
           <div>
@@ -115,7 +179,7 @@ export function CourseView(props: CourseViewProps) {
               className="prose prose-sm mt-3 max-w-none text-foreground dark:prose-invert"
               /** biome-ignore lint/security/noDangerouslySetInnerHtml: course HTML from index */
               dangerouslySetInnerHTML={{
-                __html: props.goalsHtml?.trim() || "<p>—</p>",
+                __html: courseDetails.goals?.trim() || "<p>—</p>",
               }}
             />
           </div>
@@ -126,19 +190,18 @@ export function CourseView(props: CourseViewProps) {
               className="prose prose-sm mt-3 max-w-none text-foreground dark:prose-invert"
               /** biome-ignore lint/security/noDangerouslySetInnerHtml: course HTML from index */
               dangerouslySetInnerHTML={{
-                __html: props.contentHtml?.trim() || "<p>—</p>",
+                __html: courseDetails.content?.trim() || "<p>—</p>",
               }}
             />
           </div>
         </div>
       </section>
 
-      {/* Rounds */}
-      {props.rounds.length > 0 && (
+      {courseDetails.rounds.length > 0 && (
         <section className="rounded-lg border border-border bg-card p-5 shadow-sm">
           <SectionTitle>Course offerings</SectionTitle>
           <ul className="mt-3 flex flex-col gap-2 text-sm">
-            {props.rounds.map((r, idx) => (
+            {courseDetails.rounds.map((r, idx) => (
               <li
                 key={`${r.startTerm}-${r.formattedPeriodsAndCredits ?? ""}-${idx}`}
                 className="flex flex-wrap items-center gap-2 text-foreground"
@@ -163,12 +226,11 @@ export function CourseView(props: CourseViewProps) {
         </section>
       )}
 
-      {/* Examinations */}
-      {props.examinations.length > 0 && (
+      {courseDetails.examinations.length > 0 && (
         <section className="rounded-lg border border-border bg-card p-5 shadow-sm">
           <SectionTitle>Examinations</SectionTitle>
           <ul className="mt-3 flex flex-col gap-2 text-sm">
-            {props.examinations.map((e: ExamRoundSummary) => (
+            {courseDetails.examinations.map((e: ExamRoundSummary) => (
               <li
                 key={e.examCode}
                 className="flex flex-wrap items-center gap-2 text-foreground"
@@ -193,7 +255,6 @@ export function CourseView(props: CourseViewProps) {
         </section>
       )}
 
-      {/* Reviews */}
       <section aria-labelledby="reviews-heading">
         <h2
           id="reviews-heading"
@@ -205,16 +266,14 @@ export function CourseView(props: CourseViewProps) {
         <p className="mb-4 text-muted-foreground text-sm">
           Here are review insights and student comments about the course.
         </p>
-        {props.reviewComposer ? (
-          <div className="mb-4">{props.reviewComposer}</div>
-        ) : null}
+        {reviewComposer ? <div className="mb-4">{reviewComposer}</div> : null}
         <div className="flex flex-col gap-4">
-          {props.posts && props.posts.length > 0 ? (
-            props.posts.map((post) => (
+          {posts.length > 0 ? (
+            posts.map((post) => (
               <Post
                 key={post.postId}
                 className="w-full max-w-full border border-border bg-card shadow-sm"
-                courseCode={props.courseCode}
+                courseCode={courseDetails.courseCode}
                 wouldRecommend={post.wouldRecommend}
                 content={post.content}
                 examinationMethods={post.examinationMethods}

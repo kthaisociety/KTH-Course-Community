@@ -1,1 +1,1 @@
-export { ContactScreen } from "./components/contact-screen";
+export { Contact } from "./components/contact";

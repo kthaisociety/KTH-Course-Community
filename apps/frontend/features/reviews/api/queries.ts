@@ -1,12 +1,16 @@
 "use client";
 
-import { useTRPC } from "@/trpc/client";
+import { useQuery } from "@tanstack/react-query";
+import { type RouterOutputs, useTRPC } from "@/trpc/client";
 
-export function useReviewQueries() {
+export type ReviewList = RouterOutputs["reviews"]["list"];
+
+export function useReviewList(courseCode: string | undefined) {
   const trpc = useTRPC();
-
-  return {
-    list: (courseCode: string) =>
-      trpc.reviews.list.queryOptions({ courseCode }),
-  };
+  return useQuery(
+    trpc.reviews.list.queryOptions(
+      { courseCode: courseCode ?? "" },
+      { enabled: Boolean(courseCode) },
+    ),
+  );
 }

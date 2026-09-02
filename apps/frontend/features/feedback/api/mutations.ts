@@ -1,11 +1,9 @@
 "use client";
 
+import { useMutation } from "@tanstack/react-query";
 import { useTRPC } from "@/trpc/client";
 
-export function useFeedbackMutations() {
+export function useSubmitFeedback() {
   const trpc = useTRPC();
-
-  return {
-    submit: () => trpc.feedback.submit.mutationOptions(),
-  };
+  return useMutation(trpc.feedback.submit.mutationOptions());
 }

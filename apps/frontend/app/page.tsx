@@ -1,5 +1,5 @@
-import { LandingScreen } from "@/features/landing";
+import { Landing } from "@/features/landing";
 
 export default function Home() {
-  return <LandingScreen />;
+  return <Landing />;
 }

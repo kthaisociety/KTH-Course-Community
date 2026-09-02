@@ -1,12 +1,12 @@
 import { Suspense } from "react";
-import { SearchScreen } from "@/features/search";
+import { Search } from "@/features/search";
 
 export const dynamic = "force-dynamic";
 
 export default function Page() {
   return (
     <Suspense fallback={null}>
-      <SearchScreen />
+      <Search />
     </Suspense>
   );
 }

@@ -1,4 +1,8 @@
+"use client";
+
 import type { OauthProvider } from "@shared/types";
+import { useState } from "react";
+import { toast } from "sonner";
 import {
   AppleIcon,
   GithubIcon,
@@ -14,19 +18,35 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/shadcn-io/spinner";
+import { authClient } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
 
-type AuthViewProps = {
-  onSubmit: (provider: OauthProvider) => void;
-  isLoading: boolean;
-  providerClicked: OauthProvider | null;
-};
+export function Auth() {
+  const [isLoading, setIsLoading] = useState(false);
+  const [providerClicked, setProviderClicked] = useState<OauthProvider | null>(
+    null,
+  );
 
-export function AuthView({
-  onSubmit,
-  isLoading,
-  providerClicked,
-}: AuthViewProps) {
+  async function handleSubmit(provider: OauthProvider) {
+    setIsLoading(true);
+    setProviderClicked(provider);
+    try {
+      const { error } = await authClient.signIn.social({
+        provider,
+        callbackURL: "/search",
+      });
+      if (error) {
+        toast.error("Failed to sign in");
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to sign in");
+    } finally {
+      setIsLoading(false);
+      setProviderClicked(null);
+    }
+  }
+
   return (
     <div className="bg-muted flex min-h-svh flex-col items-center justify-center gap-6 p-6 md:p-10">
       <div className="flex w-full max-w-sm flex-col gap-6">
@@ -47,7 +67,7 @@ export function AuthView({
                       variant="outline"
                       type="button"
                       className="w-full"
-                      onClick={() => onSubmit("apple")}
+                      onClick={() => handleSubmit("apple")}
                     >
                       <AppleIcon />
                       {isLoading && providerClicked === "apple" ? (
@@ -61,7 +81,7 @@ export function AuthView({
                       variant="outline"
                       type="button"
                       className="w-full"
-                      onClick={() => onSubmit("google")}
+                      onClick={() => handleSubmit("google")}
                     >
                       <GoogleIcon />
                       {isLoading && providerClicked === "google" ? (
@@ -75,7 +95,7 @@ export function AuthView({
                       variant="outline"
                       type="button"
                       className="w-full"
-                      onClick={() => onSubmit("github")}
+                      onClick={() => handleSubmit("github")}
                     >
                       <GithubIcon />
                       {isLoading && providerClicked === "github" ? (
@@ -89,7 +109,7 @@ export function AuthView({
                       variant="outline"
                       type="button"
                       className="w-full"
-                      onClick={() => onSubmit("microsoft")}
+                      onClick={() => handleSubmit("microsoft")}
                     >
                       <MicrosoftIcon />
                       {isLoading && providerClicked === "microsoft" ? (

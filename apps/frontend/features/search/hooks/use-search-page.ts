@@ -1,19 +1,17 @@
 "use client";
 
 import type { CourseWithUserInfo } from "@shared/types";
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useState } from "react";
 import { useMe } from "@/features/auth";
-import { useCourseQueries } from "@/features/courses";
+import { useCourseDetails } from "@/features/courses";
 import { useToggleFavorite } from "@/features/favorites";
-import { toSearchCoursesInput, useSearchQueries } from "../api/queries";
-import { useDebouncedQuery } from "../hooks/use-debounced-query";
-import { SearchView } from "./search-view";
+import { toSearchCoursesInput, useSearchCourses } from "../api/queries";
+import { useDebouncedQuery } from "./use-debounced-query";
 
 const DEFAULT_QUERY = "interaction programming";
 
-export function SearchScreen() {
+export function useSearchPage() {
   const { user } = useMe();
   const userFavorites = user?.userFavorites ?? [];
   const toggleFavorite = useToggleFavorite();
@@ -21,8 +19,6 @@ export function SearchScreen() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const selectedCode = searchParams.get("selected");
-  const search = useSearchQueries();
-  const courses = useCourseQueries();
 
   const [localQuery, setLocalQuery] = useState(DEFAULT_QUERY);
   const [debouncedQuery, setDebouncedQuery] = useDebouncedQuery(localQuery);
@@ -32,20 +28,13 @@ export function SearchScreen() {
     data: searchData,
     isLoading,
     error: searchError,
-  } = useQuery({
-    ...search.courses(toSearchCoursesInput(debouncedQuery, filters)),
-    enabled: Boolean(debouncedQuery.trim()),
-    placeholderData: keepPreviousData,
-  });
+  } = useSearchCourses(toSearchCoursesInput(debouncedQuery, filters));
 
   const {
     data: courseDetails,
     isLoading: courseDetailsLoading,
     error: courseDetailsQueryError,
-  } = useQuery({
-    ...courses.details(selectedCode ?? ""),
-    enabled: Boolean(selectedCode),
-  });
+  } = useCourseDetails(selectedCode ?? undefined);
 
   const selectedCourseDetails =
     selectedCode &&
@@ -54,7 +43,7 @@ export function SearchScreen() {
       ? courseDetails
       : null;
 
-  const resultsFull: CourseWithUserInfo[] = (
+  const results: CourseWithUserInfo[] = (
     debouncedQuery.trim() ? (searchData?.results ?? []) : []
   ).map((result) => ({
     ...result,
@@ -126,25 +115,23 @@ export function SearchScreen() {
     }
   }
 
-  return (
-    <SearchView
-      localQuery={localQuery}
-      setLocalQuery={setLocalQuery}
-      onSubmit={onSubmit}
-      isLoading={isLoading}
-      error={error}
-      results={resultsFull}
-      filters={filters}
-      onFiltersChange={onFiltersChange}
-      onCardClick={onCardClick}
-      onWriteReview={onWriteReview}
-      onToggleFavorite={onToggleFavorite}
-      onAddToComparison={onAddToComparison}
-      selectedCode={selectedCode}
-      courseDetails={selectedCourseDetails}
-      courseDetailsLoading={courseDetailsLoading}
-      courseDetailsError={courseDetailsError}
-      onCloseDetails={onCloseDetails}
-    />
-  );
+  return {
+    localQuery,
+    setLocalQuery,
+    onSubmit,
+    isLoading,
+    error,
+    results,
+    filters,
+    onFiltersChange,
+    onCardClick,
+    onWriteReview,
+    onToggleFavorite,
+    onAddToComparison,
+    selectedCode,
+    courseDetails: selectedCourseDetails,
+    courseDetailsLoading,
+    courseDetailsError,
+    onCloseDetails,
+  };
 }

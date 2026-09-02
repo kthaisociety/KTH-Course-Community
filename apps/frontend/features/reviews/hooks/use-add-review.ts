@@ -1,18 +1,13 @@
 "use client";
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import profoundWords from "profane-words";
 import { useCallback } from "react";
 import { toast } from "sonner";
-import { useTRPC } from "@/trpc/client";
-import { useReviewMutations } from "../api/mutations";
+import { useCreateReview } from "../api/mutations";
 import type { ReviewFormData } from "../components/review";
 
 export function useAddReview() {
-  const trpc = useTRPC();
-  const queryClient = useQueryClient();
-  const reviews = useReviewMutations();
-  const createReview = useMutation(reviews.create());
+  const createReview = useCreateReview();
 
   return useCallback(
     async (
@@ -39,15 +34,12 @@ export function useAddReview() {
       try {
         await createReview.mutateAsync({ courseCode, ...reviewForm });
         toast.success("Review added successfully!");
-        await queryClient.invalidateQueries({
-          queryKey: trpc.reviews.list.queryKey({ courseCode }),
-        });
         return true;
       } catch {
         toast.error("Failed to add review", { description: "Try again later" });
         return false;
       }
     },
-    [createReview, queryClient, trpc],
+    [createReview],
   );
 }

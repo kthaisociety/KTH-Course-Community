@@ -1,6 +1,5 @@
 "use client";
 
-import type { CourseDetails, CourseWithUserInfo } from "@shared/types";
 import { SearchIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -26,26 +25,7 @@ import {
   CourseDetailsSidebar,
   CourseItemSkeleton,
 } from "@/features/courses";
-
-type SearchViewProps = {
-  localQuery: string;
-  setLocalQuery: (q: string) => void;
-  onSubmit: (e?: React.FormEvent) => void;
-  isLoading: boolean;
-  error: string | undefined;
-  results: CourseWithUserInfo[];
-  filters: Record<string, string | string[]>;
-  onFiltersChange: (filters: Record<string, string | string[]>) => void;
-  onCardClick: (courseCode: string) => void;
-  onWriteReview: (courseCode: string) => void;
-  onToggleFavorite: (courseCode: string) => void;
-  onAddToComparison: (courseCode: string) => void;
-  selectedCode: string | null;
-  courseDetails: CourseDetails | null;
-  courseDetailsLoading: boolean;
-  courseDetailsError: string | null;
-  onCloseDetails: () => void;
-};
+import { useSearchPage } from "../hooks/use-search-page";
 
 const skeletonKeys = Array.from({ length: 5 }, () => crypto.randomUUID());
 
@@ -172,25 +152,27 @@ function useResizableSidebar() {
   };
 }
 
-export function SearchView({
-  localQuery,
-  setLocalQuery,
-  onSubmit,
-  isLoading,
-  error,
-  results,
-  filters,
-  onFiltersChange,
-  onCardClick,
-  onWriteReview,
-  onToggleFavorite,
-  onAddToComparison,
-  selectedCode,
-  courseDetails,
-  courseDetailsLoading,
-  courseDetailsError,
-  onCloseDetails,
-}: SearchViewProps) {
+export function Search() {
+  const {
+    localQuery,
+    setLocalQuery,
+    onSubmit,
+    isLoading,
+    error,
+    results,
+    filters,
+    onFiltersChange,
+    onCardClick,
+    onWriteReview,
+    onToggleFavorite,
+    onAddToComparison,
+    selectedCode,
+    courseDetails,
+    courseDetailsLoading,
+    courseDetailsError,
+    onCloseDetails,
+  } = useSearchPage();
+
   const isDesktop = useIsDesktop();
   const showSidebarAside = Boolean(selectedCode) && isDesktop;
   const showDrawer = Boolean(selectedCode) && !isDesktop;

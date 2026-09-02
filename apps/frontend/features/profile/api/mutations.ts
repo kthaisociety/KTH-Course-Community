@@ -1,11 +1,9 @@
 "use client";
 
+import { useMutation } from "@tanstack/react-query";
 import { useTRPC } from "@/trpc/client";
 
-export function useProfileMutations() {
+export function useDeleteAccount() {
   const trpc = useTRPC();
-
-  return {
-    remove: () => trpc.user.delete.mutationOptions(),
-  };
+  return useMutation(trpc.user.delete.mutationOptions());
 }
