@@ -3,11 +3,16 @@
 import type { CourseWithUserInfo } from "@shared/types";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
+import { useRequireSession } from "@/hooks/sessionHooks";
 import { useFavorites } from "@/hooks/userHooks";
 import { getCourseSummary } from "@/lib/courses";
 import UserCoursesView from "@/views/UserCoursesView";
 
 export default function UserCoursesController() {
+  // Redirects to /auth if the session resolves to null. `useFavorites`
+  // reads the session too, but only to decide whether to fetch; nothing
+  // here sends the user away when it is missing.
+  useRequireSession();
   const {
     favorites,
     isLoading: isFavoritesLoading,

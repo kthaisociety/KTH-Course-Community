@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useDispatch } from "react-redux";
 import { toast } from "sonner";
-import { useSessionData } from "@/hooks/sessionHooks";
+import { useRequireSession } from "@/hooks/sessionHooks";
 import { authClient } from "@/lib/auth-client";
 import type { Dispatch } from "@/state/store";
 import { deleteAccount, uploadImage } from "@/state/user/userThunk";
@@ -13,7 +13,9 @@ import ProfileView from "@/views/ProfileView";
 export default function ProfileController() {
   const router = useRouter();
   const dispatch = useDispatch<Dispatch>();
-  const { user, refetch } = useSessionData();
+  // Redirects to /auth if the session resolves to null: the proxy only
+  // checks that the cookie exists, so a stale one reaches this page.
+  const { user, refetch } = useRequireSession();
   // Local object-URL shown while the upload is in flight. The committed image
   // lives on the Better Auth session, so there is nothing to roll back on
   // failure beyond dropping this preview.
