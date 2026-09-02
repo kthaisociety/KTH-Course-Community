@@ -90,7 +90,7 @@ These are breaking changes and new patterns introduced in Next.js 15 that are co
 
 Always run the linter as part of every review:
 ```bash
-npm run lint
+bun run lint
 ```
 from the repo root. Include the full lint output in your findings — every error and warning. Lint errors go under **Must fix**; warnings go under **Should fix** unless a `biome.json` override is already in place for that specific case.
 

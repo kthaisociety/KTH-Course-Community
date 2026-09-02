@@ -61,19 +61,16 @@
   },
   "overrides": [
     {
-      "includes": [
-        "frontend/components/ai-elements/**",
-        "frontend/components/ui/**"
-      ],
+      "includes": ["apps/frontend/components/ui/**"],
       "linter": {
         "enabled": false
       }
     },
     {
       "includes": [
-        "backend-nest/src/**/*.service.ts",
-        "backend-nest/src/**/*.controller.ts",
-        "backend-nest/src/**/*.module.ts"
+        "apps/backend-nest/src/**/*.service.ts",
+        "apps/backend-nest/src/**/*.controller.ts",
+        "apps/backend-nest/src/**/*.module.ts"
       ],
       "linter": {
         "rules": {
@@ -84,7 +81,7 @@
       }
     },
     {
-      "includes": ["frontend/views/ProfileView.tsx"],
+      "includes": ["apps/frontend/views/ProfileView.tsx"],
       "linter": {
         "rules": {
           "performance": {

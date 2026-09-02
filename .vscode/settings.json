@@ -1,6 +1,6 @@
 {
   "typescript.tsdk": "node_modules/typescript/lib",
   "typescript.enablePromptUseWorkspaceTsdk": true,
-  "jest.jestCommandLine": "npx jest --config jest.config.js",
-  "jest.rootPath": "backend-nest"
+  "jest.jestCommandLine": "bunx jest --config jest.config.js",
+  "jest.rootPath": "apps/backend-nest"
 }

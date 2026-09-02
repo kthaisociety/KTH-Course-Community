@@ -32,18 +32,18 @@ Always analyse the work fully before touching any file. Then check whether write
 2. **Apply all changes.** Work through every finding. Make the minimal change that addresses each one. Do not refactor surrounding code, add comments, or improve things that weren't flagged.
 3. **Run tests if logic changed.** If you touched anything beyond a mechanical fix (types, logic, structure), run:
    ```bash
-   npm run test:be
+    bun run test:be
    ```
    Diagnose failures — do not adjust assertions to make tests pass unless the assertion was wrong.
 4. **Final lint check.** Once all changes are applied, run:
    ```bash
-   npm run lint
+    bun run lint
    ```
    from the repo root. If anything remains, fix it and stop only when the output is clean.
 
 ## Fixing lint output
 
-When given lint output or when running `npm run lint` yourself:
+When given lint output or when running `bun run lint` yourself:
 
 - **Auto-fixable issues** (`FIXABLE` in the output): apply the suggested fix exactly — do not improvise an alternative.
 - **`noExplicitAny`** in test files: define a local `MockDb` type with only the methods that file uses — see existing `*.service.spec.ts` files for the pattern.

@@ -3,7 +3,10 @@
 # ROOT
 # =================================
 node_modules/
-/node_modules
+.bun/
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
 
 # OS
 .DS_Store
@@ -23,7 +26,7 @@ types/**/*.d.ts
 # =================================
 
 # dependencies
-/frontend/node_modules
+/apps/frontend/node_modules
 /.pnp
 .pnp.*
 .yarn/*
@@ -33,102 +36,99 @@ types/**/*.d.ts
 !.yarn/versions
 
 # Next.js build output
-/frontend/.next/
-/frontend/out/
-/frontend/build
+.next/
+/apps/frontend/out/
+/apps/frontend/build
 
 # testing
-/frontend/coverage
-/frontend/.nyc_output
+/apps/frontend/coverage
+/apps/frontend/.nyc_output
 
 # logs
-/frontend/npm-debug.log*
-/frontend/yarn-debug.log*
-/frontend/yarn-error.log*
-/frontend/.pnpm-debug.log*
-
-# environment files
-/frontend/.env
-/frontend/.env.local
-/frontend/.env.development.local
-/frontend/.env.test.local
-/frontend/.env.production.local
+/apps/frontend/npm-debug.log*
+/apps/frontend/yarn-debug.log*
+/apps/frontend/yarn-error.log*
+/apps/frontend/.pnpm-debug.log*
 
 # Vercel
-/frontend/.vercel
+/apps/frontend/.vercel
 
 # misc
-/frontend/*.pem
-/frontend/.temp
-/frontend/.tmp
+/apps/frontend/.temp
+/apps/frontend/.tmp
 
 # history
-/frontend/.history
+/apps/frontend/.history
 
 # =================================
 # BACKEND (Nest.js)
 # =================================
 
 # compiled output
-/backend-nest/dist
-/backend-nest/node_modules
-/backend-nest/build
-/backend-nest/**/*.d.ts
-/shared/dist
-/shared/node_modules
+dist/
+/apps/backend-nest/build
+/apps/backend-nest/**/*.d.ts
 
 # logs
-/backend-nest/logs
-/backend-nest/*.log
-/backend-nest/npm-debug.log*
-/backend-nest/pnpm-debug.log*
-/backend-nest/yarn-debug.log*
-/backend-nest/yarn-error.log*
-/backend-nest/lerna-debug.log*
+/apps/backend-nest/logs
+/apps/backend-nest/*.log
+/apps/backend-nest/npm-debug.log*
+/apps/backend-nest/pnpm-debug.log*
+/apps/backend-nest/yarn-debug.log*
+/apps/backend-nest/yarn-error.log*
+/apps/backend-nest/lerna-debug.log*
 
 # testing
-/backend-nest/coverage
-/backend-nest/.nyc_output
+/apps/backend-nest/coverage
+/apps/backend-nest/.nyc_output
 
 # IDEs and editors
-/backend-nest/.idea
-/backend-nest/.project
-/backend-nest/.classpath
-/backend-nest/.c9/
-/backend-nest/*.launch
-/backend-nest/.settings/
-/backend/*.sublime-workspace
+/apps/backend-nest/.idea
+/apps/backend-nest/.project
+/apps/backend-nest/.classpath
+/apps/backend-nest/.c9/
+/apps/backend-nest/*.launch
+/apps/backend-nest/.settings/
+/apps/backend-nest/*.sublime-workspace
 
 # IDE - VSCode
-/backend-nest/.vscode/*
-!/backend-nest/.vscode/settings.json
-!/backend-nest/.vscode/tasks.json
-!/backend-nest/.vscode/launch.json
-!/backend-nest/.vscode/extensions.json
-
-# environment files
-/backend-nest/.env
-/backend-nest/.env.local
-/backend-nest/.env.development.local
-/backend-nest/.env.test.local
-/backend-nest/.env.production.local
+/apps/backend-nest/.vscode/*
+!/apps/backend-nest/.vscode/settings.json
+!/apps/backend-nest/.vscode/tasks.json
+!/apps/backend-nest/.vscode/launch.json
+!/apps/backend-nest/.vscode/extensions.json
 
 # temp directory
-/backend-nest/.temp
-/backend-nest/.tmp
+/apps/backend-nest/.temp
+/apps/backend-nest/.tmp
 
 # runtime data
-/backend-nest/pids
-/backend-nest/*.pid
-/backend-nest/*.seed
-/backend-nest/*.pid.lock
+/apps/backend-nest/pids
+/apps/backend-nest/*.pid
+/apps/backend-nest/*.seed
+/apps/backend-nest/*.pid.lock
 
 # diagnostic reports
-/backend-nest/report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+/apps/backend-nest/report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
 /elastic-start-local
 
+# =================================
+# SENSITIVE FILES
+# =================================
 .env
+.env.*
+!.env.example
+!.env*.example
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa
+*credentials*.json
+*service-account*.json
+secrets.json
+.secrets
 
 # =================================
 # INGEST PROFILING ARTIFACTS

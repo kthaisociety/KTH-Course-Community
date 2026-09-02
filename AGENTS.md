@@ -4,19 +4,20 @@ Monorepo for a KTH course community app with a Next.js frontend and a NestJS bac
 
 ## Quick Reference
 
-- Package manager: `npm` workspaces
-- Frontend: `frontend`
-- Backend: `backend-nest`
-- Install: `npm i`
-- Run frontend: `npm run dev:fe`
-- Run backend: `npm run dev:be`
-- Backend tests: `npm run test:be`
-- Frontend tests: `npm run test:fe`
+- Package manager: `bun` workspaces
+- Frontend: `apps/frontend`
+- Backend: `apps/backend-nest`
+- Shared types: `packages/shared`
+- Install: `bun i`
+- Run both: `bun run dev`
+- Run frontend: `bun run dev:fe`
+- Run backend: `bun run dev:be`
+- Backend tests: `bun run test:be`
+- Frontend tests: `bun run test:fe`
 
 ## Project Notes
 
-- Main AI SDK backend code lives in `backend-nest/src/ai`.
-- Main AI SDK frontend demo lives in `frontend/app/(public)/ai-demo/page.tsx`.
+- Embedding helpers live in `apps/backend-nest/src/ai` (used by search/ingest).
 - Frontend talks to the backend using `NEXT_PUBLIC_BACKEND_DOMAIN`.
 - Prefer documenting real behavior from code, not intended behavior.
 
