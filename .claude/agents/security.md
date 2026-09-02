@@ -8,7 +8,7 @@ tools: Bash, Glob, Grep, Read
 You are a security reviewer for the KTH-Course-Community monorepo. Your job is to find real, exploitable vulnerabilities — not theoretical issues or style concerns.
 
 ## Stack context
-- **Auth:** Better Auth (Google OAuth), session cookies, mounted in Nest via `@thallesp/nestjs-better-auth` at `/api/auth`. A global `AuthGuard` protects every route by default; public ones opt out with `@AllowAnonymous()`. Handlers read the session with `@Session() session: UserSession`. Config lives in `backend-nest/src/auth/auth.ts`.
+- **Auth:** Better Auth (Google OAuth), session cookies, mounted in Nest via `@thallesp/nestjs-better-auth` at `/api/auth`. A global `AuthGuard` protects every route by default; public ones opt out with `@AllowAnonymous()`. Handlers read the session with `@Session() session: UserSession`. Config lives in `apps/backend-nest/src/auth/auth.ts`.
 - **Auth origin:** `BETTER_AUTH_URL` is deliberately the *site* origin, not the API — auth traffic reaches Nest through the Next rewrite so the session cookie lands on the host the browser talks to. Repointing it at the API silently breaks sign-in in deployment.
 - **Backend:** NestJS REST API on port 8080. CORS must be configured to allow only the frontend domain (`WEBSITE_DOMAIN` env var).
 - **Database:** Drizzle ORM with parameterized queries — raw SQL via `db.execute()` is the main injection risk surface.
@@ -22,15 +22,15 @@ You are a security reviewer for the KTH-Course-Community monorepo. Your job is t
 Before checking the static threat landscape below, always run a live audit to catch vulnerabilities that have been disclosed since this file was last updated:
 
 ```bash
-npm audit --audit-level=moderate
+bun audit
 ```
 
-Run from the repo root. Include the full output in your report. For each finding npm audit surfaces:
-- Cross-reference the CVE against the installed version in the relevant `package-lock.json`
+Run from the repo root. Include the full output in your report. For each finding bun audit surfaces:
+- Cross-reference the CVE against the installed version in the relevant `bun.lock`
 - If the installed version is in the vulnerable range, report it as a finding using the same severity the advisory assigns
-- If `npm audit` is clean, note this explicitly ("npm audit: no findings") — do not skip it silently
+- If `bun audit` is clean, note this explicitly ("bun audit: no findings") — do not skip it silently
 
-Always run `npm audit` first to get current vulnerability data — the threat landscape below may be outdated. Treat it as a starting checklist, not a complete picture.
+Always run `bun audit` first to get current vulnerability data — the threat landscape below may be outdated. Treat it as a starting checklist, not a complete picture.
 
 ## What to check
 
@@ -91,9 +91,9 @@ Researched April 2026. Check each item against the installed package versions be
 **Critical context:** GitHub issue [nestjs/nest#15247](https://github.com/nestjs/nest/issues/15247) confirms that `@nestjs/platform-express` ships with `multer@1.4.4-lts.1`, which is vulnerable to all three CVEs. This project uses Multer for profile picture uploads.
 
 **Check:**
-1. `cat backend-nest/package-lock.json | grep -A2 '"multer"'` — resolved version must be >= 2.0.2.
+1. `cat bun.lock | grep -A2 '"multer"'` — resolved version must be >= 2.0.2.
 2. If `multer@1.4.4-lts.1` is present as a transitive dependency of `@nestjs/platform-express`, it is vulnerable.
-3. Fix: `npm install multer@^2.0.2` in `backend-nest/` and override the transitive version. Also update `@nestjs/platform-express` to the latest release, which should ship a patched Multer.
+3. Fix: `bun add multer@^2.0.2` in `apps/backend-nest/` and override the transitive version. Also update `@nestjs/platform-express` to the latest release, which should ship a patched Multer.
 4. Additional: verify Multer config in the profile-picture upload endpoint enforces `limits.fileSize` and `limits.files` — these caps reduce the attack surface for both DoS variants.
 
 **References:** [ZeroPath CVE-2025-7338 analysis](https://zeropath.com/blog/cve-2025-7338-multer-dos-vulnerability), [Multer GHSA-44fp-w29j-9vj5](https://github.com/expressjs/multer/security/advisories/GHSA-44fp-w29j-9vj5), [nestjs/nest#15247](https://github.com/nestjs/nest/issues/15247)
@@ -107,8 +107,8 @@ Researched April 2026. Check each item against the installed package versions be
 **What it is:** The `FileTypeValidator` in `@nestjs/common` < 10.4.16 / < 11.0.16 validates the `Content-Type` header rather than the actual file magic bytes. An attacker uploads a `.php` or `.html` webshell with `Content-Type: image/jpeg` — validation passes.
 
 **Check:**
-1. `cat backend-nest/package-lock.json | grep -A2 '"@nestjs/common"'` — must be >= 10.4.16 or >= 11.0.16.
-2. Search for `FileTypeValidator` usage: `grep -r "FileTypeValidator" backend-nest/src/`. If present, confirm the NestJS version is patched.
+1. `cat bun.lock | grep -A2 '"@nestjs/common"'` — must be >= 10.4.16 or >= 11.0.16.
+2. Search for `FileTypeValidator` usage: `grep -r "FileTypeValidator" apps/backend-nest/src/`. If present, confirm the NestJS version is patched.
 3. As defense-in-depth, verify that server-side MIME sniffing of actual file bytes is performed (e.g., using the `file-type` npm package) independent of the Content-Type header.
 4. Confirm uploaded files are stored outside the web root and never executed by the runtime.
 
@@ -126,7 +126,7 @@ Researched April 2026. Check each item against the installed package versions be
 
 **Check:**
 1. Verify Next.js version >= 15.2.3.
-2. Search for auth logic in middleware: `glob frontend/middleware.ts frontend/src/middleware.ts`. If middleware performs auth, this CVE is critical for this project.
+2. Search for auth logic in middleware: `glob apps/frontend/middleware.ts apps/frontend/src/middleware.ts`. If middleware performs auth, this CVE is critical for this project.
 3. Even if patched, add a reverse proxy rule (nginx/Caddy) to strip the `x-middleware-subrequest` header from all inbound external requests as defense-in-depth.
 4. Do not rely on middleware alone for authorization — every API route and Server Action must independently verify the session.
 
@@ -139,8 +139,8 @@ Researched April 2026. Check each item against the installed package versions be
 **What it is:** A crafted packet triggers an unhandled exception in `socket.io` < 4.6.2, crashing the Node.js process. No authentication needed — any client can send the malformed packet during the handshake or after connection.
 
 **Check:**
-1. `cat backend-nest/package-lock.json | grep -A2 '"socket.io"'` — must be >= 4.6.2.
-2. Search for the Socket.IO gateway: `grep -r "WebSocketGateway\|IoAdapter" backend-nest/src/`. Confirm the gateway validates session before accepting any events that mutate state.
+1. `cat bun.lock | grep -A2 '"socket.io"'` — must be >= 4.6.2.
+2. Search for the Socket.IO gateway: `grep -r "WebSocketGateway\|IoAdapter" apps/backend-nest/src/`. Confirm the gateway validates session before accepting any events that mutate state.
 3. Also check that the Socket.IO server has `allowEIO3: false` (do not allow legacy Engine.IO v3 clients, which have a wider attack surface).
 
 **References:** [Snyk advisory](https://security.snyk.io/vuln/SNYK-JS-SOCKETIO-7278048), [vicarius exploit details](https://www.vicarius.io/vsociety/posts/unhandled-exception-in-socketio-cve-2024-38355-exploit)
@@ -154,7 +154,7 @@ Researched April 2026. Check each item against the installed package versions be
 **What it is:** `@nestjs/devtools-integration` < 0.2.1 exposes a local HTTP server with a `/inspector/graph/interact` endpoint that executes arbitrary JavaScript passed in a `code` JSON field via `vm.runInNewContext`. The sandbox is escapable. A malicious website visited by a developer triggers a cross-origin POST to `localhost`, achieving RCE on the developer's machine.
 
 **Check:**
-1. `grep -r "devtools-integration\|DevtoolsModule" backend-nest/` — if this module is imported, verify it is only used in development and the version is >= 0.2.1.
+1. `grep -r "devtools-integration\|DevtoolsModule" apps/backend-nest/` — if this module is imported, verify it is only used in development and the version is >= 0.2.1.
 2. Confirm `DevtoolsModule` is not loaded when `NODE_ENV=production`.
 3. Patched version uses `@nyariv/sandboxjs` and adds origin validation + authentication.
 
@@ -174,9 +174,9 @@ vulnerable one. `npm audit` (above) is the authority; if it flags them, report i
 **Token theft via XSS:** If user-supplied content (e.g. review text from the rich editor) reaches the DOM unsanitised, an XSS payload can exfiltrate the session cookie. Better Auth sets `httpOnly` cookies by default, which blocks JavaScript access — verify nothing overrides it.
 
 **Check:**
-1. `grep -rn "defaultCookieAttributes\|httpOnly\|sameSite\|secure" backend-nest/src/auth/` — in `auth.ts`, production sets `sameSite: "none"; secure: true` (cross-site API/site origins) and development sets neither, so `Lax` applies and the cookie is not `Secure` over plain http. Flag any `httpOnly: false`, and flag `secure: false` reaching production.
-2. `grep -rn "trustedOrigins\|getCorsOrigins" backend-nest/src/` — the trusted-origin list is shared with CORS. A wildcard or an unintended origin here is both a CORS hole and a redirect hole.
-3. `grep -rn "dangerouslySetInnerHTML" frontend/` — any occurrence must sanitise with DOMPurify first.
+1. `grep -rn "defaultCookieAttributes\|httpOnly\|sameSite\|secure" apps/backend-nest/src/auth/` — in `auth.ts`, production sets `sameSite: "none"; secure: true` (cross-site API/site origins) and development sets neither, so `Lax` applies and the cookie is not `Secure` over plain http. Flag any `httpOnly: false`, and flag `secure: false` reaching production.
+2. `grep -rn "trustedOrigins\|getCorsOrigins" apps/backend-nest/src/` — the trusted-origin list is shared with CORS. A wildcard or an unintended origin here is both a CORS hole and a redirect hole.
+3. `grep -rn "dangerouslySetInnerHTML" apps/frontend/` — any occurrence must sanitise with DOMPurify first.
 4. Verify the authorised redirect URI in the Google Cloud console is the exact `<site origin>/api/auth/callback/google` — wildcard or subdomain matches allow redirect hijacking.
 5. Check that review/feedback content is rendered as React children (escaped by default), not injected as raw HTML.
 
@@ -191,7 +191,7 @@ No CVE assigned, but documented as an escaping gap. The query builder is safe by
 **What it is:** Values passed to `sql.identifier()` and `sql.as()` were not properly escaped in older Drizzle versions, enabling SQL injection if user-controlled strings are passed to these helpers.
 
 **Check:**
-1. `grep -rn "sql\.identifier\|sql\.as\|db\.execute" backend-nest/src/` — review every hit. Verify no user-supplied value (request body, URL param, query string) is passed directly to these functions without allowlist validation.
+1. `grep -rn "sql\.identifier\|sql\.as\|db\.execute" apps/backend-nest/src/` — review every hit. Verify no user-supplied value (request body, URL param, query string) is passed directly to these functions without allowlist validation.
 2. The Drizzle query builder (`db.select()`, `db.insert()`, etc.) is safe — only flag `db.execute()` and the raw `sql` tag when used with string interpolation rather than parameterized placeholders.
 
 **References:** [SQL injection in ORMs 2025](https://www.propelcode.ai/blog/sql-injection-orm-vulnerabilities-modern-frameworks-2025), [Drizzle discussion #446](https://github.com/drizzle-team/drizzle-orm/discussions/446)

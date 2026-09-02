@@ -8,9 +8,9 @@ tools: Bash, Edit, Glob, Grep, Read, Write
 You are a test engineer for the KTH-Course-Community monorepo. You write focused, useful tests — not tests that just assert the mock returns what you told it to return.
 
 ## Stack context
-- **Backend tests:** Jest 30 + NestJS `TestingModule`. Run with `npm run test:be` from repo root.
+- **Backend tests:** Jest 30 + NestJS `TestingModule`. Run with `bun run test:be` from repo root.
 - **Frontend tests:** No Jest is configured in the frontend (`package.json` script echoes a placeholder). Frontend logic can be tested by adding Jest; for now, focus on backend tests.
-- **E2E:** `backend-nest/test/` using `jest-e2e.json` config with Supertest.
+- **E2E:** `apps/backend-nest/test/` using `jest-e2e.json` config with Supertest.
 - **Database mocks:** Backend tests mock the Drizzle DB token (`DRIZZLE`) with a typed `MockDb` object — see existing spec files for the pattern.
 - **Auth in tests:** Better Auth behind a global `AuthGuard`. Use `createAuthTestApp()` from `src/testing/better-auth-test-app.ts` rather than stubbing the guard — see "Overriding providers and guards" below.
 
@@ -336,8 +336,8 @@ jest.retryTimes(3, { waitBeforeRetry: 500 }); // ms between retries
 ## Running tests
 Always run tests after writing them to confirm they pass:
 ```bash
-npm run test:be   # backend only
-npm run test      # all
+bun run test:be   # backend only
+bun run test      # all
 ```
 
 If a test fails, diagnose the root cause — do not adjust the assertion to make it pass unless the assertion was genuinely wrong.

@@ -1,37 +1,33 @@
 # syntax=docker.io/docker/dockerfile:1
 
-FROM node:20-alpine AS base
-
-# Install dependencies only when needed
-FROM base AS deps
-# Check https://github.com/nodejs/docker-node/tree/b4117f9333da4138b03a546ec926ef50a31506c3#nodealpine to understand why libc6-compat might be needed.
+FROM oven/bun:1-alpine AS base
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
-# Copy workspace package files (all workspaces must be present for npm ci)
-COPY package.json package-lock.json ./
-COPY frontend/package.json ./frontend/
-COPY backend-nest/package.json ./backend-nest/
-COPY shared/package.json ./shared/
+# Install dependencies only when needed
+FROM base AS deps
 
-# Lockfile generated on macOS lacks linux-musl platform native binaries.
-# Delete it and do fresh install so npm resolves platform-specific optional
-# deps (lightningcss, @tailwindcss/oxide) for the current alpine/musl target.
-RUN rm package-lock.json && npm install
+# Copy workspace package files (all workspaces must be present for bun install)
+COPY package.json bun.lock ./
+COPY apps/frontend/package.json ./apps/frontend/
+COPY apps/backend-nest/package.json ./apps/backend-nest/
+COPY packages/shared/package.json ./packages/shared/
+
+RUN bun install --frozen-lockfile
 
 # Rebuild the source code only when needed
 FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/package.json ./package.json
-COPY --from=deps /app/package-lock.json ./package-lock.json
+COPY package.json bun.lock ./
 
 # Copy source code
-COPY frontend/ ./frontend/
-COPY shared/ ./shared/
+COPY apps/frontend/ ./apps/frontend/
+COPY packages/shared/ ./packages/shared/
+COPY apps/backend-nest/package.json ./apps/backend-nest/
 
 # Build shared types before frontend
-RUN npm run build:shared
+RUN bun run build:shared
 
 # Next.js collects completely anonymous telemetry data about general usage.
 # Learn more here: https://nextjs.org/telemetry
@@ -50,11 +46,11 @@ RUN test -n "$BACKEND_DOMAIN" || (echo "Missing build arg BACKEND_DOMAIN" && exi
 ENV NEXT_PUBLIC_BACKEND_DOMAIN=$NEXT_PUBLIC_BACKEND_DOMAIN
 ENV NEXT_PUBLIC_WEBSITE_DOMAIN=$NEXT_PUBLIC_WEBSITE_DOMAIN
 ENV BACKEND_DOMAIN=$BACKEND_DOMAIN
-WORKDIR /app/frontend
-RUN npm run build
+WORKDIR /app/apps/frontend
+RUN bun run build
 
 # Production image, copy all the files and run next
-FROM base AS runner
+FROM node:20-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
@@ -65,15 +61,15 @@ RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
 # Copy the built application
-COPY --from=builder /app/frontend/public ./public
+COPY --from=builder /app/apps/frontend/public ./public
 
 # Automatically leverage output traces to reduce image size
 # https://nextjs.org/docs/advanced-features/output-file-tracing
-COPY --from=builder --chown=nextjs:nodejs /app/frontend/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/frontend/.next/static ./frontend/.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/apps/frontend/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/apps/frontend/.next/static ./apps/frontend/.next/static
 
 # Copy public assets to the correct location for standalone mode
-COPY --from=builder --chown=nextjs:nodejs /app/frontend/public ./frontend/public
+COPY --from=builder --chown=nextjs:nodejs /app/apps/frontend/public ./apps/frontend/public
 
 USER nextjs
 
@@ -84,4 +80,4 @@ ENV HOSTNAME="0.0.0.0"
 
 # server.js is created by next build from the standalone output
 # https://nextjs.org/docs/pages/api-reference/config/next-config-js/output
-CMD ["node", "frontend/server.js"]
+CMD ["node", "apps/frontend/server.js"]

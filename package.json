@@ -4,29 +4,30 @@
   "description": "This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).",
   "main": "index.js",
   "workspaces": [
-    "frontend",
-    "backend-nest",
-    "shared"
+    "apps/*",
+    "packages/*"
   ],
+  "packageManager": "bun@1.3.14",
   "scripts": {
-    "test": "npm run test:be && npm run test:fe",
-    "test:be": "npm run test --workspace=backend-nest",
-    "test:fe": "npm run test --workspace=frontend",
+    "test": "bun run test:be && bun run test:fe",
+    "test:be": "bun run --filter backend-nest test",
+    "test:fe": "bun run --filter kth-course-community-frontend test",
     "lint": "biome check --fix",
     "format": "biome format --write",
-    "build": "echo 'Run build from /frontend or /backend-nest instead'",
-    "build:shared": "npm -w @shared/types run build",
-    "dev:fe": "npm run build:shared && npm run dev -C frontend",
-    "dev:be": "npm run build:shared && npm run start:dev -C backend-nest",
-    "add:fe": "npm -C frontend i",
-    "add:fe:dev": "npm -C frontend i -D",
-    "add:be": "npm -C backend-nest i",
-    "add:be:dev": "npm -C backend-nest i -D",
-    "rm:fe": "npm -C frontend un",
-    "rm:be": "npm -C backend-nest un",
-    "docker:start:prod": "cd backend-nest && node dist/main.js",
-    "docker:fe:build": "npm run build:shared && npm run build --workspace=frontend",
-    "docker:be:build": "npm run build:shared && npm run build --workspace=backend-nest"
+    "build": "echo 'Run build from /apps/frontend or /apps/backend-nest instead'",
+    "build:shared": "bun run --filter @shared/types build",
+    "dev": "bun run build:shared && concurrently -n web,api -c cyan,magenta \"bun run --filter kth-course-community-frontend dev\" \"bun run --filter backend-nest start:dev\"",
+    "dev:fe": "bun run build:shared && bun run --filter kth-course-community-frontend dev",
+    "dev:be": "bun run build:shared && bun run --filter backend-nest start:dev",
+    "add:fe": "bun add --filter=kth-course-community-frontend",
+    "add:fe:dev": "bun add -d --filter=kth-course-community-frontend",
+    "add:be": "bun add --filter=backend-nest",
+    "add:be:dev": "bun add -d --filter=backend-nest",
+    "rm:fe": "bun remove --filter=kth-course-community-frontend",
+    "rm:be": "bun remove --filter=backend-nest",
+    "docker:start:prod": "cd apps/backend-nest && node dist/main.js",
+    "docker:fe:build": "bun run build:shared && bun run --filter kth-course-community-frontend build",
+    "docker:be:build": "bun run build:shared && bun run --filter backend-nest build"
   },
   "repository": {
     "type": "git",
@@ -41,16 +42,12 @@
   "homepage": "https://github.com/Tegelstenen/course-compass#readme",
   "overrides": {
     "lodash": "^4.18.1",
-    "@angular-devkit/core": {
-      "picomatch": "^4.0.4"
-    },
-    "@esbuild-kit/core-utils": {
-      "esbuild": ">=0.25.0"
-    }
+    "@angular-devkit/core>picomatch": "^4.0.4",
+    "@esbuild-kit/core-utils>esbuild": ">=0.25.0"
   },
   "devDependencies": {
     "@biomejs/biome": "2.2.6",
-    "dotenv-cli": "^10.0.0",
+    "concurrently": "^10.0.5",
     "lefthook": "^2.0.0",
     "zod": "^3.23.8"
   },
