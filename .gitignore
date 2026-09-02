@@ -18,9 +18,6 @@ pnpm-lock.yaml
 # Next.js auto-generated type file
 next-env.d.ts
 
-# Compiled declaration files from the types/ shared package
-types/**/*.d.ts
-
 # =================================
 # WEB (Next.js)
 # =================================

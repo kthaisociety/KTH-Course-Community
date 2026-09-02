@@ -34,10 +34,6 @@ function truncate(text: string, maxLength: number): string {
 
 export type CourseCardWithChartsProps = {
   title: string;
-  goals: string;
-  /** Full course text (kept for detail flows; not shown on the card). */
-  content: string;
-  /** Short summary shown on the card under “Summary”. */
   summary: string;
   courseCode: string;
   department: string;
@@ -67,8 +63,6 @@ function stop<T>(handler: () => T) {
 
 export function CourseCardWithCharts({
   title,
-  goals: _goals,
-  content: _content,
   summary,
   courseCode,
   department,
@@ -205,7 +199,7 @@ export function CourseCardWithCharts({
           </div>
         </div>
 
-        {/* Summary (same typography as keywords/prerequisites); full content lives in props for detail views */}
+        {/* Summary */}
         <div className="flex min-h-0 flex-1 flex-col">
           <p className="text-xs font-medium text-muted-foreground mb-1.5">
             Summary

@@ -6,7 +6,6 @@ Monorepo for a KTH course community app. Next.js hosts the UI, Better Auth, Driz
 
 - Package manager: `bun` workspaces
 - App: `apps/web`
-- Shared types: `packages/shared`
 - Install: `bun i`
 - Run: `bun run dev`
 - Tests: `bun run test:web`

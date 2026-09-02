@@ -3,7 +3,7 @@ import type {
   CourseRoundSummary,
   CourseSummary,
   ExamRoundSummary,
-} from "@shared/types";
+} from "@/types";
 import { eq, inArray } from "drizzle-orm";
 import type { Database } from "./db";
 import {

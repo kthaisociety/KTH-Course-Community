@@ -27,7 +27,7 @@ import {
 } from "@/features/courses";
 import { useSearchPage } from "../hooks/use-search-page";
 
-const skeletonKeys = Array.from({ length: 5 }, () => crypto.randomUUID());
+const SKELETON_KEYS = ["s0", "s1", "s2", "s3", "s4"] as const;
 
 function useIsDesktop(): boolean {
   const [isDesktop, setIsDesktop] = useState(true);
@@ -297,7 +297,7 @@ export function Search() {
             </div>
             {isLoading && (
               <ul className="flex flex-col gap-4">
-                {skeletonKeys.map((key) => (
+                {SKELETON_KEYS.map((key) => (
                   <li key={key}>
                     <CourseItemSkeleton />
                   </li>
@@ -310,8 +310,6 @@ export function Search() {
                 <li key={course.courseCode}>
                   <CourseCardWithCharts
                     title={course.titleEng}
-                    goals={""}
-                    content={""}
                     summary={getMockSummary(course.courseCode)}
                     courseCode={course.courseCode}
                     department={course.department}

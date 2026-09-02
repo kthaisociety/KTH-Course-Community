@@ -1,6 +1,5 @@
 "use client";
 
-import type { CourseWithUserInfo } from "@shared/types";
 import { useRouter } from "next/navigation";
 import { useCallback } from "react";
 import {
@@ -16,6 +15,7 @@ import {
   CourseItemSkeleton,
   useCourseSummaries,
 } from "@/features/courses";
+import type { CourseWithUserInfo } from "@/types";
 import { useToggleFavorite } from "../api/mutations";
 
 const SKELETON_KEYS = ["f0", "f1", "f2", "f3", "f4"] as const;
@@ -83,8 +83,6 @@ export function Favorites() {
               <li key={course.courseCode}>
                 <CourseCardWithCharts
                   title={course.titleEng}
-                  goals={""}
-                  content={""}
                   summary={getMockSummary(course.courseCode)}
                   courseCode={course.courseCode}
                   department={course.department}

@@ -1,6 +1,6 @@
 "use client";
 
-import type { CourseWithUserInfo } from "@shared/types";
+import type { CourseWithUserInfo } from "@/types";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useState } from "react";
 import { useMe } from "@/features/auth";

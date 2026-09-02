@@ -101,6 +101,7 @@ apps/web/
     api/routers/<name>.ts      # procedures
     api/root.ts                # register the router
   trpc/                        # client + QueryClient
+  types/                       # shared server + UI types
 ```
 
 ### 1. Server
@@ -121,7 +122,7 @@ export const notesRouter = createTRPCRouter({
 });
 ```
 
-Register it on `appRouter` in `server/api/root.ts`. If you need a new table, add it in `server/db/schema.ts` (or `auth-schema.ts` for identity) and run `bun run db:push` from `apps/web`. Types that both server and UI share go in `packages/shared`.
+Register it on `appRouter` in `server/api/root.ts`. If you need a new table, add it in `server/db/schema.ts` (or `auth-schema.ts` for identity) and run `bun run db:push` from `apps/web`. Types that both server and UI share go in `types/`.
 
 ### 2. Frontend
 

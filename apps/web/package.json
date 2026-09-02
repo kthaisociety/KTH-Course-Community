@@ -38,7 +38,6 @@
     "@radix-ui/react-tooltip": "^1.2.8",
     "@radix-ui/react-use-controllable-state": "^1.2.2",
     "@shadcn/react": "^0.3.1",
-    "@shared/types": "*",
     "@tailwindcss/postcss": "^4.1.15",
     "@neondatabase/serverless": "^1.1.0",
     "@tanstack/react-query": "^5.102.8",

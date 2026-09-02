@@ -1,7 +1,5 @@
 import { Suspense } from "react";
-import { Search } from "@/features/search";
-
-export const dynamic = "force-dynamic";
+import { Search } from "@/features/search/components/search";
 
 export default function Page() {
   return (

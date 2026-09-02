@@ -1,6 +1,5 @@
-import { CoursePageSkeleton } from "@/features/courses";
+import { CoursePageSkeleton } from "@/features/courses/components/course-page-skeleton";
 
-/** Shown during navigations to /course/[courseCode] — empty page shell (no spinner). */
 export default function CourseRouteLoading() {
   return <CoursePageSkeleton />;
 }

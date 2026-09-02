@@ -13,7 +13,6 @@
       "!.next",
       "!dist",
       "!build",
-      "!types",
       "!migrations",
       "!drizzle"
     ]

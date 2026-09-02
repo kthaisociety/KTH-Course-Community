@@ -1,12 +1,12 @@
 "use client";
 
-import type { CourseDetails } from "@shared/types";
-import DOMPurify from "isomorphic-dompurify";
 import { ExternalLink, X } from "lucide-react";
 import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { kthCourseUrl } from "@/lib/kth";
+import { formatHp, formatTerm, kthCourseUrl } from "@/lib/kth";
+import { sanitizeCourseHtml } from "@/lib/sanitize-html";
+import type { CourseDetails } from "@/types";
 
 export type CourseDetailsSidebarProps = {
   /** The course code the sidebar was opened for — shown while details are loading. */
@@ -25,23 +25,6 @@ function SectionTitle({ children }: { children: ReactNode }) {
   );
 }
 
-function formatTerm(startTerm: number): string {
-  const year = Math.floor(startTerm / 10);
-  const half = startTerm % 10;
-  const prefix = half === 1 ? "VT" : half === 2 ? "HT" : "";
-  return prefix ? `${prefix}${String(year).slice(-2)}` : String(startTerm);
-}
-
-function formatHp(credits: number | null): string {
-  if (credits == null || !Number.isFinite(credits)) return "—";
-  return Number.isInteger(credits) ? String(credits) : credits.toFixed(1);
-}
-
-function sanitizeCourseHtml(html: string | null | undefined): string {
-  const normalized = html?.trim() || "<p>—</p>";
-  return DOMPurify.sanitize(normalized);
-}
-
 export function CourseDetailsSidebar({
   courseCode,
   details,
@@ -49,9 +32,6 @@ export function CourseDetailsSidebar({
   error,
   onClose,
 }: CourseDetailsSidebarProps) {
-  // Render from whatever details we currently have — the Redux slice keeps the
-  // previous course in state while a new fetch is pending, so switches swap
-  // atomically without a skeleton flash in between.
   const headerCode = details?.courseCode ?? courseCode;
   const showSkeleton = !details && loading;
   const showError = !details && !loading && error;

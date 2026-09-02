@@ -1,22 +1,21 @@
-"use client";
-
-import type { ExamRoundSummary } from "@shared/types";
+import { TRPCError } from "@trpc/server";
 import { ArrowLeft, ExternalLink } from "lucide-react";
 import Link from "next/link";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { type ReactNode, useEffect, useRef } from "react";
+import { notFound } from "next/navigation";
+import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
-import { useMe } from "@/features/auth";
-import {
-  Post,
-  type PostProps,
-  Review,
-  useAddReview,
-  useReviewList,
-} from "@/features/reviews";
-import { kthCourseUrl as kthCoursePageUrl } from "@/lib/kth";
-import { useCourseDetails } from "../api/queries";
-import { CoursePageSkeleton } from "./course-page-skeleton";
+import { Post } from "@/features/reviews/components/post";
+import { Review } from "@/features/reviews/components/review";
+import { formatHp, formatTerm, kthCourseUrl } from "@/lib/kth";
+import { sanitizeCourseHtml } from "@/lib/sanitize-html";
+import { caller } from "@/trpc/server";
+import type { ExamRoundSummary } from "@/types";
+
+export type CourseProps = {
+  courseCode: string;
+  fromSaved?: boolean;
+  openReviewOnLoad?: boolean;
+};
 
 function SectionTitle({ children, id }: { children: ReactNode; id?: string }) {
   return (
@@ -29,110 +28,26 @@ function SectionTitle({ children, id }: { children: ReactNode; id?: string }) {
   );
 }
 
-function formatTerm(startTerm: number): string {
-  const year = Math.floor(startTerm / 10);
-  const half = startTerm % 10;
-  const prefix = half === 1 ? "VT" : half === 2 ? "HT" : "";
-  return prefix ? `${prefix}${String(year).slice(-2)}` : String(startTerm);
-}
-
-export function Course() {
-  const params = useParams<{ courseCode: string }>();
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const { userId } = useMe();
-  const fromSaved = searchParams.get("from") === "saved";
-  const openReviewOnLoad = searchParams.get("writeReview") === "1";
-  const addReview = useAddReview();
+export async function Course({
+  courseCode,
+  fromSaved = false,
+  openReviewOnLoad = false,
+}: CourseProps) {
   const backHref = fromSaved ? "/favorites" : "/search";
   const backLabel = fromSaved ? "Back to saved courses" : "Back to explore";
 
-  const courseCode = params?.courseCode;
-  const {
-    data: courseDetails,
-    isLoading: courseLoading,
-    error: courseQueryError,
-  } = useCourseDetails(courseCode);
-  const {
-    data: reviews,
-    isLoading: reviewsLoading,
-    isError: reviewsError,
-  } = useReviewList(courseCode);
-  const courseError = courseQueryError
-    ? courseQueryError instanceof Error
-      ? courseQueryError.message
-      : "Failed to load course"
-    : null;
+  const [details, reviews] = await Promise.all([
+    caller.course.details({ courseCode }),
+    caller.reviews.list({ courseCode }),
+  ]).catch((error: unknown) => {
+    if (error instanceof TRPCError && error.code === "NOT_FOUND") {
+      notFound();
+    }
+    throw error;
+  });
 
-  useEffect(() => {
-    if (!params?.courseCode) router.push("/search");
-  }, [params?.courseCode, router]);
-
-  const posts: (PostProps & { postId: string })[] = Array.isArray(reviews)
-    ? reviews.map((review) => ({ ...review, postId: review.id }))
-    : [];
-
-  const reviewsHeadingRef = useRef<HTMLHeadingElement>(null);
-
-  useEffect(() => {
-    if (!openReviewOnLoad || !courseDetails) return;
-    reviewsHeadingRef.current?.scrollIntoView({
-      behavior: "smooth",
-      block: "start",
-    });
-  }, [openReviewOnLoad, courseDetails]);
-
-  if (!params.courseCode) {
-    return <CoursePageSkeleton backHref={backHref} backLabel={backLabel} />;
-  }
-
-  if (courseError && !courseLoading) {
-    return (
-      <div className="mx-auto max-w-4xl px-4 py-16 text-center">
-        <p className="text-destructive text-lg font-medium">
-          Could not load this course.
-        </p>
-        <p className="mt-2 text-muted-foreground text-sm">{courseError}</p>
-        <button
-          type="button"
-          className="mt-6 text-primary text-sm underline"
-          onClick={() => router.push(backHref)}
-        >
-          {backLabel}
-        </button>
-      </div>
-    );
-  }
-
-  if (
-    courseLoading ||
-    !courseDetails ||
-    (reviewsLoading && reviews == null && !reviewsError)
-  ) {
-    return (
-      <CoursePageSkeleton
-        courseCode={params.courseCode}
-        backHref={backHref}
-        backLabel={backLabel}
-      />
-    );
-  }
-
-  const kthUrl = kthCoursePageUrl(courseDetails.courseCode);
-  const hp =
-    courseDetails.credits != null && Number.isFinite(courseDetails.credits)
-      ? Number.isInteger(courseDetails.credits)
-        ? String(courseDetails.credits)
-        : courseDetails.credits.toFixed(1)
-      : "—";
-  const reviewComposer = userId ? (
-    <Review
-      courseCode={courseDetails.courseCode}
-      userId={userId}
-      onAddReview={addReview}
-      openOnLoad={openReviewOnLoad}
-    />
-  ) : null;
+  const kthUrl = kthCourseUrl(details.courseCode);
+  const hp = formatHp(details.credits);
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-4 pb-16 pt-6">
@@ -148,11 +63,11 @@ export function Course() {
         <div className="flex flex-col gap-4 p-5 md:flex-row md:items-start md:justify-between">
           <div className="min-w-0 flex-1">
             <h1 className="text-2xl font-semibold capitalize leading-tight text-foreground">
-              {courseDetails.titleEng}
+              {details.titleEng}
             </h1>
             <p className="mt-1 text-muted-foreground text-sm">
-              {hp} hp · {courseDetails.courseCode}
-              {courseDetails.department ? ` · ${courseDetails.department}` : ""}
+              {hp} hp · {details.courseCode}
+              {details.department ? ` · ${details.department}` : ""}
             </p>
           </div>
           <div className="flex shrink-0 flex-col gap-2 sm:flex-row sm:items-center">
@@ -177,9 +92,9 @@ export function Course() {
             <SectionTitle id="course-goals">Goals</SectionTitle>
             <div
               className="prose prose-sm mt-3 max-w-none text-foreground dark:prose-invert"
-              /** biome-ignore lint/security/noDangerouslySetInnerHtml: course HTML from index */
+              /** biome-ignore lint/security/noDangerouslySetInnerHtml: sanitized with DOMPurify */
               dangerouslySetInnerHTML={{
-                __html: courseDetails.goals?.trim() || "<p>—</p>",
+                __html: sanitizeCourseHtml(details.goals),
               }}
             />
           </div>
@@ -188,20 +103,20 @@ export function Course() {
             <SectionTitle id="course-content">Course content</SectionTitle>
             <div
               className="prose prose-sm mt-3 max-w-none text-foreground dark:prose-invert"
-              /** biome-ignore lint/security/noDangerouslySetInnerHtml: course HTML from index */
+              /** biome-ignore lint/security/noDangerouslySetInnerHtml: sanitized with DOMPurify */
               dangerouslySetInnerHTML={{
-                __html: courseDetails.content?.trim() || "<p>—</p>",
+                __html: sanitizeCourseHtml(details.content),
               }}
             />
           </div>
         </div>
       </section>
 
-      {courseDetails.rounds.length > 0 && (
+      {details.rounds.length > 0 && (
         <section className="rounded-lg border border-border bg-card p-5 shadow-sm">
           <SectionTitle>Course offerings</SectionTitle>
           <ul className="mt-3 flex flex-col gap-2 text-sm">
-            {courseDetails.rounds.map((r, idx) => (
+            {details.rounds.map((r, idx) => (
               <li
                 key={`${r.startTerm}-${r.formattedPeriodsAndCredits ?? ""}-${idx}`}
                 className="flex flex-wrap items-center gap-2 text-foreground"
@@ -226,11 +141,11 @@ export function Course() {
         </section>
       )}
 
-      {courseDetails.examinations.length > 0 && (
+      {details.examinations.length > 0 && (
         <section className="rounded-lg border border-border bg-card p-5 shadow-sm">
           <SectionTitle>Examinations</SectionTitle>
           <ul className="mt-3 flex flex-col gap-2 text-sm">
-            {courseDetails.examinations.map((e: ExamRoundSummary) => (
+            {details.examinations.map((e: ExamRoundSummary) => (
               <li
                 key={e.examCode}
                 className="flex flex-wrap items-center gap-2 text-foreground"
@@ -258,7 +173,6 @@ export function Course() {
       <section aria-labelledby="reviews-heading">
         <h2
           id="reviews-heading"
-          ref={reviewsHeadingRef}
           className="mb-4 text-lg font-semibold capitalize leading-tight"
         >
           Student reviews
@@ -266,24 +180,23 @@ export function Course() {
         <p className="mb-4 text-muted-foreground text-sm">
           Here are review insights and student comments about the course.
         </p>
-        {reviewComposer ? <div className="mb-4">{reviewComposer}</div> : null}
+        <Review courseCode={details.courseCode} openOnLoad={openReviewOnLoad} />
         <div className="flex flex-col gap-4">
-          {posts.length > 0 ? (
-            posts.map((post) => (
+          {reviews.length > 0 ? (
+            reviews.map((review) => (
               <Post
-                key={post.postId}
+                key={review.id}
                 className="w-full max-w-full border border-border bg-card shadow-sm"
-                courseCode={courseDetails.courseCode}
-                wouldRecommend={post.wouldRecommend}
-                content={post.content}
-                examinationMethods={post.examinationMethods}
-                theoreticalVsApplied={post.theoreticalVsApplied}
-                workload={post.workload}
-                learningExperience={post.learningExperience}
-                likeCount={post.likeCount}
-                dislikeCount={post.dislikeCount}
-                userVote={post.userVote}
-                postId={post.postId}
+                courseCode={details.courseCode}
+                wouldRecommend={review.wouldRecommend}
+                content={review.content}
+                examinationMethods={review.examinationMethods}
+                theoreticalVsApplied={review.theoreticalVsApplied}
+                workload={review.workload}
+                learningExperience={review.learningExperience}
+                likeCount={review.likeCount}
+                userVote={review.userVote}
+                postId={review.id}
               />
             ))
           ) : (

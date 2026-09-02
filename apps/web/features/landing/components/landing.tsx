@@ -61,19 +61,12 @@ export function Landing() {
   const { isAuthenticated, isPending } = useSessionData();
 
   function onSubmit() {
+    if (isPending) return;
     if (isAuthenticated) {
       router.push("/search");
     } else {
       setIsLoggingIn(true);
     }
-  }
-
-  if (isPending) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <p>Loading...</p>
-      </div>
-    );
   }
 
   if (isLoggingIn) {
@@ -156,9 +149,10 @@ export function Landing() {
             size="lg"
             variant="default"
             className="h-15 text-lg px-9"
-            onClick={onSubmit}
           >
             <motion.button
+              type="button"
+              onClick={onSubmit}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               className="relative inline-block px-8 py-4 font-bold text-white rounded-lg overflow-hidden cursor-pointer"

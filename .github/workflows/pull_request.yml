@@ -40,7 +40,5 @@ jobs:
           node-version: 20
       - name: Install dependencies
         run: bun install --frozen-lockfile
-      - name: Build shared types
-        run: bun run build:shared
       - name: Run tests
         run: bun run test:web

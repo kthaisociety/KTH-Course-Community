@@ -1,4 +1,4 @@
-import type { Review } from "@shared/types";
+import type { Review } from "@/types";
 import { and, eq, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import type { Database } from "./db";

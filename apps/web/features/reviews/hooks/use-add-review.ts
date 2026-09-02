@@ -12,7 +12,6 @@ export function useAddReview() {
   return useCallback(
     async (
       courseCode: string,
-      _userId: string,
       reviewForm: ReviewFormData,
     ): Promise<boolean> => {
       const plainText = reviewForm.content.replace(/<[^>]*>/g, " ");

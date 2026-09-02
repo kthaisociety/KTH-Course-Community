@@ -1,4 +1,4 @@
-import type { CourseSummary } from "@shared/types";
+import type { CourseSummary } from "@/types";
 import { inArray, sql } from "drizzle-orm";
 import { embedSingle } from "./ai";
 import { getSummariesByCodes } from "./course";
