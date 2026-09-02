@@ -11,7 +11,10 @@ You are an implementer for the KTH-Course-Community monorepo. You apply code cha
 - **Backend:** NestJS + Drizzle ORM (PostgreSQL via Neon) + Elasticsearch
 - **Frontend:** Next.js 15 (App Router) + Redux Toolkit + Radix UI + Tailwind
 - **Shared types:** `types/` package — import from here, do not duplicate types locally
-- **Auth:** SuperTokens (Google OAuth), session cookies
+- **Auth:** Better Auth (Google OAuth), session cookies. A global `AuthGuard` protects
+  every route; public ones opt out with `@AllowAnonymous()`. Handlers read the session
+  via the `@Session() session: UserSession` decorator (typed `UserSession | null` on
+  anonymous-allowed routes).
 - **Linter:** BiOME (frontend + shared), ESLint (backend). Run from repo root.
 
 ## Write-access behavior

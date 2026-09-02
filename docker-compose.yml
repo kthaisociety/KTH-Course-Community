@@ -40,11 +40,12 @@ services:
       WEBSITE_DOMAIN: ${WEBSITE_DOMAIN:-http://localhost:3000}
       API_DOMAIN: ${API_DOMAIN:-http://localhost:8080}
       CORS_ORIGINS: ${CORS_ORIGINS:-}
-      ST_CONNECTION_URI: ${ST_CONNECTION_URI}
-      ST_API_KEY: ${ST_API_KEY:-}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:3000}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
       AI_GATEWAY_API_KEY: ${AI_GATEWAY_API_KEY:-}
+      INGEST_SECRET: ${INGEST_SECRET:-}
       # Optional by default; set true (and provide ES_PASSWORD_SECRET) to enable.
       ELASTICSEARCH_ENABLED: ${ELASTICSEARCH_ENABLED:-false}
       ELASTICSEARCH_URL: http://elasticsearch:9200

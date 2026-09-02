@@ -54,14 +54,17 @@ Create a file at `backend-nest/.env` and add the following variables.
 # PostgreSQL database connection string
 DATABASE_URL=postgresql://user:password@host:port/database
 
+# Auth
+# BETTER_AUTH_URL is the frontend/site URL because /api/auth is proxied by Next.
+BETTER_AUTH_URL=http://localhost:3000
+BETTER_AUTH_SECRET= # Generate with: openssl rand -base64 32
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+
 # ElasticSearch credentials
 ELASTICSEARCH_URL=http://localhost:9200
 ELASTICSEARCH_USERNAME=elastic
 ELASTICSEARCH_PASSWORD= # The password you get after starting ElasticSearch
-
-# SuperTokens Authentication
-ST_CONNECTION_URI=https://try.supertokens.com
-ST_API_KEY=
 
 # Application URLs and Port
 PORT=8080

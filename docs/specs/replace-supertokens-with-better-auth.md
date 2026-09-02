@@ -322,9 +322,9 @@ Sub-issue 2 is implemented by hand from a tutorial. When the tutorial's approach
 Too small for its own ticket, too easy to forget at merge time.
 
 - Remove the SuperTokens connection URI and API key from the deployment environment and `docker-compose.yml`.
-- Add Better Auth's secret and base URL.
+- Add Better Auth's secret and base URL. `BETTER_AUTH_URL` is the public **site** origin, not the API — auth traffic reaches Nest through the Next rewrite, so the session cookie must be set on the host the browser talks to.
 - Configure trusted origins — the frontend and backend are on different origins in the deployed environment.
-- **Update the authorised redirect URI in the Google Cloud console.** The callback path moves from SuperTokens' to Better Auth's. This one will silently break sign-in in the deployed environment while working perfectly on localhost, and it is the single most likely cause of a bad merge night.
+- **Update the authorised redirect URI in the Google Cloud console** to `<site origin>/api/auth/callback/google`. The callback path moves from SuperTokens' to Better Auth's, and the origin is the site, not the API. This one will silently break sign-in in the deployed environment while working perfectly on localhost, and it is the single most likely cause of a bad merge night.
 - Confirm the CORS configuration still allows credentials with the new header set.
 
 ### Manual smoke checklist

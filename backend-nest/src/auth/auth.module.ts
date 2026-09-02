@@ -7,8 +7,8 @@ import { auth } from "./auth";
  *
  * `forRoot` mounts Better Auth's own `/api/auth/*` handler and registers its
  * `AuthGuard` globally, so every route is protected unless it opts out with
- * `@Public()`. `isGlobal` makes `AuthService` injectable without re-importing
- * this module.
+ * `@AllowAnonymous()`. `isGlobal` makes `AuthService` injectable without
+ * re-importing this module.
  */
 @Module({
   imports: [

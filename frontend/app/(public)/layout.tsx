@@ -1,7 +1,6 @@
 "use client";
 
-import { type ReactNode, useEffect } from "react";
-import { useDispatch, useSelector } from "react-redux";
+import type { ReactNode } from "react";
 import Navbar from "@/components/Navbar";
 import Topbar from "@/components/Topbar";
 import { useSessionData } from "@/hooks/sessionHooks";

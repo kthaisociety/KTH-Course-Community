@@ -21,7 +21,9 @@ function AuthController() {
       // Only Google works for now, will throw error on everything else.
       const { error } = await authClient.signIn.social({
         provider,
-        callbackURL: "/search", // where we route to after the login
+        // Relative, so it resolves against Better Auth's baseURL — which is the
+        // site origin (BETTER_AUTH_URL), not the API. Where we land after login.
+        callbackURL: "/search",
       });
       if (error) {
         // if no error, only redirect happens.
