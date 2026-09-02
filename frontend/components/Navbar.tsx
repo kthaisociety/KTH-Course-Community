@@ -2,12 +2,10 @@
 
 import { Bookmark, Search } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useEffect } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { DiCompass } from "react-icons/di";
 import { MdContactSupport, MdOutlineContactSupport } from "react-icons/md";
 import { RiBookOpenFill, RiBookOpenLine } from "react-icons/ri";
-import { useDispatch, useSelector } from "react-redux";
 import { ModeToggle } from "@/components/mode-toggle";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 // UI imports
@@ -20,21 +18,17 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { getSession, logout } from "@/state/session/sessionSlice";
-import type { Dispatch, RootState } from "@/state/store";
+import { useSessionData } from "@/hooks/sessionHooks";
+import { authClient } from "@/lib/auth-client";
 
 export default function Navbar() {
   const pathname = usePathname();
-  const dispatch = useDispatch<Dispatch>();
-  const user = useSelector((s: RootState) => s.user);
+  const router = useRouter();
+  const { user, isPending } = useSessionData();
 
-  // Check session on mount to handle page refresh
-  useEffect(() => {
-    dispatch(getSession());
-  }, [dispatch]);
-
-  const handleLogout = () => {
-    dispatch(logout());
+  const handleLogout = async () => {
+    await authClient.signOut();
+    router.push("/"); // routes to main page after log-out.
   };
 
   const getInitials = (name: string, email: string) => {
@@ -150,7 +144,7 @@ export default function Navbar() {
       <DropdownMenu>
         <DropdownMenuTrigger className="w-full mb-10 h-auto rounded-md text-sm font-medium transition-all gap-2 py-2 pl-2 pr-2 justify-start whitespace-normal cursor-pointer flex items-center group hover:bg-primary-light">
           <Avatar className="w-10 h-10">
-            {user.image ? (
+            {user?.image ? (
               <AvatarImage
                 src={user.image}
                 alt="Profile"
@@ -158,13 +152,13 @@ export default function Navbar() {
               />
             ) : null}
             <AvatarFallback className="bg-primary-light text-white font-semibold">
-              {getInitials(user.name, user.email)}
+              {getInitials(user?.name ?? "", user?.email ?? "")}
             </AvatarFallback>
           </Avatar>
           <span className="transition-all group-hover:font-bold">
-            {user.name?.trim() ||
-              user.email?.split("@")[0] ||
-              "Loading user..."}
+            {user?.name?.trim() ||
+              user?.email?.split("@")[0] ||
+              (isPending ? "Loading user..." : "Sign in")}
           </span>
         </DropdownMenuTrigger>
         <DropdownMenuContent>

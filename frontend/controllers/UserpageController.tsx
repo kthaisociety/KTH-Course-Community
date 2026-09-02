@@ -1,16 +1,17 @@
 "use client";
 
 import { useSessionData } from "@/hooks/sessionHooks";
-import { useUserData } from "@/hooks/userHooks";
+import { useFavorites } from "@/hooks/userHooks";
 import UserView from "@/views/UserView";
 
 export default function UserpageController() {
-  const userData = useUserData();
-  const userId = useSessionData().userId;
-  const { isLoading } = useSessionData();
+  const { user, userId, isPending } = useSessionData();
+  const { favorites } = useFavorites();
 
-  if (isLoading) {
+  if (isPending) {
     return <div>Loading...</div>;
   }
-  return <UserView userData={userData} userId={userId} />;
+  return (
+    <UserView name={user?.name ?? ""} favorites={favorites} userId={userId} />
+  );
 }

@@ -1,23 +1,38 @@
 "use client";
 
-import { useSelector } from "react-redux";
-import type { RootState } from "../state/store";
+import { useCallback, useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { useSessionData } from "@/hooks/sessionHooks";
+import { toggleUserFavorite } from "@/lib/user";
+import type { Dispatch, RootState } from "@/state/store";
+import { toggleFavoriteSuccess } from "@/state/user/userSlice";
+import { fetchFavorites } from "@/state/user/userThunk";
 
-export function useUser() {
-  return useSelector((state: RootState) => state.user);
-}
+/**
+ * The single entry point for the signed-in user's favorite courses.
+ *
+ * Redux is the shared cache here only so the list survives navigation between
+ * /search, /favorites and /profile. When TanStack Query lands this becomes a
+ * `useQuery` + `useMutation` pair and no caller has to change.
+ */
+export function useFavorites() {
+  const dispatch = useDispatch<Dispatch>();
+  const { isAuthenticated } = useSessionData();
+  const favorites = useSelector((s: RootState) => s.user.userFavorites);
+  const status = useSelector((s: RootState) => s.user.status);
 
-// exports the full user data
-export function useUserData() {
-  const userState = useSelector((state: RootState) => state.user);
-  return userState;
-}
+  useEffect(() => {
+    if (isAuthenticated) dispatch(fetchFavorites());
+  }, [isAuthenticated, dispatch]);
 
-// exports parts of the user data (not sure if needed, but good practice if only some parts of user data are needed)
-export function useUserName() {
-  return useSelector((state: RootState) => state.user.name);
-}
+  const toggle = useCallback(
+    async (courseCode: string) => {
+      const res = await toggleUserFavorite(courseCode);
+      dispatch(toggleFavoriteSuccess({ courseCode, action: res.action }));
+      return res;
+    },
+    [dispatch],
+  );
 
-export function useUserEmail() {
-  return useSelector((state: RootState) => state.user.email);
+  return { favorites, isLoading: status !== "ready", toggle };
 }

@@ -4,16 +4,10 @@ import { type ReactNode, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import Navbar from "@/components/Navbar";
 import Topbar from "@/components/Topbar";
-import { getSession } from "@/state/session/sessionSlice";
-import type { Dispatch, RootState } from "@/state/store";
+import { useSessionData } from "@/hooks/sessionHooks";
 
 export default function PublicLayout({ children }: { children: ReactNode }) {
-  const dispatch = useDispatch<Dispatch>();
-  const { isAuthenticated } = useSelector((state: RootState) => state.session);
-
-  useEffect(() => {
-    dispatch(getSession());
-  }, [dispatch]);
+  const { isAuthenticated } = useSessionData();
 
   return (
     <div className="min-h-screen flex">

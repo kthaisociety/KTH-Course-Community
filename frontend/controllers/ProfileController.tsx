@@ -1,31 +1,30 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useDispatch, useSelector } from "react-redux";
+import { useState } from "react";
+import { useDispatch } from "react-redux";
 import { toast } from "sonner";
-import Session from "supertokens-auth-react/recipe/session";
-import type { Dispatch, RootState } from "@/state/store";
-import { setImage } from "@/state/user/userSlice";
-import {
-  deleteAccount,
-  getUser,
-  uploadImage,
-} from "@/state/user/userThunk";
+import { useSessionData } from "@/hooks/sessionHooks";
+import { authClient } from "@/lib/auth-client";
+import type { Dispatch } from "@/state/store";
+import { deleteAccount, uploadImage } from "@/state/user/userThunk";
 import ProfileView from "@/views/ProfileView";
 
 export default function ProfileController() {
   const router = useRouter();
   const dispatch = useDispatch<Dispatch>();
-  const { name, email, image } = useSelector(
-    (state: RootState) => state.user,
-  );
+  const { user, refetch } = useSessionData();
+  // Local object-URL shown while the upload is in flight. The committed image
+  // lives on the Better Auth session, so there is nothing to roll back on
+  // failure beyond dropping this preview.
+  const [preview, setPreview] = useState<string | null>(null);
 
   // Handle file upload
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       const localPreview = URL.createObjectURL(file);
-      dispatch(setImage(localPreview));
+      setPreview(localPreview);
 
       // Await the resolved return value of the thunk, which is always {success, error?}
       const result: {
@@ -36,11 +35,14 @@ export default function ProfileController() {
       } = await dispatch(uploadImage(file));
       if (!result.success) {
         toast.error(result.error || result.message || "Image upload failed.");
-        if (image) dispatch(setImage(image));
+        setPreview(null);
         URL.revokeObjectURL(localPreview);
         return;
       }
-      await dispatch(getUser());
+      // The backend writes the new URL to the Better Auth users table, so
+      // re-reading the session is what refreshes the avatar everywhere.
+      await refetch();
+      setPreview(null);
       URL.revokeObjectURL(localPreview);
     }
   };
@@ -53,16 +55,16 @@ export default function ProfileController() {
       )
     ) {
       await dispatch(deleteAccount());
-      await Session.signOut();
+      await authClient.signOut();
       router.push("/");
     }
   };
 
   return (
     <ProfileView
-      name={name}
-      email={email}
-      preview={image}
+      name={user?.name ?? ""}
+      email={user?.email ?? ""}
+      preview={preview ?? user?.image ?? null}
       handleFileChange={handleFileChange}
       handleDeleteAccount={handleDeleteAccount}
     />

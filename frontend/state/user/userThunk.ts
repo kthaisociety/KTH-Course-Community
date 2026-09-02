@@ -1,38 +1,31 @@
 import { nestHttpUrl } from "@/lib/nest-http";
-import type { Dispatch } from "@/state/store";
-import { clearUser, setImage, setUser } from "./userSlice";
+import { getUserFavorites } from "@/lib/user";
+import type { Dispatch, RootState } from "@/state/store";
+import { clearUser, favoritesLoaded, favoritesLoading } from "./userSlice";
 
-export function getUser() {
-  return async (dispatch: Dispatch) => {
+/**
+ * Loads the user's favorite course codes once per session.
+ * Guarded on `status` because several components call `useFavorites()` in the
+ * same render pass and would otherwise each fire their own request.
+ */
+export function fetchFavorites() {
+  return async (dispatch: Dispatch, getState: () => RootState) => {
+    if (getState().user.status !== "idle") return;
+    dispatch(favoritesLoading());
     try {
-      const res = await fetch(nestHttpUrl("/user/me"));
-
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-
-      dispatch(
-        setUser({
-          name: data.name,
-          email: data.email,
-          image: data.image ?? null,
-          userFavorites: data.userFavorites ?? [],
-        }),
-      );
-      return { success: true as const };
+      dispatch(favoritesLoaded(await getUserFavorites()));
     } catch (err) {
-      console.error("Failed to fetch user:", err);
-      dispatch(clearUser());
-      return {
-        success: false as const,
-        error: err instanceof Error ? err.message : "Failed to fetch user",
-      };
+      console.error("Failed to fetch favorites:", err);
+      // Settle as an empty list rather than staying in "loading" forever, so
+      // the UI stops spinning and the effect does not retry in a loop.
+      dispatch(favoritesLoaded([]));
     }
   };
 }
 
 // Uploading profile picture
 export function uploadImage(file: File) {
-  return async (dispatch: Dispatch) => {
+  return async () => {
     try {
       const formData = new FormData();
       formData.append("file", file);
@@ -54,7 +47,6 @@ export function uploadImage(file: File) {
       }
 
       const data = await res.json();
-      dispatch(setImage(data.url));
       return { success: true, url: data.url };
     } catch (err) {
       if (err instanceof Error) {

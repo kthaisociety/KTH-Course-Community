@@ -4,8 +4,7 @@ import type { CourseWithUserInfo } from "@shared/types";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { useUser } from "@/hooks/userHooks";
-import { toggleUserFavorite } from "@/lib/user";
+import { useFavorites } from "@/hooks/userHooks";
 import { fetchCourseDetails } from "@/state/course/courseThunk";
 import { executeSearch } from "@/state/search/executeSearchThunk";
 import {
@@ -14,7 +13,6 @@ import {
   queryChanged,
 } from "@/state/search/searchSlice";
 import type { Dispatch, RootState } from "@/state/store";
-import { toggleFavoriteSuccess } from "@/state/user/userSlice";
 import SearchView from "@/views/SearchView";
 
 export default function SearchController() {
@@ -22,7 +20,7 @@ export default function SearchController() {
   const { query, filters, results, isLoading, error } = useSelector(
     (s: RootState) => s.search,
   );
-  const { userFavorites } = useUser(); // useUser hook to fetch from Redux
+  const { favorites, toggle: toggleFavorite } = useFavorites();
   const dispatch = useDispatch<Dispatch>(); // connect between redux and the component
   const router = useRouter();
   const pathname = usePathname();
@@ -69,10 +67,10 @@ export default function SearchController() {
     setResultsFull(
       results.map((result) => ({
         ...result,
-        isUserFavorite: (userFavorites ?? []).includes(result.courseCode),
+        isUserFavorite: favorites.includes(result.courseCode),
       })),
     );
-  }, [results, userFavorites]);
+  }, [results, favorites]);
 
   // When ?selected= changes, pull full course details for the sidebar.
   useEffect(() => {
@@ -146,15 +144,7 @@ export default function SearchController() {
 
   async function onToggleFavorite(courseCode: string) {
     try {
-      const res = await toggleUserFavorite(courseCode);
-
-      // Update Redux
-      dispatch(
-        toggleFavoriteSuccess({
-          courseCode,
-          action: res.action,
-        }),
-      );
+      const res = await toggleFavorite(courseCode);
 
       // Update local state immediately for fast rUI updates
       setResultsFull((prev) =>

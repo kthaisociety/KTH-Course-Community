@@ -1,20 +1,19 @@
 "use client";
 
-import { useEffect } from "react";
-import { useDispatch, useSelector } from "react-redux";
-import { getSession } from "@/state/session/sessionSlice";
-import type { Dispatch, RootState } from "@/state/store";
+import { authClient } from "@/lib/auth-client";
 
 export function useSessionData() {
-  const dispatch = useDispatch<Dispatch>();
-  const { userId, isLoading } = useSelector(
-    (state: RootState) => state.session,
-  );
-
-  useEffect(() => {
-    // (optional app logic)
-    dispatch(getSession());
-  }, [dispatch]);
-
-  return { userId, isLoading };
+  // fetches the session-data from Nest via Better Auth.
+  const { data, isPending, refetch } = authClient.useSession();
+  return {
+    user: data?.user ?? null,
+    userId: data?.user.id ?? "",
+    session: data?.session,
+    isAuthenticated: !!data,
+    isPending: isPending,
+    // Re-reads the session from the server. Needed after mutations that change
+    // fields Better Auth owns (e.g. the profile image), so the cached session
+    // does not go stale.
+    refetch,
+  };
 }
