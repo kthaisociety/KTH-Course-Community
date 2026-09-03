@@ -2,6 +2,10 @@ import { getAuth } from "@/server/auth";
 import { TranscriptParseError } from "@/server/ingest/transcript/parse";
 import { extractTranscriptText } from "@/server/ingest/transcript/pdf-text";
 import { buildTranscriptProposal } from "@/server/ingest/transcript/service";
+import {
+  capRequestBody,
+  TranscriptTooLargeError,
+} from "@/server/ingest/transcript/upload";
 
 export const runtime = "nodejs";
 
@@ -24,15 +28,22 @@ export async function POST(request: Request) {
     return Response.json({ message: "Unauthorized" }, { status: 401 });
   }
 
-  // Checked before `formData()` so an oversized upload is refused rather than
-  // buffered into memory first. `file.size` below is the check that counts; a
-  // client can send any Content-Length it likes.
-  const declaredLength = Number(request.headers.get("content-length"));
-  if (declaredLength > MAX_BYTES) {
-    return Response.json({ message: TOO_LARGE }, { status: 413 });
+  // Counted as the body arrives: `formData()` would otherwise buffer the whole
+  // upload before anything could look at the file's size, and Content-Length is
+  // absent on a chunked upload and a lie whenever the client wants it to be.
+  let formData: FormData;
+  try {
+    formData = await capRequestBody(request, MAX_BYTES).formData();
+  } catch (error) {
+    if (error instanceof TranscriptTooLargeError) {
+      return Response.json({ message: TOO_LARGE }, { status: 413 });
+    }
+    return Response.json(
+      { message: "Upload the transcript PDF that Ladok generates" },
+      { status: 400 },
+    );
   }
 
-  const formData = await request.formData();
   const file = formData.get("file");
   if (!(file instanceof File) || file.size === 0) {
     return Response.json(
@@ -40,14 +51,13 @@ export async function POST(request: Request) {
       { status: 400 },
     );
   }
+  // Advisory only — the browser sets this and a client may lie. The real check
+  // is `extractTranscriptText` below, which fails on anything that is not a PDF.
   if (file.type !== "application/pdf") {
     return Response.json(
       { message: "Upload the transcript PDF that Ladok generates" },
       { status: 400 },
     );
-  }
-  if (file.size > MAX_BYTES) {
-    return Response.json({ message: TOO_LARGE }, { status: 413 });
   }
 
   try {
