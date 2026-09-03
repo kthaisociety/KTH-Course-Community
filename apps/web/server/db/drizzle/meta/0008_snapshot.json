@@ -1177,15 +1177,13 @@
           "name": "workload_score",
           "type": "integer",
           "primaryKey": false,
-          "notNull": true,
-          "default": 1
+          "notNull": false
         },
         "learning_score": {
           "name": "learning_score",
           "type": "integer",
           "primaryKey": false,
-          "notNull": true,
-          "default": 1
+          "notNull": false
         },
         "happy_took": {
           "name": "happy_took",

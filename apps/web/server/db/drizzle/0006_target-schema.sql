@@ -6,26 +6,10 @@
 DO $$
 BEGIN
 	IF EXISTS (
-		SELECT 1 FROM "reviews"
-		WHERE "workload" NOT BETWEEN 1 AND 10
-			OR "learning_experience" NOT BETWEEN 1 AND 10
-	) THEN
-		RAISE EXCEPTION 'Cannot migrate reviews: workload and learning_experience must be between 1 and 10';
-	END IF;
-
-	IF EXISTS (
 		SELECT 1 FROM "review_likes"
 		WHERE "vote_type" NOT IN ('like', 'dislike')
 	) THEN
 		RAISE EXCEPTION 'Cannot migrate review_likes: unsupported vote_type found';
-	END IF;
-
-	IF EXISTS (
-		SELECT 1 FROM "course_rounds"
-		WHERE "study_pace" IS NOT NULL
-			AND "study_pace" NOT BETWEEN 1 AND 100
-	) THEN
-		RAISE EXCEPTION 'Cannot migrate course_rounds: study_pace must be between 1 and 100';
 	END IF;
 END
 $$;--> statement-breakpoint
@@ -133,8 +117,8 @@ ALTER TABLE "users" ALTER COLUMN "updated_at" SET DEFAULT now();--> statement-br
 ALTER TABLE "courses" ADD COLUMN "created_at" timestamp with time zone DEFAULT now() NOT NULL;--> statement-breakpoint
 ALTER TABLE "reviews" ADD COLUMN "examination_distribution" jsonb;--> statement-breakpoint
 ALTER TABLE "reviews" ADD COLUMN "approach_theory_percent" integer;--> statement-breakpoint
-ALTER TABLE "reviews" ADD COLUMN "workload_score" integer DEFAULT 1 NOT NULL;--> statement-breakpoint
-ALTER TABLE "reviews" ADD COLUMN "learning_score" integer DEFAULT 1 NOT NULL;--> statement-breakpoint
+ALTER TABLE "reviews" ADD COLUMN "workload_score" integer;--> statement-breakpoint
+ALTER TABLE "reviews" ADD COLUMN "learning_score" integer;--> statement-breakpoint
 ALTER TABLE "reviews" ADD COLUMN "happy_took" boolean DEFAULT false NOT NULL;--> statement-breakpoint
 ALTER TABLE "reviews" ADD COLUMN "message" text;--> statement-breakpoint
 ALTER TABLE "users" ADD COLUMN "personalization_tier_earned" smallint DEFAULT 0 NOT NULL;--> statement-breakpoint
@@ -201,11 +185,17 @@ FROM "courses";--> statement-breakpoint
 
 -- The old integer answers cannot safely become a distribution or percentage,
 -- so those target columns intentionally remain NULL. Directly equivalent data
--- is copied and empty comments become NULL.
+-- is copied when valid, and empty comments become NULL.
 UPDATE "reviews"
 SET
-	"workload_score" = "workload",
-	"learning_score" = "learning_experience",
+	"workload_score" = CASE
+		WHEN "workload" BETWEEN 1 AND 10 THEN "workload"
+		ELSE NULL
+	END,
+	"learning_score" = CASE
+		WHEN "learning_experience" BETWEEN 1 AND 10 THEN "learning_experience"
+		ELSE NULL
+	END,
 	"happy_took" = "would_recommend",
 	"message" = NULLIF("content", '');--> statement-breakpoint
 
@@ -215,8 +205,14 @@ RETURNS trigger
 LANGUAGE plpgsql
 AS $$
 BEGIN
-	NEW."workload_score" := NEW."workload";
-	NEW."learning_score" := NEW."learning_experience";
+	NEW."workload_score" := CASE
+		WHEN NEW."workload" BETWEEN 1 AND 10 THEN NEW."workload"
+		ELSE NULL
+	END;
+	NEW."learning_score" := CASE
+		WHEN NEW."learning_experience" BETWEEN 1 AND 10 THEN NEW."learning_experience"
+		ELSE NULL
+	END;
 	NEW."happy_took" := NEW."would_recommend";
 	NEW."message" := NULLIF(NEW."content", '');
 	RETURN NEW;
@@ -255,6 +251,10 @@ CREATE INDEX "course_explore_search_vector_idx" ON "course_explore" USING gin ("
 CREATE INDEX "course_explore_embedding_idx" ON "course_explore" USING hnsw ("embedding" vector_cosine_ops);--> statement-breakpoint
 ALTER TABLE "course_examinations" ADD CONSTRAINT "course_examinations_course_code_courses_code_fk" FOREIGN KEY ("course_code") REFERENCES "public"."courses"("code") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "course_rounds" ADD CONSTRAINT "course_rounds_course_code_courses_code_fk" FOREIGN KEY ("course_code") REFERENCES "public"."courses"("code") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+UPDATE "course_rounds"
+SET "study_pace" = NULL
+WHERE "study_pace" IS NOT NULL
+	AND "study_pace" NOT BETWEEN 1 AND 100;--> statement-breakpoint
 ALTER TABLE "course_rounds" ADD CONSTRAINT "study_pace_range" CHECK ("course_rounds"."study_pace" between 1 and 100);--> statement-breakpoint
 ALTER TABLE "reviews" ADD CONSTRAINT "approach_theory_percent_range" CHECK ("reviews"."approach_theory_percent" between 0 and 100);--> statement-breakpoint
 ALTER TABLE "reviews" ADD CONSTRAINT "workload_score_range" CHECK ("reviews"."workload_score" between 1 and 10);--> statement-breakpoint

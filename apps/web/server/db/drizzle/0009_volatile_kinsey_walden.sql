@@ -1,5 +1,3 @@
-ALTER TABLE "reviews" ALTER COLUMN "workload_score" SET DEFAULT NULL;--> statement-breakpoint
-ALTER TABLE "reviews" ALTER COLUMN "learning_score" SET DEFAULT NULL;--> statement-breakpoint
 ALTER TABLE "reviews" ALTER COLUMN "happy_took" SET DEFAULT NULL;--> statement-breakpoint
 
 -- Temporary expand/contract compatibility. B must drop these triggers and
@@ -17,10 +15,17 @@ BEGIN
 			AND NEW."happy_took" IS NULL;
 		-- NULL means the target field was omitted; explicit target values win.
 		IF NEW."workload_score" IS NULL THEN
-			NEW."workload_score" := NEW."workload";
+			NEW."workload_score" := CASE
+				WHEN NEW."workload" BETWEEN 1 AND 10 THEN NEW."workload"
+				ELSE NULL
+			END;
 		END IF;
 		IF NEW."learning_score" IS NULL THEN
-			NEW."learning_score" := NEW."learning_experience";
+			NEW."learning_score" := CASE
+				WHEN NEW."learning_experience" BETWEEN 1 AND 10
+					THEN NEW."learning_experience"
+				ELSE NULL
+			END;
 		END IF;
 		IF NEW."happy_took" IS NULL THEN
 			NEW."happy_took" := NEW."would_recommend";
@@ -31,10 +36,17 @@ BEGIN
 	ELSE
 		-- A target-only update must not be replaced by unchanged legacy values.
 		IF NEW."workload" IS DISTINCT FROM OLD."workload" THEN
-			NEW."workload_score" := NEW."workload";
+			NEW."workload_score" := CASE
+				WHEN NEW."workload" BETWEEN 1 AND 10 THEN NEW."workload"
+				ELSE NULL
+			END;
 		END IF;
 		IF NEW."learning_experience" IS DISTINCT FROM OLD."learning_experience" THEN
-			NEW."learning_score" := NEW."learning_experience";
+			NEW."learning_score" := CASE
+				WHEN NEW."learning_experience" BETWEEN 1 AND 10
+					THEN NEW."learning_experience"
+				ELSE NULL
+			END;
 		END IF;
 		IF NEW."would_recommend" IS DISTINCT FROM OLD."would_recommend" THEN
 			NEW."happy_took" := NEW."would_recommend";

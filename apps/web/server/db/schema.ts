@@ -470,12 +470,12 @@ const reviewsTable = pgTable(
     content: text("content").notNull(),
 
     // Target fields coexist with the legacy fields until the review domain
-    // switches. Temporary NULL defaults let the compatibility trigger identify
-    // omitted target values while keeping legacy inserts type-compatible.
+    // switches. Scores stay nullable during the expand phase because legacy
+    // zeroes do not represent valid target ratings.
     examinationDistribution: jsonb("examination_distribution"),
     approachTheoryPercent: integer("approach_theory_percent"),
-    workloadScore: integer("workload_score").default(sql`NULL`).notNull(),
-    learningScore: integer("learning_score").default(sql`NULL`).notNull(),
+    workloadScore: integer("workload_score"),
+    learningScore: integer("learning_score"),
     happyTook: boolean("happy_took").default(sql`NULL`).notNull(),
     message: text("message"),
 
