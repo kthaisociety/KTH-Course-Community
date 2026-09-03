@@ -91,43 +91,63 @@ export async function deleteCollection(
     );
 }
 
-/** The collection's course codes, in stored order. */
+/**
+ * The collection's course codes, in stored order. `course_code` breaks a tie:
+ * nothing stops two rows sharing a position, and a read must still be stable.
+ */
 export async function listCourseCodes(collectionId: string): Promise<string[]> {
   const rows = await db
     .select({ courseCode: schema.collectionCourses.courseCode })
     .from(schema.collectionCourses)
     .where(eq(schema.collectionCourses.collectionId, collectionId))
-    .orderBy(schema.collectionCourses.position);
+    .orderBy(
+      schema.collectionCourses.position,
+      schema.collectionCourses.courseCode,
+    );
   return rows.map((row) => row.courseCode);
 }
 
-/** Null when the collection holds no courses. */
-export async function findMaxPosition(
-  collectionId: string,
-): Promise<number | null> {
-  const [row] = await db
-    .select({ value: max(schema.collectionCourses.position) })
-    .from(schema.collectionCourses)
-    .where(eq(schema.collectionCourses.collectionId, collectionId));
-  return row?.value ?? null;
-}
-
 /**
- * Idempotent: a course already in the collection keeps its position.
+ * Appends a course at the end of the collection and reports whether a row was
+ * added — `false` means it was already a member and kept its position.
+ *
+ * Reading the last position and inserting after it is one transaction that
+ * locks the parent collection row first, so two concurrent additions to the
+ * same collection are serialized and cannot both claim the same position.
  *
  * `collectionUserId` is repeated so PostgreSQL can check both composite keys —
  * collection ownership, and that the same user has saved the course.
  */
-export async function insertCollectionCourse(values: {
+export function appendCollectionCourse(values: {
   collectionId: string;
   collectionUserId: string;
   courseCode: string;
-  position: number;
-}): Promise<void> {
-  await db
-    .insert(schema.collectionCourses)
-    .values(values)
-    .onConflictDoNothing();
+}): Promise<boolean> {
+  return db.transaction(async (tx) => {
+    await tx
+      .select({ id: schema.collections.id })
+      .from(schema.collections)
+      .where(
+        and(
+          eq(schema.collections.id, values.collectionId),
+          eq(schema.collections.userId, values.collectionUserId),
+        ),
+      )
+      .for("update");
+
+    const [last] = await tx
+      .select({ value: max(schema.collectionCourses.position) })
+      .from(schema.collectionCourses)
+      .where(eq(schema.collectionCourses.collectionId, values.collectionId));
+
+    const inserted = await tx
+      .insert(schema.collectionCourses)
+      .values({ ...values, position: (last?.value ?? -1) + 1 })
+      .onConflictDoNothing()
+      .returning({ courseCode: schema.collectionCourses.courseCode });
+
+    return inserted.length > 0;
+  });
 }
 
 /** Returns whether a membership row was actually deleted. */

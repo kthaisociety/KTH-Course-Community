@@ -87,6 +87,39 @@ export async function upsertTakenCourses(
     });
 }
 
+/**
+ * Edits an existing row and nothing else. One statement, so a concurrent
+ * delete cannot slip between a check and the write and be undone by it —
+ * unlike `upsertTakenCourses`, this never inserts.
+ *
+ * `transcript_imported_at` is not in the SET list, so an imported row keeps its
+ * provenance through a manual edit.
+ *
+ * Returns whether a row was actually updated.
+ */
+export async function updateTakenCourse(
+  userId: string,
+  row: TakenCourseWrite,
+): Promise<boolean> {
+  const updated = await db
+    .update(schema.userTakenCourses)
+    .set({
+      grade: row.grade,
+      earnedCredits: row.earnedCredits,
+      attendancePeriods: row.attendancePeriods,
+      attendanceYear: row.attendanceYear,
+      updatedAt: new Date(),
+    })
+    .where(
+      and(
+        eq(schema.userTakenCourses.userId, userId),
+        eq(schema.userTakenCourses.courseCode, row.courseCode),
+      ),
+    )
+    .returning({ courseCode: schema.userTakenCourses.courseCode });
+  return updated.length > 0;
+}
+
 /** Returns whether a row was actually deleted. */
 export async function deleteTakenCourse(
   userId: string,

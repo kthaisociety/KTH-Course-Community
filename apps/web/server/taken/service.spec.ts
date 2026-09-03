@@ -152,21 +152,26 @@ describe("taken course edits", () => {
   });
 
   it("updateTakenCourse rejects a course the user has not taken", async () => {
+    vi.mocked(takenRepo.updateTakenCourse).mockResolvedValue(false);
+
     await expect(
       updateTakenCourse("u1", { courseCode: "SF1625", grade: "B" }),
     ).rejects.toBeInstanceOf(NotFoundError);
-
-    expect(takenRepo.upsertTakenCourses).not.toHaveBeenCalled();
   });
 
-  it("updateTakenCourse writes as a manual edit", async () => {
-    vi.mocked(takenRepo.findTakenCourseCodes).mockResolvedValue(["SF1625"]);
+  it("updateTakenCourse never upserts, so a concurrent remove stands", async () => {
+    vi.mocked(takenRepo.updateTakenCourse).mockResolvedValue(true);
 
     await updateTakenCourse("u1", { courseCode: "SF1625", grade: "B" });
 
-    expect(vi.mocked(takenRepo.upsertTakenCourses).mock.calls[0][2]).toEqual({
-      mode: "preserve",
+    expect(takenRepo.updateTakenCourse).toHaveBeenCalledWith("u1", {
+      courseCode: "SF1625",
+      grade: "B",
+      earnedCredits: null,
+      attendancePeriods: null,
+      attendanceYear: null,
     });
+    expect(takenRepo.upsertTakenCourses).not.toHaveBeenCalled();
   });
 
   it("removeTakenCourse rejects a course the user has not taken", async () => {

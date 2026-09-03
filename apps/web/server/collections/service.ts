@@ -43,7 +43,10 @@ export async function listCollections(userId: string): Promise<Collection[]> {
     toCollection(
       row,
       (byCollection.get(row.id) ?? [])
-        .sort((a, b) => a.position - b.position)
+        .sort(
+          (a, b) =>
+            a.position - b.position || a.courseCode.localeCompare(b.courseCode),
+        )
         .map((membership) => membership.courseCode),
     ),
   );
@@ -102,12 +105,12 @@ export async function addCourseToCollection(
       `Save ${courseCode} before adding it to a collection`,
     );
   }
-  const lastPosition = await collectionsRepo.findMaxPosition(collectionId);
-  await collectionsRepo.insertCollectionCourse({
+  // Position allocation belongs to the repository: appending safely means
+  // reading the last position and inserting inside one locked transaction.
+  await collectionsRepo.appendCollectionCourse({
     collectionId,
     collectionUserId: userId,
     courseCode,
-    position: lastPosition === null ? 0 : lastPosition + 1,
   });
   return { collectionId, courseCode };
 }

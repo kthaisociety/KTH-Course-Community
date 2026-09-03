@@ -119,13 +119,19 @@ export async function addTakenCourse(
   return { courseCode: input.courseCode, created: inserted > 0 };
 }
 
-/** Edits the self-reported fields of a course the user already has. */
+/**
+ * Edits the self-reported fields of a course the user already has.
+ *
+ * This is update-only, not an upsert: it goes through a single `UPDATE` so a
+ * concurrent `removeTakenCourse` cannot be silently undone by an edit that was
+ * in flight when the row was deleted.
+ */
 export async function updateTakenCourse(
   userId: string,
   input: TakenCourseInput,
 ): Promise<{ courseCode: string }> {
-  await assertTaken(userId, input.courseCode);
-  await recordTakenCourses(userId, [input], { source: "manual" });
+  const updated = await takenRepo.updateTakenCourse(userId, toWrite(input));
+  if (!updated) throw notTaken(input.courseCode);
   return { courseCode: input.courseCode };
 }
 
@@ -136,11 +142,6 @@ export async function removeTakenCourse(
   const deleted = await takenRepo.deleteTakenCourse(userId, courseCode);
   if (!deleted) throw notTaken(courseCode);
   return { courseCode };
-}
-
-async function assertTaken(userId: string, courseCode: string): Promise<void> {
-  const existing = await takenRepo.findTakenCourseCodes(userId, [courseCode]);
-  if (existing.length === 0) throw notTaken(courseCode);
 }
 
 function notTaken(courseCode: string): NotFoundError {

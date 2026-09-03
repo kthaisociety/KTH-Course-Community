@@ -105,30 +105,29 @@ describe("collection membership", () => {
     await expect(
       addCourseToCollection("u1", "c1", "DD2421"),
     ).rejects.toBeInstanceOf(ForbiddenError);
-    expect(collectionsRepo.insertCollectionCourse).not.toHaveBeenCalled();
+    expect(collectionsRepo.appendCollectionCourse).not.toHaveBeenCalled();
   });
 
-  it("puts the first course of an empty collection at position 0", async () => {
-    vi.mocked(collectionsRepo.findMaxPosition).mockResolvedValue(null);
+  it("appends a saved course, leaving position allocation to the repository", async () => {
+    await expect(addCourseToCollection("u1", "c1", "DD2421")).resolves.toEqual({
+      collectionId: "c1",
+      courseCode: "DD2421",
+    });
 
-    await addCourseToCollection("u1", "c1", "DD2421");
-
-    expect(collectionsRepo.insertCollectionCourse).toHaveBeenCalledWith({
+    expect(collectionsRepo.appendCollectionCourse).toHaveBeenCalledWith({
       collectionId: "c1",
       collectionUserId: "u1",
       courseCode: "DD2421",
-      position: 0,
     });
   });
 
-  it("appends a further course after the last position", async () => {
-    vi.mocked(collectionsRepo.findMaxPosition).mockResolvedValue(3);
+  it("hides a collection the caller does not own from an add", async () => {
+    vi.mocked(collectionsRepo.findCollection).mockResolvedValue(undefined);
 
-    await addCourseToCollection("u1", "c1", "DD2421");
-
-    expect(collectionsRepo.insertCollectionCourse).toHaveBeenCalledWith(
-      expect.objectContaining({ position: 4 }),
-    );
+    await expect(
+      addCourseToCollection("intruder", "c1", "DD2421"),
+    ).rejects.toBeInstanceOf(NotFoundError);
+    expect(collectionsRepo.appendCollectionCourse).not.toHaveBeenCalled();
   });
 
   it("rejects removing a course the collection does not hold", async () => {

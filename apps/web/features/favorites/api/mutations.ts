@@ -18,7 +18,8 @@ export function useSetCourseSaved() {
   const unsave = useMutation(trpc.saved.unsave.mutationOptions());
 
   async function setSaved(courseCode: string, saved: boolean) {
-    await queryClient.cancelQueries({ queryKey: meKey });
+    // Written before the first await so a second click in the same tick reads
+    // the state this one is heading for, not the state it started from.
     const previous = queryClient.getQueryData<Me | null>(meKey);
     if (previous) {
       queryClient.setQueryData<Me>(meKey, {
@@ -28,6 +29,7 @@ export function useSetCourseSaved() {
           : previous.savedCourseCodes.filter((code) => code !== courseCode),
       });
     }
+    await queryClient.cancelQueries({ queryKey: meKey });
 
     try {
       await (saved ? save : unsave).mutateAsync({ courseCode });
@@ -41,8 +43,20 @@ export function useSetCourseSaved() {
     }
   }
 
+  /**
+   * Flips saved state. Reads the cache at call time rather than a value
+   * captured by the caller's render, so clicking twice quickly ends in the
+   * state the second click asked for.
+   */
+  function toggleSaved(courseCode: string) {
+    const current = queryClient.getQueryData<Me | null>(meKey);
+    const isSaved = current?.savedCourseCodes.includes(courseCode) ?? false;
+    return setSaved(courseCode, !isSaved);
+  }
+
   return {
     setSaved,
+    toggleSaved,
     isPending: save.isPending || unsave.isPending,
   };
 }

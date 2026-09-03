@@ -14,7 +14,7 @@ const DEFAULT_QUERY = "interaction programming";
 export function useSearchPage() {
   const { user } = useMe();
   const savedCourseCodes = user?.savedCourseCodes ?? [];
-  const { setSaved } = useSetCourseSaved();
+  const { toggleSaved } = useSetCourseSaved();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -107,9 +107,12 @@ export function useSearchPage() {
 
   const onAddToComparison = useCallback((_courseCode: string) => {}, []);
 
+  // `toggleSaved` reads the cache at call time. Deriving the target state from
+  // `savedCourseCodes` here would reuse this render's value, so two fast clicks
+  // would both request the same state.
   async function onToggleFavorite(courseCode: string) {
     try {
-      await setSaved(courseCode, !savedCourseCodes.includes(courseCode));
+      await toggleSaved(courseCode);
     } catch (err) {
       console.error("Failed to change saved course:", err);
     }
