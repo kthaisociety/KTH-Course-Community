@@ -244,3 +244,4 @@ Repo-local agent skills live under `.agents/skills/`.
 | `bun run ingest` | Ingests KOPPS courses into Neon |
 | `bun run add:web` | Adds a dependency to the web workspace |
 | `bun run rm:web` | Removes a dependency from the web workspace |
+ 
