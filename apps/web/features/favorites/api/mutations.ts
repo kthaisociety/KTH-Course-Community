@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useRef } from "react";
 import type { Me } from "@/lib/user";
 import { useTRPC } from "@/trpc/client";
 
@@ -8,6 +9,10 @@ import { useTRPC } from "@/trpc/client";
  * Saves or unsaves a course. The caller says which state it wants, because the
  * server has no toggle: `saved.save` and `saved.unsave` are separate and
  * idempotent.
+ *
+ * Writes to one course are queued, so the last click decides the stored state
+ * even when a user clicks faster than the network answers. Two different
+ * courses still go in parallel.
  */
 export function useSetCourseSaved() {
   const trpc = useTRPC();
@@ -16,6 +21,10 @@ export function useSetCourseSaved() {
 
   const save = useMutation(trpc.saved.save.mutationOptions());
   const unsave = useMutation(trpc.saved.unsave.mutationOptions());
+
+  // The write currently in flight per course code, so the next one can wait for
+  // it instead of racing it.
+  const inFlight = useRef(new Map<string, Promise<unknown>>());
 
   async function setSaved(courseCode: string, saved: boolean) {
     // Written before the first await so a second click in the same tick reads
@@ -31,15 +40,28 @@ export function useSetCourseSaved() {
     }
     await queryClient.cancelQueries({ queryKey: meKey });
 
+    const queue = inFlight.current;
+    // A failed predecessor must not cancel this write, so its rejection is
+    // swallowed here — it was already surfaced to whoever awaited it.
+    const write = (queue.get(courseCode) ?? Promise.resolve())
+      .catch(() => undefined)
+      .then(() => (saved ? save : unsave).mutateAsync({ courseCode }));
+    queue.set(courseCode, write);
+
     try {
-      await (saved ? save : unsave).mutateAsync({ courseCode });
+      await write;
     } catch (error) {
       if (previous !== undefined) {
         queryClient.setQueryData(meKey, previous);
       }
       throw error;
     } finally {
-      queryClient.invalidateQueries({ queryKey: meKey });
+      // Only the last write for this course clears the queue and refetches;
+      // an earlier one must not pull server state back mid-sequence.
+      if (queue.get(courseCode) === write) {
+        queue.delete(courseCode);
+        queryClient.invalidateQueries({ queryKey: meKey });
+      }
     }
   }
 
