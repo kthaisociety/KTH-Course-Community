@@ -114,17 +114,33 @@ export async function findNearestNodes(
 /**
  * Write one placement: the node, its profile and its backbone edges, together.
  *
- * Every insert is `on conflict do nothing`, so re-running a placement can never
- * move a node that is already there or duplicate a backbone edge. The
- * `no_self_backbone_edge` check constraint rejects self-edges in the database
- * even if a caller ever asks for one.
+ * The node insert is the gate. `on conflict do nothing ... returning` inserts a
+ * row and hands it back, or hands back nothing because a placement for this app
+ * user committed first. When it hands back nothing the whole placement is
+ * abandoned — profile and backbone edges included — so a node that is already
+ * there can never be moved, and can never collect a second set of anchors from
+ * a placement that lost the race. `undefined` tells the caller that happened.
+ *
+ * The profile and edge inserts stay `on conflict do nothing` so that repairing
+ * a half-written placement is safe. Duplicate backbone edges are impossible by
+ * composite primary key, and `no_self_backbone_edge` rejects a self-edge in the
+ * database even if a caller ever asks for one.
  */
-export async function persistPlacement(write: PlacementWrite): Promise<void> {
-  await db.transaction(async (tx) => {
-    await tx
+export async function persistPlacement(
+  write: PlacementWrite,
+): Promise<GraphNode | undefined> {
+  return db.transaction(async (tx) => {
+    const [placed] = await tx
       .insert(schema.usersGraphNodes)
       .values(write.node)
-      .onConflictDoNothing();
+      .onConflictDoNothing()
+      .returning({
+        userId: schema.usersGraphNodes.userId,
+        x: schema.usersGraphNodes.x,
+        y: schema.usersGraphNodes.y,
+      });
+    if (!placed) return undefined;
+
     await tx
       .insert(schema.usersNodeProfiles)
       .values(write.profile)
@@ -135,6 +151,7 @@ export async function persistPlacement(write: PlacementWrite): Promise<void> {
         .values(write.edges)
         .onConflictDoNothing();
     }
+    return placed;
   });
 }
 

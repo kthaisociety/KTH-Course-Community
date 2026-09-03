@@ -64,8 +64,11 @@ function inMemoryCommunity() {
         .slice(0, limit),
   );
   vi.mocked(graphRepo.persistPlacement).mockImplementation(async (write) => {
+    if (nodes.some((node) => node.userId === write.node.userId))
+      return undefined;
     nodes.push({ ...write.node, ...write.profile });
     edges.push(...write.edges);
+    return write.node;
   });
 
   return { nodes, edges };
@@ -77,7 +80,9 @@ beforeEach(() => {
   vi.mocked(graphRepo.findNode).mockResolvedValue(undefined);
   vi.mocked(graphRepo.findNearestNodes).mockResolvedValue([]);
   vi.mocked(graphRepo.findBackboneEdgesWithin).mockResolvedValue([]);
-  vi.mocked(graphRepo.persistPlacement).mockResolvedValue(undefined);
+  vi.mocked(graphRepo.persistPlacement).mockImplementation(
+    async (write) => write.node,
+  );
   vi.mocked(graphRepo.findTierBasis).mockResolvedValue({
     earnedTier: 3,
     accountCreatedAt: JOINED,
@@ -171,6 +176,28 @@ describe("joinCommunityGraph", () => {
 
     expect(node).toEqual({ userId: "returning", x: 12.5, y: -8.25 });
     expect(graphRepo.persistPlacement).not.toHaveBeenCalled();
+  });
+
+  it("yields to a concurrent join that was persisted first", async () => {
+    const winner = { userId: "newcomer", x: 42, y: -17 };
+    vi.mocked(graphRepo.findNode)
+      .mockResolvedValueOnce(undefined)
+      .mockResolvedValueOnce(winner);
+    vi.mocked(graphRepo.persistPlacement).mockResolvedValue(undefined);
+
+    const node = await joinCommunityGraph("newcomer");
+
+    // The losing request reports where the app user really is, never the
+    // position it computed and failed to store.
+    expect(node).toEqual(winner);
+  });
+
+  it("refuses to invent a position when a conflicted placement leaves no node", async () => {
+    vi.mocked(graphRepo.persistPlacement).mockResolvedValue(undefined);
+
+    await expect(joinCommunityGraph("newcomer")).rejects.toThrow(
+      /conflicted but no node was found/,
+    );
   });
 
   it("does not move anyone already placed when the community grows", async () => {

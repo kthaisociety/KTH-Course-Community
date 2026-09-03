@@ -43,7 +43,7 @@ export async function joinCommunityGraph(userId: string): Promise<GraphNode> {
   const node: GraphNode = { userId, ...position };
   const anchors = await findAnchors(userId, position);
 
-  await graphRepo.persistPlacement({
+  const placed = await graphRepo.persistPlacement({
     node,
     profile: {
       userId,
@@ -58,8 +58,18 @@ export async function joinCommunityGraph(userId: string): Promise<GraphNode> {
       anchorUserId: anchor.userId,
     })),
   });
+  if (placed) return placed;
 
-  return node;
+  // A concurrent join for the same app user committed first. Their placement
+  // stands and ours was abandoned whole, so report where this app user really
+  // is rather than coordinates that were never stored.
+  const winner = await graphRepo.findNode(userId);
+  if (!winner) {
+    throw new Error(
+      `Placement for app user ${userId} conflicted but no node was found`,
+    );
+  }
+  return winner;
 }
 
 /**
