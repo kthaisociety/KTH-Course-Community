@@ -21,7 +21,7 @@ Updated: 2026-09-01. This document explains the approved Lucidchart target. The 
 
 `course_prerequisites` represents directed extracted relationships and preserves `courses.eligibility` for full source prose. It cannot express complex AND/OR eligibility logic.
 
-`course_explore` contains derived full-text and semantic-search state keyed one-to-one by `course_code`. `search_vector` and `embedding` serve different retrieval modes and are not duplicates. The source hash prevents unnecessary regeneration, while model and embedding timestamps make generated values traceable. Confirm the model dimension before fixing `vector(1536)`. Create GIN and vector indexes after the extension and data strategy are settled.
+`course_explore` contains derived full-text and semantic-search state keyed one-to-one by `course_code`. `search_vector` and `embedding` serve different retrieval modes and are not duplicates. The source hash prevents unnecessary regeneration, while model and embedding timestamps make generated values traceable. `vector(1536)` follows the embedding model in `apps/web/server/ai.ts` (`openai/text-embedding-3-small`) and matches the shipped `courses.embedding` column, so the width carries over unchanged. Changing models later is a re-embed, not a column tweak — `embedding_model` and `embedded_at` exist to make that generation traceable. Create GIN and vector indexes after the extension and data strategy are settled.
 
 ## Saved and user domains
 
@@ -57,4 +57,4 @@ If mappings are persisted later, design a separate versioned mapping table or ar
 
 ## Implementation gates
 
-Before production migration: inspect the current Neon schema and data, verify `round_code`, check new constraints against existing rows, decide referential actions, confirm pgvector/model dimensions, and generate the Drizzle schema plus explicit SQL migrations. Test those migrations first on an isolated data-containing Neon branch.
+Before production migration: inspect the current Neon schema and data, verify `round_code`, check new constraints against existing rows, decide referential actions, confirm the pgvector extension is enabled on the target branch, and generate the Drizzle schema plus explicit SQL migrations. Test those migrations first on an isolated data-containing Neon branch.
