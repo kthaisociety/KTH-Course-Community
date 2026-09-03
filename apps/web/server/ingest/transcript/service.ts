@@ -70,13 +70,18 @@ export async function buildTranscriptProposal(
   };
 }
 
-/** A row the user accepted, possibly after editing what the transcript said. */
-export type ConfirmedTranscriptRow = {
-  courseCode: string;
-  grade?: string | null;
-  earnedCredits?: number | null;
-  attendanceYear?: number | null;
-};
+/**
+ * A row the user accepted, possibly after editing what the transcript said.
+ *
+ * Derived from #64's pinned `TakenCourseInput` rather than restated, so that a
+ * change to the write contract fails the typecheck here instead of drifting.
+ * `attendancePeriods` is dropped: a Ladok transcript has no period column, and
+ * an import must not pretend to know one.
+ */
+export type ConfirmedTranscriptRow = Omit<
+  TakenCourseInput,
+  "attendancePeriods"
+>;
 
 /**
  * Writes the courses the user confirmed, and only those.

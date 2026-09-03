@@ -173,6 +173,36 @@ describe("parseLadokTranscript", () => {
     ]);
   });
 
+  it("rejects a document too large to be a transcript, without scanning it", () => {
+    const huge = `Code Name Scope Grade Date Note\nSF1625 ${"x".repeat(3_000_000)}`;
+
+    const startedAt = performance.now();
+    expect(() => parseLadokTranscript(huge)).toThrow(TranscriptParseError);
+    expect(performance.now() - startedAt).toBeLessThan(1000);
+  });
+
+  it("does not let one unterminated row absorb the rest of the document", () => {
+    const runaway = [
+      "Code Name Scope Grade Date Note",
+      "SF1625 Calculus in One Variable",
+      ...Array.from({ length: 500 }, (_, index) => `filler line ${index}`),
+      "DD1337 Programming 6.0 hp P 2023-06-02 2",
+      "Summation",
+    ].join("\n");
+
+    const candidates = parseLadokTranscript(runaway);
+
+    expect(candidates).toHaveLength(2);
+    expect(candidates[0].courseName).not.toContain("filler line 499");
+    expect(candidates[1]).toEqual({
+      courseCode: "DD1337",
+      courseName: "Programming",
+      credits: 6,
+      grade: "P",
+      completedOn: "2023-06-02",
+    });
+  });
+
   it("rejects a transcript whose completed-courses table is empty", () => {
     const noResultsYet = [
       "Official Transcript of Records Print date",

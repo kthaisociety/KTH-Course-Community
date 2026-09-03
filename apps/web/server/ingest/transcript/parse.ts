@@ -37,12 +37,30 @@ const TABLE_END = /^(?:Summation|Summering)\b/;
 /** A KTH course code: two or three letters then four digits. */
 const COURSE_CODE = /^[A-ZÅÄÖ]{2,3}\d{4}[A-Z]?$/;
 
+/** The longest course name KTH prints is well under this. */
+const MAX_NAME_LENGTH = 300;
+
+/**
+ * A real transcript's text layer is tens of kilobytes. The bound is not a
+ * judgement about the document: it stops a crafted PDF from handing the regexes
+ * below a megabyte-long line to backtrack over.
+ */
+const MAX_TEXT_LENGTH = 500_000;
+
+/**
+ * A wrapped course name runs to a second or third line, and its remaining
+ * columns may land on one more. Past that, the lines belong to something else.
+ */
+const MAX_CONTINUATION_LINES = 4;
+
 /**
  * `<code> <name> <credits> hp <grade> <YYYY-MM-DD> [note]`, matched against a
- * whole row after its wrapped lines have been rejoined.
+ * whole row after its wrapped lines have been rejoined. The name is length-
+ * bounded so a failed match cannot backtrack across a long line.
  */
-const ROW =
-  /^([A-ZÅÄÖ]{2,3}\d{4}[A-Z]?)\s+(.+?)\s+(\d+(?:[.,]\d+)?)\s*hp\s+(\S{1,3})\s+(\d{4}-\d{2}-\d{2})(?:\s+\d+)?$/;
+const ROW = new RegExp(
+  `^([A-ZÅÄÖ]{2,3}\\d{4}[A-Z]?)\\s+(.{1,${MAX_NAME_LENGTH}}?)\\s+(\\d+(?:[.,]\\d+)?)\\s*hp\\s+(\\S{1,3})\\s+(\\d{4}-\\d{2}-\\d{2})(?:\\s+\\d+)?$`,
+);
 
 /** The fallback when a row's trailing columns are unreadable: code and name. */
 const ROW_HEAD = /^([A-ZÅÄÖ]{2,3}\d{4}[A-Z]?)\s+(.*)$/;
@@ -66,20 +84,30 @@ function startsRow(line: string): boolean {
  */
 function rowBlocks(lines: string[]): string[] {
   const blocks: string[] = [];
+  let continuations = 0;
   for (const line of lines) {
     if (line === "") continue;
     if (startsRow(line)) {
       blocks.push(line);
+      continuations = 0;
       continue;
     }
     const open = blocks.at(-1);
-    if (open === undefined || ROW.test(open)) continue;
+    if (open === undefined) continue;
+    if (continuations >= MAX_CONTINUATION_LINES || ROW.test(open)) continue;
     blocks[blocks.length - 1] = `${open} ${line}`;
+    continuations += 1;
   }
   return blocks;
 }
 
 export function parseLadokTranscript(text: string): TranscriptCandidate[] {
+  if (text.length > MAX_TEXT_LENGTH) {
+    throw new TranscriptParseError(
+      "This document is too large to be a Ladok transcript.",
+    );
+  }
+
   const lines = toLines(text);
   const headerAt = lines.findIndex((line) => TABLE_HEADER.test(line));
   if (headerAt === -1) {
@@ -113,7 +141,7 @@ export function parseLadokTranscript(text: string): TranscriptCandidate[] {
     if (!head) continue;
     candidates.push({
       courseCode: head[1],
-      courseName: head[2].trim(),
+      courseName: head[2].trim().slice(0, MAX_NAME_LENGTH),
       credits: null,
       grade: null,
       completedOn: null,
