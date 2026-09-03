@@ -12,7 +12,9 @@
     "format": "biome format --write",
     "ingest": "bun --env-file=.env.local scripts/ingest.ts",
     "db:generate": "drizzle-kit generate --config server/db/drizzle.config.ts",
-    "db:push": "drizzle-kit push --config server/db/drizzle.config.ts"
+    "db:push": "drizzle-kit push --config server/db/drizzle.config.ts",
+    "db:migrate": "drizzle-kit migrate --config server/db/drizzle.config.ts",
+    "db:studio": "drizzle-kit studio --config server/db/drizzle.config.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
