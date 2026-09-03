@@ -9,7 +9,8 @@
     "Lucidchart is the visual authority; this JSON is its canonical machine-readable transcription.",
     "Defaults, referential actions and indexes not shown here are migration-time decisions documented in planned-database-formats.md.",
     "The classification taxonomy and Better Auth-managed tables are outside this 16-table target.",
-    "The allowed values for node_style and node_signal_style are product decisions not enumerated in the diagram."
+    "The allowed values for node_style and node_signal_style are product decisions not enumerated in the diagram.",
+    "course_rounds keys on a serial id. The planned (course_code, round_code) key required KOPPS round.ladokUID; that API is closed and no key derivable from the retained data distinguishes parallel rounds. See docs/adr/0004-course-round-identity.md."
   ],
   "extensions": ["vector"],
   "enums": {
@@ -225,8 +226,8 @@
     },
     "course_rounds": {
       "columns": {
+        "id": { "type": "serial", "nullable": false },
         "course_code": { "type": "text", "nullable": false },
-        "round_code": { "type": "text", "nullable": false },
         "start_term": { "type": "integer", "nullable": false },
         "study_pace": { "type": "integer", "nullable": true },
         "schema_url": { "type": "text", "nullable": true },
@@ -237,7 +238,7 @@
         "is_pu": { "type": "boolean", "nullable": false },
         "is_vu": { "type": "boolean", "nullable": false }
       },
-      "primaryKey": ["course_code", "round_code"],
+      "primaryKey": ["id"],
       "foreignKeys": [
         {
           "columns": ["course_code"],

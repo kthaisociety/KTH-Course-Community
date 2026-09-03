@@ -16,7 +16,6 @@ import {
   text,
   timestamp,
   unique,
-  uniqueIndex,
   vector,
 } from "drizzle-orm/pg-core";
 
@@ -98,10 +97,10 @@ export type SelectCourse = typeof courses.$inferSelect;
 export const courseRounds = pgTable(
   "course_rounds",
   {
+    // The serial id is the permanent key. A natural (course_code, round_code)
+    // key needed KOPPS round.ladokUID, and that API is closed — see
+    // docs/adr/0004-course-round-identity.md.
     id: serial("id").primaryKey(),
-    // Expand phase: populated from KOPPS round.ladokUID. The contract migration
-    // may make this required only after a verified source-backed round rebuild.
-    roundCode: text("round_code"),
     courseCode: text("course_code")
       .notNull()
       .references(() => courses.code, {
@@ -120,9 +119,6 @@ export const courseRounds = pgTable(
   },
   (table) => [
     check("study_pace_range", sql`${table.studyPace} between 1 and 100`),
-    uniqueIndex("course_rounds_course_code_round_code_unique")
-      .on(table.courseCode, table.roundCode)
-      .where(sql`${table.roundCode} is not null`),
     index("course_rounds_course_code_idx").on(table.courseCode),
   ],
 );
