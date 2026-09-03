@@ -49,8 +49,13 @@ fields.
 ## Decision
 
 `course_rounds` keys on its serial `id`. `round_code` is removed from the
-schema, the canonical planned schema, and the schema documents. The column is
-dropped from the database as part of the legacy cleanup.
+schema, the canonical planned schema, and the schema documents, and the column
+is dropped from the database by migration `0010`.
+
+The drop ships here rather than with the wider legacy cleanup because it has no
+prerequisite: the column is NULL on every row, no foreign key or query
+references it, and nothing has to be rewired first. Deferring it would leave
+the Drizzle model and the database disagreeing for no benefit.
 
 `schema_url` is retained. It embeds KTH's own subgroup slug
 (`.../subgroup/ht-2025-555/...`), present and distinct on 1831 of 2320 rows,
@@ -66,8 +71,10 @@ decision forecloses nothing.
   identical to another row on every column but `id`. Whether those are
   ingestion artefacts or genuinely parallel rounds cannot be determined from
   the retained data.
-- The `course_rounds` half of the contract migration reduces to one
-  `DROP COLUMN`, with no key swap, no NOT NULL, and no re-ingest prerequisite.
+- `course_rounds` needs nothing from the later contract migration: no key swap,
+  no NOT NULL, and no re-ingest prerequisite. Migration `0010` also drops the
+  partial unique index `course_rounds_course_code_round_code_unique`, which
+  only ever guarded an always-NULL column.
 - The Lucid diagram is the visual authority for the planned schema and still
   shows the composite key. **It needs the matching edit**; this ADR and
   `planned-schema-lucid.json` record the intent until it does.
