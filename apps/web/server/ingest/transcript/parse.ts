@@ -65,6 +65,32 @@ const ROW = new RegExp(
 /** The fallback when a row's trailing columns are unreadable: code and name. */
 const ROW_HEAD = /^([A-ZÅÄÖ]{2,3}\d{4}[A-Z]?)\s+(.*)$/;
 
+/**
+ * Marks a line as belonging to the page rather than to the table: the Ladok
+ * verification footer, the address block, the page counter, and the column
+ * header repeated at the top of each page.
+ *
+ * Only the first line of that run has to be recognised — reaching one closes
+ * the row being built, and nothing is absorbed again until the next course
+ * code. Without this, a row whose columns are missing swallows the footer, and
+ * the footer carries the student's personal identity number.
+ */
+const PAGE_FURNITURE = [
+  TABLE_HEADER,
+  /student\.ladok\.se/i,
+  /\b(?:Page|Sida)\s+\d+\s*\/\s*\d+/,
+  /^(?:Verifiable until|Verifierbart tom)\b/,
+  /^(?:Postal address|Postadress)\b/,
+  /^(?:Contact information|Kontaktinformation)\b/,
+  /(?:Personal identity number|Personnummer)\s*:/,
+  /(?:Control code|Kontrollkod)\s*:/,
+  /^https?:\/\//i,
+];
+
+function isPageFurniture(line: string): boolean {
+  return PAGE_FURNITURE.some((pattern) => pattern.test(line));
+}
+
 function toLines(text: string): string[] {
   return text.split(/\r\n|\r|\n/).map((line) => line.trim());
 }
@@ -77,21 +103,32 @@ function startsRow(line: string): boolean {
  * Splits the table body into one string per course, rejoining the lines a long
  * course name wrapped onto.
  *
- * A row keeps absorbing following lines only until it has all of its columns.
- * That is what carries the table over a page break: once a row is complete, the
- * page footer and the repeated column header that follow it belong to no row
- * and are dropped instead of being glued onto the last course name.
+ * A row absorbs following lines only until it has all of its columns, and never
+ * across page furniture. Both bounds matter at a page break: a complete row
+ * stops on its own, and an incomplete one is closed by the footer rather than
+ * swallowing it. A row left incomplete by the break is still reported, with
+ * null columns — losing a course's grade is recoverable, putting the footer's
+ * personal identity number in its name is not.
  */
 function rowBlocks(lines: string[]): string[] {
   const blocks: string[] = [];
   let continuations = 0;
+  let openForContinuation = false;
+
   for (const line of lines) {
     if (line === "") continue;
     if (startsRow(line)) {
       blocks.push(line);
       continuations = 0;
+      openForContinuation = true;
       continue;
     }
+    if (isPageFurniture(line)) {
+      openForContinuation = false;
+      continue;
+    }
+    if (!openForContinuation) continue;
+
     const open = blocks.at(-1);
     if (open === undefined) continue;
     if (continuations >= MAX_CONTINUATION_LINES || ROW.test(open)) continue;

@@ -147,6 +147,53 @@ describe("parseLadokTranscript", () => {
     ]);
   });
 
+  it("never joins page furniture onto an incomplete row at a page break", () => {
+    const incompleteBeforeBreak = [
+      "Code Name Scope Grade Date Note",
+      "SF1625 Calculus in One Variable 7.5 hp A 2023-01-13 1",
+      "DD1337 Programming",
+      "Check the certificate on: https://student.ladok.se/verifiera/ Personal identity number: 19900101-0000",
+      "Verifiable until: 2026-11-27 Control code: AAAA0AAAAA",
+      "Postal address Contact information Page 1 / 2",
+      "KTH Royal Institute of Technology",
+      "100 44 Stockholm",
+      "Code Name Scope Grade Date Note",
+      "SF1672 Linear Algebra 7.5 hp C 2024-01-12 1",
+      "Summation",
+    ].join("\n");
+
+    const candidates = parseLadokTranscript(incompleteBeforeBreak);
+    const names = candidates.map((candidate) => candidate.courseName).join(" ");
+
+    expect(names).not.toContain("19900101-0000");
+    expect(names).not.toContain("ladok.se");
+    expect(names).not.toContain("Page 1 / 2");
+    expect(names).not.toContain("Scope Grade Date");
+    expect(candidates).toEqual([
+      {
+        courseCode: "SF1625",
+        courseName: "Calculus in One Variable",
+        credits: 7.5,
+        grade: "A",
+        completedOn: "2023-01-13",
+      },
+      {
+        courseCode: "DD1337",
+        courseName: "Programming",
+        credits: null,
+        grade: null,
+        completedOn: null,
+      },
+      {
+        courseCode: "SF1672",
+        courseName: "Linear Algebra",
+        credits: 7.5,
+        grade: "C",
+        completedOn: "2024-01-12",
+      },
+    ]);
+  });
+
   it("reports a row whose scope, grade and date it cannot read", () => {
     const oddRow = [
       "Code Name Scope Grade Date Note",
