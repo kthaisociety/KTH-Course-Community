@@ -65,6 +65,50 @@
       "linter": {
         "enabled": false
       }
+    },
+    {
+      "includes": ["apps/web/server/*/router.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["**/repository", "**/repositories/**"],
+                    "message": "Routers must not reach into a repository. Call the domain service instead (router -> service -> repository)."
+                  },
+                  {
+                    "group": ["../*/router"],
+                    "message": "Routers must not import another domain's router. Compose routers in server/api/root.ts."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["apps/web/server/*/repository.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["**/service", "**/router"],
+                    "message": "Repositories are the bottom layer: they may import server/db only, never a service or router."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
     }
   ]
 }

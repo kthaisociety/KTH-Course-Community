@@ -1,4 +1,4 @@
-import { ping } from "../repositories/health";
+import { ping } from "./repository";
 
 type HealthCheckResult = {
   ok: boolean;

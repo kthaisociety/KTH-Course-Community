@@ -1,4 +1,4 @@
-import { testAll } from "@/server/services/health";
+import { testAll } from "@/server/health/service";
 
 export const runtime = "nodejs";
 

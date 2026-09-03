@@ -30,10 +30,13 @@ apps/web/
   types/                    # shared server + UI types
   trpc/                     # browser tRPC client + QueryClient
   server/
-    api/routers/            # thin tRPC procedures
+    <domain>/               # one folder per domain: course, reviews, search,
+      router.ts             #   user, feedback, health
+      service.ts            # router = thin tRPC procedures
+      repository.ts         # service = business logic, repository = Drizzle
+      service.spec.ts       # colocated test
     api/root.ts             # register routers
-    services/               # business logic
-    repositories/           # Drizzle queries
+    api/trpc.ts             # context, baseProcedure, protectedProcedure
     db/                     # schema, client, drizzle-kit, migrations
     auth.ts                 # Better Auth
     ai.ts                   # embeddings (search/ingest)
@@ -47,7 +50,10 @@ apps/web/
 - Feature `index.ts` is the cross-feature API. Other features import hooks/shared UI from `@/features/<name>`.
 - A feature route is one component (data + layout). Split a child only when it has its own name (`CourseCard`, `Review`), not a Screen/View pair.
 - Do not put tRPC routers under `features/`.
-- Layers: router → service → repository → `db`. Routers stay thin: validate input, pick `baseProcedure` or `protectedProcedure`, call the service. Services hold business logic. Repositories import `db` and run queries.
+- Server code is grouped **by domain, not by layer**: everything for one domain lives in `server/<domain>/`. Adding an endpoint means editing one folder.
+- Layers within a domain: router → service → repository → `db`. Routers stay thin: validate input, pick `baseProcedure` or `protectedProcedure`, call the service. Services hold business logic. Repositories import `db` and run queries.
+- These layers are **enforced by Biome**, not just convention: a router importing a `repository`, or a repository importing a `service`/`router`, fails `bun run lint`. See the `noRestrictedImports` overrides in `biome.json`.
+- Cross-domain calls go service → service (e.g. `search/service.ts` imports `../course/service`). Routers never import another domain's router; compose them in `server/api/root.ts`.
 - Feature `api/` exposes wrapped `useQuery` / `useMutation` hooks, not raw queryOptions factories.
 - `protectedProcedure` is the real auth gate (`ctx.session.user`). `proxy.ts` (Next 16; not `middleware.ts`) only checks that a session cookie exists for `/profile` and `/favorites`. Visitors may browse courses, search, and read reviews.
 - Browser calls same-origin `/api/trpc` and `/api/auth`. Multipart profile pictures POST to `/api/user/profile-picture` (not tRPC).
