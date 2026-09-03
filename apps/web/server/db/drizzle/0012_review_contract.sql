@@ -15,8 +15,7 @@ BEGIN
 	SELECT count(*) INTO unscored
 	FROM "reviews"
 	WHERE "workload_score" IS NULL
-		OR "learning_score" IS NULL
-		OR "happy_took" IS NULL;
+		OR "learning_score" IS NULL;
 
 	IF unscored > 0 THEN
 		RAISE EXCEPTION
@@ -45,4 +44,6 @@ ALTER TABLE "reviews" DROP COLUMN "learning_experience";--> statement-breakpoint
 ALTER TABLE "reviews" DROP COLUMN "would_recommend";--> statement-breakpoint
 ALTER TABLE "reviews" DROP COLUMN "content";--> statement-breakpoint
 
-DROP TABLE "review_likes" CASCADE;
+-- No CASCADE: nothing should depend on this table any more, and if something
+-- does, aborting here is better than dropping it silently.
+DROP TABLE "review_likes";

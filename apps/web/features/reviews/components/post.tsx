@@ -16,6 +16,7 @@ import type { ExaminationDistribution, ReviewVoteType } from "@/types";
 import {
   EXAMINATION_DISTRIBUTION_KEYS,
   EXAMINATION_DISTRIBUTION_LABELS,
+  MAX_REVIEW_SCORE,
 } from "@/types";
 import { useReviewVotes } from "../hooks/use-review-votes";
 import PostActionBar from "./post-action-bar";
@@ -85,9 +86,6 @@ function truncateHtmlAtWord(html: string, max: number) {
   return result;
 }
 
-/** Scores are stored on a 1-10 scale; see `planned-database-formats.md`. */
-const MAX_SCORE = 10;
-
 function scoreVariant(score: number) {
   if (score >= 8) return "default" as const;
   if (score >= 5) return "outline" as const;
@@ -100,13 +98,13 @@ type ScorePillProps = {
 };
 
 function ScorePill({ name, score }: Readonly<ScorePillProps>) {
-  const aria = `${name}: ${score} out of ${MAX_SCORE}`;
+  const aria = `${name}: ${score} out of ${MAX_REVIEW_SCORE}`;
 
   return (
     <div className="flex items-center gap-2" title={aria}>
       <span className="w-24 text-sm text-muted-foreground">{name}</span>
       <Badge variant={scoreVariant(score)}>
-        {score}/{MAX_SCORE}
+        {score}/{MAX_REVIEW_SCORE}
       </Badge>
     </div>
   );
@@ -156,22 +154,17 @@ type ExaminationSummaryProps = {
 function ExaminationSummary({
   distribution,
 }: Readonly<ExaminationSummaryProps>) {
-  const shares =
-    distribution === null
-      ? []
-      : EXAMINATION_DISTRIBUTION_KEYS.filter(
-          (key) => distribution[key] > 0,
-        ).map((key) => ({ key, share: distribution[key] }));
-
   return (
     <div className="flex flex-wrap items-center gap-2">
       <span className="w-24 text-sm text-muted-foreground">Examination</span>
-      {shares.length === 0 ? (
+      {distribution === null ? (
         <Badge variant="secondary">Not remembered</Badge>
       ) : (
-        shares.map(({ key, share }) => (
+        EXAMINATION_DISTRIBUTION_KEYS.filter(
+          (key) => distribution[key] > 0,
+        ).map((key) => (
           <Badge key={key} variant="outline">
-            {EXAMINATION_DISTRIBUTION_LABELS[key]} {share}%
+            {EXAMINATION_DISTRIBUTION_LABELS[key]} {distribution[key]}%
           </Badge>
         ))
       )}

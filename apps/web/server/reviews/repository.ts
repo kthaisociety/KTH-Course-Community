@@ -1,19 +1,12 @@
 import { and, eq, sql } from "drizzle-orm";
-import type { ExaminationDistribution, ReviewVoteType } from "@/types/review";
+import type { ReviewInput, ReviewVoteType } from "@/types/review";
 import { db } from "../db";
 import * as schema from "../db/schema";
 
 export type ReviewRecord = typeof schema.reviews.$inferSelect;
 
 /** The reviewer-supplied half of a review; the rest is identity and clock. */
-export type ReviewWrite = {
-  examinationDistribution: ExaminationDistribution | null;
-  approachTheoryPercent: number | null;
-  workloadScore: number;
-  learningScore: number;
-  happyTook: boolean;
-  message: string | null;
-};
+export type ReviewWrite = ReviewInput;
 
 /** A review row joined with its vote tallies and the caller's own vote. */
 export type ReviewWithVotes = ReviewRecord & {

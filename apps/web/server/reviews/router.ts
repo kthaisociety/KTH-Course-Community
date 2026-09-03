@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { reviewInputSchema, reviewVoteTypeSchema } from "@/types";
 import {
   baseProcedure,
   createTRPCRouter,
@@ -13,32 +14,6 @@ import {
   updateReview,
 } from "./service";
 
-const percentage = z.number().int().min(0).max(100);
-
-/**
- * `null` is the stored answer for "I don't remember"; the service rejects a
- * distribution that does not add up to 100.
- */
-const examinationDistribution = z
-  .object({
-    exam: percentage,
-    assignments: percentage,
-    labs: percentage,
-    projects: percentage,
-    seminars: percentage,
-    other: percentage,
-  })
-  .nullable();
-
-const reviewInput = z.object({
-  examinationDistribution,
-  approachTheoryPercent: percentage.nullable(),
-  workloadScore: z.number().int(),
-  learningScore: z.number().int(),
-  happyTook: z.boolean(),
-  message: z.string().nullable(),
-});
-
 export const reviewsRouter = createTRPCRouter({
   list: baseProcedure
     .input(z.object({ courseCode: z.string().optional() }))
@@ -49,13 +24,13 @@ export const reviewsRouter = createTRPCRouter({
     .input(z.object({ id: z.string().min(1) }))
     .query(({ input }) => findOneReview(input.id)),
   create: protectedProcedure
-    .input(reviewInput.extend({ courseCode: z.string().min(1) }))
+    .input(reviewInputSchema.extend({ courseCode: z.string().min(1) }))
     .mutation(({ ctx, input }) => {
       const { courseCode, ...reviewData } = input;
       return createReview(courseCode, ctx.session.user.id, reviewData);
     }),
   update: protectedProcedure
-    .input(reviewInput.extend({ id: z.string().min(1) }))
+    .input(reviewInputSchema.extend({ id: z.string().min(1) }))
     .mutation(({ ctx, input }) => {
       const { id, ...reviewData } = input;
       return updateReview(id, ctx.session.user.id, reviewData);
@@ -67,7 +42,7 @@ export const reviewsRouter = createTRPCRouter({
     .input(
       z.object({
         id: z.string().min(1),
-        voteType: z.enum(["up", "down"]),
+        voteType: reviewVoteTypeSchema,
       }),
     )
     .mutation(({ ctx, input }) =>

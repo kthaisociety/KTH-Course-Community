@@ -1,14 +1,10 @@
 import { nanoid } from "nanoid";
-import type { ExaminationDistribution, Review, ReviewVoteType } from "@/types";
-import { EXAMINATION_DISTRIBUTION_KEYS } from "@/types";
+import type { Review, ReviewInput, ReviewVoteType } from "@/types";
+import { reviewInputSchema } from "@/types";
 import { ForbiddenError, NotFoundError, ValidationError } from "../errors";
 import * as reviewsRepo from "./repository";
 
-export type ReviewInput = reviewsRepo.ReviewWrite;
-
-/** Both score axes are 1-10, matching the database check constraints. */
-const MIN_SCORE = 1;
-const MAX_SCORE = 10;
+export type { ReviewInput };
 
 function toIso(value: Date | string): string {
   return value instanceof Date ? value.toISOString() : value;
@@ -35,69 +31,24 @@ function serializeReview(
   };
 }
 
-function assertScore(name: string, value: number) {
-  if (!Number.isInteger(value) || value < MIN_SCORE || value > MAX_SCORE) {
-    throw new ValidationError(
-      `${name} must be a whole number between ${MIN_SCORE} and ${MAX_SCORE}`,
-    );
-  }
-}
-
 /**
- * A distribution the reviewer did supply must be complete and add up to 100.
- * `null` is left alone: it is how "I don't remember" is stored, and turning it
- * into zeroes would claim the reviewer answered.
- */
-function assertExaminationDistribution(
-  distribution: ExaminationDistribution | null,
-) {
-  if (distribution === null) return;
-
-  let total = 0;
-  for (const key of EXAMINATION_DISTRIBUTION_KEYS) {
-    const share = distribution[key];
-    if (!Number.isInteger(share) || share < 0 || share > 100) {
-      throw new ValidationError(
-        `Examination distribution "${key}" must be a whole percentage between 0 and 100`,
-      );
-    }
-    total += share;
-  }
-  if (total !== 100) {
-    throw new ValidationError(
-      `Examination distribution must add up to 100, got ${total}`,
-    );
-  }
-}
-
-function assertApproachTheoryPercent(percent: number | null) {
-  if (percent === null) return;
-  if (!Number.isInteger(percent) || percent < 0 || percent > 100) {
-    throw new ValidationError(
-      "Approach theory percent must be a whole number between 0 and 100",
-    );
-  }
-}
-
-/**
- * Normalizes what the form sends into what the target columns store. An
- * unanswered recollection stays `null`; an empty message becomes `null` rather
- * than an empty string.
+ * The last gate before the target columns. It enforces the shared contract —
+ * 1-10 scores, a distribution that adds up to 100 — and normalizes a blank
+ * message to `null`. A `null` recollection is left alone: that is how "I don't
+ * remember" is stored, and filling it with zeroes would claim an answer the
+ * reviewer never gave.
  */
 function validateReviewInput(input: ReviewInput): ReviewInput {
-  assertScore("Workload score", input.workloadScore);
-  assertScore("Learning score", input.learningScore);
-  assertExaminationDistribution(input.examinationDistribution);
-  assertApproachTheoryPercent(input.approachTheoryPercent);
+  const parsed = reviewInputSchema.safeParse(input);
+  if (!parsed.success) {
+    throw new ValidationError(
+      parsed.error.issues[0]?.message ?? "Invalid review",
+    );
+  }
 
-  const message = input.message?.trim();
   return {
-    examinationDistribution: input.examinationDistribution,
-    approachTheoryPercent: input.approachTheoryPercent,
-    workloadScore: input.workloadScore,
-    learningScore: input.learningScore,
-    happyTook: input.happyTook,
-    message: message ? input.message : null,
+    ...parsed.data,
+    message: parsed.data.message?.trim() ? parsed.data.message : null,
   };
 }
 

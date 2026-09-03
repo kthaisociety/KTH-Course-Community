@@ -35,11 +35,12 @@ import type { ExaminationDistribution } from "@/types";
 import {
   EXAMINATION_DISTRIBUTION_KEYS,
   EXAMINATION_DISTRIBUTION_LABELS,
+  examinationDistributionSchema,
+  MAX_REVIEW_SCORE,
+  percentSchema,
+  reviewScoreSchema,
 } from "@/types";
 import { useAddReview } from "../hooks/use-add-review";
-
-/** Both score axes are 1-10; see `docs/schema_docs/planned-database-formats.md`. */
-const MAX_SCORE = 10;
 
 export type ReviewFormData = {
   happyTook: boolean;
@@ -61,33 +62,8 @@ const EMPTY_DISTRIBUTION: ExaminationDistribution = {
   other: 0,
 };
 
-const scoreSchema = z
-  .number()
-  .int()
-  .min(1, "Select a score.")
-  .max(MAX_SCORE, `Scores go up to ${MAX_SCORE}.`);
-
-const percentageSchema = z.number().int().min(0).max(100);
-
-const distributionSchema = z
-  .object({
-    exam: percentageSchema,
-    assignments: percentageSchema,
-    labs: percentageSchema,
-    projects: percentageSchema,
-    seminars: percentageSchema,
-    other: percentageSchema,
-  })
-  .refine(
-    (value) =>
-      EXAMINATION_DISTRIBUTION_KEYS.reduce(
-        (total, key) => total + value[key],
-        0,
-      ) === 100,
-    "Shares must add up to 100%.",
-  )
-  .nullable();
-
+// The form shares the wire contract from `@/types` and adds only what is
+// specific to writing a review in a dialog: a message that is not just markup.
 const formSchema = z.object({
   happyTook: z.boolean(),
   message: z
@@ -96,10 +72,10 @@ const formSchema = z.object({
       (html) => html.replace(/<[^>]*>/g, "").trim().length > 0,
       "Write a review.",
     ),
-  examinationDistribution: distributionSchema,
-  approachTheoryPercent: percentageSchema.nullable(),
-  workloadScore: scoreSchema,
-  learningScore: scoreSchema,
+  examinationDistribution: examinationDistributionSchema.nullable(),
+  approachTheoryPercent: percentSchema.nullable(),
+  workloadScore: reviewScoreSchema,
+  learningScore: reviewScoreSchema,
 });
 
 const defaultValues: ReviewFormData = {
@@ -178,8 +154,8 @@ export function Review({
               <FieldSet>
                 <FieldLegend>Rate the Course</FieldLegend>
                 <FieldDescription>
-                  Two separate axes, each from 1 to {MAX_SCORE}. Neither is an
-                  overall verdict.
+                  Two separate axes, each from 1 to {MAX_REVIEW_SCORE}. Neither
+                  is an overall verdict.
                 </FieldDescription>
                 <FieldGroup>
                   <form.Field name="workloadScore">
@@ -196,9 +172,12 @@ export function Review({
                             value={field.state.value}
                             onValueChange={(value) => field.handleChange(value)}
                           >
-                            {Array.from({ length: MAX_SCORE }, (_, i) => (
-                              <RatingButton key={`workload-star-${i + 1}`} />
-                            ))}
+                            {Array.from(
+                              { length: MAX_REVIEW_SCORE },
+                              (_, i) => (
+                                <RatingButton key={`workload-star-${i + 1}`} />
+                              ),
+                            )}
                           </Rating>
                           {isInvalid && (
                             <FieldError errors={field.state.meta.errors} />
@@ -222,9 +201,12 @@ export function Review({
                             value={field.state.value}
                             onValueChange={(value) => field.handleChange(value)}
                           >
-                            {Array.from({ length: MAX_SCORE }, (_, i) => (
-                              <RatingButton key={`learning-star-${i + 1}`} />
-                            ))}
+                            {Array.from(
+                              { length: MAX_REVIEW_SCORE },
+                              (_, i) => (
+                                <RatingButton key={`learning-star-${i + 1}`} />
+                              ),
+                            )}
                           </Rating>
                           {isInvalid && (
                             <FieldError errors={field.state.meta.errors} />
