@@ -67,7 +67,7 @@
       }
     },
     {
-      "includes": ["apps/web/server/*/router.ts"],
+      "includes": ["apps/web/server/**/router.ts"],
       "linter": {
         "rules": {
           "style": {
@@ -80,7 +80,11 @@
                     "message": "Routers must not reach into a repository. Call the domain service instead (router -> service -> repository)."
                   },
                   {
-                    "group": ["../*/router", "@/server/*/router"],
+                    "group": [
+                      "../*/router",
+                      "../../*/router",
+                      "@/server/*/router"
+                    ],
                     "message": "Routers must not import another domain's router. Compose routers in server/api/root.ts."
                   }
                 ]
@@ -91,7 +95,7 @@
       }
     },
     {
-      "includes": ["apps/web/server/*/repository.ts"],
+      "includes": ["apps/web/server/**/repository.ts"],
       "linter": {
         "rules": {
           "style": {

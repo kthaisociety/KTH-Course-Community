@@ -14,6 +14,7 @@ pnpm-lock.yaml
 # TypeScript build artifacts (all packages)
 *.tsbuildinfo
 *.js.map
+dist/
 
 # Next.js auto-generated type file
 next-env.d.ts
@@ -56,59 +57,6 @@ next-env.d.ts
 
 # history
 /apps/web/.history
-
-# =================================
-# BACKEND (Nest.js)
-# =================================
-
-# compiled output
-dist/
-/apps/backend-nest/build
-/apps/backend-nest/**/*.d.ts
-
-# logs
-/apps/backend-nest/logs
-/apps/backend-nest/*.log
-/apps/backend-nest/npm-debug.log*
-/apps/backend-nest/pnpm-debug.log*
-/apps/backend-nest/yarn-debug.log*
-/apps/backend-nest/yarn-error.log*
-/apps/backend-nest/lerna-debug.log*
-
-# testing
-/apps/backend-nest/coverage
-/apps/backend-nest/.nyc_output
-
-# IDEs and editors
-/apps/backend-nest/.idea
-/apps/backend-nest/.project
-/apps/backend-nest/.classpath
-/apps/backend-nest/.c9/
-/apps/backend-nest/*.launch
-/apps/backend-nest/.settings/
-/apps/backend-nest/*.sublime-workspace
-
-# IDE - VSCode
-/apps/backend-nest/.vscode/*
-!/apps/backend-nest/.vscode/settings.json
-!/apps/backend-nest/.vscode/tasks.json
-!/apps/backend-nest/.vscode/launch.json
-!/apps/backend-nest/.vscode/extensions.json
-
-# temp directory
-/apps/backend-nest/.temp
-/apps/backend-nest/.tmp
-
-# runtime data
-/apps/backend-nest/pids
-/apps/backend-nest/*.pid
-/apps/backend-nest/*.seed
-/apps/backend-nest/*.pid.lock
-
-# diagnostic reports
-/apps/backend-nest/report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
-
-/elastic-start-local
 
 # =================================
 # SENSITIVE FILES
