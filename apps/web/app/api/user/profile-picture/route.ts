@@ -1,6 +1,6 @@
 import { put } from "@vercel/blob";
 import { getAuth } from "@/server/auth";
-import { updateImage } from "@/server/services/user";
+import { updateImage } from "@/server/user/service";
 
 export const runtime = "nodejs";
 

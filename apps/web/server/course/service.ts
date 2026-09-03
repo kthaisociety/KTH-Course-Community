@@ -5,7 +5,7 @@ import type {
   ExamRoundSummary,
 } from "@/types";
 import type { SelectCourse } from "../db/schema";
-import * as courseRepo from "../repositories/course";
+import * as courseRepo from "./repository";
 
 export function getCourse(
   courseCode: string,

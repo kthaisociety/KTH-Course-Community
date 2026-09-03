@@ -1,10 +1,10 @@
 import { z } from "zod";
 import {
-  deleteUser,
-  getUserFavorites,
-  toggleUserFavorite,
-} from "@/server/services/user";
-import { baseProcedure, createTRPCRouter, protectedProcedure } from "../trpc";
+  baseProcedure,
+  createTRPCRouter,
+  protectedProcedure,
+} from "../api/trpc";
+import { deleteUser, getUserFavorites, toggleUserFavorite } from "./service";
 
 export const userRouter = createTRPCRouter({
   me: baseProcedure.query(async ({ ctx }) => {

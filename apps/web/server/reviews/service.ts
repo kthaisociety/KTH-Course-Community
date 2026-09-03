@@ -1,7 +1,7 @@
 import { nanoid } from "nanoid";
 import type { Review } from "@/types";
 import { ForbiddenError, NotFoundError } from "../errors";
-import * as reviewsRepo from "../repositories/reviews";
+import * as reviewsRepo from "./repository";
 
 export type ReviewInput = reviewsRepo.ReviewWrite;
 

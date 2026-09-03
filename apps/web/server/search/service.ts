@@ -1,13 +1,13 @@
 import type { CourseSummary } from "@/types";
 import { embedSingle } from "../ai";
+import { getSummariesByCodes } from "../course/service";
 import {
   averageRatings,
   listDepartments,
   type SearchHit,
   searchByEmbedding,
   searchByKeyword,
-} from "../repositories/search";
-import { getSummariesByCodes } from "./course";
+} from "./repository";
 
 export type { SearchHit };
 

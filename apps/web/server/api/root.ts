@@ -1,9 +1,9 @@
-import { courseRouter } from "./routers/course";
-import { feedbackRouter } from "./routers/feedback";
-import { healthRouter } from "./routers/health";
-import { reviewsRouter } from "./routers/reviews";
-import { searchRouter } from "./routers/search";
-import { userRouter } from "./routers/user";
+import { courseRouter } from "../course/router";
+import { feedbackRouter } from "../feedback/router";
+import { healthRouter } from "../health/router";
+import { reviewsRouter } from "../reviews/router";
+import { searchRouter } from "../search/router";
+import { userRouter } from "../user/router";
 import { createTRPCRouter } from "./trpc";
 
 export const appRouter = createTRPCRouter({

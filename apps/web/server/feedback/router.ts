@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { submitFeedback } from "@/server/services/feedback";
-import { baseProcedure, createTRPCRouter } from "../trpc";
+import { baseProcedure, createTRPCRouter } from "../api/trpc";
+import { submitFeedback } from "./service";
 
 export const feedbackRouter = createTRPCRouter({
   submit: baseProcedure

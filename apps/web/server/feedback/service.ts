@@ -1,5 +1,5 @@
 import type { InsertFeedbackForm } from "../db/schema";
-import { insertFeedback } from "../repositories/feedback";
+import { insertFeedback } from "./repository";
 
 export async function submitFeedback(
   data: Omit<InsertFeedbackForm, "id" | "createdAt">,

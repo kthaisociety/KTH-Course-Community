@@ -1,13 +1,17 @@
 import { z } from "zod";
 import {
+  baseProcedure,
+  createTRPCRouter,
+  protectedProcedure,
+} from "../api/trpc";
+import {
   createReview,
   findAllReviews,
   findOneReview,
   removeReview,
   toggleVote,
   updateReview,
-} from "@/server/services/reviews";
-import { baseProcedure, createTRPCRouter, protectedProcedure } from "../trpc";
+} from "./service";
 
 const reviewInput = z.object({
   examinationMethods: z.number().int(),

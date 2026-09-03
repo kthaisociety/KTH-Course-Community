@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 import { ForbiddenError, NotFoundError } from "../errors";
-import * as reviewsRepo from "../repositories/reviews";
-import { findOneReview, updateReview } from "./reviews";
+import * as reviewsRepo from "./repository";
+import { findOneReview, updateReview } from "./service";
 
-vi.mock("../repositories/reviews");
+vi.mock("./repository");
 
 const review = {
   id: "review-123",

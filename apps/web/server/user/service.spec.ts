@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
-import * as userRepo from "../repositories/user";
-import { toggleUserFavorite } from "./user";
+import * as userRepo from "./repository";
+import { toggleUserFavorite } from "./service";
 
-vi.mock("../repositories/user");
+vi.mock("./repository");
 
 describe("toggleUserFavorite", () => {
   it("removes an existing favorite", async () => {
