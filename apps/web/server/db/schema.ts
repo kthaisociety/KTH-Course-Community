@@ -1,7 +1,10 @@
 import { sql } from "drizzle-orm";
 import {
   boolean,
+  check,
   customType,
+  doublePrecision,
+  foreignKey,
   index,
   integer,
   pgEnum,
@@ -11,6 +14,7 @@ import {
   serial,
   text,
   timestamp,
+  unique,
   vector,
 } from "drizzle-orm/pg-core";
 
@@ -23,6 +27,20 @@ export const courseState = pgEnum("course_state", [
   "ESTABLISHED",
   "DEACTIVATED",
 ]);
+
+export const reviewVoteType = pgEnum("review_vote_type", ["up", "down"]);
+
+export const nodeStyle = customType<{ data: string }>({
+  dataType() {
+    return "node_style";
+  },
+});
+
+export const nodeSignalStyle = customType<{ data: string }>({
+  dataType() {
+    return "node_signal_style";
+  },
+});
 
 // used for pgvector full-text search
 const tsvector = customType<{ data: string }>({
@@ -118,6 +136,183 @@ export const courseExaminations = pgTable(
 export type InsertCourseExamination = typeof courseExaminations.$inferInsert;
 export type SelectCourseExamination = typeof courseExaminations.$inferSelect;
 
+export const coursePrerequisites = pgTable(
+  "course_prerequisites",
+  {
+    courseCode: text("course_code")
+      .notNull()
+      .references(() => courses.code),
+    prerequisiteCourseCode: text("prerequisite_course_code")
+      .notNull()
+      .references(() => courses.code),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+  },
+  (table) => [
+    primaryKey({
+      columns: [table.courseCode, table.prerequisiteCourseCode],
+    }),
+  ],
+);
+
+export type InsertCoursePrerequisite = typeof coursePrerequisites.$inferInsert;
+export type SelectCoursePrerequisite = typeof coursePrerequisites.$inferSelect;
+
+export const courseExplore = pgTable("course_explore", {
+  courseCode: text("course_code")
+    .primaryKey()
+    .references(() => courses.code),
+  embedding: vector("embedding", { dimensions: 1536 }),
+  sourceHash: text("source_hash"),
+  searchVector: tsvector("search_vector"),
+  embeddingModel: text("embedding_model"),
+  embeddedAt: timestamp("embedded_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull(),
+});
+
+export type InsertCourseExplore = typeof courseExplore.$inferInsert;
+export type SelectCourseExplore = typeof courseExplore.$inferSelect;
+
+export const userSavedCourses = pgTable(
+  "user_saved_courses",
+  {
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id),
+    courseCode: text("course_code")
+      .notNull()
+      .references(() => courses.code),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.userId, table.courseCode] })],
+);
+
+export type InsertUserSavedCourse = typeof userSavedCourses.$inferInsert;
+export type SelectUserSavedCourse = typeof userSavedCourses.$inferSelect;
+
+export const userTakenCourses = pgTable(
+  "user_taken_courses",
+  {
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id),
+    courseCode: text("course_code")
+      .notNull()
+      .references(() => courses.code),
+    attendancePeriods: text("attendance_periods"),
+    attendanceYear: integer("attendance_year"),
+    grade: text("grade"),
+    earnedCredits: real("earned_credits"),
+    transcriptImportedAt: timestamp("transcript_imported_at", {
+      withTimezone: true,
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.userId, table.courseCode] })],
+);
+
+export type InsertUserTakenCourse = typeof userTakenCourses.$inferInsert;
+export type SelectUserTakenCourse = typeof userTakenCourses.$inferSelect;
+
+export const collections = pgTable(
+  "collections",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id),
+    name: text("name").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+  },
+  (table) => [
+    unique("collections_id_user_id_unique").on(table.id, table.userId),
+  ],
+);
+
+export type InsertCollection = typeof collections.$inferInsert;
+export type SelectCollection = typeof collections.$inferSelect;
+
+export const collectionCourses = pgTable(
+  "collection_courses",
+  {
+    collectionId: text("collection_id").notNull(),
+    collectionUserId: text("collection_user_id").notNull(),
+    courseCode: text("course_code").notNull(),
+    position: integer("position").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.collectionId, table.courseCode] }),
+    foreignKey({
+      name: "collection_courses_collection_owner_fk",
+      columns: [table.collectionId, table.collectionUserId],
+      foreignColumns: [collections.id, collections.userId],
+    }),
+    foreignKey({
+      name: "collection_courses_saved_course_fk",
+      columns: [table.collectionUserId, table.courseCode],
+      foreignColumns: [userSavedCourses.userId, userSavedCourses.courseCode],
+    }),
+    check("position_nonnegative", sql`${table.position} >= 0`),
+  ],
+);
+
+export type InsertCollectionCourse = typeof collectionCourses.$inferInsert;
+export type SelectCollectionCourse = typeof collectionCourses.$inferSelect;
+
+export const usersGraphNodes = pgTable("users_graph_nodes", {
+  userId: text("user_id")
+    .primaryKey()
+    .references(() => users.id),
+  x: doublePrecision("x").notNull(),
+  y: doublePrecision("y").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull(),
+});
+
+export type InsertUsersGraphNode = typeof usersGraphNodes.$inferInsert;
+export type SelectUsersGraphNode = typeof usersGraphNodes.$inferSelect;
+
+export const usersGraphBackboneEdges = pgTable(
+  "users_graph_backbone_edges",
+  {
+    nodeUserId: text("node_user_id")
+      .notNull()
+      .references(() => usersGraphNodes.userId),
+    anchorUserId: text("anchor_user_id")
+      .notNull()
+      .references(() => usersGraphNodes.userId),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.nodeUserId, table.anchorUserId] }),
+    check(
+      "no_self_backbone_edge",
+      sql`${table.nodeUserId} <> ${table.anchorUserId}`,
+    ),
+  ],
+);
+
+export type InsertUsersGraphBackboneEdge =
+  typeof usersGraphBackboneEdges.$inferInsert;
+export type SelectUsersGraphBackboneEdge =
+  typeof usersGraphBackboneEdges.$inferSelect;
+
+export const usersNodeProfiles = pgTable("users_node_profiles", {
+  userId: text("user_id")
+    .primaryKey()
+    .references(() => users.id),
+  color: text("color").notNull(),
+  style: nodeStyle("style").notNull(),
+  signalStyle: nodeSignalStyle("signal_style").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull(),
+});
+
+export type InsertUsersNodeProfile = typeof usersNodeProfiles.$inferInsert;
+export type SelectUsersNodeProfile = typeof usersNodeProfiles.$inferSelect;
+
 // TODO: This should be removed and replaced with new table
 // junction table for mapping users to favorite courses
 export const user_favorites = pgTable(
@@ -168,6 +363,25 @@ export const reviews = pgTable("reviews", {
 });
 export type InsertReview = typeof reviews.$inferInsert;
 export type SelectReview = typeof reviews.$inferSelect;
+
+export const reviewVotes = pgTable(
+  "review_votes",
+  {
+    voterUserId: text("voter_user_id")
+      .notNull()
+      .references(() => users.id),
+    reviewId: text("review_id")
+      .notNull()
+      .references(() => reviews.id),
+    voteType: reviewVoteType("vote_type").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.voterUserId, table.reviewId] })],
+);
+
+export type InsertReviewVote = typeof reviewVotes.$inferInsert;
+export type SelectReviewVote = typeof reviewVotes.$inferSelect;
 
 // junction table for tracking user likes/dislikes on reviews
 export const reviewLikes = pgTable(
