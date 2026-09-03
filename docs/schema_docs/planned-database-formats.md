@@ -15,7 +15,7 @@ Updated: 2026-09-01. This document explains the approved Lucidchart target. The 
 
 `courses` contains canonical imported course information. The redundant legacy `name` and search columns are absent from the target.
 
-`course_rounds` uses `(course_code, round_code)` as its PK and retains source offering data. Confirm that the ingested `round_code` is stable before migration. `study_pace` is optional and checked from 1 through 100.
+`course_rounds` keys on its serial `id` and retains source offering data. `study_pace` is optional and checked from 1 through 100. `schema_url` is retained: it embeds KTH's own subgroup slug (`.../subgroup/ht-2025-555/...`), which is the only real round identifier still present in the data. See [ADR 0004](../adr/0004-course-round-identity.md).
 
 `course_examinations` retains original source codes, titles, credits, and grade scales. `(course_code, exam_code)` is the PK. Do not treat an exam code as a globally unique examination method.
 
@@ -57,4 +57,4 @@ If mappings are persisted later, design a separate versioned mapping table or ar
 
 ## Implementation gates
 
-Before production migration: inspect the current Neon schema and data, verify `round_code`, check new constraints against existing rows, decide referential actions, confirm the pgvector extension is enabled on the target branch, and generate the Drizzle schema plus explicit SQL migrations. Test those migrations first on an isolated data-containing Neon branch.
+Before production migration: inspect the current Neon schema and data, check new constraints against existing rows, decide referential actions, confirm the pgvector extension is enabled on the target branch, and generate the Drizzle schema plus explicit SQL migrations. Test those migrations first on an isolated data-containing Neon branch.

@@ -85,7 +85,7 @@ _Avoid_: transcript sync, Ladok scrape, upload (that is the file step, not this)
 A named, ordered group of one app user's saved courses. A course may only join a
 collection its owner has also saved.
 _Today_: no table. Closed by `collections` and `collection_courses`.
-_Avoid_: list, folder, group, playlist
+_Avoid_: comparison, list, folder, group, playlist
 
 ### Reviews
 

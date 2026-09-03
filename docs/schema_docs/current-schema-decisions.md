@@ -14,7 +14,10 @@ The old TSV export was removed. It duplicated the JSON, could not represent comp
 ## Approved structural decisions
 
 - Keep the source course domain normalized into `courses`, `course_rounds`, and `course_examinations`.
-- Use `(course_code, round_code)` as the composite primary key of `course_rounds`.
+- Key `course_rounds` on its serial `id`. The natural `(course_code, round_code)` key
+  required KOPPS `round.ladokUID`; that API is closed, the column was never populated,
+  and no key derivable from the retained data separates parallel rounds. Superseded by
+  [ADR 0004](../adr/0004-course-round-identity.md).
 - Keep search data in the one-to-one `course_explore` table rather than `courses`; it is derived and rebuildable.
 - Keep `user_saved_courses` and `user_taken_courses` separate. Saved and taken are independent relationships.
 - A collection course must be saved by the collection owner. `collection_courses` therefore has two separate composite foreign keys:

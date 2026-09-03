@@ -163,7 +163,6 @@ async function convertCourses(courses: z.infer<typeof CoursesSchema>): Promise<{
 
       const insertRounds: InsertCourseRound[] = detail.roundInfos.map((r) => ({
         courseCode: detail.course.courseCode,
-        roundCode: r.round.ladokUID,
         startTerm: r.round.startTerm.term,
         studyPace: r.round.studyPace ?? null,
         schemaUrl: r.schemaUrl ?? null,

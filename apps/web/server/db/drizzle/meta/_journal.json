@@ -43,6 +43,13 @@
       "when": 1788461690477,
       "tag": "0009_volatile_kinsey_walden",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1788474088550,
+      "tag": "0010_abnormal_shocker",
+      "breakpoints": true
     }
   ]
 }
