@@ -1,0 +1,360 @@
+{
+  "status": "canonical planned target; not an applied migration",
+  "updated": "2026-09-01",
+  "source": {
+    "name": "KTH Course Community — Planned schema",
+    "url": "https://lucid.app/lucidchart/80b5e812-7b9d-44a7-b0d4-10bdd87941fb/edit?viewport_loc=1847%2C1804%2C805%2C512%2C0_0&invitationId=inv_4fe92980-e309-403d-b227-7c5ec1f1c7fd"
+  },
+  "notes": [
+    "Lucidchart is the visual authority; this JSON is its canonical machine-readable transcription.",
+    "Defaults, referential actions and indexes not shown here are migration-time decisions documented in planned-database-formats.md.",
+    "The classification taxonomy and Better Auth-managed tables are outside this 16-table target.",
+    "The allowed values for node_style and node_signal_style are product decisions not enumerated in the diagram."
+  ],
+  "extensions": ["vector"],
+  "enums": {
+    "course_state": ["CANCELLED", "ESTABLISHED", "DEACTIVATED"],
+    "review_vote_type": ["up", "down"]
+  },
+  "customTypes": ["node_style", "node_signal_style"],
+  "tables": {
+    "collections": {
+      "columns": {
+        "id": { "type": "text", "nullable": false },
+        "user_id": { "type": "text", "nullable": false },
+        "name": { "type": "text", "nullable": false },
+        "created_at": { "type": "timestamptz", "nullable": false }
+      },
+      "primaryKey": ["id"],
+      "unique": [["id", "user_id"]],
+      "foreignKeys": [
+        {
+          "columns": ["user_id"],
+          "references": { "table": "users", "columns": ["id"] }
+        }
+      ]
+    },
+    "collection_courses": {
+      "columns": {
+        "collection_id": { "type": "text", "nullable": false },
+        "collection_user_id": { "type": "text", "nullable": false },
+        "course_code": { "type": "text", "nullable": false },
+        "position": { "type": "integer", "nullable": false },
+        "created_at": { "type": "timestamptz", "nullable": false }
+      },
+      "primaryKey": ["collection_id", "course_code"],
+      "foreignKeys": [
+        {
+          "name": "FK1",
+          "columns": ["collection_id", "collection_user_id"],
+          "references": { "table": "collections", "columns": ["id", "user_id"] }
+        },
+        {
+          "name": "FK2",
+          "columns": ["collection_user_id", "course_code"],
+          "references": {
+            "table": "user_saved_courses",
+            "columns": ["user_id", "course_code"]
+          }
+        }
+      ],
+      "checks": [
+        { "name": "position_nonnegative", "expression": "position >= 0" }
+      ]
+    },
+    "user_saved_courses": {
+      "columns": {
+        "user_id": { "type": "text", "nullable": false },
+        "course_code": { "type": "text", "nullable": false },
+        "created_at": { "type": "timestamptz", "nullable": false }
+      },
+      "primaryKey": ["user_id", "course_code"],
+      "foreignKeys": [
+        {
+          "columns": ["user_id"],
+          "references": { "table": "users", "columns": ["id"] }
+        },
+        {
+          "columns": ["course_code"],
+          "references": { "table": "courses", "columns": ["code"] }
+        }
+      ]
+    },
+    "users": {
+      "columns": {
+        "id": { "type": "text", "nullable": false },
+        "email": { "type": "text", "nullable": false },
+        "name": { "type": "text", "nullable": false },
+        "image": { "type": "text", "nullable": true },
+        "email_verified": { "type": "boolean", "nullable": false },
+        "personalization_tier_earned": {
+          "type": "smallint",
+          "nullable": false,
+          "default": 0
+        },
+        "created_at": { "type": "timestamptz", "nullable": false },
+        "updated_at": { "type": "timestamptz", "nullable": false }
+      },
+      "primaryKey": ["id"],
+      "unique": [["email"]],
+      "checks": [
+        {
+          "name": "personalization_tier_earned_range",
+          "expression": "personalization_tier_earned BETWEEN 0 AND 3"
+        }
+      ]
+    },
+    "users_graph_nodes": {
+      "columns": {
+        "user_id": { "type": "text", "nullable": false },
+        "x": { "type": "double precision", "nullable": false },
+        "y": { "type": "double precision", "nullable": false },
+        "created_at": { "type": "timestamptz", "nullable": false },
+        "updated_at": { "type": "timestamptz", "nullable": false }
+      },
+      "primaryKey": ["user_id"],
+      "foreignKeys": [
+        {
+          "columns": ["user_id"],
+          "references": { "table": "users", "columns": ["id"] }
+        }
+      ]
+    },
+    "users_node_profiles": {
+      "columns": {
+        "user_id": { "type": "text", "nullable": false },
+        "color": { "type": "text", "nullable": false },
+        "style": { "type": "node_style", "nullable": false },
+        "signal_style": { "type": "node_signal_style", "nullable": false },
+        "created_at": { "type": "timestamptz", "nullable": false },
+        "updated_at": { "type": "timestamptz", "nullable": false }
+      },
+      "primaryKey": ["user_id"],
+      "foreignKeys": [
+        {
+          "columns": ["user_id"],
+          "references": { "table": "users", "columns": ["id"] }
+        }
+      ]
+    },
+    "users_graph_backbone_edges": {
+      "columns": {
+        "node_user_id": { "type": "text", "nullable": false },
+        "anchor_user_id": { "type": "text", "nullable": false },
+        "created_at": { "type": "timestamptz", "nullable": false }
+      },
+      "primaryKey": ["node_user_id", "anchor_user_id"],
+      "foreignKeys": [
+        {
+          "columns": ["node_user_id"],
+          "references": { "table": "users_graph_nodes", "columns": ["user_id"] }
+        },
+        {
+          "columns": ["anchor_user_id"],
+          "references": { "table": "users_graph_nodes", "columns": ["user_id"] }
+        }
+      ],
+      "checks": [
+        {
+          "name": "no_self_backbone_edge",
+          "expression": "node_user_id <> anchor_user_id"
+        }
+      ]
+    },
+    "user_taken_courses": {
+      "columns": {
+        "user_id": { "type": "text", "nullable": false },
+        "course_code": { "type": "text", "nullable": false },
+        "attendance_periods": { "type": "text", "nullable": true },
+        "attendance_year": { "type": "integer", "nullable": true },
+        "grade": { "type": "text", "nullable": true },
+        "earned_credits": { "type": "real", "nullable": true },
+        "transcript_imported_at": { "type": "timestamptz", "nullable": true },
+        "created_at": { "type": "timestamptz", "nullable": false },
+        "updated_at": { "type": "timestamptz", "nullable": false }
+      },
+      "primaryKey": ["user_id", "course_code"],
+      "foreignKeys": [
+        {
+          "columns": ["user_id"],
+          "references": { "table": "users", "columns": ["id"] }
+        },
+        {
+          "columns": ["course_code"],
+          "references": { "table": "courses", "columns": ["code"] }
+        }
+      ]
+    },
+    "courses": {
+      "columns": {
+        "code": { "type": "text", "nullable": false },
+        "name_swedish": { "type": "text", "nullable": false },
+        "name_english": { "type": "text", "nullable": false },
+        "state": { "type": "course_state", "nullable": false },
+        "credits": { "type": "real", "nullable": false },
+        "credit_unit": { "type": "text", "nullable": true },
+        "department_code": { "type": "text", "nullable": false },
+        "department": { "type": "text", "nullable": false },
+        "educational_level_code": { "type": "text", "nullable": true },
+        "grade_scale_code": { "type": "text", "nullable": true },
+        "goals": { "type": "text", "nullable": true },
+        "content": { "type": "text", "nullable": true },
+        "eligibility": { "type": "text", "nullable": true },
+        "created_at": { "type": "timestamptz", "nullable": false },
+        "updated_at": { "type": "timestamptz", "nullable": false }
+      },
+      "primaryKey": ["code"]
+    },
+    "course_prerequisites": {
+      "columns": {
+        "course_code": { "type": "text", "nullable": false },
+        "prerequisite_course_code": { "type": "text", "nullable": false },
+        "created_at": { "type": "timestamptz", "nullable": false }
+      },
+      "primaryKey": ["course_code", "prerequisite_course_code"],
+      "foreignKeys": [
+        {
+          "columns": ["course_code"],
+          "references": { "table": "courses", "columns": ["code"] }
+        },
+        {
+          "columns": ["prerequisite_course_code"],
+          "references": { "table": "courses", "columns": ["code"] }
+        }
+      ]
+    },
+    "course_rounds": {
+      "columns": {
+        "course_code": { "type": "text", "nullable": false },
+        "round_code": { "type": "text", "nullable": false },
+        "start_term": { "type": "integer", "nullable": false },
+        "study_pace": { "type": "integer", "nullable": true },
+        "schema_url": { "type": "text", "nullable": true },
+        "language": { "type": "text", "nullable": true },
+        "tutoring_form": { "type": "text", "nullable": true },
+        "tutoring_time_of_day": { "type": "text", "nullable": true },
+        "formatted_periods_and_credits": { "type": "text", "nullable": true },
+        "is_pu": { "type": "boolean", "nullable": false },
+        "is_vu": { "type": "boolean", "nullable": false }
+      },
+      "primaryKey": ["course_code", "round_code"],
+      "foreignKeys": [
+        {
+          "columns": ["course_code"],
+          "references": { "table": "courses", "columns": ["code"] }
+        }
+      ],
+      "checks": [
+        {
+          "name": "study_pace_range",
+          "expression": "study_pace BETWEEN 1 AND 100"
+        }
+      ]
+    },
+    "course_examinations": {
+      "columns": {
+        "course_code": { "type": "text", "nullable": false },
+        "exam_code": { "type": "text", "nullable": false },
+        "title": { "type": "text", "nullable": true },
+        "credits": { "type": "real", "nullable": true },
+        "grade_scale_code": { "type": "text", "nullable": true }
+      },
+      "primaryKey": ["course_code", "exam_code"],
+      "foreignKeys": [
+        {
+          "columns": ["course_code"],
+          "references": { "table": "courses", "columns": ["code"] }
+        }
+      ]
+    },
+    "course_explore": {
+      "columns": {
+        "course_code": { "type": "text", "nullable": false },
+        "embedding": { "type": "vector(1536)", "nullable": true },
+        "source_hash": { "type": "text", "nullable": true },
+        "search_vector": { "type": "tsvector", "nullable": true },
+        "embedding_model": { "type": "text", "nullable": true },
+        "embedded_at": { "type": "timestamptz", "nullable": true },
+        "created_at": { "type": "timestamptz", "nullable": false },
+        "updated_at": { "type": "timestamptz", "nullable": false }
+      },
+      "primaryKey": ["course_code"],
+      "foreignKeys": [
+        {
+          "columns": ["course_code"],
+          "references": { "table": "courses", "columns": ["code"] }
+        }
+      ]
+    },
+    "reviews": {
+      "columns": {
+        "id": { "type": "text", "nullable": false },
+        "user_id": { "type": "text", "nullable": false },
+        "course_code": { "type": "text", "nullable": false },
+        "examination_distribution": { "type": "jsonb", "nullable": true },
+        "approach_theory_percent": { "type": "integer", "nullable": true },
+        "workload_score": { "type": "integer", "nullable": false },
+        "learning_score": { "type": "integer", "nullable": false },
+        "happy_took": { "type": "boolean", "nullable": false },
+        "message": { "type": "text", "nullable": true },
+        "created_at": { "type": "timestamptz", "nullable": false },
+        "updated_at": { "type": "timestamptz", "nullable": false }
+      },
+      "primaryKey": ["id"],
+      "foreignKeys": [
+        {
+          "columns": ["user_id"],
+          "references": { "table": "users", "columns": ["id"] }
+        },
+        {
+          "columns": ["course_code"],
+          "references": { "table": "courses", "columns": ["code"] }
+        }
+      ],
+      "checks": [
+        {
+          "name": "approach_theory_percent_range",
+          "expression": "approach_theory_percent BETWEEN 0 AND 100"
+        },
+        {
+          "name": "workload_score_range",
+          "expression": "workload_score BETWEEN 1 AND 10"
+        },
+        {
+          "name": "learning_score_range",
+          "expression": "learning_score BETWEEN 1 AND 10"
+        }
+      ]
+    },
+    "review_votes": {
+      "columns": {
+        "voter_user_id": { "type": "text", "nullable": false },
+        "review_id": { "type": "text", "nullable": false },
+        "vote_type": { "type": "review_vote_type", "nullable": false },
+        "created_at": { "type": "timestamptz", "nullable": false },
+        "updated_at": { "type": "timestamptz", "nullable": false }
+      },
+      "primaryKey": ["voter_user_id", "review_id"],
+      "foreignKeys": [
+        {
+          "columns": ["voter_user_id"],
+          "references": { "table": "users", "columns": ["id"] }
+        },
+        {
+          "columns": ["review_id"],
+          "references": { "table": "reviews", "columns": ["id"] }
+        }
+      ]
+    },
+    "feedback_form": {
+      "columns": {
+        "id": { "type": "text", "nullable": false },
+        "name": { "type": "text", "nullable": false },
+        "email": { "type": "text", "nullable": false },
+        "message": { "type": "text", "nullable": false },
+        "created_at": { "type": "timestamptz", "nullable": false }
+      },
+      "primaryKey": ["id"]
+    }
+  }
+}
