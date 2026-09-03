@@ -80,7 +80,7 @@
                     "message": "Routers must not reach into a repository. Call the domain service instead (router -> service -> repository)."
                   },
                   {
-                    "group": ["../*/router"],
+                    "group": ["../*/router", "@/server/*/router"],
                     "message": "Routers must not import another domain's router. Compose routers in server/api/root.ts."
                   }
                 ]
