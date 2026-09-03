@@ -1,6 +1,10 @@
 import { initTRPC, TRPCError } from "@trpc/server";
 import { getAuth } from "@/server/auth";
-import { ForbiddenError, NotFoundError } from "@/server/errors";
+import {
+  ForbiddenError,
+  NotFoundError,
+  ValidationError,
+} from "@/server/errors";
 
 export const createTRPCContext = async (opts: { headers: Headers }) => {
   const session = await getAuth().api.getSession({ headers: opts.headers });
@@ -20,6 +24,9 @@ const t = initTRPC
         return { ...shape, message: cause.message };
       }
       if (cause instanceof ForbiddenError) {
+        return { ...shape, message: cause.message };
+      }
+      if (cause instanceof ValidationError) {
         return { ...shape, message: cause.message };
       }
       return shape;
@@ -42,6 +49,13 @@ export const baseProcedure = t.procedure.use(async ({ next }) => {
     if (cause instanceof ForbiddenError) {
       throw new TRPCError({
         code: "FORBIDDEN",
+        message: cause.message,
+        cause,
+      });
+    }
+    if (cause instanceof ValidationError) {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
         message: cause.message,
         cause,
       });

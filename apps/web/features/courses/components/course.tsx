@@ -204,13 +204,14 @@ export async function Course({
                 key={review.id}
                 className="w-full max-w-full"
                 courseCode={details.courseCode}
-                wouldRecommend={review.wouldRecommend}
-                content={review.content}
-                examinationMethods={review.examinationMethods}
-                theoreticalVsApplied={review.theoreticalVsApplied}
-                workload={review.workload}
-                learningExperience={review.learningExperience}
-                likeCount={review.likeCount}
+                happyTook={review.happyTook}
+                message={review.message}
+                examinationDistribution={review.examinationDistribution}
+                approachTheoryPercent={review.approachTheoryPercent}
+                workloadScore={review.workloadScore}
+                learningScore={review.learningScore}
+                upvoteCount={review.upvoteCount}
+                downvoteCount={review.downvoteCount}
                 userVote={review.userVote}
                 postId={review.id}
               />

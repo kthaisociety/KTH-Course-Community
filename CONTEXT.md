@@ -93,36 +93,27 @@ _Avoid_: rating, comment, post, feedback (see **Feedback form**)
 **Upvote** / **Downvote**:
 An app user's judgement that a review was or was not worth reading. A vote is
 about the review, never about the reviewer.
-_Today_: `review_likes.vote_type`, a text column holding `"like"` or
-`"dislike"`. Closed by `review_votes` with an `up`/`down` enum.
 _Avoid_: like, dislike, helpful, helpful score, karma, points, reaction
 
 **Happy took**:
 Whether the reviewer is glad they took the course. A different question from
 whether they would advise a stranger to take it, and it belongs to the review.
-_Today_: `reviews.would_recommend`. Closed by `reviews.happy_took`.
 _Avoid_: would recommend, satisfaction, overall rating
 
 **Workload score** / **Learning score**:
 Two separate axes on a review: how much work the course was, and how much the
 reviewer got out of it. Neither is an overall verdict.
-_Today_: `reviews.workload` and `reviews.learning_experience`, unconstrained
-integers defaulting to 0. Closed by 1-10 scores with check constraints.
 _Avoid_: difficulty, quality, star rating, overall score
 
 **Examination distribution**:
 A reviewer's recollection of how assessment was split across a course. "I don't
 remember" is an answer and stores null, never zeroes. Distinct from **Course
 examination**, which is source data rather than memory.
-_Today_: the single integer `reviews.examination_methods`. Closed by a nullable
-`examination_distribution`.
 _Avoid_: exam breakdown, assessment mix, examination methods
 
 **Approach theory percent**:
 How theoretical rather than applied the reviewer found the course, on the same
 "I don't remember" rule.
-_Today_: the single integer `reviews.theoretical_vs_applied`. Closed by a
-nullable `approach_theory_percent`.
 _Avoid_: theory rating, theoretical vs applied
 
 ### The community graph

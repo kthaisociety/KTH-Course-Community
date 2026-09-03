@@ -1,16 +1,25 @@
 import { and, eq, sql } from "drizzle-orm";
+import type { ExaminationDistribution, ReviewVoteType } from "@/types/review";
 import { db } from "../db";
 import * as schema from "../db/schema";
 
 export type ReviewRecord = typeof schema.reviews.$inferSelect;
 
+/** The reviewer-supplied half of a review; the rest is identity and clock. */
 export type ReviewWrite = {
-  examinationMethods: number;
-  theoreticalVsApplied: number;
-  workload: number;
-  learningExperience: number;
-  wouldRecommend: boolean;
-  content: string;
+  examinationDistribution: ExaminationDistribution | null;
+  approachTheoryPercent: number | null;
+  workloadScore: number;
+  learningScore: number;
+  happyTook: boolean;
+  message: string | null;
+};
+
+/** A review row joined with its vote tallies and the caller's own vote. */
+export type ReviewWithVotes = ReviewRecord & {
+  upvoteCount: number | string | null;
+  downvoteCount: number | string | null;
+  userVote: ReviewVoteType | null;
 };
 
 export async function insertReview(
@@ -20,43 +29,49 @@ export async function insertReview(
   return inserted;
 }
 
-export async function listReviews(courseCode?: string, userId?: string) {
+export async function listReviews(
+  courseCode?: string,
+  userId?: string,
+): Promise<ReviewWithVotes[]> {
   const baseQuery = db
     .select({
       id: schema.reviews.id,
       userId: schema.reviews.userId,
       courseCode: schema.reviews.courseCode,
-      examinationMethods: schema.reviews.examinationMethods,
-      theoreticalVsApplied: schema.reviews.theoreticalVsApplied,
-      workload: schema.reviews.workload,
-      learningExperience: schema.reviews.learningExperience,
-      wouldRecommend: schema.reviews.wouldRecommend,
-      content: schema.reviews.content,
+      examinationDistribution: schema.reviews.examinationDistribution,
+      approachTheoryPercent: schema.reviews.approachTheoryPercent,
+      workloadScore: schema.reviews.workloadScore,
+      learningScore: schema.reviews.learningScore,
+      happyTook: schema.reviews.happyTook,
+      message: schema.reviews.message,
       createdAt: schema.reviews.createdAt,
       updatedAt: schema.reviews.updatedAt,
-      likeCount: sql<number>`COALESCE(like_counts.like_count, 0)`,
-      userVote: schema.reviewLikes.voteType,
+      upvoteCount: sql<number>`COALESCE(vote_counts.upvote_count, 0)`,
+      downvoteCount: sql<number>`COALESCE(vote_counts.downvote_count, 0)`,
+      userVote: schema.reviewVotes.voteType,
     })
     .from(schema.reviews)
     .leftJoin(
       sql`(
-          SELECT review_id, COUNT(*) as like_count 
-          FROM ${schema.reviewLikes} 
-          WHERE vote_type = 'like' 
+          SELECT
+            review_id,
+            COUNT(*) FILTER (WHERE vote_type = 'up') AS upvote_count,
+            COUNT(*) FILTER (WHERE vote_type = 'down') AS downvote_count
+          FROM ${schema.reviewVotes}
           GROUP BY review_id
-        ) as like_counts`,
-      eq(schema.reviews.id, sql`like_counts.review_id`),
+        ) as vote_counts`,
+      eq(schema.reviews.id, sql`vote_counts.review_id`),
     )
     .leftJoin(
-      schema.reviewLikes,
+      schema.reviewVotes,
       userId
         ? and(
-            eq(schema.reviewLikes.reviewId, schema.reviews.id),
-            eq(schema.reviewLikes.userId, userId),
+            eq(schema.reviewVotes.reviewId, schema.reviews.id),
+            eq(schema.reviewVotes.voterUserId, userId),
           )
         : sql`false`,
     )
-    .orderBy(sql`created_at DESC`);
+    .orderBy(sql`${schema.reviews.createdAt} DESC`);
 
   return courseCode
     ? await baseQuery.where(eq(schema.reviews.courseCode, courseCode))
@@ -92,14 +107,17 @@ export async function deleteById(id: string) {
   return deleted;
 }
 
-export async function findVote(reviewId: string, userId: string) {
+export async function findVote(
+  reviewId: string,
+  voterUserId: string,
+): Promise<schema.SelectReviewVote | undefined> {
   const [vote] = await db
     .select()
-    .from(schema.reviewLikes)
+    .from(schema.reviewVotes)
     .where(
       and(
-        eq(schema.reviewLikes.reviewId, reviewId),
-        eq(schema.reviewLikes.userId, userId),
+        eq(schema.reviewVotes.reviewId, reviewId),
+        eq(schema.reviewVotes.voterUserId, voterUserId),
       ),
     )
     .limit(1);
@@ -108,11 +126,11 @@ export async function findVote(reviewId: string, userId: string) {
 
 export async function insertVote(
   reviewId: string,
-  userId: string,
-  voteType: "like" | "dislike",
+  voterUserId: string,
+  voteType: ReviewVoteType,
 ) {
-  await db.insert(schema.reviewLikes).values({
-    userId,
+  await db.insert(schema.reviewVotes).values({
+    voterUserId,
     reviewId,
     voteType,
   });
@@ -120,27 +138,27 @@ export async function insertVote(
 
 export async function updateVote(
   reviewId: string,
-  userId: string,
-  voteType: "like" | "dislike",
+  voterUserId: string,
+  voteType: ReviewVoteType,
 ) {
   await db
-    .update(schema.reviewLikes)
-    .set({ voteType })
+    .update(schema.reviewVotes)
+    .set({ voteType, updatedAt: sql`now()` })
     .where(
       and(
-        eq(schema.reviewLikes.reviewId, reviewId),
-        eq(schema.reviewLikes.userId, userId),
+        eq(schema.reviewVotes.reviewId, reviewId),
+        eq(schema.reviewVotes.voterUserId, voterUserId),
       ),
     );
 }
 
-export async function deleteVote(reviewId: string, userId: string) {
+export async function deleteVote(reviewId: string, voterUserId: string) {
   await db
-    .delete(schema.reviewLikes)
+    .delete(schema.reviewVotes)
     .where(
       and(
-        eq(schema.reviewLikes.reviewId, reviewId),
-        eq(schema.reviewLikes.userId, userId),
+        eq(schema.reviewVotes.reviewId, reviewId),
+        eq(schema.reviewVotes.voterUserId, voterUserId),
       ),
     );
 }

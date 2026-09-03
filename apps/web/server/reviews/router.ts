@@ -13,13 +13,30 @@ import {
   updateReview,
 } from "./service";
 
+const percentage = z.number().int().min(0).max(100);
+
+/**
+ * `null` is the stored answer for "I don't remember"; the service rejects a
+ * distribution that does not add up to 100.
+ */
+const examinationDistribution = z
+  .object({
+    exam: percentage,
+    assignments: percentage,
+    labs: percentage,
+    projects: percentage,
+    seminars: percentage,
+    other: percentage,
+  })
+  .nullable();
+
 const reviewInput = z.object({
-  examinationMethods: z.number().int(),
-  theoreticalVsApplied: z.number().int(),
-  workload: z.number().int(),
-  learningExperience: z.number().int(),
-  wouldRecommend: z.boolean(),
-  content: z.string(),
+  examinationDistribution,
+  approachTheoryPercent: percentage.nullable(),
+  workloadScore: z.number().int(),
+  learningScore: z.number().int(),
+  happyTook: z.boolean(),
+  message: z.string().nullable(),
 });
 
 export const reviewsRouter = createTRPCRouter({
@@ -46,9 +63,14 @@ export const reviewsRouter = createTRPCRouter({
   delete: protectedProcedure
     .input(z.object({ id: z.string().min(1) }))
     .mutation(({ ctx, input }) => removeReview(input.id, ctx.session.user.id)),
-  like: protectedProcedure
-    .input(z.object({ id: z.string().min(1) }))
+  vote: protectedProcedure
+    .input(
+      z.object({
+        id: z.string().min(1),
+        voteType: z.enum(["up", "down"]),
+      }),
+    )
     .mutation(({ ctx, input }) =>
-      toggleVote(input.id, ctx.session.user.id, "like"),
+      toggleVote(input.id, ctx.session.user.id, input.voteType),
     ),
 });

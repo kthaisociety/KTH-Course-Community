@@ -4,41 +4,45 @@ import { ThumbsDown, ThumbsUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
 import { cn } from "@/lib/utils";
+import type { ReviewVoteType } from "@/types";
 
 export type PostActionBarProps = {
   postId: string;
-  likeCount: number;
-  dislikeCount: number;
-  userVote: "like" | "dislike" | null;
-  onPostLike: (postId: string) => void;
-  onPostDislike: (postId: string) => void;
+  upvoteCount: number;
+  downvoteCount: number;
+  userVote: ReviewVoteType | null;
+  onVote: (postId: string, voteType: ReviewVoteType) => void;
 };
 
 export default function PostActionBar(props: Readonly<PostActionBarProps>) {
-  const isLiked = props.userVote === "like";
-  const isDisliked = props.userVote === "dislike";
+  const isUpvoted = props.userVote === "up";
+  const isDownvoted = props.userVote === "down";
 
   return (
     <ButtonGroup>
       <Button
-        variant={isLiked ? "secondary" : "ghost"}
-        onClick={() => props.onPostLike(props.postId)}
+        variant={isUpvoted ? "secondary" : "ghost"}
+        aria-pressed={isUpvoted}
+        aria-label="Upvote this review"
+        onClick={() => props.onVote(props.postId, "up")}
       >
         <ThumbsUp
           data-icon="inline-start"
-          className={cn(isLiked && "fill-current")}
+          className={cn(isUpvoted && "fill-current")}
         />
-        {props.likeCount}
+        {props.upvoteCount}
       </Button>
       <Button
-        variant={isDisliked ? "destructive" : "ghost"}
-        onClick={() => props.onPostDislike(props.postId)}
+        variant={isDownvoted ? "destructive" : "ghost"}
+        aria-pressed={isDownvoted}
+        aria-label="Downvote this review"
+        onClick={() => props.onVote(props.postId, "down")}
       >
         <ThumbsDown
           data-icon="inline-start"
-          className={cn(isDisliked && "fill-current")}
+          className={cn(isDownvoted && "fill-current")}
         />
-        {props.dislikeCount}
+        {props.downvoteCount}
       </Button>
     </ButtonGroup>
   );

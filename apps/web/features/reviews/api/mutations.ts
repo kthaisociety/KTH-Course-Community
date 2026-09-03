@@ -20,12 +20,12 @@ export function useCreateReview() {
   );
 }
 
-export function useLikeReview(courseCode: string) {
+export function useVoteOnReview(courseCode: string) {
   const trpc = useTRPC();
   const queryClient = useQueryClient();
   const router = useRouter();
   return useMutation(
-    trpc.reviews.like.mutationOptions({
+    trpc.reviews.vote.mutationOptions({
       onSuccess: () => {
         void queryClient.invalidateQueries({
           queryKey: trpc.reviews.list.queryKey({ courseCode }),

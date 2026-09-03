@@ -14,7 +14,7 @@ export function useAddReview() {
       courseCode: string,
       reviewForm: ReviewFormData,
     ): Promise<boolean> => {
-      const plainText = reviewForm.content.replace(/<[^>]*>/g, " ");
+      const plainText = reviewForm.message.replace(/<[^>]*>/g, " ");
       const escapeRegex = (s: string) =>
         s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
       const profoundMatches = profoundWords

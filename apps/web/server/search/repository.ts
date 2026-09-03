@@ -96,10 +96,15 @@ export async function searchByEmbedding(
   }));
 }
 
+/**
+ * The crude blended score behind the `minRating` filter. It used to average
+ * four legacy review columns; #75 dropped those, so it now averages the two
+ * surviving 1-10 axes. Real aggregation over the target columns is #67's.
+ */
 export async function averageRatings(codes: string[]) {
   const ratingRows = await db.execute(
     sql`SELECT course_code,
-            ROUND((AVG(examination_methods) + AVG(theoretical_vs_applied) + AVG(workload) + AVG(learning_experience))/4) AS rating
+            ROUND((AVG(workload_score) + AVG(learning_score))/2) AS rating
             FROM ${schema.reviews}
             WHERE ${inArray(schema.reviews.courseCode, codes)}
             GROUP BY course_code`,
