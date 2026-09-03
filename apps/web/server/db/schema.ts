@@ -19,6 +19,10 @@ import {
   vector,
 } from "drizzle-orm/pg-core";
 
+// Type-only, and must stay type-only: `@/types/review` also defines the zod
+// schemas the router, service and review form share, and drizzle-kit loads
+// this file. TypeScript erases the import before drizzle-kit ever evaluates
+// that module, so no runtime dependency reaches the migration tooling.
 import type { ExaminationDistribution } from "@/types/review";
 import { users } from "./auth-schema";
 

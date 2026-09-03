@@ -37,6 +37,12 @@ function serializeReview(
  * message to `null`. A `null` recollection is left alone: that is how "I don't
  * remember" is stored, and filling it with zeroes would claim an answer the
  * reviewer never gave.
+ *
+ * The router already fed the same `reviewInputSchema` to `.input()`, so over
+ * tRPC this parse is deliberately redundant. It stays because the service is
+ * the enforcement point `planned-database-formats.md` names, and because the
+ * service is called directly by tests and by any future caller that is not a
+ * tRPC procedure. One schema, checked twice — not two sources of truth.
  */
 function validateReviewInput(input: ReviewInput): ReviewInput {
   const parsed = reviewInputSchema.safeParse(input);
