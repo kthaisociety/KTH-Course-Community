@@ -25,7 +25,7 @@ Better Auth; protected procedures fail closed, same as the old global
 ## What was dropped on purpose
 
 - **Elasticsearch.** Search is Postgres keyword (ILIKE + tsvector) merged with
-  pgvector cosine search. Compose no longer runs an ES node.
+  pgvector cosine search. Nothing in the deployment runs an ES node.
 - **Socket.IO.** Review mutations invalidate the TanStack Query cache in the
   acting tab. Other tabs wait for staleTime/refocus.
 - **HTTP ingest.** KOPPS ingest is `bun run ingest` (optional `--test`), not a
@@ -34,8 +34,11 @@ Better Auth; protected procedures fail closed, same as the old global
 
 ## Consequences
 
-- **One container.** `docker-compose.yml` runs the Next app only. Health is
-  `GET /api/health`.
+- **One container.** The app ships as a single image, built from
+  `Dockerfile.web` by `.github/workflows/docker-build-push.yml`. Health is
+  `GET /api/health`. (The original `docker-compose.yml` ran that image and
+  has since been removed; the decision it recorded — one deployable, not
+  two — still holds.)
 - **Same-origin cookies.** Better Auth can use default Lax cookies. `BETTER_AUTH_URL`
   is still the public site origin.
 - **Multipart stays off tRPC.** Profile pictures POST to
