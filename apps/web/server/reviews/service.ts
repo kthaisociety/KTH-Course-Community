@@ -107,6 +107,13 @@ export async function removeReview(id: string, userId: string) {
   return serializeReview(deleted);
 }
 
+/**
+ * Voting the same way twice takes the vote back; voting the other way flips
+ * it. The read only decides which of those the caller meant — the write itself
+ * is a set or a remove, both idempotent, so two racing requests agree instead
+ * of one of them failing on the composite key. `planned-database-formats.md`
+ * asks for exactly that: "idempotent set/remove operations".
+ */
 export async function toggleVote(
   reviewId: string,
   voterUserId: string,
@@ -114,17 +121,16 @@ export async function toggleVote(
 ) {
   const existingVote = await reviewsRepo.findVote(reviewId, voterUserId);
 
-  if (existingVote) {
-    if (existingVote.voteType === voteType) {
-      await reviewsRepo.deleteVote(reviewId, voterUserId);
-      return { action: "removed" as const, voteType: null };
-    }
-    await reviewsRepo.updateVote(reviewId, voterUserId, voteType);
-    return { action: "updated" as const, voteType };
+  if (existingVote?.voteType === voteType) {
+    await reviewsRepo.deleteVote(reviewId, voterUserId);
+    return { action: "removed" as const, voteType: null };
   }
 
-  await reviewsRepo.insertVote(reviewId, voterUserId, voteType);
-  return { action: "added" as const, voteType };
+  await reviewsRepo.upsertVote(reviewId, voterUserId, voteType);
+  return {
+    action: existingVote ? ("updated" as const) : ("added" as const),
+    voteType,
+  };
 }
 
 async function assertAuthor(reviewId: string, userId: string) {

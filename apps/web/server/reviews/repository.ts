@@ -117,32 +117,24 @@ export async function findVote(
   return vote;
 }
 
-export async function insertVote(
-  reviewId: string,
-  voterUserId: string,
-  voteType: ReviewVoteType,
-) {
-  await db.insert(schema.reviewVotes).values({
-    voterUserId,
-    reviewId,
-    voteType,
-  });
-}
-
-export async function updateVote(
+/**
+ * Sets this voter's vote on this review, whether or not they had one. It is a
+ * single conflict-aware statement rather than a read then a write: two
+ * requests racing on a first vote (a double-click is enough) would otherwise
+ * have one of them rejected by the composite primary key.
+ */
+export async function upsertVote(
   reviewId: string,
   voterUserId: string,
   voteType: ReviewVoteType,
 ) {
   await db
-    .update(schema.reviewVotes)
-    .set({ voteType, updatedAt: sql`now()` })
-    .where(
-      and(
-        eq(schema.reviewVotes.reviewId, reviewId),
-        eq(schema.reviewVotes.voterUserId, voterUserId),
-      ),
-    );
+    .insert(schema.reviewVotes)
+    .values({ voterUserId, reviewId, voteType })
+    .onConflictDoUpdate({
+      target: [schema.reviewVotes.voterUserId, schema.reviewVotes.reviewId],
+      set: { voteType, updatedAt: sql`now()` },
+    });
 }
 
 export async function deleteVote(reviewId: string, voterUserId: string) {

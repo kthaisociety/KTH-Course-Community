@@ -231,7 +231,7 @@ describe("reviews", () => {
 
     const result = await toggleVote("review-123", "voter-1", "up");
 
-    expect(reviewsRepo.insertVote).toHaveBeenCalledWith(
+    expect(reviewsRepo.upsertVote).toHaveBeenCalledWith(
       "review-123",
       "voter-1",
       "up",
@@ -250,7 +250,7 @@ describe("reviews", () => {
 
     const result = await toggleVote("review-123", "voter-1", "down");
 
-    expect(reviewsRepo.updateVote).toHaveBeenCalledWith(
+    expect(reviewsRepo.upsertVote).toHaveBeenCalledWith(
       "review-123",
       "voter-1",
       "down",
@@ -274,6 +274,33 @@ describe("reviews", () => {
       "voter-1",
     );
     expect(result).toEqual({ action: "removed", voteType: null });
+  });
+
+  it("two concurrent first votes both succeed", async () => {
+    // A double-click is enough to get two requests past the same `findVote`.
+    // A plain insert of the second would hit the composite primary key; the
+    // conflict-aware set must not.
+    const stored = new Map<string, string>();
+    const key = (reviewId: string, voterUserId: string) =>
+      `${voterUserId}:${reviewId}`;
+
+    vi.mocked(reviewsRepo.findVote).mockResolvedValue(undefined);
+    vi.mocked(reviewsRepo.upsertVote).mockImplementation(
+      async (reviewId, voterUserId, voteType) => {
+        stored.set(key(reviewId, voterUserId), voteType);
+      },
+    );
+
+    const results = await Promise.all([
+      toggleVote("review-123", "voter-1", "up"),
+      toggleVote("review-123", "voter-1", "up"),
+    ]);
+
+    expect(results).toEqual([
+      { action: "added", voteType: "up" },
+      { action: "added", voteType: "up" },
+    ]);
+    expect([...stored.values()]).toEqual(["up"]);
   });
 
   it("findAllReviews tallies upvotes and downvotes separately", async () => {
