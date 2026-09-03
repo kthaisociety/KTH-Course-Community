@@ -1,0 +1,22 @@
+# Git on Windows here has core.autocrlf=true set system-wide, which checks files
+# out with CRLF. Biome formats to LF, so every file reported a format error and
+# real findings were buried. Pin the working tree to LF so the two agree.
+
+* text=auto eol=lf
+
+# Binary — never touch these.
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.ico   binary
+*.webp  binary
+*.pdf   binary
+*.woff  binary
+*.woff2 binary
+*.ttf   binary
+*.otf   binary
+
+# Lockfiles are generated; keep them out of diffs.
+bun.lock          -diff linguist-generated
+package-lock.json -diff linguist-generated
