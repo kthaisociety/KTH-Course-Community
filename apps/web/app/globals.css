@@ -45,6 +45,27 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+
+  /* Course Community design tokens (see cc-theme.css in the design project). */
+  --color-cc-pg: var(--cc-pg);
+  --color-cc-surface: var(--cc-surface);
+  --color-cc-inset: var(--cc-inset);
+  --color-cc-pill: var(--cc-pill);
+  --color-cc-rail: var(--cc-rail);
+  --color-cc-ink: var(--cc-ink);
+  --color-cc-ink2: var(--cc-ink2);
+  --color-cc-muted: var(--cc-muted);
+  --color-cc-dim: var(--cc-dim);
+  --color-cc-dim2: var(--cc-dim2);
+  --color-cc-chip-ink: var(--cc-chip-ink);
+  --color-cc-rule: var(--cc-rule);
+  --color-cc-rule2: var(--cc-rule2);
+  --color-cc-rule3: var(--cc-rule3);
+  --color-cc-hov: var(--cc-hov);
+  --color-cc-brand: var(--cc-brand);
+  --color-cc-btn: var(--cc-btn);
+  --color-cc-btn-fg: var(--cc-btn-fg);
+  --color-cc-info: var(--cc-info);
 }
 
 :root {
@@ -83,6 +104,32 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+
+  /* Course Community — light palette.
+     pg  page background   surface cards, fields, menus   inset recessed panel
+     pill chips and tracks  rail the sidebar (brand blue in both themes)
+     ink primary text  ink2 secondary  muted supporting  dim/dim2 labels and hints
+     chip-ink text on a pill  rule/2/3 hairline, border, strong border
+     hov hover border  brand links and brand text  btn/btn-fg filled button */
+  --cc-pg: #faf8f1;
+  --cc-surface: #ffffff;
+  --cc-inset: #faf8f1;
+  --cc-pill: #f2efe6;
+  --cc-rail: #1751a6;
+  --cc-ink: #16202b;
+  --cc-ink2: #3d4650;
+  --cc-muted: #5c6570;
+  --cc-dim: #6b6355;
+  --cc-dim2: #8a857a;
+  --cc-chip-ink: #4a5560;
+  --cc-rule: #eae6da;
+  --cc-rule2: #e5e0d2;
+  --cc-rule3: #ddd8c9;
+  --cc-hov: #b9c9de;
+  --cc-brand: #1751a6;
+  --cc-btn: #1751a6;
+  --cc-btn-fg: #ffffff;
+  --cc-info: rgba(23, 81, 166, 0.07);
 }
 
 .dark {
@@ -120,6 +167,27 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
+
+  /* Course Community — dark palette. */
+  --cc-pg: #0d2d5b;
+  --cc-surface: #143a72;
+  --cc-inset: #0a2449;
+  --cc-pill: rgba(244, 238, 226, 0.16);
+  --cc-rail: #1751a6;
+  --cc-ink: #f6f1e6;
+  --cc-ink2: #eae4d7;
+  --cc-muted: #d3e0f4;
+  --cc-dim: #c6d5ee;
+  --cc-dim2: #b0c1de;
+  --cc-chip-ink: #f0ebdf;
+  --cc-rule: rgba(244, 238, 226, 0.22);
+  --cc-rule2: rgba(244, 238, 226, 0.3);
+  --cc-rule3: rgba(244, 238, 226, 0.42);
+  --cc-hov: #dbe8fa;
+  --cc-brand: #e2ecfb;
+  --cc-btn: #f4eee2;
+  --cc-btn-fg: #1751a6;
+  --cc-info: rgba(226, 236, 251, 0.1);
 }
 
 @layer base {
@@ -149,5 +217,21 @@
   }
   &::-webkit-scrollbar-thumb:hover {
     background-color: var(--border);
+  }
+}
+
+/* Course Community surfaces cross-fade between themes. Scoped to the opted-in
+   subtree — a global `*` transition would animate every existing screen too. */
+@utility cc-theme {
+  & *,
+  & {
+    transition:
+      background-color 0.34s ease,
+      color 0.34s ease,
+      border-color 0.34s ease;
+  }
+
+  & input::placeholder {
+    color: var(--cc-dim);
   }
 }
