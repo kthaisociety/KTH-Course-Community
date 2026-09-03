@@ -24,16 +24,16 @@ import {
   useCourseSummaries,
 } from "@/features/courses";
 import type { CourseWithUserInfo } from "@/types";
-import { useToggleFavorite } from "../api/mutations";
+import { useSetCourseSaved } from "../api/mutations";
 
 const SKELETON_KEYS = ["f0", "f1", "f2", "f3", "f4"] as const;
 
 export function Favorites() {
   useRequireSession();
   const { user, isLoading: isSessionLoading } = useMe();
-  const toggleFavorite = useToggleFavorite();
+  const { setSaved } = useSetCourseSaved();
   const router = useRouter();
-  const codes = user?.userFavorites ?? [];
+  const codes = user?.savedCourseCodes ?? [];
   const summaryQueries = useCourseSummaries(codes, !isSessionLoading);
 
   const isLoadingFavorites =
@@ -60,11 +60,12 @@ export function Favorites() {
 
   const onAddToComparison = useCallback((_courseCode: string) => {}, []);
 
+  // Every course on this screen is saved, so the only move here is unsaving.
   async function onToggleFavorite(courseCode: string) {
     try {
-      await toggleFavorite.mutateAsync({ courseCode });
+      await setSaved(courseCode, false);
     } catch (err) {
-      console.error("Failed to toggle favorite:", err);
+      console.error("Failed to unsave course:", err);
     }
   }
 

@@ -1,1 +1,1 @@
-export { useToggleFavorite } from "./api/mutations";
+export { useSetCourseSaved } from "./api/mutations";

@@ -50,6 +50,13 @@
       "when": 1788474088550,
       "tag": "0010_abnormal_shocker",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1788477723351,
+      "tag": "0011_saved_contract",
+      "breakpoints": true
     }
   ]
 }

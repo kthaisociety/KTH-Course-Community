@@ -4,7 +4,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useState } from "react";
 import { useMe } from "@/features/auth";
 import { useCourseDetails } from "@/features/courses";
-import { useToggleFavorite } from "@/features/favorites";
+import { useSetCourseSaved } from "@/features/favorites";
 import type { CourseWithUserInfo } from "@/types";
 import { toSearchCoursesInput, useSearchCourses } from "../api/queries";
 import { useDebouncedQuery } from "./use-debounced-query";
@@ -13,8 +13,8 @@ const DEFAULT_QUERY = "interaction programming";
 
 export function useSearchPage() {
   const { user } = useMe();
-  const userFavorites = user?.userFavorites ?? [];
-  const toggleFavorite = useToggleFavorite();
+  const savedCourseCodes = user?.savedCourseCodes ?? [];
+  const { setSaved } = useSetCourseSaved();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -47,7 +47,7 @@ export function useSearchPage() {
     debouncedQuery.trim() ? (searchData?.results ?? []) : []
   ).map((result) => ({
     ...result,
-    isUserFavorite: userFavorites.includes(result.courseCode),
+    isUserFavorite: savedCourseCodes.includes(result.courseCode),
   }));
 
   const error = searchError
@@ -109,9 +109,9 @@ export function useSearchPage() {
 
   async function onToggleFavorite(courseCode: string) {
     try {
-      await toggleFavorite.mutateAsync({ courseCode });
+      await setSaved(courseCode, !savedCourseCodes.includes(courseCode));
     } catch (err) {
-      console.error("Failed to toggle favorite:", err);
+      console.error("Failed to change saved course:", err);
     }
   }
 

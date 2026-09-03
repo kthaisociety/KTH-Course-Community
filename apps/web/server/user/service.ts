@@ -1,25 +1,17 @@
+import { listSavedCourseCodes } from "../saved/service";
 import * as userRepo from "./repository";
 
 export type Me = {
   userId: string;
   name: string;
   email: string;
-  userFavorites: string[];
+  savedCourseCodes: string[];
   image: string | null;
 };
 
-export function getUserFavorites(id: string): Promise<string[]> {
-  return userRepo.listFavoriteCodes(id);
-}
-
-export async function toggleUserFavorite(userId: string, courseCode: string) {
-  const existing = await userRepo.findFavorite(userId, courseCode);
-  if (existing) {
-    await userRepo.removeFavorite(userId, courseCode);
-    return { action: "removed" as const };
-  }
-  await userRepo.addFavorite(userId, courseCode);
-  return { action: "added" as const };
+/** Cross-domain read: saved courses belong to the saved domain. */
+export function getSavedCourseCodes(id: string): Promise<string[]> {
+  return listSavedCourseCodes(id);
 }
 
 export function updateImage(id: string, imageURL: string) {

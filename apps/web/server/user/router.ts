@@ -1,10 +1,9 @@
-import { z } from "zod";
 import {
   baseProcedure,
   createTRPCRouter,
   protectedProcedure,
 } from "../api/trpc";
-import { deleteUser, getUserFavorites, toggleUserFavorite } from "./service";
+import { deleteUser, getSavedCourseCodes } from "./service";
 
 export const userRouter = createTRPCRouter({
   me: baseProcedure.query(async ({ ctx }) => {
@@ -15,21 +14,9 @@ export const userRouter = createTRPCRouter({
       name,
       email,
       image: image ?? null,
-      userFavorites: await getUserFavorites(id),
+      savedCourseCodes: await getSavedCourseCodes(id),
     };
   }),
-  favorites: protectedProcedure.query(({ ctx }) =>
-    getUserFavorites(ctx.session.user.id),
-  ),
-  toggleFavorite: protectedProcedure
-    .input(z.object({ courseCode: z.string().min(1) }))
-    .mutation(async ({ ctx, input }) => {
-      const result = await toggleUserFavorite(
-        ctx.session.user.id,
-        input.courseCode,
-      );
-      return { success: true as const, action: result.action };
-    }),
   delete: protectedProcedure.mutation(async ({ ctx }) => {
     await deleteUser(ctx.session.user.id);
     return { success: true as const };
