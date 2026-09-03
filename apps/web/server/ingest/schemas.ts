@@ -32,10 +32,11 @@ export const CourseDetailSchema = z.object({
     z.object({
       schemaUrl: z.string().optional(),
       round: z.object({
+        ladokUID: z.string().min(1),
         startTerm: z.object({ term: z.number() }),
         isPU: z.boolean(),
         isVU: z.boolean(),
-        studyPace: z.number().optional(),
+        studyPace: z.number().int().min(1).max(100).optional(),
         tutoringTimeOfDay: z.object({ name: z.string() }).optional(),
         tutoringForm: z.object({ name: z.string() }).optional(),
         language: z.string().optional(),
