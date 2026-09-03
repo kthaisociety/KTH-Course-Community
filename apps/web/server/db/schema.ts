@@ -7,6 +7,7 @@ import {
   foreignKey,
   index,
   integer,
+  jsonb,
   pgEnum,
   pgTable,
   primaryKey,
@@ -30,17 +31,9 @@ export const courseState = pgEnum("course_state", [
 
 export const reviewVoteType = pgEnum("review_vote_type", ["up", "down"]);
 
-export const nodeStyle = customType<{ data: string }>({
-  dataType() {
-    return "node_style";
-  },
-});
+export const nodeStyle = pgEnum("node_style", ["default"]);
 
-export const nodeSignalStyle = customType<{ data: string }>({
-  dataType() {
-    return "node_signal_style";
-  },
-});
+export const nodeSignalStyle = pgEnum("node_signal_style", ["default"]);
 
 // used for pgvector full-text search
 const tsvector = customType<{ data: string }>({
@@ -73,6 +66,9 @@ export const courses = pgTable(
     goals: text("goals"),
     content: text("content"),
     eligibility: text("eligibility"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -98,21 +94,31 @@ export type SelectCourse = typeof courses.$inferSelect;
 
 // courseRounds is used for multiple course offerings across semesters
 // e.g. DD2421, which can be taken P2 or in P3. This table round-specific information.
-export const courseRounds = pgTable("course_rounds", {
-  id: serial("id").primaryKey(),
-  courseCode: text("course_code")
-    .notNull()
-    .references(() => courses.code, { onDelete: "cascade" }),
-  startTerm: integer("start_term").notNull(), // e.g. 20252
-  studyPace: integer("study_pace"), // percentage, e.g. 50
-  schemaUrl: text("schema_url"),
-  language: text("language"),
-  tutoringForm: text("tutoring_form"), // "NML (Normal) or DST (Distance)"
-  tutoringTimeOfDay: text("tutoring_time_of_day"), // "DAG (Day-time) or KVÄ (evenings)"
-  formattedPeriodsAndCredits: text("formatted_periods_and_credits"), // e.g. "P1 (7,5 hp)"
-  isPU: boolean("is_pu").notNull(), // Part of KTH programme
-  isVU: boolean("is_vu").notNull(), // open course
-});
+export const courseRounds = pgTable(
+  "course_rounds",
+  {
+    id: serial("id").primaryKey(),
+    courseCode: text("course_code")
+      .notNull()
+      .references(() => courses.code, {
+        onDelete: "restrict",
+        onUpdate: "no action",
+      }),
+    startTerm: integer("start_term").notNull(), // e.g. 20252
+    studyPace: integer("study_pace"), // percentage, e.g. 50
+    schemaUrl: text("schema_url"),
+    language: text("language"),
+    tutoringForm: text("tutoring_form"), // "NML (Normal) or DST (Distance)"
+    tutoringTimeOfDay: text("tutoring_time_of_day"), // "DAG (Day-time) or KVÄ (evenings)"
+    formattedPeriodsAndCredits: text("formatted_periods_and_credits"), // e.g. "P1 (7,5 hp)"
+    isPU: boolean("is_pu").notNull(), // Part of KTH programme
+    isVU: boolean("is_vu").notNull(), // open course
+  },
+  (table) => [
+    check("study_pace_range", sql`${table.studyPace} between 1 and 100`),
+    index("course_rounds_course_code_idx").on(table.courseCode),
+  ],
+);
 
 export type InsertCourseRound = typeof courseRounds.$inferInsert;
 export type SelectCourseRound = typeof courseRounds.$inferSelect;
@@ -124,7 +130,10 @@ export const courseExaminations = pgTable(
   {
     courseCode: text("course_code")
       .notNull()
-      .references(() => courses.code, { onDelete: "cascade" }),
+      .references(() => courses.code, {
+        onDelete: "restrict",
+        onUpdate: "no action",
+      }),
     examCode: text("exam_code").notNull(), // e.g. "TEN1"
     title: text("title"), // e.g. "Tentamen"
     credits: real("credits"),
@@ -141,34 +150,62 @@ export const coursePrerequisites = pgTable(
   {
     courseCode: text("course_code")
       .notNull()
-      .references(() => courses.code),
+      .references(() => courses.code, {
+        onDelete: "restrict",
+        onUpdate: "no action",
+      }),
     prerequisiteCourseCode: text("prerequisite_course_code")
       .notNull()
-      .references(() => courses.code),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+      .references(() => courses.code, {
+        onDelete: "restrict",
+        onUpdate: "no action",
+      }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
   },
   (table) => [
     primaryKey({
       columns: [table.courseCode, table.prerequisiteCourseCode],
     }),
+    index("course_prerequisites_prerequisite_course_code_idx").on(
+      table.prerequisiteCourseCode,
+    ),
   ],
 );
 
 export type InsertCoursePrerequisite = typeof coursePrerequisites.$inferInsert;
 export type SelectCoursePrerequisite = typeof coursePrerequisites.$inferSelect;
 
-export const courseExplore = pgTable("course_explore", {
-  courseCode: text("course_code")
-    .primaryKey()
-    .references(() => courses.code),
-  embedding: vector("embedding", { dimensions: 1536 }),
-  sourceHash: text("source_hash"),
-  searchVector: tsvector("search_vector"),
-  embeddingModel: text("embedding_model"),
-  embeddedAt: timestamp("embedded_at", { withTimezone: true }),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull(),
-});
+export const courseExplore = pgTable(
+  "course_explore",
+  {
+    courseCode: text("course_code")
+      .primaryKey()
+      .references(() => courses.code, {
+        onDelete: "cascade",
+        onUpdate: "no action",
+      }),
+    embedding: vector("embedding", { dimensions: 1536 }),
+    sourceHash: text("source_hash"),
+    searchVector: tsvector("search_vector"),
+    embeddingModel: text("embedding_model"),
+    embeddedAt: timestamp("embedded_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index("course_explore_search_vector_idx").using("gin", table.searchVector),
+    index("course_explore_embedding_idx").using(
+      "hnsw",
+      table.embedding.op("vector_cosine_ops"),
+    ),
+  ],
+);
 
 export type InsertCourseExplore = typeof courseExplore.$inferInsert;
 export type SelectCourseExplore = typeof courseExplore.$inferSelect;
@@ -178,13 +215,24 @@ export const userSavedCourses = pgTable(
   {
     userId: text("user_id")
       .notNull()
-      .references(() => users.id),
+      .references(() => users.id, {
+        onDelete: "cascade",
+        onUpdate: "no action",
+      }),
     courseCode: text("course_code")
       .notNull()
-      .references(() => courses.code),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+      .references(() => courses.code, {
+        onDelete: "restrict",
+        onUpdate: "no action",
+      }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
   },
-  (table) => [primaryKey({ columns: [table.userId, table.courseCode] })],
+  (table) => [
+    primaryKey({ columns: [table.userId, table.courseCode] }),
+    index("user_saved_courses_course_code_idx").on(table.courseCode),
+  ],
 );
 
 export type InsertUserSavedCourse = typeof userSavedCourses.$inferInsert;
@@ -195,10 +243,16 @@ export const userTakenCourses = pgTable(
   {
     userId: text("user_id")
       .notNull()
-      .references(() => users.id),
+      .references(() => users.id, {
+        onDelete: "cascade",
+        onUpdate: "no action",
+      }),
     courseCode: text("course_code")
       .notNull()
-      .references(() => courses.code),
+      .references(() => courses.code, {
+        onDelete: "restrict",
+        onUpdate: "no action",
+      }),
     attendancePeriods: text("attendance_periods"),
     attendanceYear: integer("attendance_year"),
     grade: text("grade"),
@@ -206,10 +260,17 @@ export const userTakenCourses = pgTable(
     transcriptImportedAt: timestamp("transcript_imported_at", {
       withTimezone: true,
     }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
   },
-  (table) => [primaryKey({ columns: [table.userId, table.courseCode] })],
+  (table) => [
+    primaryKey({ columns: [table.userId, table.courseCode] }),
+    index("user_taken_courses_course_code_idx").on(table.courseCode),
+  ],
 );
 
 export type InsertUserTakenCourse = typeof userTakenCourses.$inferInsert;
@@ -221,12 +282,18 @@ export const collections = pgTable(
     id: text("id").primaryKey(),
     userId: text("user_id")
       .notNull()
-      .references(() => users.id),
+      .references(() => users.id, {
+        onDelete: "cascade",
+        onUpdate: "no action",
+      }),
     name: text("name").notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
   },
   (table) => [
     unique("collections_id_user_id_unique").on(table.id, table.userId),
+    index("collections_user_id_idx").on(table.userId),
   ],
 );
 
@@ -240,7 +307,9 @@ export const collectionCourses = pgTable(
     collectionUserId: text("collection_user_id").notNull(),
     courseCode: text("course_code").notNull(),
     position: integer("position").notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
   },
   (table) => [
     primaryKey({ columns: [table.collectionId, table.courseCode] }),
@@ -248,13 +317,21 @@ export const collectionCourses = pgTable(
       name: "collection_courses_collection_owner_fk",
       columns: [table.collectionId, table.collectionUserId],
       foreignColumns: [collections.id, collections.userId],
-    }),
+    }).onDelete("cascade"),
     foreignKey({
       name: "collection_courses_saved_course_fk",
       columns: [table.collectionUserId, table.courseCode],
       foreignColumns: [userSavedCourses.userId, userSavedCourses.courseCode],
-    }),
+    }).onDelete("cascade"),
     check("position_nonnegative", sql`${table.position} >= 0`),
+    index("collection_courses_collection_owner_idx").on(
+      table.collectionId,
+      table.collectionUserId,
+    ),
+    index("collection_courses_saved_course_idx").on(
+      table.collectionUserId,
+      table.courseCode,
+    ),
   ],
 );
 
@@ -264,11 +341,18 @@ export type SelectCollectionCourse = typeof collectionCourses.$inferSelect;
 export const usersGraphNodes = pgTable("users_graph_nodes", {
   userId: text("user_id")
     .primaryKey()
-    .references(() => users.id),
+    .references(() => users.id, {
+      onDelete: "cascade",
+      onUpdate: "no action",
+    }),
   x: doublePrecision("x").notNull(),
   y: doublePrecision("y").notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
 });
 
 export type InsertUsersGraphNode = typeof usersGraphNodes.$inferInsert;
@@ -279,17 +363,28 @@ export const usersGraphBackboneEdges = pgTable(
   {
     nodeUserId: text("node_user_id")
       .notNull()
-      .references(() => usersGraphNodes.userId),
+      .references(() => usersGraphNodes.userId, {
+        onDelete: "cascade",
+        onUpdate: "no action",
+      }),
     anchorUserId: text("anchor_user_id")
       .notNull()
-      .references(() => usersGraphNodes.userId),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+      .references(() => usersGraphNodes.userId, {
+        onDelete: "cascade",
+        onUpdate: "no action",
+      }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
   },
   (table) => [
     primaryKey({ columns: [table.nodeUserId, table.anchorUserId] }),
     check(
       "no_self_backbone_edge",
       sql`${table.nodeUserId} <> ${table.anchorUserId}`,
+    ),
+    index("users_graph_backbone_edges_anchor_user_id_idx").on(
+      table.anchorUserId,
     ),
   ],
 );
@@ -302,12 +397,19 @@ export type SelectUsersGraphBackboneEdge =
 export const usersNodeProfiles = pgTable("users_node_profiles", {
   userId: text("user_id")
     .primaryKey()
-    .references(() => users.id),
-  color: text("color").notNull(),
-  style: nodeStyle("style").notNull(),
-  signalStyle: nodeSignalStyle("signal_style").notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull(),
+    .references(() => users.id, {
+      onDelete: "cascade",
+      onUpdate: "no action",
+    }),
+  color: text("color").default("default").notNull(),
+  style: nodeStyle("style").default("default").notNull(),
+  signalStyle: nodeSignalStyle("signal_style").default("default").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
 });
 
 export type InsertUsersNodeProfile = typeof usersNodeProfiles.$inferInsert;
@@ -335,49 +437,111 @@ export const user_favorites = pgTable(
 
 // --- REVIEW / FORUM TABLES ----------------
 // table for reviews that references users (posters) and courses (reviewed)
-export const reviews = pgTable("reviews", {
-  id: text("id").primaryKey(), // review id
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }), // foreign key to users table
-  courseCode: text("course_code")
-    .notNull()
-    .references(() => courses.code, { onDelete: "cascade" }), // foreign key to courses table
+const reviewsTable = pgTable(
+  "reviews",
+  {
+    id: text("id").primaryKey(), // review id
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }), // foreign key to users table
+    courseCode: text("course_code")
+      .notNull()
+      .references(() => courses.code, { onDelete: "cascade" }), // foreign key to courses table
 
-  // scores
-  examinationMethods: integer("examination_methods").notNull().default(0), // 1-5
-  theoreticalVsApplied: integer("theoretical_vs_applied").notNull().default(0), // 1-5
-  workload: integer("workload").notNull().default(0), // 1-5
-  learningExperience: integer("learning_experience").notNull().default(0), // 1-5
+    // scores
+    examinationMethods: integer("examination_methods").notNull().default(0), // 1-5
+    theoreticalVsApplied: integer("theoretical_vs_applied")
+      .notNull()
+      .default(0), // 1-5
+    workload: integer("workload").notNull().default(0), // 1-5
+    learningExperience: integer("learning_experience").notNull().default(0), // 1-5
 
-  wouldRecommend: boolean("would_recommend").notNull().default(false),
-  content: text("content").notNull(),
+    wouldRecommend: boolean("would_recommend").notNull().default(false),
+    content: text("content").notNull(),
 
-  // timestamps
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-});
-export type InsertReview = typeof reviews.$inferInsert;
-export type SelectReview = typeof reviews.$inferSelect;
+    // Target fields coexist with the legacy fields until the review domain
+    // switches. Defaults keep legacy inserts type-compatible; the A2 migration
+    // installs a trigger that mirrors actual legacy values into these columns.
+    examinationDistribution: jsonb("examination_distribution"),
+    approachTheoryPercent: integer("approach_theory_percent"),
+    workloadScore: integer("workload_score").default(1).notNull(),
+    learningScore: integer("learning_score").default(1).notNull(),
+    happyTook: boolean("happy_took").default(false).notNull(),
+    message: text("message"),
+
+    // timestamps
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    check(
+      "approach_theory_percent_range",
+      sql`${table.approachTheoryPercent} between 0 and 100`,
+    ),
+    check("workload_score_range", sql`${table.workloadScore} between 1 and 10`),
+    check("learning_score_range", sql`${table.learningScore} between 1 and 10`),
+    index("reviews_user_id_idx").on(table.userId),
+    index("reviews_course_code_idx").on(table.courseCode),
+  ],
+);
+
+type FullSelectReview = typeof reviewsTable.$inferSelect;
+type LegacyReviewKey =
+  | "id"
+  | "userId"
+  | "courseCode"
+  | "examinationMethods"
+  | "theoreticalVsApplied"
+  | "workload"
+  | "learningExperience"
+  | "wouldRecommend"
+  | "content"
+  | "createdAt"
+  | "updatedAt";
+
+// Temporary compatibility: current review services infer their read model from
+// this property. B removes the override when it switches to the target fields.
+export const reviews = reviewsTable as Omit<
+  typeof reviewsTable,
+  "$inferSelect"
+> & {
+  $inferSelect: Pick<FullSelectReview, LegacyReviewKey>;
+};
+
+export type InsertReview = typeof reviewsTable.$inferInsert;
+export type SelectReview = Pick<FullSelectReview, LegacyReviewKey>;
 
 export const reviewVotes = pgTable(
   "review_votes",
   {
     voterUserId: text("voter_user_id")
       .notNull()
-      .references(() => users.id),
+      .references(() => users.id, {
+        onDelete: "cascade",
+        onUpdate: "no action",
+      }),
     reviewId: text("review_id")
       .notNull()
-      .references(() => reviews.id),
+      .references(() => reviews.id, {
+        onDelete: "cascade",
+        onUpdate: "no action",
+      }),
     voteType: reviewVoteType("vote_type").notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
   },
-  (table) => [primaryKey({ columns: [table.voterUserId, table.reviewId] })],
+  (table) => [
+    primaryKey({ columns: [table.voterUserId, table.reviewId] }),
+    index("review_votes_review_id_idx").on(table.reviewId),
+  ],
 );
 
 export type InsertReviewVote = typeof reviewVotes.$inferInsert;
