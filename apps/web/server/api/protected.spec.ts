@@ -74,6 +74,13 @@ describe("protected procedures", () => {
           courseCode: "DD2421",
         }),
     ],
+    [
+      "transcript.confirm",
+      () =>
+        caller(null).transcript.confirm({
+          courses: [{ courseCode: "DD2421", grade: "A" }],
+        }),
+    ],
   ])("rejects visitors on %s", async (_name, call) => {
     await expect(call()).rejects.toMatchObject({ code: "UNAUTHORIZED" });
   });
