@@ -16,6 +16,7 @@ import {
   text,
   timestamp,
   unique,
+  uniqueIndex,
   vector,
 } from "drizzle-orm/pg-core";
 
@@ -98,6 +99,9 @@ export const courseRounds = pgTable(
   "course_rounds",
   {
     id: serial("id").primaryKey(),
+    // Expand phase: populated from KOPPS round.ladokUID. The contract migration
+    // may make this required only after a verified source-backed round rebuild.
+    roundCode: text("round_code"),
     courseCode: text("course_code")
       .notNull()
       .references(() => courses.code, {
@@ -116,6 +120,9 @@ export const courseRounds = pgTable(
   },
   (table) => [
     check("study_pace_range", sql`${table.studyPace} between 1 and 100`),
+    uniqueIndex("course_rounds_course_code_round_code_unique")
+      .on(table.courseCode, table.roundCode)
+      .where(sql`${table.roundCode} is not null`),
     index("course_rounds_course_code_idx").on(table.courseCode),
   ],
 );
@@ -446,7 +453,10 @@ const reviewsTable = pgTable(
       .references(() => users.id, { onDelete: "cascade" }), // foreign key to users table
     courseCode: text("course_code")
       .notNull()
-      .references(() => courses.code, { onDelete: "cascade" }), // foreign key to courses table
+      .references(() => courses.code, {
+        onDelete: "restrict",
+        onUpdate: "no action",
+      }), // foreign key to courses table
 
     // scores
     examinationMethods: integer("examination_methods").notNull().default(0), // 1-5
@@ -460,13 +470,13 @@ const reviewsTable = pgTable(
     content: text("content").notNull(),
 
     // Target fields coexist with the legacy fields until the review domain
-    // switches. Defaults keep legacy inserts type-compatible; the A2 migration
-    // installs a trigger that mirrors actual legacy values into these columns.
+    // switches. Temporary NULL defaults let the compatibility trigger identify
+    // omitted target values while keeping legacy inserts type-compatible.
     examinationDistribution: jsonb("examination_distribution"),
     approachTheoryPercent: integer("approach_theory_percent"),
-    workloadScore: integer("workload_score").default(1).notNull(),
-    learningScore: integer("learning_score").default(1).notNull(),
-    happyTook: boolean("happy_took").default(false).notNull(),
+    workloadScore: integer("workload_score").default(sql`NULL`).notNull(),
+    learningScore: integer("learning_score").default(sql`NULL`).notNull(),
+    happyTook: boolean("happy_took").default(sql`NULL`).notNull(),
     message: text("message"),
 
     // timestamps
