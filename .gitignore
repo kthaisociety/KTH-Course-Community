@@ -85,3 +85,7 @@ scripts/api-profile*.json
 # LOCAL AUDIT REPORTS
 # =================================
 AUDIT_REPORT.md
+
+# Real Ladok transcripts — contain personnummer. Never commit.
+transcript_pdfs/
+*.pdf
