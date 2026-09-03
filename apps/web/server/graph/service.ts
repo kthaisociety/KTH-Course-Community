@@ -5,6 +5,7 @@ import {
   DEFAULT_NODE_SIGNAL_STYLE,
   DEFAULT_NODE_STYLE,
   pickNodeColor,
+  type WorldPosition,
 } from "./placement";
 import type { BackboneEdge, GraphNode, NeighbourNode } from "./repository";
 import * as graphRepo from "./repository";
@@ -65,6 +66,11 @@ export async function joinCommunityGraph(userId: string): Promise<GraphNode> {
  * The bounded neighbourhood around an app user's own node: the nearby nodes,
  * the backbone edges spanning exactly that set, and the app user's effective
  * personalization tier.
+ *
+ * `nodes` deliberately contains the viewer's own node — it is the one they came
+ * to find, and it needs the same appearance every other node has. `viewer`
+ * repeats its position because the client's projection is expressed relative to
+ * it, so it should not have to search the set for itself.
  *
  * World units come back untouched. Projecting them into screen pixels, and any
  * responsive keep-out adjustment, happens on the client and never returns here.
@@ -129,7 +135,7 @@ export async function getEffectiveTier(
  */
 async function findAnchors(
   userId: string,
-  position: { x: number; y: number },
+  position: WorldPosition,
 ): Promise<NeighbourNode[]> {
   const anchorCount = chooseAnchorCount(userId);
   const candidates = await graphRepo.findNearestNodes(

@@ -212,6 +212,22 @@ describe("getNeighbourhood", () => {
     );
   });
 
+  it("includes the viewer's own node in the set, so they can find their dot", async () => {
+    vi.mocked(graphRepo.findNode).mockResolvedValue({
+      userId: "viewer",
+      x: 100,
+      y: 100,
+    });
+    vi.mocked(graphRepo.findNearestNodes).mockResolvedValue([
+      viewer,
+      neighbour("a", 1, 1),
+    ]);
+
+    const neighbourhood = await getNeighbourhood("viewer");
+
+    expect(neighbourhood.nodes.map((node) => node.userId)).toContain("viewer");
+  });
+
   it("returns only the backbone edges spanning the returned set", async () => {
     const inside = [viewer, neighbour("a", 1, 1), neighbour("b", 2, 2)];
     vi.mocked(graphRepo.findNode).mockResolvedValue({
