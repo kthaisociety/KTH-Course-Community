@@ -167,7 +167,7 @@ function SidebarContent({ details }: { details: CourseDetails }) {
         <Separator />
         <div
           className="prose prose-sm mt-0 max-w-none text-foreground dark:prose-invert"
-          /** biome-ignore lint/security/noDangerouslySetInnerHtml: sanitized with DOMPurify */
+          /** biome-ignore lint/security/noDangerouslySetInnerHtml: sanitized HTML */
           dangerouslySetInnerHTML={{
             __html: sanitizeCourseHtml(details.content),
           }}
@@ -179,7 +179,7 @@ function SidebarContent({ details }: { details: CourseDetails }) {
         <Separator />
         <div
           className="prose prose-sm mt-0 max-w-none text-foreground dark:prose-invert"
-          /** biome-ignore lint/security/noDangerouslySetInnerHtml: sanitized with DOMPurify */
+          /** biome-ignore lint/security/noDangerouslySetInnerHtml: sanitized HTML */
           dangerouslySetInnerHTML={{
             __html: sanitizeCourseHtml(details.goals),
           }}

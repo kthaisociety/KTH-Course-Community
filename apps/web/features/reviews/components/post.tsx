@@ -1,6 +1,5 @@
 "use client";
 import parse from "html-react-parser";
-import DOMPurify from "isomorphic-dompurify";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,6 +10,7 @@ import {
   CardHeader,
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { sanitizeHtml } from "@/lib/sanitize-html";
 import { cn } from "@/lib/utils";
 import { useReviewVotes } from "../hooks/use-review-votes";
 import PostActionBar from "./post-action-bar";
@@ -187,7 +187,7 @@ export function Post(props: Readonly<PostProps>) {
 
       <CardContent>
         <div className="prose prose-sm max-w-none md:prose-base">
-          <div>{parse(DOMPurify.sanitize(displayContent))}</div>
+          <div>{parse(sanitizeHtml(displayContent))}</div>
           {isLong && (
             <Button
               variant="link"

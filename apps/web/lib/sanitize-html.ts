@@ -1,6 +1,12 @@
-import DOMPurify from "isomorphic-dompurify";
+import xss from "xss";
+
+export function sanitizeHtml(html: string): string {
+  return xss(html, {
+    stripIgnoreTag: true,
+    stripIgnoreTagBody: ["script", "style"],
+  });
+}
 
 export function sanitizeCourseHtml(html: string | null | undefined): string {
-  const normalized = html?.trim() || "<p>—</p>";
-  return DOMPurify.sanitize(normalized);
+  return sanitizeHtml(html?.trim() || "<p>—</p>");
 }

@@ -98,7 +98,7 @@ export async function Course({
             <SectionTitle id="course-goals">Goals</SectionTitle>
             <div
               className="prose prose-sm mt-3 max-w-none text-foreground dark:prose-invert"
-              /** biome-ignore lint/security/noDangerouslySetInnerHtml: sanitized with DOMPurify */
+              /** biome-ignore lint/security/noDangerouslySetInnerHtml: sanitized HTML */
               dangerouslySetInnerHTML={{
                 __html: sanitizeCourseHtml(details.goals),
               }}
@@ -109,7 +109,7 @@ export async function Course({
             <SectionTitle id="course-content">Course content</SectionTitle>
             <div
               className="prose prose-sm mt-3 max-w-none text-foreground dark:prose-invert"
-              /** biome-ignore lint/security/noDangerouslySetInnerHtml: sanitized with DOMPurify */
+              /** biome-ignore lint/security/noDangerouslySetInnerHtml: sanitized HTML */
               dangerouslySetInnerHTML={{
                 __html: sanitizeCourseHtml(details.content),
               }}

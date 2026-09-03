@@ -4,7 +4,6 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: "standalone",
-  serverExternalPackages: ["jsdom", "isomorphic-dompurify"],
   outputFileTracingRoot: path.join(
     path.dirname(fileURLToPath(import.meta.url)),
     "../..",
