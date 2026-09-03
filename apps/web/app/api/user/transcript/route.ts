@@ -4,7 +4,7 @@ import { extractTranscriptText } from "@/server/ingest/transcript/pdf-text";
 import { buildTranscriptProposal } from "@/server/ingest/transcript/service";
 import {
   capRequestBody,
-  TranscriptTooLargeError,
+  isTranscriptTooLarge,
 } from "@/server/ingest/transcript/upload";
 
 export const runtime = "nodejs";
@@ -35,7 +35,7 @@ export async function POST(request: Request) {
   try {
     formData = await capRequestBody(request, MAX_BYTES).formData();
   } catch (error) {
-    if (error instanceof TranscriptTooLargeError) {
+    if (isTranscriptTooLarge(error)) {
       return Response.json({ message: TOO_LARGE }, { status: 413 });
     }
     return Response.json(

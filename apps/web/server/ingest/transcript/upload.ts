@@ -8,6 +8,19 @@ export class TranscriptTooLargeError extends Error {
 }
 
 /**
+ * Whether reading a capped body failed because it ran past the cap.
+ *
+ * The body readers wrap a mid-stream error in one of their own on some
+ * runtimes, so the cause is worth checking as well as the error itself.
+ */
+export function isTranscriptTooLarge(error: unknown): boolean {
+  return (
+    error instanceof TranscriptTooLargeError ||
+    (error instanceof Error && error.cause instanceof TranscriptTooLargeError)
+  );
+}
+
+/**
  * Re-wraps a request so that reading its body fails past `maxBytes`.
  *
  * `request.formData()` buffers the whole body before anything can look at the

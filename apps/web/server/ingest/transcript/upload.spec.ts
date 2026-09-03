@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { capRequestBody, TranscriptTooLargeError } from "./upload";
+import {
+  capRequestBody,
+  isTranscriptTooLarge,
+  TranscriptTooLargeError,
+} from "./upload";
 
 function streamingRequest(chunks: number[]): Request {
   const body = new ReadableStream<Uint8Array>({
@@ -30,6 +34,16 @@ describe("capRequestBody", () => {
     await expect(capped.arrayBuffer()).rejects.toBeInstanceOf(
       TranscriptTooLargeError,
     );
+  });
+
+  it("recognises the cap failure through a wrapping error", () => {
+    const wrapped = new TypeError("terminated", {
+      cause: new TranscriptTooLargeError(),
+    });
+
+    expect(isTranscriptTooLarge(new TranscriptTooLargeError())).toBe(true);
+    expect(isTranscriptTooLarge(wrapped)).toBe(true);
+    expect(isTranscriptTooLarge(new Error("something else"))).toBe(false);
   });
 
   it("does not trust a Content-Length that undercounts the body", async () => {
