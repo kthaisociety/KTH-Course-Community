@@ -83,17 +83,25 @@ export function Landing() {
   }
 
   return (
-    <div className="@container cc-theme min-h-dvh bg-cc-pg text-cc-ink text-sm">
+    <div className="@container cc-theme min-h-dvh bg-cc-pg text-cc-ink text-sm @lg:h-dvh @lg:overflow-y-auto">
       <header className="relative z-10 flex h-[66px] items-center justify-between gap-5 border-cc-rule border-b bg-cc-pg px-4 @lg:px-7">
         <Link
           href="/"
           className="flex items-center gap-2.5 text-cc-ink no-underline"
         >
-          {/* biome-ignore lint/performance/noImgElement: a fixed 34px mark; next/image adds a loader for nothing. */}
+          {/* biome-ignore lint/performance/noImgElement: a fixed 26px mark; next/image adds a loader for nothing. */}
+          <img
+            src="/ais-symbol-blue.png"
+            alt=""
+            data-testid="landing-mark-light"
+            className="size-[26px] shrink-0 object-contain dark:hidden"
+          />
+          {/* biome-ignore lint/performance/noImgElement: a fixed 26px mark; next/image adds a loader for nothing. */}
           <img
             src="/ais-symbol-white.png"
             alt=""
-            className="size-[22px] shrink-0 rounded-[9px] bg-cc-rail object-contain p-1.5 box-content"
+            data-testid="landing-mark-dark"
+            className="hidden size-[26px] shrink-0 object-contain dark:block"
           />
           <span aria-hidden className="h-[28px] w-px bg-cc-rule3" />
           <span className="font-semibold text-[15px] leading-[1.15]">
@@ -132,7 +140,7 @@ export function Landing() {
               <button
                 type="button"
                 onClick={() => setAuthReason("log-in")}
-                className="flex h-[34px] items-center rounded-[8px] px-[13px] font-medium text-[13px] text-cc-brand hover:bg-cc-pill"
+                className="flex h-[34px] items-center rounded-[8px] border border-transparent bg-transparent px-[13px] font-medium text-[13px] text-cc-brand hover:bg-cc-pill"
               >
                 Log in
               </button>
