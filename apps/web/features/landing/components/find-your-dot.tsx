@@ -96,6 +96,9 @@ export function FindYourDot({ open, status, onClose, onRetry }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={(next) => !next && close()}>
+      {/* The scrim and the panel shadow are the artboard's own literals and have
+          no token in `cc-theme.css`; `AuthReasonDialog` already ships this exact
+          scrim, so the two dialogs match rather than each inventing a value. */}
       <DialogContent
         showCloseButton={false}
         overlayClassName={cn(

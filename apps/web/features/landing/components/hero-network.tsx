@@ -44,8 +44,19 @@ import {
  * coordinates — is thrown away on the next resize. None of it is ever sent back.
  */
 
-/** How many dots the ambient field draws inside the frame. */
+/**
+ * How many dots the ambient field draws inside the frame.
+ *
+ * A phone gets a much sparser field, as the design's own Mobile Preview does —
+ * it embeds this page with `account-count="14"` against the desktop default.
+ */
 const AMBIENT_COUNT = 50;
+const AMBIENT_COUNT_NARROW = 14;
+const NARROW_WIDTH = 500;
+
+function ambientCount(width: number) {
+  return width < NARROW_WIDTH ? AMBIENT_COUNT_NARROW : AMBIENT_COUNT;
+}
 
 type Signal = {
   edge: FieldEdge;
@@ -168,10 +179,21 @@ function layout(scene: Scene) {
     w: scene.w,
     h: scene.h,
     rects: scene.rects,
-    count: AMBIENT_COUNT,
+    count: ambientCount(scene.w),
   });
   scene.signals = [];
   scene.clearCursor = 0;
+  refreshView(scene);
+}
+
+/**
+ * Re-derive where the real neighbourhood lands, for the frame as it is now.
+ *
+ * Called on every relayout and whenever the read answers, so the projection is
+ * always a function of the current frame — which is why it can be thrown away
+ * and why none of it is ever persisted.
+ */
+function refreshView(scene: Scene) {
   scene.view = scene.neighbourhood
     ? projectNeighbourhood({
         neighbourhood: scene.neighbourhood,
@@ -555,6 +577,19 @@ export function HeroNetwork({ neighbourhood }: Props) {
     const onWindowResize = () => resize(scene);
     if (!observer) window.addEventListener("resize", onWindowResize);
 
+    // A hidden tab has nothing to animate for. Browsers throttle rAF there, but
+    // stopping outright means no work at all rather than less of it.
+    const onVisibility = () => {
+      if (document.hidden) {
+        cancelAnimationFrame(scene.raf);
+        scene.raf = 0;
+      } else if (!scene.raf) {
+        scene.last = performance.now();
+        scene.raf = requestAnimationFrame(tick);
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+
     const media =
       typeof window.matchMedia === "function"
         ? window.matchMedia("(prefers-reduced-motion: reduce)")
@@ -572,6 +607,7 @@ export function HeroNetwork({ neighbourhood }: Props) {
     return () => {
       cancelAnimationFrame(scene.raf);
       observer?.disconnect();
+      document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("resize", onWindowResize);
       media?.removeEventListener?.("change", onMedia);
       sceneRef.current = null;
@@ -582,14 +618,7 @@ export function HeroNetwork({ neighbourhood }: Props) {
     const scene = sceneRef.current;
     if (!scene) return;
     scene.neighbourhood = neighbourhood;
-    scene.view = neighbourhood
-      ? projectNeighbourhood({
-          neighbourhood,
-          width: scene.w,
-          height: scene.h,
-          keepOut: scene.rects,
-        })
-      : null;
+    refreshView(scene);
   }, [neighbourhood]);
 
   return (
