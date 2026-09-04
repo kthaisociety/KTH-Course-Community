@@ -40,6 +40,12 @@
   --successFg: #ffffff;
   --danger: #b3261e;
   --dangerFg: #ffffff;
+  --nodeAurora: #2f9e8e;
+  --nodeEmber: #c96a4a;
+  --nodeFrost: #2f5fa8;
+  --nodeMoss: #4a7c2f;
+  --nodeSlate: #57646f;
+  --nodeViolet: #6a4ea8;
 }
 
 [data-cc-theme="dark"] {
@@ -71,6 +77,12 @@
   --successFg: #0c2417;
   --danger: #ff8a80;
   --dangerFg: #2b0a08;
+  --nodeAurora: #5fd8c4;
+  --nodeEmber: #f2946f;
+  --nodeFrost: #8ec2ff;
+  --nodeMoss: #a5d47c;
+  --nodeSlate: #b3c1d0;
+  --nodeViolet: #bda2f0;
 }
 
 /* Colour changes cross-fade; nothing else about a page animates from here. */
