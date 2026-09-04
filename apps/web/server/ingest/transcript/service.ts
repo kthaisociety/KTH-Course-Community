@@ -91,39 +91,33 @@ export type ConfirmedTranscriptRow = Omit<
  * client from confirming a code that was never proposed. Only catalogue courses
  * become taken courses.
  *
- * The write itself belongs to `server/taken` (#64). Its upsert is what makes a
- * second import of the same transcript update rather than duplicate; this
- * function's part is to send each course code exactly once.
+ * The write itself belongs to `server/taken`. Its upsert is what makes a second
+ * import of the same transcript update rather than duplicate, and it collapses
+ * a course code repeated inside one batch; neither is re-implemented here.
  */
 export async function confirmTranscriptImport(
   userId: string,
   rows: ConfirmedTranscriptRow[],
   importedAt: Date,
 ): Promise<{ inserted: number; updated: number }> {
-  const byCode = new Map<string, ConfirmedTranscriptRow>();
-  for (const row of rows) {
-    const courseCode = row.courseCode.trim().toUpperCase();
-    if (!byCode.has(courseCode)) byCode.set(courseCode, { ...row, courseCode });
-  }
-  if (byCode.size === 0) return { inserted: 0, updated: 0 };
+  const inputs: TakenCourseInput[] = rows.map((row) => ({
+    courseCode: row.courseCode.trim().toUpperCase(),
+    grade: row.grade ?? null,
+    earnedCredits: row.earnedCredits ?? null,
+    attendanceYear: row.attendanceYear ?? null,
+  }));
+  if (inputs.length === 0) return { inserted: 0, updated: 0 };
 
-  const codes = [...byCode.keys()];
+  const codes = inputs.map((input) => input.courseCode);
   const known = new Set(
     (await getSummariesByCodes(codes)).map((summary) => summary.courseCode),
   );
-  const missing = codes.filter((code) => !known.has(code));
+  const missing = [...new Set(codes.filter((code) => !known.has(code)))];
   if (missing.length > 0) {
     throw new NotFoundError(
       `No course in the catalogue matches ${missing.join(", ")}.`,
     );
   }
-
-  const inputs: TakenCourseInput[] = [...byCode.values()].map((row) => ({
-    courseCode: row.courseCode,
-    grade: row.grade ?? null,
-    earnedCredits: row.earnedCredits ?? null,
-    attendanceYear: row.attendanceYear ?? null,
-  }));
 
   return recordTakenCourses(userId, inputs, {
     source: "transcript",

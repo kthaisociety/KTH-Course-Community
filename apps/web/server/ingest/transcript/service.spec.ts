@@ -185,7 +185,7 @@ describe("confirmTranscriptImport", () => {
     }
   });
 
-  it("sends one row when the same course is confirmed twice in one import", async () => {
+  it("normalises a course code before checking it against the catalogue", async () => {
     vi.mocked(courseService.getSummariesByCodes).mockResolvedValue(
       catalogue("SF1625"),
     );
@@ -196,10 +196,7 @@ describe("confirmTranscriptImport", () => {
 
     await confirmTranscriptImport(
       "user-1",
-      [
-        { courseCode: "SF1625", grade: "A" },
-        { courseCode: "SF1625", grade: "C" },
-      ],
+      [{ courseCode: " sf1625 ", grade: "A" }],
       importedAt,
     );
 
