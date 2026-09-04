@@ -46,8 +46,9 @@ _Avoid_: exam type, assessment method, moment
 **Course prerequisite**:
 A directed edge from a course to one it requires, extracted from the source
 prose. It cannot express AND/OR logic, so it never replaces **Eligibility** —
-extraction narrows, it does not decide.
-_Today_: no table. Closed by `course_prerequisites`.
+extraction narrows, it does not decide. A course with no extracted edges is not
+a course with no prerequisites: nothing in `server/` writes the table yet, so
+absence of edges says nothing either way.
 _Avoid_: requirement, dependency, eligibility
 
 **Eligibility**:

@@ -93,6 +93,19 @@ function takenPillStyle(c: CourseCardModel): CSSProperties {
   } as CSSProperties;
 }
 
+/** Shared by the pill's two forms, so they cannot drift apart. */
+function TakenPillBody({ c }: { c: CourseCardModel }) {
+  return (
+    <>
+      <CheckCircleIcon fill={c.takenFill} />
+      <span className="tabular-nums">{c.statTaken}</span>
+    </>
+  );
+}
+
+/** Marks the picker's own subtree, so a blur inside it is not a blur away. */
+const PICKER_MARKER = "data-collection-picker";
+
 export function CourseCard({
   c,
   geo,
@@ -152,8 +165,9 @@ export function CourseCard({
 
             <div className="relative z-10 flex-none">
               {/* Without `onTaken` the pill is a reading, not a control: the
-                  viewer has already marked the course, and unmarking it would
-                  discard the grade and credits recorded beside it. */}
+                  viewer has already marked the course, and unmarking it here
+                  would discard the grade and credits recorded beside the row
+                  without ever showing them. */}
               {c.onTaken ? (
                 <button
                   type="button"
@@ -166,8 +180,7 @@ export function CourseCard({
                   className={`${TAKEN_PILL} cursor-pointer hover:bg-[var(--taken-hover)]`}
                   style={takenPillStyle(c)}
                 >
-                  <CheckCircleIcon fill={c.takenFill} />
-                  <span className="tabular-nums">{c.statTaken}</span>
+                  <TakenPillBody c={c} />
                 </button>
               ) : (
                 <span
@@ -175,8 +188,7 @@ export function CourseCard({
                   className={TAKEN_PILL}
                   style={takenPillStyle(c)}
                 >
-                  <CheckCircleIcon fill={c.takenFill} />
-                  <span className="tabular-nums">{c.statTaken}</span>
+                  <TakenPillBody c={c} />
                 </span>
               )}
 
@@ -226,7 +238,10 @@ export function CourseCard({
                 Prerequisites
               </h4>
               {c.hasPrereq ? (
-                <div className="flex h-5 flex-nowrap gap-[5px] overflow-hidden">
+                <div
+                  title={c.prereq}
+                  className="flex h-5 flex-nowrap gap-[5px] overflow-hidden"
+                >
                   {c.prereqCourses.map((prerequisite) => (
                     <span
                       key={prerequisite.code}
@@ -336,6 +351,7 @@ export function CourseCard({
 
               {c.pickerOpen ? (
                 <div
+                  {...{ [PICKER_MARKER]: "" }}
                   className="absolute left-0 z-30 box-border w-[266px] rounded-[10px] border border-cc-rule2 bg-cc-surface p-[5px] shadow-[0_8px_24px_rgba(20,30,45,0.14)]"
                   style={pickerAbove ? { bottom: "38px" } : { top: "38px" }}
                 >
@@ -459,16 +475,13 @@ export function CourseCard({
                 label="Workload"
                 value={c.workload}
                 width={c.wlW}
-                // The design's amber. `cc-theme.css` carries no palette token
-                // for it — `--warnBtn` is only amber in dark — and the two bars
-                // have to stay distinguishable in both themes.
-                fill="#dfa53c"
+                barClass="bg-cc-score-workload"
               />
               <ScoreBar
                 label="Learning"
                 value={c.learning}
                 width={c.leW}
-                fill="var(--cc-btn)"
+                barClass="bg-cc-btn"
               />
             </div>
           </div>
@@ -492,6 +505,10 @@ export function CourseCard({
  * it takes focus on mount — otherwise the control the reader just activated has
  * vanished and their next keystrokes go nowhere. Focusing once on mount is why
  * this is its own component rather than an `autoFocus` attribute.
+ *
+ * Blur commits the name, as the artboard does — but only a blur that leaves the
+ * picker. Blur fires before click, so committing on a blur *into* a collection
+ * row would create a collection and toggle that row from one click.
  */
 function NewCollectionField({
   value,
@@ -520,7 +537,11 @@ function NewCollectionField({
         value={value}
         aria-label="New collection name"
         onChange={(event) => onChange?.(event.target.value)}
-        onBlur={() => onCommit?.()}
+        onBlur={(event) => {
+          const next = event.relatedTarget as Element | null;
+          if (next?.closest(`[${PICKER_MARKER}]`)) return;
+          onCommit?.();
+        }}
         onKeyDown={(event) => {
           if (event.key === "Enter") onCommit?.();
           if (event.key === "Escape") onCancel?.();
@@ -540,12 +561,13 @@ function ScoreBar({
   label,
   value,
   width,
-  fill,
+  barClass,
 }: {
   label: string;
   value: string;
   width: string;
-  fill: string;
+  /** The bar's fill, as a token utility: the two bars must not share a colour. */
+  barClass: string;
 }) {
   return (
     <div>
@@ -554,7 +576,7 @@ function ScoreBar({
         <span className="font-semibold text-cc-ink">{value}</span>
       </div>
       <div className="h-[5px] overflow-hidden rounded-[3px] bg-cc-pill">
-        <div className="h-full" style={{ width, background: fill }} />
+        <div className={`h-full ${barClass}`} style={{ width }} />
       </div>
     </div>
   );

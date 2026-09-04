@@ -5,10 +5,12 @@ import { toast } from "sonner";
 import { type AuthReason, useMe } from "@/features/auth";
 import {
   useCollectionMutations,
-  useCollections,
   useMarkCourseTaken,
-  useTakenCourses,
 } from "@/features/courses/api/mutations";
+import {
+  useCollections,
+  useTakenCourses,
+} from "@/features/courses/api/queries";
 import {
   type CourseCardCourse,
   type CourseCardView,
@@ -165,16 +167,23 @@ export function useCourseCard({
       .catch(() => toast.error(`Could not mark ${courseCode} as taken.`));
   }
 
+  /** Abandons the draft: the name typed into a picker that is being closed. */
+  function clearDraft() {
+    setCreating(false);
+    setDraftName("");
+  }
+
   function onPicker() {
     setTakenPickerOpen(false);
     setPickerOpen((open) => !open);
-    setCreating(false);
+    // Both the name and the row it belongs to go, so reopening the picker does
+    // not offer a half-typed name from the last time it was open.
+    clearDraft();
   }
 
   function onDraftCommit() {
     const name = draftName.trim();
-    setCreating(false);
-    setDraftName("");
+    clearDraft();
     if (!name) return;
     create
       .mutateAsync({ name })
@@ -217,9 +226,6 @@ export function useCourseCard({
     draftName,
     onDraftChange: setDraftName,
     onDraftCommit,
-    onDraftCancel: () => {
-      setCreating(false);
-      setDraftName("");
-    },
+    onDraftCancel: clearDraft,
   };
 }

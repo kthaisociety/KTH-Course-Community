@@ -216,6 +216,32 @@ describe("CourseCard", () => {
       expect(onDraftCommit).toHaveBeenCalledOnce();
     });
 
+    // Blur fires before click. Committing on a blur into a collection row would
+    // create a collection and toggle that row from the one click.
+    it("does not commit the draft when focus moves within the picker", async () => {
+      const onDraftCommit = vi.fn();
+      const onClick = vi.fn();
+      render(
+        <CourseCard
+          signedIn
+          c={reviewedCard({
+            pickerOpen: true,
+            creating: true,
+            collections: [
+              { id: "k1", name: "Spring P3", fill: "none", tick: "", onClick },
+            ],
+          })}
+          geo={EXPANDED_CARD_GEOMETRY}
+          draftName="Spring"
+          onDraftCommit={onDraftCommit}
+        />,
+      );
+
+      await userEvent.click(screen.getByRole("button", { name: "Spring P3" }));
+      expect(onClick).toHaveBeenCalledOnce();
+      expect(onDraftCommit).not.toHaveBeenCalled();
+    });
+
     // Unmarking would discard the grade and credits stored beside the row, so
     // the pill stops being a control once the course is marked.
     it("stops offering the taken pill once the course is marked", () => {

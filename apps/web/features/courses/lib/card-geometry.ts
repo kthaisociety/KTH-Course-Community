@@ -94,6 +94,10 @@ export function courseCardGeometry(
     cardGap: px(8, 10, t),
     cardPad: px(14, 18, t),
     factsGap: px(10, 14, t),
+    // The Explore artboard interpolates this to 13px, its own `SAMPLE_GEO` to
+    // 12px. The Course Card artboard is the authority for the card's own
+    // geometry, so the ramp lands where its fixture does — and the card's markup
+    // fixes this padding anyway, so nothing reads it.
     reviewPad: `0 ${px(10, 12, late)}`,
     labelMax: px(0, 120, late),
     labelOpacity: late,
@@ -111,8 +115,14 @@ export function courseCardGeometry(
 }
 
 /**
- * The card at full width. What Saved and Collections render, since their lists
- * have no pane to yield to.
+ * The card at full width: the top of the ramp, and what a list with no pane to
+ * yield to starts from.
+ *
+ * Saved's own artboard passes a fully expanded geometry with a taller
+ * `summaryMax` (57px, three lines) than this ramp ever reaches, which #68's body
+ * — saying Saved pins the *collapsed* end — also disagrees with. Both ends are
+ * exported so #90 can settle that against its own artboard; nothing here
+ * forecloses either.
  */
 export const EXPANDED_CARD_GEOMETRY = courseCardGeometry(
   Number.POSITIVE_INFINITY,

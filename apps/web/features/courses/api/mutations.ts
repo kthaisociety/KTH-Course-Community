@@ -1,26 +1,14 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTRPC } from "@/trpc/client";
-
-/**
- * The viewer's collections, and the writes the card's picker makes against
- * them.
- *
- * All four procedures are `protectedProcedure`, so every hook here takes
- * `enabled` / is only called once a session exists: a visitor sees the design's
- * sign-up prompt instead, and never sends a request that would be rejected.
- */
-export function useCollections(enabled: boolean) {
-  const trpc = useTRPC();
-  return useQuery(trpc.collections.list.queryOptions(undefined, { enabled }));
-}
 
 /**
  * Creating a collection, and moving one course in or out of it.
  *
  * Each write refetches `collections.list`, which is what the picker's ticks are
- * drawn from — there is no second copy of that state to keep in step.
+ * drawn from — there is no second copy of that state to keep in step. All three
+ * procedures are protected, so the card only reaches them once a session exists.
  */
 export function useCollectionMutations() {
   const trpc = useTRPC();
@@ -40,12 +28,6 @@ export function useCollectionMutations() {
   );
 
   return { create, addCourse, removeCourse };
-}
-
-/** The viewer's taken courses. Protected, so it waits for a session. */
-export function useTakenCourses(enabled: boolean) {
-  const trpc = useTRPC();
-  return useQuery(trpc.taken.list.queryOptions(undefined, { enabled }));
 }
 
 /**

@@ -1,10 +1,10 @@
+export { useCollectionMutations, useMarkCourseTaken } from "./api/mutations";
 export {
-  useCollectionMutations,
   useCollections,
-  useMarkCourseTaken,
+  useCourseDetails,
+  useCourseSummaries,
   useTakenCourses,
-} from "./api/mutations";
-export { useCourseDetails, useCourseSummaries } from "./api/queries";
+} from "./api/queries";
 export { CourseCard } from "./components/course-card";
 export { CourseCardWithCharts } from "./components/course-card-with-charts";
 export { CourseDetailsSidebar } from "./components/course-details-sidebar";
