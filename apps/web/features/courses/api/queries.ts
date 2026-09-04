@@ -26,6 +26,24 @@ export function useCourseSummaries(courseCodes: string[], enabled = true) {
 }
 
 /**
+ * The card numbers for a whole page of courses in one call.
+ *
+ * `course.stats` answers for every code it is given, so a code missing from the
+ * result never happened — a screen still needs `NO_COURSE_STATS` for the window
+ * before the batch settles. Explore asks for its whole result set at once, which
+ * is what the procedure's 200-code cap is sized for.
+ */
+export function useCourseStats(courseCodes: string[]) {
+  const trpc = useTRPC();
+  return useQuery(
+    trpc.course.stats.queryOptions(
+      { courseCodes },
+      { enabled: courseCodes.length > 0 },
+    ),
+  );
+}
+
+/**
  * The viewer's collections, which the course card's picker ticks.
  *
  * `collections.list` is a `protectedProcedure`, so `enabled` waits for a
