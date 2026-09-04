@@ -129,7 +129,9 @@ export function ReviewCard({
   const detailId = useId();
 
   const { happyTook } = review;
-  const accent = happyTook ? "var(--cc-success)" : "var(--cc-danger)";
+  // The revised card uses the review-warning accent for an unhappy verdict;
+  // danger ink remains reserved for destructive actions such as downvoting.
+  const accent = happyTook ? "var(--cc-success)" : "var(--cc-warn-btn)";
   const excerpt = toExcerpt(review.message);
   const netScore = review.upvoteCount - review.downvoteCount;
   const isUpvoted = review.userVote === "up";
@@ -153,7 +155,7 @@ export function ReviewCard({
         <div
           className={cn(
             "flex items-center gap-[5px] font-semibold text-[11px]",
-            happyTook ? "text-cc-success" : "text-cc-danger",
+            happyTook ? "text-cc-success-ink" : "text-cc-danger-ink",
           )}
         >
           {happyTook ? (
@@ -207,7 +209,7 @@ export function ReviewCard({
                 aria-pressed={isDownvoted}
                 className="flex h-[22px] w-6 cursor-pointer items-center justify-center transition-transform"
                 style={{
-                  color: isDownvoted ? "var(--cc-danger)" : "var(--cc-dim)",
+                  color: isDownvoted ? "var(--cc-danger-ink)" : "var(--cc-dim)",
                   transform: isDownvoted ? "scale(1.2)" : undefined,
                 }}
                 onClick={() => onVote("down")}

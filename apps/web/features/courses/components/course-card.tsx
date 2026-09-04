@@ -330,7 +330,7 @@ export function CourseCard({
               type="button"
               onClick={c.onReview}
               title="Write a review"
-              className="box-border flex h-[34px] min-w-[40px] flex-[var(--card-review-flex)] cursor-pointer items-center justify-center gap-[7px] overflow-hidden rounded-[8px] bg-cc-warn-btn px-[10px] font-medium text-[13px] text-cc-warn-btn-fg hover:opacity-90"
+              className="box-border flex h-[34px] min-w-[40px] flex-[var(--card-review-flex)] cursor-pointer items-center justify-center gap-[7px] overflow-hidden rounded-[8px] bg-cc-btn px-[10px] font-medium text-[13px] text-cc-btn-fg hover:opacity-90"
             >
               <ReviewIcon />
               {geo.showLabel ? (
@@ -472,10 +472,9 @@ export function CourseCard({
                 onClick={c.onRemove}
                 aria-label={c.removeLabel}
                 title={c.removeLabel}
-                // The artboard turns this red on hover (#d9a08c border, #a4402a
-                // ink). `--cc-danger` is that colour in the palette now, and the
-                // border is derived from it rather than given a token of its own.
-                className="ml-auto flex size-[34px] flex-none cursor-pointer items-center justify-center rounded-[8px] border border-cc-rule3 bg-cc-surface text-cc-dim hover:border-cc-danger/55 hover:text-cc-danger"
+                // Removal is destructive in every state. The semantic danger
+                // token keeps its colour coherent across themes.
+                className="ml-auto flex size-[34px] flex-none cursor-pointer items-center justify-center rounded-[8px] border border-cc-rule3 bg-cc-surface text-cc-danger hover:border-cc-danger"
               >
                 <TrashIcon />
               </button>
@@ -825,8 +824,8 @@ function TrashIcon() {
 
 function ReviewCountIcon() {
   return (
-    <Svg size={14} className="flex-none">
-      <path d="M22 17a2 2 0 0 1-2 2H6l-4 4V4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z" />
+    <Svg size={14} strokeWidth={2} className="flex-none">
+      <path d="M21 12a8 8 0 0 1-8 8H4l2-3.2A8 8 0 1 1 21 12z" />
     </Svg>
   );
 }
