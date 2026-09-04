@@ -11,16 +11,23 @@
  * picker and the Collections page are two surfaces over the same seven
  * procedures; exporting the one hook that holds those writes is what stops the
  * second surface from growing a second write path with its own cache keys.
+ *
+ * `useTakenCourses` and `useMarkCourseTaken` are here for the same reason. The
+ * card reads the viewer's taken courses to tick its Taken control and writes
+ * one with `taken.add`; Taken courses (#92) reads the same list and builds its
+ * other three writes on the same invalidation, so both surfaces share one query
+ * key and one `taken.add`.
  */
 
 /** Every `collections` write. Shared by the card's picker and the page. */
-export { useCollectionMutations } from "./api/mutations";
+export { useCollectionMutations, useMarkCourseTaken } from "./api/mutations";
 export {
   type Collection,
   useCollections,
   useCourseDetails,
   useCourseStats,
   useCourseSummaries,
+  useTakenCourses,
 } from "./api/queries";
 /** The presentational card: takes a model, and measures nothing. */
 export { CourseCard } from "./components/course-card";

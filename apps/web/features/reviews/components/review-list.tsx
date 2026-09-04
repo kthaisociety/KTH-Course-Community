@@ -89,7 +89,7 @@ export function ReviewList({ courseCode, reviews }: Readonly<ReviewListProps>) {
           key={editing.id}
           courseCode={courseCode}
           editing={editing}
-          onEditingClose={() => setEditing(null)}
+          onClose={() => setEditing(null)}
         />
       ) : null}
 

@@ -31,10 +31,11 @@ export const WORDMARK = "Course Community";
  * their section's title.
  */
 const TITLES: ReadonlyArray<readonly [string, string]> = [
-  // The design's own five, less `taken`, whose route #92 still has to build.
+  // The design's own five.
   ["/search", "Explore courses"],
   ["/saved", "Saved courses"],
   ["/profile", "My Page"],
+  ["/taken", "Taken courses"],
   // Routes the design does not key, titled after the page's own heading.
   ["/collections", "Collections"],
   // #96 owns About and Contact if it wants different words.

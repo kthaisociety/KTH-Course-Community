@@ -110,15 +110,33 @@ type ReviewProps = {
    * independently — an id belonging to someone else is refused there.
    */
   editing?: EditableReview;
-  /** Required alongside `editing`: the parent owns the dialog's open state. */
-  onEditingClose?: () => void;
+  /**
+   * Renders no trigger button of its own, leaving the opening to `openOnLoad`.
+   *
+   * Taken courses (#92) walks a queue of unreviewed courses and mounts one of
+   * these per course; the row the reader clicked is the trigger, so a second
+   * "Add Review" button sitting under the list would open a dialog that is
+   * already open. `editing` implies this — a review being rewritten is opened
+   * from its own card.
+   */
+  triggerless?: boolean;
+  /**
+   * Called whenever the dialog closes, whether the review was published or
+   * abandoned.
+   *
+   * Required alongside `editing`, where the parent owns the open state, and
+   * alongside `triggerless`, where the parent is what decides whether anything
+   * opens next.
+   */
+  onClose?: () => void;
 };
 
 export function Review({
   courseCode,
   openOnLoad = false,
   editing,
-  onEditingClose,
+  triggerless = false,
+  onClose,
 }: Readonly<ReviewProps>) {
   const { userId, isLoading } = useMe();
   const addReview = useAddReview();
@@ -152,7 +170,7 @@ export function Review({
         : await addReview(courseCode, value);
       if (success) {
         setDialogIsOpen(false);
-        onEditingClose?.();
+        onClose?.();
         form.reset();
       }
     },
@@ -176,11 +194,11 @@ export function Review({
           setDialogIsOpen(open);
           if (!open) {
             form.reset();
-            onEditingClose?.();
+            onClose?.();
           }
         }}
       >
-        {editing ? null : (
+        {editing || triggerless ? null : (
           <DialogTrigger asChild>
             <Button className="flex-1" type="button" aria-label="Add review">
               Add Review

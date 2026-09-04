@@ -1,6 +1,14 @@
 "use client";
 
-import { Bookmark, BookOpen, LogOut, Search, UserRound, X } from "lucide-react";
+import {
+  Bookmark,
+  BookOpen,
+  CircleCheck,
+  LogOut,
+  Search,
+  UserRound,
+  X,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { AuthReason } from "@/features/auth";
@@ -35,19 +43,15 @@ type NavItem = {
 };
 
 /**
- * A contradiction between the artboard and the codebase: the rail's fourth link
- * is "Taken courses", and no such route exists. Per #68 the codebase wins, and
- * the smallest change that keeps the design intact is to drop the one element
- * rather than ship a link that 404s on every page.
+ * "Taken courses" is back, which #85 deferred only because `/taken` did not
+ * exist yet and it would not ship a link that 404s. #92 built the route, so the
+ * rail is the artboard's four items again.
  *
- * This is a deferral, not a design change. **#92 must put it back** when it
- * builds the route: one more entry here, third in the list, between "Saved
- * courses" and "My Page" —
- *
- *   { href: <its route>, label: "Taken courses", icon: CircleCheck, strokeWidth: 1.8 }
- *
- * which is where and how `Course Community - Explore.dc.html` line 30 draws it.
- * Until then the rail is knowingly one item short of the artboard.
+ * It is **fourth**, after "My Page", which is where the artboards draw it —
+ * `Course Community - Explore.dc.html` and `Course Community - Taken
+ * Courses.dc.html` both order the group Explore, Saved courses, My Page, Taken
+ * courses. #85's note said "third in the list" in the same breath as calling it
+ * "the rail's fourth link"; the artboards settle it.
  */
 /**
  * "Collections" is deliberately *not* here, and #91's stopgap entry for it was
@@ -65,6 +69,12 @@ const NAV: readonly NavItem[] = [
     strokeWidth: 2,
   },
   { href: "/profile", label: "My Page", icon: UserRound, strokeWidth: 2 },
+  {
+    href: "/taken",
+    label: "Taken courses",
+    icon: CircleCheck,
+    strokeWidth: 1.8,
+  },
 ];
 
 function isActive(pathname: string, href: string) {

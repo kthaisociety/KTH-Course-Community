@@ -15,6 +15,7 @@ const ROUTES_INSIDE_THE_SHELL = [
   "/course",
   "/course/DD2380",
   "/saved",
+  "/taken",
   "/collections",
   "/profile",
   "/reviews",
@@ -29,6 +30,7 @@ describe("pageTitleFor", () => {
     ["/search", "Explore courses"],
     ["/saved", "Saved courses"],
     ["/profile", "My Page"],
+    ["/taken", "Taken courses"],
   ])("names %s the way the design names it", (pathname, title) => {
     expect(pageTitleFor(pathname)).toBe(title);
   });
