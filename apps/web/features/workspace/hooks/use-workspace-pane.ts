@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   activateCourse,
   closeCourse,
@@ -9,6 +9,7 @@ import {
   openCourse,
   type Workspace,
 } from "../lib/open-courses";
+import { readWorkspace, writeWorkspace } from "../lib/workspace-storage";
 
 /**
  * The open list, for a screen that hosts the workspace pane.
@@ -18,9 +19,24 @@ import {
  * same. A pane that hid this state would have to signal the count back out,
  * which is what the artboard does with a nonce prop and what React does not
  * need.
+ *
+ * It survives a page load through `sessionStorage`, so that signing in — an
+ * OAuth redirect away and back — returns the student to the courses they had
+ * open rather than to an empty pane. Restoring happens in an effect rather
+ * than in the initial state so the server and the first client render agree.
  */
 export function useWorkspacePane() {
   const [workspace, setWorkspace] = useState<Workspace>(EMPTY_WORKSPACE);
+  const restored = useRef(false);
+
+  useEffect(() => {
+    setWorkspace(readWorkspace());
+    restored.current = true;
+  }, []);
+
+  useEffect(() => {
+    if (restored.current) writeWorkspace(workspace);
+  }, [workspace]);
 
   const open = useCallback((courseCode: string, kind: OpenCourseKind) => {
     setWorkspace((current) => openCourse(current, courseCode, kind));

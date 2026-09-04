@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { type AuthReason, AuthReasonDialog, useMe } from "@/features/auth";
 import { useCourseDetails } from "@/features/courses";
 import { useAddReview } from "@/features/reviews";
@@ -21,6 +21,7 @@ import {
   canPublish,
   dividerPositions,
   type ExaminationKey,
+  isUntouched,
   MIN_SHARE,
   moveDivider,
   nudgeDivider,
@@ -30,6 +31,11 @@ import {
   toggleMethod,
   toReviewInput,
 } from "../lib/review-draft";
+import {
+  claimAwaitingSignIn,
+  markAwaitingSignIn,
+} from "../lib/workspace-storage";
+import { APPLIED_FILL, Kicker } from "./pane-parts";
 
 /** How the design starts a review for someone staring at an empty box. */
 const PROMPTS = [
@@ -40,15 +46,6 @@ const PROMPTS = [
 
 /** Unanswered tracks are drawn in the theme's strong hairline, not a fill. */
 const UNSET_FILL = "var(--cc-rule3)";
-const APPLIED_FILL = "color-mix(in srgb, var(--cc-btn) 40%, var(--cc-surface))";
-
-function Kicker({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="font-semibold text-[10.5px] text-cc-dim uppercase tracking-[0.09em]">
-      {children}
-    </div>
-  );
-}
 
 function Card({ children }: { children: React.ReactNode }) {
   return (
@@ -184,13 +181,22 @@ export function ReviewDraftPanel({
   draft,
   onDraftChange,
 }: Readonly<ReviewDraftPanelProps>) {
-  const { isAuthenticated, isLoading: sessionLoading } = useMe();
+  const { user, isAuthenticated, isLoading: sessionLoading } = useMe();
   const addReview = useAddReview();
   const details = useCourseDetails(courseCode);
   const [authReason, setAuthReason] = useState<AuthReason | null>(null);
   const [published, setPublished] = useState(false);
   const [publishing, setPublishing] = useState(false);
+  const [justSignedIn, setJustSignedIn] = useState(false);
   const examTrackRef = useRef<HTMLDivElement>(null);
+
+  // Signing in navigated the page away and back. The draft came with it
+  // through `sessionStorage`; this is the note that says so, and only the
+  // course that asked for the sign-in may claim it.
+  useEffect(() => {
+    if (sessionLoading || !isAuthenticated) return;
+    if (claimAwaitingSignIn(courseCode)) setJustSignedIn(true);
+  }, [sessionLoading, isAuthenticated, courseCode]);
 
   const course = details.data;
   const done = sectionsDone(draft);
@@ -230,6 +236,7 @@ export function ReviewDraftPanel({
     const input = toReviewInput(draft);
     if (!input) return;
     if (!isAuthenticated) {
+      markAwaitingSignIn(courseCode);
       setAuthReason("post-review");
       return;
     }
@@ -249,8 +256,13 @@ export function ReviewDraftPanel({
   return (
     <div className="flex min-h-full flex-col">
       <div className="bg-cc-warn px-5 pt-[18px] pb-3.5">
-        <div className="font-semibold text-[11px] text-cc-warn-ink uppercase tracking-[0.06em]">
-          Review draft
+        <div className="flex items-center justify-between gap-3">
+          <div className="font-semibold text-[11px] text-cc-warn-ink uppercase tracking-[0.06em]">
+            Review draft
+          </div>
+          <div className="text-[11.5px] text-cc-dim">
+            {isUntouched(draft) ? "Not saved yet" : "Saved just now"}
+          </div>
         </div>
         <h2 className="mt-1.5 font-semibold text-[19px] leading-[1.2]">
           {course?.titleEng ?? courseCode}
@@ -579,6 +591,12 @@ export function ReviewDraftPanel({
       </div>
 
       <div className="sticky bottom-0 mt-auto border-cc-rule border-t bg-cc-surface">
+        {justSignedIn && !published && (
+          <p className="flex items-center gap-2.5 border-cc-rule border-b bg-cc-pill px-5 py-2.5 text-[12.5px] text-cc-brand leading-[1.45]">
+            Signed in{user?.name ? ` as ${user.name}` : ""}. Your draft came
+            back untouched — check it and publish when you are ready.
+          </p>
+        )}
         {published && (
           <p
             className="flex items-center gap-2.5 border-cc-rule border-b px-5 py-2.5 text-[12.5px]"
@@ -608,7 +626,11 @@ export function ReviewDraftPanel({
                 : "cursor-not-allowed bg-cc-pill text-cc-dim",
             )}
           >
-            {published ? "Published" : "Post review"}
+            {published
+              ? "Published"
+              : justSignedIn
+                ? "Publish review"
+                : "Post review"}
           </button>
         </div>
       </div>

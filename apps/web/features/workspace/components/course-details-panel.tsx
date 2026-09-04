@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCourseDetails, useCourseSummaries } from "@/features/courses";
 import { Post, useReviewList } from "@/features/reviews";
@@ -10,17 +10,7 @@ import { cn } from "@/lib/utils";
 import type { CourseReviewStats } from "@/types";
 import { EXAMINATION_DISTRIBUTION_LABELS, MAX_REVIEW_SCORE } from "@/types";
 import { EXAMINATION_COLOR_VAR, namedShares } from "../lib/examination-palette";
-
-/** The applied half of the theory bar, and the unanswered track behind both. */
-const APPLIED_FILL = "color-mix(in srgb, var(--cc-btn) 40%, var(--cc-surface))";
-
-function Kicker({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="font-semibold text-[10.5px] text-cc-dim uppercase tracking-[0.09em]">
-      {children}
-    </div>
-  );
-}
+import { APPLIED_FILL, Kicker } from "./pane-parts";
 
 function Figure({ label, value }: { label: string; value: string }) {
   return (
@@ -201,6 +191,22 @@ export function CourseDetailsPanel({
 }: Readonly<CourseDetailsPanelProps>) {
   const [contentOpen, setContentOpen] = useState(false);
   const [reviewsOpen, setReviewsOpen] = useState(false);
+  const reviewsHeadingRef = useRef<HTMLDivElement>(null);
+
+  /**
+   * "Read all N reviews" opens the list further down the pane, which is often
+   * below the fold — so the pane scrolls to it, as the artboard's own
+   * `revealReviews` does. Deferred a frame so the list is laid out first.
+   */
+  const revealReviews = useCallback(() => {
+    setReviewsOpen(true);
+    requestAnimationFrame(() => {
+      reviewsHeadingRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    });
+  }, []);
 
   const details = useCourseDetails(courseCode);
   const [summary] = useCourseSummaries([courseCode]);
@@ -308,10 +314,7 @@ export function CourseDetailsPanel({
             No reviews yet — be the first to write one.
           </div>
         ) : (
-          <ReviewsSummary
-            stats={stats}
-            onReadReviews={() => setReviewsOpen(true)}
-          />
+          <ReviewsSummary stats={stats} onReadReviews={revealReviews} />
         )}
 
         <div className="flex items-center justify-between gap-3 rounded-[10px] border border-cc-rule bg-cc-info px-[13px] py-[11px]">
@@ -329,7 +332,10 @@ export function CourseDetailsPanel({
 
         {stats !== null && (
           <div>
-            <div className="flex border-cc-rule border-b">
+            <div
+              ref={reviewsHeadingRef}
+              className="flex border-cc-rule border-b"
+            >
               <button
                 type="button"
                 onClick={() => setReviewsOpen((open) => !open)}

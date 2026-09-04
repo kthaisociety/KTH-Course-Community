@@ -158,6 +158,26 @@ export function sectionsDone(draft: ReviewDraft): number {
 export const REVIEW_DRAFT_SECTIONS = 3;
 
 /**
+ * Whether the writer has put anything into the draft at all.
+ *
+ * It is what the header's "Not saved yet" reads off: there is nothing to have
+ * kept until a question is answered or a word is typed.
+ */
+export function isUntouched(draft: ReviewDraft): boolean {
+  return (
+    sectionsDone(draft) === 0 &&
+    draft.happyTook === null &&
+    draft.workloadScore === null &&
+    draft.learningScore === null &&
+    draft.methods.length === 0 &&
+    !draft.examinationForgotten &&
+    !draft.approachForgotten &&
+    draft.approachTheoryPercent === null &&
+    draft.message.trim().length === 0
+  );
+}
+
+/**
  * Whether the draft can be published.
  *
  * The write-up is the only optional part: `reviewInputSchema` requires the two

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,6 +16,7 @@ import {
   tabLayout,
 } from "../lib/open-courses";
 import { EMPTY_REVIEW_DRAFT, type ReviewDraft } from "../lib/review-draft";
+import { readDrafts, writeDrafts } from "../lib/workspace-storage";
 import { CourseDetailsPanel } from "./course-details-panel";
 import { ReviewDraftPanel } from "./review-draft-panel";
 
@@ -67,6 +68,19 @@ export function WorkspacePane({
   className,
 }: Readonly<WorkspacePaneProps>) {
   const [drafts, setDrafts] = useState<Record<string, ReviewDraft>>({});
+  const restoredDrafts = useRef(false);
+
+  // Drafts outlive the tab they were written in, because signing in navigates
+  // the page away and back. Restored in an effect so the first client render
+  // matches the server's.
+  useEffect(() => {
+    setDrafts(readDrafts());
+    restoredDrafts.current = true;
+  }, []);
+
+  useEffect(() => {
+    if (restoredDrafts.current) writeDrafts(drafts);
+  }, [drafts]);
 
   const active =
     openCourses.find((entry) => entry.id === activeId) ?? openCourses[0];
