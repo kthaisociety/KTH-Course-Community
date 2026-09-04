@@ -19,10 +19,11 @@ import {
 import { PageColumn, PageHeader } from "@/features/shell";
 import { CollectionDetail, type SavedCourse } from "./collection-detail";
 import { CollectionTile } from "./collection-tile";
+import { EmptyPanel } from "./empty-panel";
 import { NewCollectionDialog } from "./new-collection-dialog";
 
 /** How long the artboard's confirmation strip stays up, in milliseconds. */
-const NOTE_LIFETIME = 4000;
+const NOTE_LIFETIME = 3000;
 
 const SKELETON_KEYS = ["c0", "c1", "c2"] as const;
 
@@ -81,27 +82,37 @@ export function Collections({ openCollectionId = null }: Props) {
   const signedIn = user !== null;
   const savedCourseCodes = user?.savedCourseCodes ?? [];
 
-  const { data: collections, isPending: collectionsPending } =
-    useCollections(signedIn);
+  const {
+    data: collections,
+    isPending: collectionsPending,
+    isFetching: collectionsFetching,
+  } = useCollections(signedIn);
   const summaries = useCourseSummaries(savedCourseCodes, signedIn);
   const { create, rename, deleteCollection, reorder, addCourse, removeCourse } =
     useCollectionMutations();
 
   const [openId, setOpenId] = useState<string | null>(openCollectionId);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [note, setNote] = useState<{ key: number; text: string } | null>(null);
+  /**
+   * The confirmation strip. A fresh object every time, so that saying the same
+   * thing twice is a state change React does not skip — and the timer under it
+   * restarts rather than expiring on the first message's clock.
+   */
+  const [note, setNote] = useState<{ text: string } | null>(null);
   const [authReason, setAuthReason] = useState<AuthReason | null>(null);
 
-  const showNote = useCallback(
-    (text: string) => setNote({ key: Date.now(), text }),
-    [],
-  );
+  const showNote = useCallback((text: string) => setNote({ text }), []);
 
   useEffect(() => {
     if (!note) return;
     const timer = setTimeout(() => setNote(null), NOTE_LIFETIME);
     return () => clearTimeout(timer);
   }, [note]);
+
+  // The route is the authority on what is open: a link to `/collections` from
+  // the rail while a collection is open has to close it, and only the prop
+  // knows that happened.
+  useEffect(() => setOpenId(openCollectionId), [openCollectionId]);
 
   /** Keeps the route in step with what is open, so a refresh lands back here. */
   const openCollection = useCallback(
@@ -134,12 +145,29 @@ export function Collections({ openCollectionId = null }: Props) {
       stats: course.stats,
     });
   }
-  const savedCourses = savedCourseCodes.flatMap(
-    (courseCode) => savedByCode.get(courseCode)?.course ?? [],
+  // Keyed on the saved codes, not on the summaries that have arrived: a course
+  // whose title is still in flight is still addable, and dropping it would make
+  // the dialog and the detail's "Add course" disagree about what can be added.
+  const savedCourses = savedCourseCodes.map(
+    (courseCode) =>
+      savedByCode.get(courseCode)?.course ?? {
+        courseCode,
+        titleEng: "",
+        credits: null,
+        department: null,
+      },
   );
 
   const openCollectionRecord =
     collections?.find((collection) => collection.id === openId) ?? null;
+
+  /**
+   * A collection that is open but not in the list yet is still arriving, not
+   * missing. Creating one opens it before its refetch lands, and saying "not
+   * found" for that frame would accuse the app of losing what it just made.
+   */
+  const resolvingOpen =
+    openId !== null && !openCollectionRecord && collectionsFetching;
 
   async function onCreate(name: string, courseCodes: string[]) {
     let created: { id: string };
@@ -220,7 +248,8 @@ export function Collections({ openCollectionId = null }: Props) {
       .catch(() => toast.error(`Could not reorder "${collection.name}".`));
   }
 
-  const isLoading = sessionLoading || (signedIn && collectionsPending);
+  const isLoading =
+    sessionLoading || (signedIn && collectionsPending) || resolvingOpen;
 
   return (
     <PageColumn>
@@ -230,12 +259,19 @@ export function Collections({ openCollectionId = null }: Props) {
       />
 
       <div className="flex flex-col gap-3.5 px-7 pt-[18px]">
+        {/* The live region is always in the tree and out of the flow: a region
+            that appears already carrying its text announces nothing, because
+            there was no change for a screen reader to notice. The strip below
+            is the same words, drawn. */}
+        <div aria-live="polite" className="sr-only">
+          {note?.text ?? ""}
+        </div>
         {note ? (
           <div
-            aria-live="polite"
+            aria-hidden
             className="flex items-center gap-2 rounded-[9px] border border-cc-rule2 bg-cc-pill px-[13px] py-[9px] text-[12.5px] text-cc-brand"
           >
-            <Check size={14} aria-hidden />
+            <Check size={14} />
             {note.text}
           </div>
         ) : null}
@@ -281,21 +317,14 @@ export function Collections({ openCollectionId = null }: Props) {
         ) : null}
 
         {!isLoading && signedIn && openId !== null && !openCollectionRecord ? (
-          <div className="rounded-[11px] border border-cc-rule bg-cc-surface p-6 text-center">
-            <div className="font-semibold text-[14.5px]">
-              Collection not found
-            </div>
-            <div className="mt-[5px] text-[12.5px] text-cc-muted">
-              There is no such collection. It may have been deleted.
-            </div>
-            <button
-              type="button"
-              onClick={() => openCollection(null)}
-              className="mx-auto mt-[13px] flex h-[34px] w-max cursor-pointer items-center rounded-[9px] bg-cc-btn px-3.5 font-semibold text-[13px] text-cc-btn-fg hover:opacity-[0.88]"
-            >
-              All collections
-            </button>
-          </div>
+          <EmptyPanel
+            title="Collection not found"
+            body="There is no such collection. It may have been deleted."
+            action={{
+              label: "All collections",
+              onClick: () => openCollection(null),
+            }}
+          />
         ) : null}
 
         {!isLoading && signedIn && openCollectionRecord ? (
@@ -328,22 +357,14 @@ export function Collections({ openCollectionId = null }: Props) {
 
         {!isLoading && signedIn && openId === null && collections ? (
           collections.length === 0 ? (
-            <div className="rounded-[11px] border border-cc-rule bg-cc-surface p-6 text-center">
-              <div className="font-semibold text-[14.5px]">
-                No collections yet
-              </div>
-              <div className="mt-[5px] text-[12.5px] text-cc-muted">
-                Create a collection to organize courses you are considering
-                together.
-              </div>
-              <button
-                type="button"
-                onClick={() => setDialogOpen(true)}
-                className="mx-auto mt-[13px] flex h-[34px] w-max cursor-pointer items-center rounded-[9px] bg-cc-btn px-3.5 font-semibold text-[13px] text-cc-btn-fg hover:opacity-[0.88]"
-              >
-                Create collection
-              </button>
-            </div>
+            <EmptyPanel
+              title="No collections yet"
+              body="Create a collection to organize courses you are considering together."
+              action={{
+                label: "Create collection",
+                onClick: () => setDialogOpen(true),
+              }}
+            />
           ) : (
             <div className="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-3">
               <button

@@ -1,7 +1,8 @@
 "use client";
 
 import { MoreHorizontal } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { usePopover } from "@/features/collections/hooks/use-popover";
+import { useRenameDraft } from "@/features/collections/hooks/use-rename-draft";
 import {
   courseCountLabel,
   overflowLabel,
@@ -43,36 +44,15 @@ export function CollectionTile({
   onRename,
   onDelete,
 }: Props) {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [draft, setDraft] = useState<string | null>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  // A menu left open behind a click elsewhere on the page would sit over the
-  // next tile the reader reaches for; the artboard closes it on any pointer
-  // down outside itself, and so does this.
-  useEffect(() => {
-    if (!menuOpen) return;
-    function onPointerDown(event: PointerEvent) {
-      if (!menuRef.current?.contains(event.target as Node)) setMenuOpen(false);
-    }
-    document.addEventListener("pointerdown", onPointerDown, true);
-    return () =>
-      document.removeEventListener("pointerdown", onPointerDown, true);
-  }, [menuOpen]);
-
-  function commitRename() {
-    const name = draft?.trim() ?? "";
-    setDraft(null);
-    if (name && name !== collection.name) onRename(name);
-  }
+  const menu = usePopover();
+  const renaming = useRenameDraft(collection.name, onRename);
 
   const previews = collection.courseCodes.slice(0, TILE_PREVIEW_LIMIT);
   const overflow = overflowLabel(collection.courseCodes.length);
-  const renaming = draft !== null;
 
   return (
     <div className="relative box-border flex min-h-[150px] flex-col gap-[9px] rounded-[11px] border border-cc-rule bg-cc-surface p-[14px_15px] hover:border-cc-hov">
-      {renaming ? null : (
+      {renaming.isRenaming ? null : (
         <button
           type="button"
           onClick={onOpen}
@@ -83,18 +63,15 @@ export function CollectionTile({
 
       <div className="flex items-start justify-between gap-2">
         <div className="pointer-events-none min-w-0 flex-1">
-          {renaming ? (
+          {renaming.isRenaming ? (
             <input
-              // biome-ignore lint/a11y/noAutofocus: the menu's Rename put the caret here, as the artboard's own autoFocus does.
+              // biome-ignore lint/a11y/noAutofocus: Rename put the caret here, as the artboard's own autoFocus does.
               autoFocus
               aria-label="Collection name"
-              value={draft ?? ""}
-              onChange={(event) => setDraft(event.target.value)}
-              onBlur={commitRename}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") event.currentTarget.blur();
-                if (event.key === "Escape") setDraft(null);
-              }}
+              value={renaming.draft}
+              onChange={(event) => renaming.change(event.target.value)}
+              onBlur={renaming.commit}
+              onKeyDown={renaming.onKeyDown}
               className="pointer-events-auto box-border h-7 w-full rounded-[6px] border border-cc-brand bg-cc-surface px-2 font-semibold text-[13.5px] text-cc-ink outline-none"
             />
           ) : (
@@ -104,25 +81,33 @@ export function CollectionTile({
           )}
         </div>
 
-        <div className="relative flex-none" ref={menuRef}>
+        <div className="relative flex-none">
           <button
+            ref={menu.triggerRef}
             type="button"
-            onClick={() => setMenuOpen((open) => !open)}
+            onClick={menu.toggle}
             aria-label={`More actions for ${collection.name}`}
-            aria-expanded={menuOpen}
+            aria-haspopup="menu"
+            aria-expanded={menu.isOpen}
             title={`More actions for ${collection.name}`}
             className="flex size-[26px] cursor-pointer items-center justify-center rounded-[7px] text-cc-dim hover:bg-cc-pill"
           >
             <MoreHorizontal size={16} aria-hidden />
           </button>
 
-          {menuOpen ? (
-            <div className="absolute top-[30px] right-0 z-20 w-[150px] rounded-[9px] border border-cc-rule2 bg-cc-surface p-1 shadow-[0_8px_24px_rgba(20,30,45,.14)]">
+          {menu.isOpen ? (
+            <div
+              ref={menu.panelRef}
+              role="menu"
+              aria-label={`Actions for ${collection.name}`}
+              className="absolute top-[30px] right-0 z-20 w-[150px] rounded-[9px] border border-cc-rule2 bg-cc-surface p-1 shadow-[0_8px_24px_rgba(20,30,45,.14)]"
+            >
               <button
                 type="button"
+                role="menuitem"
                 onClick={() => {
-                  setMenuOpen(false);
-                  setDraft(collection.name);
+                  menu.close();
+                  renaming.start();
                 }}
                 className="block w-full cursor-pointer rounded-[6px] px-[9px] py-2 text-left text-[12.5px] text-cc-ink2 hover:bg-cc-pill"
               >
@@ -130,8 +115,9 @@ export function CollectionTile({
               </button>
               <button
                 type="button"
+                role="menuitem"
                 onClick={() => {
-                  setMenuOpen(false);
+                  menu.close();
                   onDelete();
                 }}
                 className="block w-full cursor-pointer rounded-[6px] px-[9px] py-2 text-left text-[12.5px] text-cc-danger hover:bg-[color-mix(in_srgb,var(--cc-danger)_12%,var(--cc-surface))]"

@@ -94,6 +94,7 @@ function setup({
   useCollections.mockReturnValue({
     data: signedIn ? collections : undefined,
     isPending: !signedIn,
+    isFetching: false,
   });
   useCourseSummaries.mockImplementation((codes: string[]) =>
     codes.map(summaryOf),
@@ -279,6 +280,25 @@ describe("reordering within a collection", () => {
   });
 });
 
+describe("the add-course menu", () => {
+  it("closes on Escape and gives focus back to the trigger", async () => {
+    setup({
+      savedCourseCodes: ["AA1000", "BB2000"],
+      collections: [{ id: "c1", name: "Spring", courseCodes: ["AA1000"] }],
+    });
+    render(<Collections openCollectionId="c1" />);
+
+    const trigger = screen.getByRole("button", { name: "Add course" });
+    await userEvent.click(trigger);
+    expect(screen.getByRole("menu")).toBeVisible();
+
+    await userEvent.keyboard("{Escape}");
+
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+    expect(trigger).toHaveFocus();
+  });
+});
+
 describe("a collection that is not the viewer's", () => {
   // Ownership is scoped in the query, so a stranger's collection is absent
   // rather than refused, and the page says exactly what the server says.
@@ -291,6 +311,20 @@ describe("a collection that is not the viewer's", () => {
     expect(screen.getByText("Collection not found")).toBeVisible();
     expect(screen.queryByText(/belongs to/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/permission/i)).not.toBeInTheDocument();
+  });
+
+  // Creating a collection opens it before its refetch lands. Calling that frame
+  // "not found" would accuse the app of losing what it had just made.
+  it("waits rather than saying not found while the list is still arriving", () => {
+    setup({ collections: [] });
+    useCollections.mockReturnValue({
+      data: [],
+      isPending: false,
+      isFetching: true,
+    });
+    render(<Collections openCollectionId="brand-new" />);
+
+    expect(screen.queryByText("Collection not found")).not.toBeInTheDocument();
   });
 });
 
@@ -321,7 +355,7 @@ describe("the grid", () => {
     await userEvent.click(
       screen.getByRole("button", { name: "More actions for Spring" }),
     );
-    await userEvent.click(screen.getByRole("button", { name: "Rename" }));
+    await userEvent.click(screen.getByRole("menuitem", { name: "Rename" }));
 
     const field = screen.getByLabelText("Collection name");
     await userEvent.clear(field);
@@ -342,7 +376,7 @@ describe("the grid", () => {
     await userEvent.click(
       screen.getByRole("button", { name: "More actions for Spring" }),
     );
-    await userEvent.click(screen.getByRole("button", { name: "Delete" }));
+    await userEvent.click(screen.getByRole("menuitem", { name: "Delete" }));
 
     expect(deleteCollection).toHaveBeenCalledWith({ collectionId: "c1" });
   });

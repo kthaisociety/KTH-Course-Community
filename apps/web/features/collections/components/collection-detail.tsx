@@ -1,8 +1,10 @@
 "use client";
 
 import { ArrowLeft, ChevronDown, ChevronUp } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect } from "react";
 import type { AuthReason } from "@/features/auth";
+import { usePopover } from "@/features/collections/hooks/use-popover";
+import { useRenameDraft } from "@/features/collections/hooks/use-rename-draft";
 import { courseCountLabel } from "@/features/collections/lib/collection-model";
 import {
   type Collection,
@@ -12,6 +14,7 @@ import {
   EXPANDED_CARD_GEOMETRY,
 } from "@/features/courses";
 import type { CourseStats } from "@/types";
+import { EmptyPanel } from "./empty-panel";
 
 /** A course the viewer has saved, with everything a card needs to draw it. */
 export type SavedCourse = {
@@ -75,32 +78,17 @@ export function CollectionDetail({
   onOpenCourse,
   onRequestAuth,
 }: Props) {
-  const [draft, setDraft] = useState<string | null>(null);
-  const [addOpen, setAddOpen] = useState(false);
-  const addRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!addOpen) return;
-    function onPointerDown(event: PointerEvent) {
-      if (!addRef.current?.contains(event.target as Node)) setAddOpen(false);
-    }
-    document.addEventListener("pointerdown", onPointerDown, true);
-    return () =>
-      document.removeEventListener("pointerdown", onPointerDown, true);
-  }, [addOpen]);
+  const renaming = useRenameDraft(collection.name, onRename);
+  const addMenu = usePopover();
 
   // The collection under the reader can change: another tab removes a course,
   // or unsaving one cascades its membership away. Nothing addable means nothing
-  // to open.
+  // to open, and the trigger itself goes with it.
+  const nothingAddable = addableCourseCodes.length === 0;
+  const closeAddMenu = addMenu.close;
   useEffect(() => {
-    if (addableCourseCodes.length === 0) setAddOpen(false);
-  }, [addableCourseCodes.length]);
-
-  function commitRename() {
-    const name = draft?.trim() ?? "";
-    setDraft(null);
-    if (name && name !== collection.name) onRename(name);
-  }
+    if (nothingAddable) closeAddMenu();
+  }, [nothingAddable, closeAddMenu]);
 
   const { courseCodes } = collection;
 
@@ -117,24 +105,21 @@ export function CollectionDetail({
 
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
-          {draft === null ? (
-            <h2 className="m-0 font-semibold text-[21px] tracking-[-0.015em]">
-              {collection.name}
-            </h2>
-          ) : (
+          {renaming.isRenaming ? (
             <input
               // biome-ignore lint/a11y/noAutofocus: Rename put the caret here, as the artboard's own autoFocus does.
               autoFocus
               aria-label="Collection name"
-              value={draft}
-              onChange={(event) => setDraft(event.target.value)}
-              onBlur={commitRename}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") event.currentTarget.blur();
-                if (event.key === "Escape") setDraft(null);
-              }}
+              value={renaming.draft}
+              onChange={(event) => renaming.change(event.target.value)}
+              onBlur={renaming.commit}
+              onKeyDown={renaming.onKeyDown}
               className="box-border h-[34px] rounded-[8px] border border-cc-brand bg-cc-surface px-2.5 font-semibold text-[20px] text-cc-ink outline-none"
             />
+          ) : (
+            <h2 className="m-0 font-semibold text-[21px] tracking-[-0.015em]">
+              {collection.name}
+            </h2>
           )}
           <div className="mt-[5px] text-[12.5px] text-cc-muted">
             {courseCountLabel(courseCodes.length)}
@@ -144,25 +129,27 @@ export function CollectionDetail({
         <div className="flex items-center gap-[7px]">
           <button
             type="button"
-            onClick={() => setDraft(collection.name)}
+            onClick={renaming.start}
             className={ACTION_BUTTON}
           >
             Rename
           </button>
 
-          {addableCourseCodes.length > 0 ? (
-            <div className="relative" ref={addRef}>
+          {nothingAddable ? null : (
+            <div className="relative">
               <button
+                ref={addMenu.triggerRef}
                 type="button"
-                onClick={() => setAddOpen((open) => !open)}
+                onClick={addMenu.toggle}
                 aria-haspopup="menu"
-                aria-expanded={addOpen}
+                aria-expanded={addMenu.isOpen}
                 className={ACTION_BUTTON}
               >
                 Add course
               </button>
-              {addOpen ? (
+              {addMenu.isOpen ? (
                 <div
+                  ref={addMenu.panelRef}
                   role="menu"
                   aria-label="Add a saved course"
                   className="absolute top-9 right-0 z-20 box-border max-h-[260px] w-[250px] overflow-auto rounded-[10px] border border-cc-rule2 bg-cc-surface p-[5px] shadow-[0_8px_24px_rgba(20,30,45,.14)]"
@@ -173,7 +160,7 @@ export function CollectionDetail({
                       type="button"
                       role="menuitem"
                       onClick={() => {
-                        setAddOpen(false);
+                        addMenu.close();
                         onAddCourse(courseCode);
                       }}
                       className="flex w-full cursor-pointer items-baseline gap-2 rounded-[7px] px-[9px] py-2 text-left text-[12.5px] text-cc-ink2 hover:bg-cc-pill"
@@ -189,7 +176,7 @@ export function CollectionDetail({
                 </div>
               ) : null}
             </div>
-          ) : null}
+          )}
 
           <button
             type="button"
@@ -202,16 +189,14 @@ export function CollectionDetail({
       </div>
 
       {courseCodes.length === 0 ? (
-        <div className="rounded-[11px] border border-cc-rule bg-cc-surface p-6 text-center">
-          <div className="font-semibold text-[14.5px]">
-            No courses in this collection
-          </div>
-          <div className="mt-[5px] text-[12.5px] text-cc-muted">
-            {hasSavedCourses
+        <EmptyPanel
+          title="No courses in this collection"
+          body={
+            hasSavedCourses
               ? "Add one of your saved courses to it — a collection can only hold courses you have saved."
-              : "A collection can only hold courses you have saved. Save some from Explore, then add them here."}
-          </div>
-        </div>
+              : "A collection can only hold courses you have saved. Save some from Explore, then add them here."
+          }
+        />
       ) : (
         <ol className="flex list-none flex-col gap-3 p-0">
           {courseCodes.map((courseCode, index) => {
