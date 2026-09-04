@@ -8,7 +8,11 @@
  * own internals turns each of them into a promise to three other pages.
  */
 
-export { useCourseDetails, useCourseSummaries } from "./api/queries";
+export {
+  useCourseDetails,
+  useCourseStats,
+  useCourseSummaries,
+} from "./api/queries";
 /** The presentational card: takes a model, and measures nothing. */
 export { CourseCard } from "./components/course-card";
 /**
@@ -35,4 +39,7 @@ export {
   courseCardGeometry,
   EXPANDED_CARD_GEOMETRY,
 } from "./lib/card-geometry";
-export type { CourseCardCourse } from "./lib/course-card-model";
+export {
+  type CourseCardCourse,
+  NO_COURSE_STATS,
+} from "./lib/course-card-model";

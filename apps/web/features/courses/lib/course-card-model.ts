@@ -35,6 +35,18 @@ const ABBREVIATE_FROM = 1000;
 /** Above this many thousands the decimal stops earning its place. */
 const DECIMAL_K_BELOW = 10_000;
 
+/**
+ * What a card renders while `course.stats` is still in flight, and for a code
+ * the batch did not answer for.
+ *
+ * `reviews: null` is the truthful half: it renders "No reviews yet" rather than
+ * 0% happy. `takenCount: 0` is not — the count is unknown, not zero — but
+ * `CourseStats` has no "unknown" for it and the pill has no unknown state to
+ * draw. It settles to the real figure the moment the batch answers, and 0 is
+ * what `user_taken_courses` holds for very nearly every course today.
+ */
+export const NO_COURSE_STATS: CourseStats = { reviews: null, takenCount: 0 };
+
 /** The course facts the card names in its title and its meta line. */
 export type CourseCardCourse = {
   courseCode: string;

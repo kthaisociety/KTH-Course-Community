@@ -1,0 +1,315 @@
+import { render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { CourseSummary } from "@/types";
+import { Explore } from "./explore";
+
+const push = vi.fn();
+const replace = vi.fn();
+const useMe = vi.fn();
+const useSearchCourses = vi.fn();
+
+let search = "";
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push, replace }),
+  usePathname: () => "/search",
+  useSearchParams: () => new URLSearchParams(search),
+}));
+
+// Only the session hook is faked; `AuthReasonDialog` stays real, because whether
+// a visitor is actually asked to sign in is the thing under test.
+vi.mock("@/features/auth", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/features/auth")>()),
+  useMe: () => useMe(),
+}));
+
+vi.mock("@/features/favorites", () => ({
+  useSetCourseSaved: () => ({ setSaved: vi.fn().mockResolvedValue(undefined) }),
+}));
+
+vi.mock("@/features/courses/api/queries", () => ({
+  useCourseDetails: () => ({ data: undefined }),
+  useCourseSummaries: () => [],
+  useCourseStats: () => ({ data: {} }),
+  useCollections: () => ({ data: [] }),
+  useTakenCourses: () => ({ data: [] }),
+}));
+
+vi.mock("@/features/courses/api/mutations", () => ({
+  useCollectionMutations: () => ({
+    create: { mutateAsync: vi.fn() },
+    addCourse: { mutateAsync: vi.fn() },
+    removeCourse: { mutateAsync: vi.fn() },
+  }),
+  useMarkCourseTaken: () => ({ mutateAsync: vi.fn() }),
+}));
+
+vi.mock("sonner", () => ({ toast: { error: vi.fn() } }));
+
+// `toSearchCoursesInput` stays real: that the browser sends a star threshold and
+// never a 1-10 score is the point of it (#67).
+vi.mock("../api/queries", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../api/queries")>()),
+  useSearchCourses: (input: unknown) => useSearchCourses(input),
+  useDepartments: () => ({ data: { departments: ["EECS", "ITM"] } }),
+}));
+
+function course(courseCode: string, titleEng: string): CourseSummary {
+  return {
+    courseCode,
+    titleEng,
+    currentStatus: "ESTABLISHED",
+    credits: 6,
+    creditUnit: "hp",
+    department: "EECS",
+    startTerms: [20252],
+    examTypes: null,
+    languages: ["English"],
+    updatedAt: "2026-01-01",
+  };
+}
+
+function searchState(over: Record<string, unknown> = {}) {
+  return {
+    data: undefined,
+    isFetching: false,
+    isError: false,
+    refetch: vi.fn(),
+    ...over,
+  };
+}
+
+function results(...courses: CourseSummary[]) {
+  return searchState({
+    data: { results: courses, total: courses.length, page: 1, pageSize: 10 },
+  });
+}
+
+beforeEach(() => {
+  search = "";
+  useMe.mockReturnValue({ user: { userId: "u1", savedCourseCodes: [] } });
+  useSearchCourses.mockReturnValue(results());
+});
+
+describe("Explore", () => {
+  describe("the results list", () => {
+    beforeEach(() => {
+      search = "q=graphs";
+      useSearchCourses.mockReturnValue(
+        results(
+          course("DD2380", "Artificial Intelligence"),
+          course("DD1337", "Programming"),
+        ),
+      );
+    });
+
+    it("renders one card per result", () => {
+      render(<Explore />);
+
+      expect(screen.getAllByRole("article")).toHaveLength(2);
+      expect(
+        screen.getByRole("heading", { name: "DD2380 Artificial Intelligence" }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("heading", { name: "DD1337 Programming" }),
+      ).toBeInTheDocument();
+    });
+
+    // The count is what came back, not what matched: `search.courses` returns one
+    // page and post-filters after fetching, so "2 courses match" would be a
+    // claim the server cannot support (#74).
+    it("says how many results it is showing, not how many matched", () => {
+      render(<Explore />);
+      expect(screen.getByText("Showing 2 courses for “graphs”")).toBeVisible();
+    });
+
+    // `reviews` is empty, so this is the ordinary card, not an edge case — and
+    // it says "no reviews yet" rather than scoring the course zero.
+    it("has no reviews to show for them, which is not zero", () => {
+      render(<Explore />);
+      for (const card of screen.getAllByRole("article")) {
+        expect(
+          within(card).getAllByText("No reviews yet").length,
+        ).toBeGreaterThan(0);
+        expect(within(card).queryByText("0%")).not.toBeInTheDocument();
+      }
+    });
+
+    it("opens a course on its own page", async () => {
+      render(<Explore />);
+      await userEvent.click(
+        within(screen.getAllByRole("article")[0] as HTMLElement).getByRole(
+          "button",
+          { name: /Artificial Intelligence/ },
+        ),
+      );
+      expect(push).toHaveBeenCalledWith("/course/DD2380");
+    });
+  });
+
+  describe("the empty state", () => {
+    it("names the search that found nothing", () => {
+      search = "q=nothing at all";
+      render(<Explore />);
+
+      expect(
+        screen.getByText("No courses match “nothing at all”"),
+      ).toBeVisible();
+      expect(screen.queryByRole("article")).not.toBeInTheDocument();
+    });
+
+    it("offers a way out of it", async () => {
+      search = "q=nothing at all";
+      render(<Explore />);
+
+      await userEvent.click(
+        screen.getByRole("button", { name: "clear the search" }),
+      );
+      await waitFor(() =>
+        expect(replace).toHaveBeenCalledWith("/search", { scroll: false }),
+      );
+    });
+  });
+
+  describe("the initial state, with nothing searched yet", () => {
+    it("says what to type rather than showing a blank column", () => {
+      render(<Explore />);
+
+      expect(screen.getByText("Search the KTH catalogue")).toBeVisible();
+      expect(screen.queryByRole("article")).not.toBeInTheDocument();
+      // Nothing is claimed about a catalogue nobody has searched.
+      expect(screen.queryByText(/^Showing/)).not.toBeInTheDocument();
+    });
+
+    it("runs a suggestion on one click", async () => {
+      render(<Explore />);
+
+      await userEvent.click(
+        screen.getByRole("button", { name: "machine learning" }),
+      );
+
+      expect(screen.getByLabelText("Search courses")).toHaveValue(
+        "machine learning",
+      );
+      await waitFor(() =>
+        expect(replace).toHaveBeenCalledWith("/search?q=machine+learning", {
+          scroll: false,
+        }),
+      );
+    });
+  });
+
+  describe("a visitor", () => {
+    beforeEach(() => {
+      useMe.mockReturnValue({ user: null });
+      search = "q=graphs";
+      useSearchCourses.mockReturnValue(
+        results(course("DD2380", "Artificial Intelligence")),
+      );
+    });
+
+    it("may search and browse without an account", () => {
+      render(<Explore />);
+
+      expect(
+        screen.getByRole("heading", { name: "DD2380 Artificial Intelligence" }),
+      ).toBeVisible();
+      expect(screen.getByLabelText("Search courses")).toBeEnabled();
+    });
+
+    it("is asked to sign in only when they try to save", async () => {
+      render(<Explore />);
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+
+      await userEvent.click(
+        screen.getByRole("button", { name: "Save course" }),
+      );
+
+      expect(
+        await screen.findByText("Sign in to save this course"),
+      ).toBeVisible();
+    });
+  });
+
+  describe("the filters", () => {
+    beforeEach(() => {
+      search = "q=graphs";
+    });
+
+    // The dropdown asks for stars; `search/service.ts` converts to the stored
+    // 1-10 scale and thresholds the learning mean alone (#67).
+    it("sends the rating threshold in stars", async () => {
+      render(<Explore />);
+
+      await userEvent.selectOptions(
+        screen.getByLabelText("Minimum rating"),
+        "4",
+      );
+
+      expect(replace).toHaveBeenCalledWith("/search?q=graphs&rating=4", {
+        scroll: false,
+      });
+    });
+
+    it("offers the schools the catalogue actually holds", () => {
+      render(<Explore />);
+      const school = screen.getByLabelText("School");
+      expect(
+        within(school).getByRole("option", { name: "EECS" }),
+      ).toBeInTheDocument();
+      expect(
+        within(school).getByRole("option", { name: "ITM" }),
+      ).toBeInTheDocument();
+    });
+
+    it("keeps both filters in the URL, so a filtered search is shareable", async () => {
+      search = "q=graphs&department=EECS&rating=3";
+      render(<Explore />);
+
+      expect(screen.getByLabelText("School")).toHaveValue("EECS");
+      expect(screen.getByLabelText("Minimum rating")).toHaveValue("3");
+
+      await userEvent.click(
+        screen.getByRole("button", { name: "Clear filters" }),
+      );
+      expect(replace).toHaveBeenCalledWith("/search?q=graphs", {
+        scroll: false,
+      });
+    });
+
+    // A hand-edited threshold outside 1-5 would be rejected by the procedure.
+    it("ignores a rating the procedure would reject", () => {
+      search = "q=graphs&rating=9";
+      render(<Explore />);
+      expect(screen.getByLabelText("Minimum rating")).toHaveValue("");
+      expect(useSearchCourses).toHaveBeenCalledWith(
+        expect.objectContaining({ minRating: undefined }),
+      );
+    });
+  });
+
+  describe("while the catalogue is answering", () => {
+    it("shows the skeleton instead of an empty column", () => {
+      search = "q=graphs";
+      useSearchCourses.mockReturnValue(searchState({ isFetching: true }));
+      render(<Explore />);
+
+      expect(screen.getAllByTestId("explore-skeleton")).toHaveLength(3);
+      expect(screen.getByText("Loading courses…")).toBeVisible();
+    });
+
+    it("offers a retry when it does not answer", async () => {
+      search = "q=graphs";
+      const refetch = vi.fn();
+      useSearchCourses.mockReturnValue(searchState({ isError: true, refetch }));
+      render(<Explore />);
+
+      expect(
+        screen.getByText("The course catalogue did not answer"),
+      ).toBeVisible();
+      await userEvent.click(screen.getByRole("button", { name: "Try again" }));
+      expect(refetch).toHaveBeenCalled();
+    });
+  });
+});
