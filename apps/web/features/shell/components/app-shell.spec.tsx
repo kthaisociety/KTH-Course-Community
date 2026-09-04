@@ -74,6 +74,14 @@ describe("AppShell", () => {
     expect(screen.getByText("Page body")).toBeInTheDocument();
   });
 
+  it("uses its named shell container for the title transition", () => {
+    const { container } = renderShell();
+    expect(container.firstElementChild).toHaveClass("@container/shell");
+    expect(
+      within(screen.getByRole("banner")).getByRole("heading", { level: 1 }),
+    ).toHaveClass("@3xl/shell:hidden");
+  });
+
   it("does not give Explore a competing page scroll surface", () => {
     renderShell();
     expect(screen.getByText("Page body").closest("main")).toHaveClass(
@@ -92,6 +100,9 @@ describe("AppShell", () => {
       expect(
         within(nav).getByRole("link", { name: /my page/i }),
       ).toHaveAttribute("href", "/profile");
+      expect(
+        within(nav).getByRole("link", { name: /taken courses/i }),
+      ).toHaveAttribute("href", "/taken");
     });
 
     it("says what an account adds rather than what it locks", () => {
@@ -208,7 +219,12 @@ describe("AppShell", () => {
     it("names the page the visitor is on, not the app", () => {
       pathname = "/search";
       renderShell();
-      expect(screen.getByRole("banner")).toHaveTextContent("Explore courses");
+      expect(
+        within(screen.getByRole("banner")).getByRole("heading", {
+          level: 1,
+          name: "Explore courses",
+        }),
+      ).toBeInTheDocument();
     });
 
     // Every route inside the shell is titled, so this only shows up on a path
@@ -216,11 +232,38 @@ describe("AppShell", () => {
     it("falls back to the wordmark where there is no page to name", () => {
       pathname = "/nothing-here";
       renderShell();
-      expect(screen.getByRole("banner")).toHaveTextContent("Course Community");
+      expect(
+        within(screen.getByRole("banner")).getByRole("heading", {
+          level: 1,
+          name: "Course Community",
+        }),
+      ).toBeInTheDocument();
     });
   });
 
   describe("the drawer", () => {
+    it("keeps every primary route available on mobile", async () => {
+      const user = userEvent.setup();
+      renderShell();
+
+      await user.click(screen.getByRole("button", { name: /open menu/i }));
+      const drawer = await screen.findByRole("dialog");
+      const nav = within(drawer).getByRole("navigation", { name: "Main" });
+
+      expect(
+        within(nav).getByRole("link", { name: /explore/i }),
+      ).toHaveAttribute("href", "/search");
+      expect(
+        within(nav).getByRole("link", { name: /saved courses/i }),
+      ).toHaveAttribute("href", "/saved");
+      expect(
+        within(nav).getByRole("link", { name: /my page/i }),
+      ).toHaveAttribute("href", "/profile");
+      expect(
+        within(nav).getByRole("link", { name: /taken courses/i }),
+      ).toHaveAttribute("href", "/taken");
+    });
+
     it("brings the rail back on a narrow frame and closes after a tap", async () => {
       const user = userEvent.setup();
       renderShell();

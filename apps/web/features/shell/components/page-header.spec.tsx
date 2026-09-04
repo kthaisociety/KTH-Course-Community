@@ -28,4 +28,10 @@ describe("PageHeader", () => {
     const { container } = render(<PageHeader title="Explore" />);
     expect(container.querySelector("h1")?.nextElementSibling).toBeNull();
   });
+
+  it("uses the named shell breakpoint so tablet containers cannot lose the title", () => {
+    const { container } = render(<PageHeader title="Explore courses" />);
+    expect(container.firstElementChild).toHaveClass("hidden");
+    expect(container.firstElementChild).toHaveClass("@3xl/shell:block");
+  });
 });
