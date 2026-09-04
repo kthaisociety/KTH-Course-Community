@@ -20,7 +20,12 @@ export function useSearchPage() {
   const searchParams = useSearchParams();
   const selectedCode = searchParams.get("selected");
 
-  const [localQuery, setLocalQuery] = useState(DEFAULT_QUERY);
+  // The landing page hands its query over in `?q=`, so a search started there
+  // arrives here as the search the visitor actually typed. Read once, as the
+  // initial value: after that the field owns the query.
+  const [localQuery, setLocalQuery] = useState(
+    searchParams.get("q")?.trim() || DEFAULT_QUERY,
+  );
   const [debouncedQuery, setDebouncedQuery] = useDebouncedQuery(localQuery);
   const [filters, setFilters] = useState<Record<string, string | string[]>>({});
 
