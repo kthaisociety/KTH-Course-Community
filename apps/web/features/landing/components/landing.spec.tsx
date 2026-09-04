@@ -125,6 +125,31 @@ function header() {
 
 describe("Landing", () => {
   describe("a visitor", () => {
+    it("keeps the header mark legible in each theme", () => {
+      render(<Landing />);
+
+      expect(screen.getByTestId("landing-mark-light")).toHaveAttribute(
+        "src",
+        "/ais-symbol-blue.png",
+      );
+      expect(screen.getByTestId("landing-mark-light")).toHaveClass(
+        "dark:hidden",
+      );
+      expect(screen.getByTestId("landing-mark-dark")).toHaveAttribute(
+        "src",
+        "/ais-symbol-white.png",
+      );
+      expect(screen.getByTestId("landing-mark-dark")).toHaveClass("dark:block");
+    });
+
+    it("uses the artboard's full-height desktop composition", () => {
+      const { container } = render(<Landing />);
+      expect(container.firstElementChild).toHaveClass(
+        "lg:h-dvh",
+        "lg:overflow-y-auto",
+      );
+    });
+
     it("gets the whole page without an account", () => {
       render(<Landing />);
       expect(
