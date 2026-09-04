@@ -125,92 +125,90 @@ const issues = [
 
 export default function NewsletterPage() {
   return (
-    <div className="min-h-screen bg-background">
-      <main className="container mx-auto px-6 py-12 pt-32">
-        <div className="max-w-4xl mx-auto">
-          <Card>
-            <CardHeader className="text-center">
-              <CardTitle className="text-4xl md:text-5xl font-bold">
-                Newsletter
-              </CardTitle>
-              <CardDescription className="text-lg">
-                Monthly updates on courses, careers, research, and community
-                life at KTH.
-              </CardDescription>
-            </CardHeader>
+    <main className="container mx-auto px-6 py-12">
+      <div className="max-w-4xl mx-auto">
+        <Card>
+          <CardHeader className="text-center">
+            <CardTitle className="text-4xl md:text-5xl font-bold">
+              Newsletter
+            </CardTitle>
+            <CardDescription className="text-lg">
+              Monthly updates on courses, careers, research, and community life
+              at KTH.
+            </CardDescription>
+          </CardHeader>
 
-            <CardContent className="flex flex-col gap-8">
-              <Separator />
+          <CardContent className="flex flex-col gap-8">
+            <Separator />
 
-              {/* Subscribe section */}
-              <Card className="border-primary/30 bg-primary/5">
-                <CardHeader>
-                  <CardTitle>Subscribe to the newsletter</CardTitle>
-                  <CardDescription>
-                    Get the latest issue delivered to your inbox on the first of
-                    every month. No spam, unsubscribe any time.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <NewsletterSubscribeForm />
-                </CardContent>
-              </Card>
+            {/* Subscribe section */}
+            <Card className="border-primary/30 bg-primary/5">
+              <CardHeader>
+                <CardTitle>Subscribe to the newsletter</CardTitle>
+                <CardDescription>
+                  Get the latest issue delivered to your inbox on the first of
+                  every month. No spam, unsubscribe any time.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <NewsletterSubscribeForm />
+              </CardContent>
+            </Card>
 
-              {/* Past issues */}
-              <div>
-                <h2 className="text-2xl font-semibold text-foreground mb-6">
-                  Past Issues
-                </h2>
-                <div className="grid gap-6 sm:grid-cols-2">
-                  {issues.map((issue) => {
-                    const Icon = issue.icon;
-                    return (
-                      <Card
-                        key={issue.id}
-                        className={
-                          issue.highlight ? "border-primary/40 shadow-md" : ""
-                        }
-                      >
-                        <CardHeader>
-                          <div className="flex items-start gap-3">
-                            <span className="mt-0.5 rounded-md bg-primary/10 p-2 text-primary">
-                              <Icon className="size-5" />
-                            </span>
-                            <div className="flex flex-col gap-1">
-                              <CardTitle className="text-base leading-snug">
-                                {issue.title}
-                              </CardTitle>
-                              <div className="flex items-center gap-2">
-                                <span className="text-xs text-muted-foreground">
-                                  {issue.date}
-                                </span>
-                                <Badge variant="secondary">
-                                  {issue.category}
-                                </Badge>
-                                {issue.highlight && (
-                                  <Badge variant="default">Latest</Badge>
-                                )}
-                              </div>
+            {/* Past issues */}
+            <div>
+              <h2 className="text-2xl font-semibold text-foreground mb-6">
+                Past Issues
+              </h2>
+              <div className="grid gap-6 sm:grid-cols-2">
+                {issues.map((issue) => {
+                  const Icon = issue.icon;
+                  return (
+                    <Card
+                      key={issue.id}
+                      className={
+                        issue.highlight ? "border-primary/40 shadow-md" : ""
+                      }
+                    >
+                      <CardHeader>
+                        <div className="flex items-start gap-3">
+                          <span className="mt-0.5 rounded-md bg-primary/10 p-2 text-primary">
+                            <Icon className="size-5" />
+                          </span>
+                          <div className="flex flex-col gap-1">
+                            <CardTitle className="text-base leading-snug">
+                              {issue.title}
+                            </CardTitle>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-muted-foreground">
+                                {issue.date}
+                              </span>
+                              <Badge variant="secondary">
+                                {issue.category}
+                              </Badge>
+                              {issue.highlight && (
+                                <Badge variant="default">Latest</Badge>
+                              )}
                             </div>
                           </div>
-                          <CardDescription className="mt-2">
-                            {issue.description}
-                          </CardDescription>
-                        </CardHeader>
-                        <CardFooter>
-                          <Button variant="outline" size="sm">
-                            Read issue
-                          </Button>
-                        </CardFooter>
-                      </Card>
-                    );
-                  })}
-                </div>
+                        </div>
+                        <CardDescription className="mt-2">
+                          {issue.description}
+                        </CardDescription>
+                      </CardHeader>
+                      <CardFooter>
+                        <Button variant="outline" size="sm">
+                          Read issue
+                        </Button>
+                      </CardFooter>
+                    </Card>
+                  );
+                })}
               </div>
-            </CardContent>
-          </Card>
-        </div>
-      </main>
-    </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </main>
   );
 }
