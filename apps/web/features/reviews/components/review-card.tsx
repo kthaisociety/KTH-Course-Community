@@ -129,7 +129,9 @@ export function ReviewCard({
   const detailId = useId();
 
   const { happyTook } = review;
-  const accent = happyTook ? "var(--cc-success)" : "var(--cc-danger)";
+  // The revised card uses the review-warning accent for an unhappy verdict;
+  // danger ink remains reserved for destructive actions such as downvoting.
+  const accent = happyTook ? "var(--cc-success)" : "var(--cc-warn-btn)";
   const excerpt = toExcerpt(review.message);
   const netScore = review.upvoteCount - review.downvoteCount;
   const isUpvoted = review.userVote === "up";

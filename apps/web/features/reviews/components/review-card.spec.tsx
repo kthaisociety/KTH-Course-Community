@@ -249,5 +249,8 @@ describe("ReviewCard", () => {
     expect(
       screen.getByRole("button", { name: "Downvote this review" }),
     ).toHaveStyle({ color: "var(--cc-danger-ink)" });
+    expect(screen.getByText("Not really").closest("article")).toHaveStyle({
+      borderLeftColor: "var(--cc-warn-btn)",
+    });
   });
 });
