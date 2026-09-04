@@ -419,7 +419,10 @@ export function CourseCard({
                 onClick={c.onRemove}
                 aria-label={c.removeLabel}
                 title={c.removeLabel}
-                className="ml-auto flex size-[34px] flex-none cursor-pointer items-center justify-center rounded-[8px] border border-cc-rule3 bg-cc-surface text-cc-dim hover:border-destructive/50 hover:text-destructive"
+                // The artboard turns this red on hover (#d9a08c border, #a4402a
+                // ink). `--cc-danger` is that colour in the palette now, and the
+                // border is derived from it rather than given a token of its own.
+                className="ml-auto flex size-[34px] flex-none cursor-pointer items-center justify-center rounded-[8px] border border-cc-rule3 bg-cc-surface text-cc-dim hover:border-cc-danger/55 hover:text-cc-danger"
               >
                 <TrashIcon />
               </button>
