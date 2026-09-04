@@ -7,7 +7,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { AuthReasonDialog } from "@/features/auth";
 import { CourseCardItem, courseCardGeometry } from "@/features/courses";
 import { PageColumn, PageHeader } from "@/features/shell";
-import { useWorkspacePane } from "@/features/workspace";
+import {
+  MobileWorkspaceSheetHost,
+  useWorkspacePane,
+} from "@/features/workspace";
 import {
   MAX_RATING_STARS,
   RATING_STAR_OPTIONS,
@@ -67,6 +70,7 @@ export function Explore() {
   const workspace = useWorkspacePane();
   const containerRef = useRef<HTMLDivElement>(null);
   const desktopWorkspace = useContainerBreakpoint(containerRef, 768);
+  const mobileWorkspace = !useContainerBreakpoint(containerRef, 640);
   const rowRef = useRef<HTMLDivElement>(null);
   const pane = useWorkspaceWidth(rowRef, workspace.hasOpenCourses);
   const [resultsRef, resultsWidth] = useResultsWidth();
@@ -75,11 +79,15 @@ export function Explore() {
   const { results, hasQuery, isLoading, isError } = explore;
   const showEmpty = hasQuery && !isLoading && !isError && results.length === 0;
 
-  // The desktop pane intentionally does not replace the mobile course route:
-  // #133 owns the mobile sheet host. Keeping that established route means a
-  // phone's Drawer and course controls remain keyboard-reachable today.
+  // The desktop column and phone sheet share the same state machine. The
+  // in-between layout remains a route: it has neither enough width for the
+  // column nor the narrow mobile chrome the sheet was designed for.
   function openCourse(courseCode: string, kind: "details" | "review") {
     if (desktopWorkspace) {
+      workspace.open(courseCode, kind);
+      return;
+    }
+    if (mobileWorkspace) {
       workspace.open(courseCode, kind);
       return;
     }
@@ -211,6 +219,15 @@ export function Explore() {
           </div>
         ) : null}
       </div>
+
+      {mobileWorkspace ? (
+        <MobileWorkspaceSheetHost
+          openCourses={workspace.openCourses}
+          activeId={workspace.activeId}
+          onClose={workspace.close}
+          onOpen={workspace.open}
+        />
+      ) : null}
 
       <AuthReasonDialog
         reason={explore.authReason}
