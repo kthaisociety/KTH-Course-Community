@@ -1,6 +1,7 @@
 import type { CourseSummary } from "@/types";
 import { embedSingle } from "../ai";
-import { getStatsByCodes, getSummariesByCodes } from "../course/service";
+import { getSummariesByCodes } from "../course/service";
+import { getAggregatesByCourseCodes } from "../reviews/service";
 import {
   listDepartments,
   type SearchHit,
@@ -114,6 +115,10 @@ async function searchWithEmbedding(
  *
  * A course with no reviews has no rating, so it cannot clear a minimum and is
  * filtered out — absent, rather than a zero that would rank it last.
+ *
+ * The threshold is compared against the raw stored mean. Search is choosing
+ * courses, not drawing a card, so it takes the reviews domain's aggregate
+ * rather than the rounded figures `course/service.ts` assembles for display.
  */
 export async function searchCourses(
   query: string,
@@ -143,10 +148,17 @@ export async function searchCourses(
 
   const minRating = filters?.minRating;
   if (minRating) {
-    const statsByCode = await getStatsByCodes(codes);
+    // The reviews domain's raw aggregate, not the course card's numbers: the
+    // card rounds its means to one decimal for display, and a 5.99 rounded up
+    // to 6.0 would clear a three-star threshold it actually misses. Filtering
+    // reads the unrounded score; rounding stays at the presentation edge.
+    const aggregates = await getAggregatesByCourseCodes(codes);
+    const learningMeanByCode = new Map(
+      aggregates.map((row) => [row.courseCode, row.learningMean]),
+    );
     const threshold = minRating * SCORE_POINTS_PER_STAR;
     codes = codes.filter((code) => {
-      const learningMean = statsByCode.get(code)?.reviews?.learningMean;
+      const learningMean = learningMeanByCode.get(code);
       return learningMean !== undefined && learningMean >= threshold;
     });
   }
