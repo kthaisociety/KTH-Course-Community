@@ -244,6 +244,15 @@ describe("MyPage Overview", () => {
     expect(screen.getByText("4.2")).toBeVisible();
   });
 
+  it("counts a single upvote in the singular", () => {
+    reviews.mockReturnValue(
+      settled([makeReview({ userId: "u1", upvoteCount: 1 })]),
+    );
+    render(<MyPage />);
+
+    expect(screen.getByText("1 member found them helpful")).toBeVisible();
+  });
+
   it("says no grades are stored rather than showing a zero average", () => {
     taken.mockReturnValue(
       settled([takenCourse({ earnedCredits: 7.5, grade: null })]),

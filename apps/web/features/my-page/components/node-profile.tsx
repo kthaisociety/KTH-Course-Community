@@ -19,9 +19,11 @@ type Props = {
 };
 
 /**
- * "My dot": how far the viewer has unlocked the appearance of their node in the
- * community graph — `docs/design/Course Community - My Page.dc.html`, the
- * `isDot` branch.
+ * How far the viewer has unlocked their **node profile** — a node's appearance,
+ * stored separately from graph topology. This is the tab the artboard labels
+ * "My dot" (`docs/design/Course Community - My Page.dc.html`, its `isDot`
+ * branch); `CONTEXT.md` licenses "dot" for the **Find your dot** flow's copy
+ * alone, so the label stays and the identifiers say what the glossary says.
  *
  * **Nothing here is choosable, and that is the schema's decision.** The
  * artboard renders each unlocked tier as a row of pickable options and writes
@@ -37,7 +39,7 @@ type Props = {
  * through the same table the landing page's canvas uses. The server stores a
  * name and never a hex; `cc-store.js` inverts that and is wrong.
  */
-export function MyDot({ effectiveTier, isUnavailable }: Props) {
+export function NodeProfile({ effectiveTier, isUnavailable }: Props) {
   const rows = personalizationTierRows(effectiveTier ?? 0);
 
   return (

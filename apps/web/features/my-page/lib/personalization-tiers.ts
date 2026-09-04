@@ -25,6 +25,15 @@
  * `server/` writes `personalization_tier_earned` yet, so every account is at
  * tier 0 and all three read as locked — the hints describe the intended rules,
  * not a mechanism that runs today.
+ *
+ * **The design disagrees with itself about tiers 2 and 3.** The My Page
+ * artboard's rendered list builds `mk(2, "Dot style", …, "style")` and
+ * `mk(3, "Signal on click", …, "signalStyle")`, while `cc-store.js`'s
+ * `TIER_AXES` constant is `{ 1: "color", 2: "signalStyle", 3: "style" }` — the
+ * opposite pairing for 2 and 3. The order below follows the rendered list,
+ * because that is what a reader of the artboard sees and the schema is silent:
+ * `personalization_tier_earned` is one number and no column says which axis a
+ * tier buys. Whoever writes that column settles it.
  */
 export const PERSONALIZATION_AXES = [
   {

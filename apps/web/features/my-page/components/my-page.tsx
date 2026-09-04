@@ -1,37 +1,18 @@
 "use client";
 
-import { useQueryClient } from "@tanstack/react-query";
 import { Lock, RotateCw, TriangleAlert } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useMemo, useRef, useState } from "react";
-import { toast } from "sonner";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useMemo, useRef, useState } from "react";
 import { useMe, useRequireSession } from "@/features/auth";
 import {
   type EditableReview,
   Review,
-  ReviewCard,
   toEditableReview,
   UnreviewedCard,
-  useRemoveReview,
   useUnreviewedTakenCourses,
 } from "@/features/reviews";
 import { PageColumn, PageHeader } from "@/features/shell";
-import type { Me } from "@/lib/user";
-import { uploadProfilePicture } from "@/lib/user";
-import { useTRPC } from "@/trpc/client";
-import type { Review as ReviewModel } from "@/types";
 import {
   isTierUnavailable,
   useAllReviews,
@@ -44,15 +25,22 @@ import {
   totalEarnedCredits,
 } from "../lib/grade-average";
 import { AccountSettings } from "./account-settings";
-import { MyDot } from "./my-dot";
+import { DeleteReviewDialog, type PendingDelete } from "./delete-review-dialog";
+import { Identity } from "./identity";
+import { NodeProfile } from "./node-profile";
+import { ReviewColumn } from "./review-column";
+import { StatCard } from "./stat-card";
 
-const VIEWS = ["overview", "reviews", "dot", "settings"] as const;
+// "node" rather than the artboard's "dot": `CONTEXT.md` licenses "dot" for
+// **Find your dot**'s copy alone, so the tab is labelled "My dot" and named for
+// the **Node profile** it shows.
+const VIEWS = ["overview", "reviews", "node", "settings"] as const;
 type MyPageView = (typeof VIEWS)[number];
 
 const TAB_LABELS: Record<MyPageView, string> = {
   overview: "Overview",
   reviews: "Reviews",
-  dot: "My dot",
+  node: "My dot",
   settings: "Settings",
 };
 
@@ -67,8 +55,6 @@ const TAB_KEY_STEPS: Record<string, number | "first" | "last" | undefined> = {
   End: "last",
 };
 
-/** Which review the delete dialog is about: `reviews.delete` needs the id, the cache needs the course. */
-type PendingDelete = { id: string; courseCode: string };
 /** Which review the editor is open on. The dialog is per-course, so it carries one. */
 type OpenEditor = { review: EditableReview; courseCode: string };
 
@@ -288,11 +274,7 @@ export function MyPage() {
                   <StatCard
                     label="Written reviews"
                     value={String(myReviews.length)}
-                    note={
-                      upvotesOnMine === 0
-                        ? "no upvotes yet"
-                        : `${upvotesOnMine} members found them helpful`
-                    }
+                    note={upvoteNote(upvotesOnMine)}
                   />
                   <StatCard
                     label="Average grade"
@@ -369,8 +351,8 @@ export function MyPage() {
               </div>
             ) : null}
 
-            {view === "dot" ? (
-              <MyDot
+            {view === "node" ? (
+              <NodeProfile
                 effectiveTier={tierQuery.data}
                 isUnavailable={
                   tierQuery.isError && isTierUnavailable(tierQuery.error)
@@ -414,258 +396,6 @@ export function MyPage() {
         />
       ) : null}
     </PageColumn>
-  );
-}
-
-/**
- * Who the reader is, and the one control that changes it.
- *
- * The artboard's profile line reads "At KTH since 2023 · reviews signed Elsa
- * Lindqvist". The second half is dropped: reviews carry no name. The first half
- * is the earliest `attendance_year` on the viewer's taken courses, and it is
- * left out entirely when they have none rather than rendered as an em dash
- * beside a date that was never recorded.
- *
- * The picture posts to `/api/user/profile-picture`, which is multipart and
- * therefore not a tRPC procedure. That route already exists and is the only one.
- */
-function Identity({
-  user,
-  sinceYear,
-}: {
-  user: Me | null;
-  sinceYear: number | null;
-}) {
-  const queryClient = useQueryClient();
-  const trpc = useTRPC();
-  const fileInput = useRef<HTMLInputElement>(null);
-  const [preview, setPreview] = useState<string | null>(null);
-  const [isUploading, setUploading] = useState(false);
-
-  const name = user?.name ?? "";
-  const email = user?.email ?? "";
-  const image = preview ?? user?.image ?? null;
-
-  async function handleFile(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    // Cleared so choosing the same file twice fires a change event again.
-    event.target.value = "";
-    if (!file) return;
-
-    const localPreview = URL.createObjectURL(file);
-    setPreview(localPreview);
-    setUploading(true);
-
-    const result = await uploadProfilePicture(file);
-    setUploading(false);
-    setPreview(null);
-    URL.revokeObjectURL(localPreview);
-
-    if (!result.success) {
-      toast.error(result.error || "Image upload failed.");
-      return;
-    }
-    await queryClient.invalidateQueries({
-      queryKey: trpc.user.me.queryKey(),
-    });
-  }
-
-  return (
-    <div className="flex items-center gap-3.5 px-7 pt-[18px] @max-[440px]:px-[14px]">
-      <Avatar className="size-[52px] flex-none">
-        {image ? <AvatarImage src={image} alt="" /> : null}
-        <AvatarFallback className="bg-cc-pill font-semibold text-[16px] text-cc-brand">
-          {initialsOf(name || email)}
-        </AvatarFallback>
-      </Avatar>
-      <div className="min-w-0">
-        <div className="font-semibold text-[19px] leading-[1.25]">
-          {name || email}
-        </div>
-        <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13.5px] text-cc-muted">
-          {sinceYear === null ? null : <span>At KTH since {sinceYear}</span>}
-          <button
-            type="button"
-            onClick={() => fileInput.current?.click()}
-            disabled={isUploading}
-            className="cursor-pointer font-medium text-cc-brand hover:underline disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {isUploading ? "Uploading…" : "Change photo"}
-          </button>
-        </div>
-      </div>
-      <input
-        ref={fileInput}
-        type="file"
-        accept="image/*"
-        className="sr-only"
-        aria-label="Upload a profile picture"
-        onChange={(event) => void handleFile(event)}
-      />
-    </div>
-  );
-}
-
-type ReviewColumnProps = {
-  heading: string;
-  reviews: ReviewModel[];
-  emptyTitle: string;
-  emptyBody: string;
-  emptyAction?: { label: string; onClick: () => void };
-  onEdit?: (review: ReviewModel) => void;
-  onDelete?: (review: ReviewModel) => void;
-};
-
-/**
- * One of the Reviews tab's two columns.
- *
- * No vote controls: voting happens where the review lives, on the course page,
- * and `reviews.vote` invalidates that course's list rather than this page's
- * unfiltered one. The cards still show the net score, which is what the artboard
- * puts in the column too.
- */
-function ReviewColumn({
-  heading,
-  reviews,
-  emptyTitle,
-  emptyBody,
-  emptyAction,
-  onEdit,
-  onDelete,
-}: ReviewColumnProps) {
-  return (
-    <section>
-      <h2 className="m-0 mb-2.5 font-semibold text-[12px] text-cc-dim uppercase tracking-[0.05em]">
-        {heading}
-      </h2>
-      {reviews.length === 0 ? (
-        <div className="rounded-xl border border-cc-rule3 border-dashed bg-cc-surface px-5 py-11 text-center">
-          <div className="font-semibold text-[16px]">{emptyTitle}</div>
-          <p className="mx-auto mt-[7px] max-w-[420px] text-[13px] text-cc-muted leading-[1.5]">
-            {emptyBody}
-          </p>
-          {emptyAction ? (
-            <button
-              type="button"
-              onClick={emptyAction.onClick}
-              className="mt-4 inline-flex h-10 cursor-pointer items-center rounded-[9px] bg-cc-btn px-[17px] font-semibold text-[13.5px] text-cc-btn-fg hover:opacity-[.88]"
-            >
-              {emptyAction.label}
-            </button>
-          ) : null}
-        </div>
-      ) : (
-        <ul className="m-0 flex list-none flex-col gap-3.5 p-0">
-          {reviews.map((review) => (
-            <li key={review.id}>
-              <ReviewCard
-                review={review}
-                isAuthor={Boolean(onEdit || onDelete)}
-                onEdit={onEdit ? () => onEdit(review) : undefined}
-                onDelete={onDelete ? () => onDelete(review) : undefined}
-              />
-            </li>
-          ))}
-        </ul>
-      )}
-    </section>
-  );
-}
-
-/**
- * Deleting one of the viewer's own reviews.
- *
- * Mounted only while a review is pending, because `useRemoveReview` is keyed by
- * course code and this page's reviews span many courses. It invalidates the
- * unfiltered list as well, which the hook cannot know about.
- */
-function DeleteReviewDialog({
-  pending,
-  onClose,
-}: {
-  pending: PendingDelete;
-  onClose: () => void;
-}) {
-  const trpc = useTRPC();
-  const queryClient = useQueryClient();
-  const removeReview = useRemoveReview(pending.courseCode);
-
-  const confirm = useCallback(async () => {
-    onClose();
-    const removed = await removeReview(pending.id);
-    if (removed) {
-      await queryClient.invalidateQueries({
-        queryKey: trpc.reviews.list.queryKey(),
-      });
-    }
-  }, [onClose, pending.id, queryClient, removeReview, trpc.reviews.list]);
-
-  return (
-    <AlertDialog
-      open
-      onOpenChange={(open) => {
-        if (!open) onClose();
-      }}
-    >
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Delete this review?</AlertDialogTitle>
-          <AlertDialogDescription>
-            This removes your review of {pending.courseCode} — the scores, the
-            examination split and the write-up — from the course, along with the
-            votes it collected. It cannot be undone.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>Keep review</AlertDialogCancel>
-          <AlertDialogAction
-            variant="destructive"
-            onClick={() => void confirm()}
-          >
-            Delete review
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-  );
-}
-
-function StatCard({
-  label,
-  value,
-  unit,
-  note,
-  emphasis = false,
-}: {
-  label: string;
-  value: string;
-  unit?: string;
-  note: string;
-  emphasis?: boolean;
-}) {
-  return (
-    <div
-      className={`rounded-xl border px-[17px] py-4 ${
-        emphasis
-          ? "border-cc-hov bg-cc-info-solid"
-          : "border-cc-rule bg-cc-surface"
-      }`}
-    >
-      <div className="font-medium text-[11.5px] text-cc-dim">{label}</div>
-      <div
-        className={`mt-[7px] font-semibold text-[28px] tracking-[-0.02em] tabular-nums ${
-          emphasis ? "text-cc-brand" : ""
-        }`}
-      >
-        {value}
-        {unit ? (
-          <span className="ml-1 font-medium text-[15px] text-cc-dim">
-            {unit}
-          </span>
-        ) : null}
-      </div>
-      <div className="mt-[5px] text-[12px] text-cc-dim2">{note}</div>
-    </div>
   );
 }
 
@@ -764,6 +494,14 @@ function LoadFailed({ onRetry }: { onRetry: () => void }) {
   );
 }
 
+/** #97 settled the substitution: members, never students — it is app users who vote. */
+function upvoteNote(upvotes: number): string {
+  if (upvotes === 0) return "no upvotes yet";
+  return upvotes === 1
+    ? "1 member found them helpful"
+    : `${upvotes} members found them helpful`;
+}
+
 function averageNote(
   hasStoredGrades: boolean,
   average: number | null,
@@ -791,14 +529,4 @@ function formatDate(iso: string): string {
         month: "short",
         day: "numeric",
       });
-}
-
-function initialsOf(value: string): string {
-  const letters = value
-    .split(/\s+/)
-    .map((part) => part[0])
-    .filter(Boolean)
-    .join("")
-    .toUpperCase();
-  return letters.slice(0, 2) || "?";
 }
