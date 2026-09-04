@@ -111,6 +111,11 @@ export function WorkspacePane({
     );
   }
 
+  /** The review is in `reviews.list` now, so the note has done its job. */
+  function forgetPublished(courseCode: string) {
+    setPublished((current) => current.filter((code) => code !== courseCode));
+  }
+
   return (
     <section
       aria-label="Open courses"
@@ -254,6 +259,7 @@ export function WorkspacePane({
             publishedEarlier={published.includes(active.courseCode)}
             onDraftChange={(draft) => patchDraft(active.courseCode, draft)}
             onPublished={() => markPublished(active.courseCode)}
+            onPublishedConfirmed={() => forgetPublished(active.courseCode)}
           />
         )}
       </section>

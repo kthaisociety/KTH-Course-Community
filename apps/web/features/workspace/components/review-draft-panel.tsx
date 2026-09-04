@@ -168,10 +168,15 @@ function ScoreSlider({
 export interface ReviewDraftPanelProps {
   courseCode: string;
   draft: ReviewDraft;
-  /** The workspace already sent a review for this course. */
+  /**
+   * The workspace sent a review for this course and has not yet seen it come
+   * back in `reviews.list`.
+   */
   publishedEarlier: boolean;
   onDraftChange: (draft: ReviewDraft) => void;
   onPublished: () => void;
+  /** The sent review has arrived in the list; the workspace can forget it. */
+  onPublishedConfirmed: () => void;
 }
 
 /**
@@ -188,6 +193,7 @@ export function ReviewDraftPanel({
   publishedEarlier,
   onDraftChange,
   onPublished,
+  onPublishedConfirmed,
 }: Readonly<ReviewDraftPanelProps>) {
   const { user, userId, isAuthenticated, isLoading: sessionLoading } = useMe();
   const addReview = useAddReview();
@@ -241,11 +247,22 @@ export function ReviewDraftPanel({
    * look — so a second publish would quietly add a row and move the course's
    * averages. Flagged in the PR: that guard belongs in the reviews domain.
    */
-  const alreadyReviewed =
-    published ||
-    (userId !== "" &&
-      (courseReviews.data ?? []).some((review) => review.userId === userId));
+  const reviewedInList =
+    userId !== "" &&
+    (courseReviews.data ?? []).some((review) => review.userId === userId);
+  const alreadyReviewed = published || reviewedInList;
   const publishable = canPublish(draft) && !alreadyReviewed;
+
+  /**
+   * The workspace's note that it published covers one window: between the
+   * write and `reviews.list` catching up. Once the review is in the list, the
+   * list is the authority and the note is dropped — otherwise deleting the
+   * review would leave a workspace that refuses to let its owner write another
+   * one, which is a course they can no longer review at all.
+   */
+  useEffect(() => {
+    if (publishedEarlier && reviewedInList) onPublishedConfirmed();
+  }, [publishedEarlier, reviewedInList, onPublishedConfirmed]);
   const cuts = dividerPositions(draft);
   const examDisabled = draft.examinationForgotten;
   const approachDisabled = draft.approachForgotten;

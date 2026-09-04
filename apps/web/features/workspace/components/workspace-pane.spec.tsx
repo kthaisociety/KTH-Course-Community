@@ -504,6 +504,42 @@ describe("what survives a page load", () => {
     expect(addReview).toHaveBeenCalledTimes(1);
   });
 
+  it("lets a reviewer write again after deleting the review they published", async () => {
+    const user = userEvent.setup({ delay: null });
+    const first = renderPane([openCourse("review")]);
+
+    await user.click(screen.getByRole("button", { name: "Yes, I am" }));
+    setScore("How demanding was this course?", 8);
+    setScore("How much did you learn in this course?", 6);
+    await user.click(screen.getByRole("button", { name: "Post review" }));
+    await screen.findByText(/Published. Thanks/);
+    first.unmount();
+
+    // The list catches up, which is what the workspace's note was covering.
+    useReviewList.mockReturnValue({
+      data: [{ id: "rev-1", courseCode: "DD2380", userId: "u1" }],
+      isLoading: false,
+    });
+    const second = renderPane([openCourse("review")]);
+    expect(
+      await screen.findByText(/You have already reviewed this course/),
+    ).toBeInTheDocument();
+    second.unmount();
+
+    // The reviewer deletes it from the course's reviews. Nothing should stand
+    // between them and writing another — least of all a stale note.
+    useReviewList.mockReturnValue({ data: [], isLoading: false });
+    renderPane([openCourse("review")]);
+    await user.click(screen.getByRole("button", { name: "Yes, I am" }));
+    setScore("How demanding was this course?", 4);
+    setScore("How much did you learn in this course?", 4);
+
+    expect(
+      screen.queryByText(/You have already reviewed this course/),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Post review" })).toBeEnabled();
+  });
+
   it("forgets a draft once it is a published review", async () => {
     const user = userEvent.setup({ delay: null });
     const { unmount } = renderPane([openCourse("review")]);
