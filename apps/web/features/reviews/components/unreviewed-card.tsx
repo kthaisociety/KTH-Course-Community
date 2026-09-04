@@ -1,3 +1,5 @@
+"use client";
+
 import { MessageCircle } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
@@ -26,14 +28,15 @@ type Props = {
   /** How many rows to list before collapsing the rest into "+N more". */
   max?: number;
   /**
-   * Opens the run-them-back-to-back reviewer. Optional, and the button is left
-   * out when it is missing — a call to action that goes nowhere is worse than
-   * no call to action. The rows still route on their own.
+   * Opens the run-them-back-to-back reviewer. Required, because the artboard
+   * never draws this card without its call to action — a screen that cannot
+   * offer one has no business rendering the prompt.
    */
-  onStart?: () => void;
+  onStart: () => void;
   /**
-   * Handles a row instead of the default link into the review flow. Taken
-   * courses opens its reviewer in place rather than navigating away.
+   * Handles a row instead of the default link into the review flow. This is the
+   * artboard's own per-course `c.onClick`, which Taken courses uses to open its
+   * reviewer in place rather than navigating away; My Page passes one too.
    */
   onSelect?: (courseCode: string) => void;
 };
@@ -111,16 +114,14 @@ export function UnreviewedCard({
             Your review is what the next student reads.
           </p>
         </div>
-        {onStart ? (
-          <button
-            type="button"
-            onClick={onStart}
-            className="flex h-10 flex-none items-center justify-center gap-2 rounded-[9px] bg-cc-btn px-[18px] font-semibold text-[13.5px] text-cc-btn-fg hover:opacity-[.88] @max-md:w-full"
-          >
-            <MessageCircle size={15} aria-hidden />
-            {fastTrackLabelFor(courses.length)}
-          </button>
-        ) : null}
+        <button
+          type="button"
+          onClick={onStart}
+          className="flex h-10 flex-none items-center justify-center gap-2 rounded-[9px] bg-cc-btn px-[18px] font-semibold text-[13.5px] text-cc-btn-fg hover:opacity-[.88] @max-[440px]:w-full"
+        >
+          <MessageCircle size={15} aria-hidden />
+          {fastTrackLabelFor(courses.length)}
+        </button>
       </div>
 
       <ul className="mt-3 flex list-none flex-col gap-[7px] border-cc-rule border-t pt-3 pl-0">

@@ -29,7 +29,9 @@ function renderScreen(
     VIEWER,
   ).map((course) => ({ code: course.courseCode, name: course.name }));
 
-  return render(<UnreviewedCard courses={courses} {...over} />);
+  return render(
+    <UnreviewedCard courses={courses} onStart={() => {}} {...over} />,
+  );
 }
 
 describe("UnreviewedCard", () => {
@@ -73,13 +75,14 @@ describe("UnreviewedCard", () => {
     expect(container).toBeEmptyDOMElement();
   });
 
-  it("offers the fast track only when a screen can open one", async () => {
+  it("counts the fast track's label and opens the reviewer with it", async () => {
     const onStart = vi.fn();
-    const { rerender } = renderScreen([]);
+    const { rerender } = renderScreen([], { onStart });
 
-    expect(
-      screen.queryByRole("button", { name: /Fast track/ }),
-    ).not.toBeInTheDocument();
+    await userEvent.click(
+      screen.getByRole("button", { name: "Fast track all 2" }),
+    );
+    expect(onStart).toHaveBeenCalledOnce();
 
     rerender(
       <UnreviewedCard
@@ -87,11 +90,9 @@ describe("UnreviewedCard", () => {
         onStart={onStart}
       />,
     );
-
-    await userEvent.click(
+    expect(
       screen.getByRole("button", { name: "Fast track it" }),
-    );
-    expect(onStart).toHaveBeenCalledOnce();
+    ).toBeInTheDocument();
   });
 
   it("hands a row to onSelect instead of navigating when a screen supplies one", async () => {
@@ -111,6 +112,7 @@ describe("UnreviewedCard", () => {
         courses={["DD2424", "SF1918", "AK2030"].map((code) => ({ code }))}
         line="You have 3 unreviewed courses."
         max={2}
+        onStart={() => {}}
       />,
     );
 
