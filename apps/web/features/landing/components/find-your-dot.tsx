@@ -273,14 +273,14 @@ function SignIn(props: {
         }
         className={cn(
           "mt-4 h-10 w-full rounded-[9px] border bg-cc-inset px-3 text-[13.5px] text-cc-ink outline-none",
-          props.invalid ? "border-cc-warn-ink" : "border-cc-rule3",
+          props.invalid ? "border-cc-danger" : "border-cc-rule3",
         )}
       />
       {props.invalid || props.failed ? (
         <p
           id="find-your-dot-error"
           role="alert"
-          className="mt-2 text-[12.5px] text-cc-warn-ink"
+          className="mt-2 text-[12.5px] text-cc-danger"
         >
           {props.invalid
             ? "Enter a valid email address."
@@ -307,6 +307,12 @@ function SignIn(props: {
  * that is not there — an invented position would be a lie about where somebody
  * stands in the community, and it would be the first thing to go wrong when
  * placement does land.
+ *
+ * Deliberately **informational, not an error**. Nobody has failed at anything
+ * here and nothing went wrong, so there is no `--cc-danger`, no `role="alert"`
+ * and no retry: dressing an ordinary state as a fault would tell the reader
+ * they had done something to deserve it. The dashed ring stands where the dot
+ * will be, and stays unlabelled — a label is the one thing being refused.
  */
 function Unplaced({ onClose }: { onClose: () => void }) {
   return (
