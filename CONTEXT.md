@@ -131,21 +131,16 @@ _Avoid_: theory rating, theoretical vs applied
 One persistent global graph of app users in a shared world coordinate space. It
 is not rebuilt per visit: a returning user keeps their place and their
 neighbourhood.
-_Today_: no tables. The landing hero renders a synthetic field from a generated
-sequence. Closed by the graph tables below.
 _Avoid_: network, social graph, map, constellation
 
 **Node**:
 One app user's presence in the community graph. Every node is a user; there are
 no non-user nodes.
-_Today_: no table. Closed by `users_graph_nodes`.
 _Avoid_: point, vertex, avatar, dot (except in **Find your dot**)
 
 **World position**:
 A node's persistent place in the graph. World units are not browser pixels — the
 frontend projects them, and responsive adjustments never write back.
-_Today_: not persisted; the hero generates a position per render. Closed by
-`users_graph_nodes.x` / `.y`.
 _Avoid_: screen position, canvas coordinates, pixel position
 
 **Anchor**:
@@ -157,12 +152,10 @@ _Avoid_: parent, host, neighbour
 The stored attachment between a node and its anchor. Its direction records
 placement history — newer to older — and the UI may draw it undirected. It is
 not a friendship and carries no social meaning.
-_Today_: no table. Closed by `users_graph_backbone_edges`.
 _Avoid_: friendship, connection, follow, link, relationship
 
 **Node profile**:
 A node's appearance, stored separately from graph topology.
-_Today_: no table. Closed by `users_node_profiles`.
 _Avoid_: avatar, skin, theme
 
 **Signal**:
@@ -173,7 +166,6 @@ _Avoid_: pulse, ping, animation, activity
 How far an app user has unlocked node personalisation, held as the highest value
 ever reached. An effective tier may decay with inactivity, but that is derived at
 read time and never overwrites what was earned.
-_Today_: no column. Closed by `users.personalization_tier_earned`.
 _Avoid_: level, rank, XP, points, streak
 
 **Find your dot**:

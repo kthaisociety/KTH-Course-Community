@@ -1,6 +1,7 @@
 import { collectionsRouter } from "../collections/router";
 import { courseRouter } from "../course/router";
 import { feedbackRouter } from "../feedback/router";
+import { graphRouter } from "../graph/router";
 import { healthRouter } from "../health/router";
 import { reviewsRouter } from "../reviews/router";
 import { savedRouter } from "../saved/router";
@@ -17,6 +18,7 @@ export const appRouter = createTRPCRouter({
   taken: takenRouter,
   collections: collectionsRouter,
   user: userRouter,
+  graph: graphRouter,
   feedback: feedbackRouter,
   health: healthRouter,
 });
