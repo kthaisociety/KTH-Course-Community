@@ -4,7 +4,7 @@ export type Me = {
   userId: string;
   name: string;
   email: string;
-  userFavorites: string[];
+  savedCourseCodes: string[];
   image: string | null;
 };
 

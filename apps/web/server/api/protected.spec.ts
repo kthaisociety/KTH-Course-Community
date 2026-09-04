@@ -29,6 +29,55 @@ describe("protected procedures", () => {
     ).rejects.toMatchObject({ code: "UNAUTHORIZED" });
   });
 
+  it.each([
+    ["saved.list", () => caller(null).saved.list()],
+    ["saved.save", () => caller(null).saved.save({ courseCode: "DD2421" })],
+    ["saved.unsave", () => caller(null).saved.unsave({ courseCode: "DD2421" })],
+    ["taken.list", () => caller(null).taken.list()],
+    ["taken.add", () => caller(null).taken.add({ courseCode: "DD2421" })],
+    ["taken.update", () => caller(null).taken.update({ courseCode: "DD2421" })],
+    ["taken.remove", () => caller(null).taken.remove({ courseCode: "DD2421" })],
+    ["collections.list", () => caller(null).collections.list()],
+    [
+      "collections.create",
+      () => caller(null).collections.create({ name: "x" }),
+    ],
+    [
+      "collections.rename",
+      () => caller(null).collections.rename({ collectionId: "c1", name: "x" }),
+    ],
+    [
+      "collections.delete",
+      () => caller(null).collections.delete({ collectionId: "c1" }),
+    ],
+    [
+      "collections.reorder",
+      () =>
+        caller(null).collections.reorder({
+          collectionId: "c1",
+          courseCodes: [],
+        }),
+    ],
+    [
+      "collections.addCourse",
+      () =>
+        caller(null).collections.addCourse({
+          collectionId: "c1",
+          courseCode: "DD2421",
+        }),
+    ],
+    [
+      "collections.removeCourse",
+      () =>
+        caller(null).collections.removeCourse({
+          collectionId: "c1",
+          courseCode: "DD2421",
+        }),
+    ],
+  ])("rejects visitors on %s", async (_name, call) => {
+    await expect(call()).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+  });
+
   it("allows visitors on search.courses", async () => {
     const result = await caller(null).search.courses({ q: "" });
     expect(result).toMatchObject({ results: [], total: 0 });

@@ -4,7 +4,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useState } from "react";
 import { useMe } from "@/features/auth";
 import { useCourseDetails } from "@/features/courses";
-import { useToggleFavorite } from "@/features/favorites";
+import { useSetCourseSaved } from "@/features/favorites";
 import type { CourseWithUserInfo } from "@/types";
 import { toSearchCoursesInput, useSearchCourses } from "../api/queries";
 import { useDebouncedQuery } from "./use-debounced-query";
@@ -13,8 +13,8 @@ const DEFAULT_QUERY = "interaction programming";
 
 export function useSearchPage() {
   const { user } = useMe();
-  const userFavorites = user?.userFavorites ?? [];
-  const toggleFavorite = useToggleFavorite();
+  const savedCourseCodes = user?.savedCourseCodes ?? [];
+  const { toggleSaved } = useSetCourseSaved();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -47,7 +47,7 @@ export function useSearchPage() {
     debouncedQuery.trim() ? (searchData?.results ?? []) : []
   ).map((result) => ({
     ...result,
-    isUserFavorite: userFavorites.includes(result.courseCode),
+    isUserFavorite: savedCourseCodes.includes(result.courseCode),
   }));
 
   const error = searchError
@@ -107,11 +107,14 @@ export function useSearchPage() {
 
   const onAddToComparison = useCallback((_courseCode: string) => {}, []);
 
+  // `toggleSaved` reads the cache at call time. Deriving the target state from
+  // `savedCourseCodes` here would reuse this render's value, so two fast clicks
+  // would both request the same state.
   async function onToggleFavorite(courseCode: string) {
     try {
-      await toggleFavorite.mutateAsync({ courseCode });
+      await toggleSaved(courseCode);
     } catch (err) {
-      console.error("Failed to toggle favorite:", err);
+      console.error("Failed to change saved course:", err);
     }
   }
 

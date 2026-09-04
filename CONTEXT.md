@@ -65,13 +65,10 @@ being either.
 A course an app user has kept for later. Saved state is the existence of a row,
 never a flag; unsaving removes it and must leave taken history and reviews
 untouched.
-_Today_: `user_favorites`, keyed on `fav_course_code`. Closed by
-`user_saved_courses`.
 _Avoid_: favorite, bookmark, starred, liked, wishlist
 
 **Taken course**:
 A course an app user has actually attended.
-_Today_: no table. Closed by `user_taken_courses`.
 _Avoid_: completed course, course history, my courses, enrolled course
 
 **Transcript import**:
@@ -84,7 +81,6 @@ _Avoid_: transcript sync, Ladok scrape, upload (that is the file step, not this)
 **Collection**:
 A named, ordered group of one app user's saved courses. A course may only join a
 collection its owner has also saved.
-_Today_: no table. Closed by `collections` and `collection_courses`.
 _Avoid_: comparison, list, folder, group, playlist
 
 ### Reviews
