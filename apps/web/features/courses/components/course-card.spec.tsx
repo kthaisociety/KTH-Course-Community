@@ -133,6 +133,55 @@ describe("CourseCard", () => {
       expect(onLogIn).toHaveBeenCalledOnce();
     });
 
+    // The artboard dismisses its panels from the screen, with one handler that
+    // can see every card. State is per-card here, so the card does it — which
+    // also means pointing at another card's trigger closes this one.
+    it("closes the picker when the reader points somewhere else", async () => {
+      const onPicker = vi.fn();
+      render(
+        <CourseCard
+          signedIn
+          c={reviewedCard({ pickerOpen: true, onPicker })}
+          geo={EXPANDED_CARD_GEOMETRY}
+        />,
+      );
+
+      await userEvent.click(document.body);
+      expect(onPicker).toHaveBeenCalledOnce();
+    });
+
+    it("does not close the picker on a press inside it", async () => {
+      const onPicker = vi.fn();
+      const onNewCollection = vi.fn();
+      render(
+        <CourseCard
+          signedIn
+          c={reviewedCard({ pickerOpen: true, onPicker, onNewCollection })}
+          geo={EXPANDED_CARD_GEOMETRY}
+        />,
+      );
+
+      await userEvent.click(
+        screen.getByRole("button", { name: "Create new collection" }),
+      );
+      expect(onNewCollection).toHaveBeenCalledOnce();
+      expect(onPicker).not.toHaveBeenCalled();
+    });
+
+    it("closes the picker on Escape", async () => {
+      const onPicker = vi.fn();
+      render(
+        <CourseCard
+          signedIn
+          c={reviewedCard({ pickerOpen: true, onPicker })}
+          geo={EXPANDED_CARD_GEOMETRY}
+        />,
+      );
+
+      await userEvent.keyboard("{Escape}");
+      expect(onPicker).toHaveBeenCalledOnce();
+    });
+
     // The prompt must not advertise a feature that does not exist (#68).
     it("is not promised an AI comparison", () => {
       const { container } = render(
@@ -292,9 +341,11 @@ describe("CourseCard", () => {
       );
 
       expect(screen.queryByRole("button", { name: "Save course" })).toBeNull();
-      await userEvent.click(
-        screen.getByRole("button", { name: "Add to collections" }),
-      );
+      // The accessible name is the visible label, not a tidier synonym of it:
+      // voice control cannot reach a control it cannot say (WCAG 2.5.3).
+      const picker = screen.getByRole("button", { name: "Add to comparison" });
+      expect(picker).toHaveTextContent("Add to comparison");
+      await userEvent.click(picker);
       expect(onPicker).toHaveBeenCalledOnce();
     });
 

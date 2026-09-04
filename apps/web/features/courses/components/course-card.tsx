@@ -1,6 +1,6 @@
 "use client";
 
-import type { CSSProperties, ReactNode } from "react";
+import type { CSSProperties, ReactNode, RefObject } from "react";
 import { useEffect, useRef } from "react";
 import { keywordChips } from "@/features/courses/lib/course-card-model";
 import type { CardGeometry, CourseCardAction, CourseCardModel } from "@/types";
@@ -106,6 +106,44 @@ function TakenPillBody({ c }: { c: CourseCardModel }) {
 /** Marks the picker's own subtree, so a blur inside it is not a blur away. */
 const PICKER_MARKER = "data-collection-picker";
 
+/**
+ * Closes an open popover when the reader points or presses somewhere else.
+ *
+ * The artboard dismisses both panels from the screen, where one `closeAll` can
+ * see every card. Here each card owns its own popover state, so the same
+ * behaviour has to live with the DOM that defines "elsewhere" — which is this
+ * component. It also settles the multi-card case for free: pointing at another
+ * card's trigger is outside this one, so at most one panel is ever open.
+ *
+ * `close` is the trigger's own toggle, and it only runs while the panel is
+ * open, so toggling is closing.
+ */
+function useDismissOnOutside(
+  open: boolean,
+  region: RefObject<HTMLElement | null>,
+  close: (() => void) | undefined,
+) {
+  useEffect(() => {
+    if (!open || !close) return;
+
+    const onPointerDown = (event: PointerEvent) => {
+      const target = event.target;
+      if (target instanceof Node && region.current?.contains(target)) return;
+      close();
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") close();
+    };
+
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open, close, region]);
+}
+
 export function CourseCard({
   c,
   geo,
@@ -120,6 +158,13 @@ export function CourseCard({
 }: Props) {
   const tween = { transition: geo.tween };
   const keywords = keywordChips(c.keywords);
+
+  // Each popover's region is its trigger plus its panel: a press inside either
+  // is not a press elsewhere.
+  const takenRegion = useRef<HTMLDivElement>(null);
+  const pickerRegion = useRef<HTMLDivElement>(null);
+  useDismissOnOutside(c.takenPickerOpen ?? false, takenRegion, c.onTaken);
+  useDismissOnOutside(c.pickerOpen, pickerRegion, c.onPicker);
 
   return (
     <div className="@container w-full" style={geometryVars(geo)}>
@@ -163,7 +208,7 @@ export function CourseCard({
               </div>
             </div>
 
-            <div className="relative z-10 flex-none">
+            <div className="relative z-10 flex-none" ref={takenRegion}>
               {/* Without `onTaken` the pill is a reading, not a control: the
                   viewer has already marked the course, and unmarking it here
                   would discard the grade and credits recorded beside the row
@@ -295,7 +340,10 @@ export function CourseCard({
               ) : null}
             </button>
 
-            <div className="relative min-w-[44px] flex-[var(--card-save-flex)]">
+            <div
+              className="relative min-w-[44px] flex-[var(--card-save-flex)]"
+              ref={pickerRegion}
+            >
               {action === "save" ? (
                 <div
                   className="box-border flex h-[34px] max-w-full items-stretch overflow-hidden rounded-[8px] border"
@@ -341,9 +389,14 @@ export function CourseCard({
                   className="box-border flex h-[34px] cursor-pointer items-center gap-[7px] overflow-hidden rounded-[8px] border border-cc-rule3 bg-cc-surface px-[10px] text-[13px] text-cc-ink hover:border-cc-hov hover:bg-cc-info"
                 >
                   <AddToCollectionIcon />
+                  {/* Same string as the accessible name above: a visible label
+                      the accessible name does not contain is unreachable by
+                      voice control (WCAG 2.5.3), and the label is hidden by the
+                      container query on a narrow card, so it cannot be the only
+                      name either. */}
                   {geo.showLabel ? (
                     <span className="min-w-0 overflow-hidden whitespace-nowrap @max-[440px]:hidden">
-                      Add to comparison
+                      {c.addLabel}
                     </span>
                   ) : null}
                 </button>
@@ -549,8 +602,12 @@ function NewCollectionField({
         aria-label="New collection name"
         onChange={(event) => onChange?.(event.target.value)}
         onBlur={(event) => {
-          const next = event.relatedTarget as Element | null;
-          if (next?.closest(`[${PICKER_MARKER}]`)) return;
+          // `relatedTarget` is an EventTarget: it is null when focus leaves the
+          // document, and `.closest` is not on every one of them.
+          const next = event.relatedTarget;
+          if (next instanceof Element && next.closest(`[${PICKER_MARKER}]`)) {
+            return;
+          }
           onCommit?.();
         }}
         onKeyDown={(event) => {

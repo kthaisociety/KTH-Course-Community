@@ -103,6 +103,19 @@ describe("useCourseCard", () => {
       expect(onRequestAuth).toHaveBeenCalledWith("sign-up");
       expect(onRequestAuth).toHaveBeenCalledWith("log-in");
     });
+
+    // Otherwise the panel sits behind the dialog and is still open when the
+    // reader dismisses it.
+    it("puts away the panel that asked before the dialog opens", async () => {
+      const { result } = card();
+      await act(async () => result.current.c.onTaken?.());
+      expect(result.current.c.takenPickerOpen).toBe(true);
+
+      await act(async () => result.current.c.onSignUp?.());
+      expect(result.current.c.takenPickerOpen).toBe(false);
+      expect(result.current.c.pickerOpen).toBe(false);
+      expect(onRequestAuth).toHaveBeenCalledWith("sign-up");
+    });
   });
 
   describe("a signed-in viewer", () => {

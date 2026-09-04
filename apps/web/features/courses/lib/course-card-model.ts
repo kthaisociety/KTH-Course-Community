@@ -237,7 +237,11 @@ export function toCourseCardModel(view: CourseCardView): CourseCardModel {
     collections,
 
     takenPickerOpen: view.takenPickerOpen ?? false,
-    addLabel: "Add to collections",
+    // Reader-facing copy follows the design, which calls this "Add to
+    // comparison"; the identifier behind it is a collection either way
+    // (`CONTEXT.md`, "How to read it"). The card renders this string *and* uses
+    // it as the accessible name, so the two cannot drift apart.
+    addLabel: "Add to comparison",
     removeLabel: view.removeLabel,
   };
 }

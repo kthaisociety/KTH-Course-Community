@@ -108,7 +108,7 @@ export function useCourseCard({
 
   function onSave() {
     if (!signedIn) {
-      onRequestAuth("save-course");
+      requestAuthFrom("save-course");
       return;
     }
     setSaved(courseCode, !isSaved).catch(() =>
@@ -131,6 +131,13 @@ export function useCourseCard({
   function onPicker() {
     setTakenPickerOpen(false);
     picker.toggle();
+  }
+
+  /** Hands off to the app's one sign-in surface, closing whatever asked. */
+  function requestAuthFrom(reason: AuthReason) {
+    picker.close();
+    setTakenPickerOpen(false);
+    onRequestAuth(reason);
   }
 
   const view: CourseCardView = {
@@ -160,8 +167,11 @@ export function useCourseCard({
       onTaken: signedIn && isTaken ? undefined : onTaken,
       onPicker,
       onNewCollection: picker.startNew,
-      onSignUp: () => onRequestAuth("sign-up"),
-      onLogIn: () => onRequestAuth("log-in"),
+      // The panel that named the reason gets out of the way first, as the
+      // artboard's own `closeAll({ authOpen: true })` does — otherwise it sits
+      // behind the dialog and is still open when the reader dismisses it.
+      onSignUp: () => requestAuthFrom("sign-up"),
+      onLogIn: () => requestAuthFrom("log-in"),
     },
     action,
     signedIn,
