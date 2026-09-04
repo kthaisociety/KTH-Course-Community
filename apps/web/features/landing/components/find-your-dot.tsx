@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -64,6 +64,17 @@ export function FindYourDot({ open, status, onClose, onRetry }: Props) {
   const [sending, setSending] = useState(false);
   const [sentTo, setSentTo] = useState<string | null>(null);
 
+  /**
+   * Which submission the panel is currently showing the result of.
+   *
+   * A send that is still in flight when the panel closes, or when a second
+   * address is submitted, is **stale**: it must not land. Without this a
+   * visitor who sends to one address, reopens and sends to another can be told
+   * "Check your inbox" over the *first* address if the first request happens to
+   * resolve last — the panel would be reporting on a submission they abandoned.
+   */
+  const submission = useRef(0);
+
   // The reveal is the point: while the dot is on screen the panel steps aside
   // and the scrim lifts, exactly as the artboard does it.
   const revealing = status === "placed";
@@ -87,26 +98,33 @@ export function FindYourDot({ open, status, onClose, onRetry }: Props) {
     setInvalid(false);
     setFailed(false);
     setSending(true);
+    const mine = ++submission.current;
     try {
       const { error } = await authClient.signIn.magicLink({
         email: address,
         callbackURL: DOT_CALLBACK,
         errorCallbackURL: DOT_ERROR_CALLBACK,
       });
+      if (mine !== submission.current) return;
       if (error) {
         setFailed(true);
         return;
       }
       setSentTo(address);
     } catch (error) {
+      if (mine !== submission.current) return;
       console.error(error);
       setFailed(true);
     } finally {
-      setSending(false);
+      // Only the submission still on screen owns the button. A superseded one
+      // clearing it would re-enable the form under a request still running.
+      if (mine === submission.current) setSending(false);
     }
   }
 
   function close() {
+    // Whatever is in flight belongs to the panel being closed, not the next one.
+    submission.current++;
     setSentTo(null);
     setInvalid(false);
     setFailed(false);

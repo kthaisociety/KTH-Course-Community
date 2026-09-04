@@ -270,6 +270,51 @@ describe("Landing", () => {
         ).not.toBeInTheDocument();
       });
 
+      // Greptile reproduced this: a send left in flight when the panel closed
+      // could land afterwards and report on an address the visitor abandoned.
+      it("ignores a send the visitor walked away from", async () => {
+        let settleFirst: (value: { error: null }) => void = () => {};
+        sendMagicLink.mockImplementationOnce(
+          () =>
+            new Promise<{ error: null }>((resolve) => {
+              settleFirst = resolve;
+            }),
+        );
+        const user = userEvent.setup();
+        render(<Landing />);
+
+        await openFindYourDot(user);
+        await user.type(
+          await screen.findByLabelText(/email address/i),
+          "first@kth.se",
+        );
+        await user.click(
+          screen.getByRole("button", { name: /send private link/i }),
+        );
+
+        // Away, back, and a different address this time.
+        await user.click(screen.getByRole("button", { name: "Close" }));
+        await waitFor(() =>
+          expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+        );
+        sendMagicLink.mockResolvedValue({ error: null });
+        await openFindYourDot(user);
+        const field = await screen.findByLabelText(/email address/i);
+        await user.clear(field);
+        await user.type(field, "second@kth.se");
+        await user.click(
+          screen.getByRole("button", { name: /send private link/i }),
+        );
+        expect(await screen.findByText(/second@kth.se/)).toBeInTheDocument();
+
+        // The abandoned request lands last and must change nothing.
+        settleFirst({ error: null });
+        await waitFor(() =>
+          expect(screen.getByText(/second@kth.se/)).toBeInTheDocument(),
+        );
+        expect(screen.queryByText(/first@kth.se/)).not.toBeInTheDocument();
+      });
+
       it("sends the private link back to the landing page", async () => {
         const user = userEvent.setup();
         render(<Landing />);
