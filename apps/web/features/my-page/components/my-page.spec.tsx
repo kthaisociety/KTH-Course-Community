@@ -281,6 +281,25 @@ describe("MyPage empty states", () => {
   it("draws no unreviewed prompt when every taken course has a review", () => {
     render(<MyPage />);
     expect(screen.queryByTestId("unreviewed")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/could not be worked out/),
+    ).not.toBeInTheDocument();
+  });
+
+  it("holds the prompt's place while the unreviewed set is still unknown", () => {
+    unreviewed.mockReturnValue({
+      courses: [],
+      isLoading: true,
+      isUnavailable: false,
+    });
+    render(<MyPage />);
+
+    // The stat cards are up, so a blank slot here would read as "nothing left
+    // to review" rather than "still working it out".
+    expect(screen.getByText("Taken courses")).toBeVisible();
+    expect(document.querySelectorAll(".animate-pulse").length).toBeGreaterThan(
+      0,
+    );
   });
 });
 

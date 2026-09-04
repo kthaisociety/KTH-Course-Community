@@ -292,7 +292,20 @@ export function MyPage() {
                   />
                 </div>
 
-                {unreviewed.isUnavailable ? (
+                {/*
+                  Three states, not two. `UnreviewedCard` renders nothing for an
+                  empty list, and an empty list is also what the hook reports
+                  while it is still differencing taken courses against reviews —
+                  so drawing the card's slot as blank mid-flight would tell a
+                  reader with unreviewed courses that they had none. The
+                  placeholder says the question is still open.
+                */}
+                {unreviewed.isLoading ? (
+                  <div
+                    aria-hidden
+                    className="h-[140px] animate-pulse rounded-xl border border-cc-rule2 bg-cc-surface"
+                  />
+                ) : unreviewed.isUnavailable ? (
                   <output className="block rounded-xl border border-cc-rule bg-cc-surface px-[17px] py-4 text-[12.5px] text-cc-dim">
                     Which of your courses still need a review could not be
                     worked out just now. Reload to try again.
