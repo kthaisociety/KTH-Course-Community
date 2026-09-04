@@ -5,6 +5,9 @@ import { EMBEDDING_MODEL, embedBatch } from "../ai";
 import { db } from "../db";
 import {
   courseExaminations as courseExaminationsTable,
+  courseExplore,
+  courseKeywords,
+  coursePrerequisites,
   courseRounds as courseRoundsTable,
   courses as coursesTable,
   type InsertCourse,
@@ -211,27 +214,98 @@ async function upsertCourses(courses: InsertCourse[]) {
   const chunkSize = 1000;
   for (let i = 0; i < courses.length; i += chunkSize) {
     const chunk = courses.slice(i, i + chunkSize);
-    await db
-      .insert(coursesTable)
-      .values(chunk)
-      .onConflictDoUpdate({
-        target: coursesTable.code,
-        set: {
-          titleSwe: sql`excluded.name_swedish`,
-          titleEng: sql`excluded.name_english`,
-          state: sql`excluded.state`,
-          credits: sql`excluded.credits`,
-          creditUnit: sql`excluded.credit_unit`,
-          departmentCode: sql`excluded.department_code`,
-          department: sql`excluded.department`,
-          educationalLevelCode: sql`excluded.educational_level_code`,
-          gradeScaleCode: sql`excluded.grade_scale_code`,
-          goals: sql`excluded.goals`,
-          content: sql`excluded.content`,
-          eligibility: sql`excluded.eligibility`,
-          updatedAt: sql`now()`,
-        },
+    await db.transaction(async (tx) => {
+      const existing = await tx
+        .select({
+          code: coursesTable.code,
+          goals: coursesTable.goals,
+          content: coursesTable.content,
+          eligibility: coursesTable.eligibility,
+        })
+        .from(coursesTable)
+        .where(
+          inArray(
+            coursesTable.code,
+            chunk.map((course) => course.code),
+          ),
+        )
+        .for("update");
+      const existingByCode = new Map(
+        existing.map((course) => [course.code, course]),
+      );
+      const summaryChangedCourseCodes = chunk.flatMap((course) => {
+        const previous = existingByCode.get(course.code);
+        return previous &&
+          (previous.goals !== course.goals ||
+            previous.content !== course.content)
+          ? [course.code]
+          : [];
       });
+      const eligibilityChangedCourseCodes = chunk.flatMap((course) => {
+        const previous = existingByCode.get(course.code);
+        return previous && previous.eligibility !== course.eligibility
+          ? [course.code]
+          : [];
+      });
+
+      await tx
+        .insert(coursesTable)
+        .values(chunk)
+        .onConflictDoUpdate({
+          target: coursesTable.code,
+          set: {
+            titleSwe: sql`excluded.name_swedish`,
+            titleEng: sql`excluded.name_english`,
+            state: sql`excluded.state`,
+            credits: sql`excluded.credits`,
+            creditUnit: sql`excluded.credit_unit`,
+            departmentCode: sql`excluded.department_code`,
+            department: sql`excluded.department`,
+            educationalLevelCode: sql`excluded.educational_level_code`,
+            gradeScaleCode: sql`excluded.grade_scale_code`,
+            goals: sql`excluded.goals`,
+            content: sql`excluded.content`,
+            eligibility: sql`excluded.eligibility`,
+            updatedAt: sql`now()`,
+          },
+        });
+
+      if (summaryChangedCourseCodes.length > 0) {
+        await tx
+          .update(courseExplore)
+          .set({
+            summary: null,
+            summaryVersion: null,
+            summaryGeneratedAt: null,
+            updatedAt: sql`now()`,
+          })
+          .where(inArray(courseExplore.courseCode, summaryChangedCourseCodes));
+        await tx
+          .delete(courseKeywords)
+          .where(inArray(courseKeywords.courseCode, summaryChangedCourseCodes));
+      }
+
+      if (eligibilityChangedCourseCodes.length > 0) {
+        await tx
+          .update(courseExplore)
+          .set({
+            eligibilityVersion: null,
+            eligibilityExtractedAt: null,
+            updatedAt: sql`now()`,
+          })
+          .where(
+            inArray(courseExplore.courseCode, eligibilityChangedCourseCodes),
+          );
+        await tx
+          .delete(coursePrerequisites)
+          .where(
+            inArray(
+              coursePrerequisites.courseCode,
+              eligibilityChangedCourseCodes,
+            ),
+          );
+      }
+    });
   }
 }
 
