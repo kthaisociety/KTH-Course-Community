@@ -13,25 +13,36 @@ import { readFileSync } from "node:fs";
  * docs/schema_docs/corpus-census.md.
  */
 export type CorpusCourse = {
-  code: string;
-  departmentCode: string;
-  titleSwe: string;
-  titleEng: string;
+  readonly code: string;
+  readonly departmentCode: string;
+  readonly titleSwe: string;
+  readonly titleEng: string;
   /**
    * Raw syllabus prose, verbatim. The columns are nullable, but no row in
    * `courses` is null: an absent field is stored as the empty string.
    */
-  goals: string;
-  content: string;
-  eligibility: string;
+  readonly goals: string;
+  readonly content: string;
+  readonly eligibility: string;
 };
 
-let cached: CorpusCourse[] | undefined;
+let cached: readonly CorpusCourse[] | undefined;
 
-/** Read the committed corpus sample. Cached, because it is ~600 KB of JSON. */
-export function loadCorpusFixture(): CorpusCourse[] {
-  cached ??= JSON.parse(
-    readFileSync(new URL("./corpus.json", import.meta.url), "utf8"),
-  ) as CorpusCourse[];
+/**
+ * Read the committed corpus sample.
+ *
+ * Cached, because it is ~600 KB of JSON — which means every caller shares one
+ * instance, so the result is frozen too. Without that, a consumer that edited a
+ * course in place would silently change the corpus every later consumer sees.
+ * To work on modified inputs, copy first: `corpus.map((c) => ({ ...c }))`.
+ */
+export function loadCorpusFixture(): readonly CorpusCourse[] {
+  cached ??= Object.freeze(
+    (
+      JSON.parse(
+        readFileSync(new URL("./corpus.json", import.meta.url), "utf8"),
+      ) as CorpusCourse[]
+    ).map((course) => Object.freeze(course)),
+  );
   return cached;
 }

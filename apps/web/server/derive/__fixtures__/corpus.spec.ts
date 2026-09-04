@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { loadCorpusFixture } from "./corpus";
+import { type CorpusCourse, loadCorpusFixture } from "./corpus";
 
 const corpus = loadCorpusFixture();
 
@@ -15,6 +15,25 @@ describe("corpus fixture", () => {
   it("loads 300 courses with unique codes", () => {
     expect(corpus).toHaveLength(300);
     expect(new Set(corpus.map((course) => course.code)).size).toBe(300);
+  });
+
+  it("cannot be corrupted by one consumer for the next", () => {
+    // Every caller shares one cached instance, so the corpus is frozen. A test
+    // that edited a course in place would otherwise poison the ones after it.
+    const corpusFirstLoad = loadCorpusFixture();
+    expect(Object.isFrozen(corpusFirstLoad)).toBe(true);
+    expect(Object.isFrozen(corpusFirstLoad[0])).toBe(true);
+
+    expect(() => {
+      (corpusFirstLoad[0] as { goals: string }).goals = "mutated";
+    }).toThrow(TypeError);
+    expect(() => {
+      (corpusFirstLoad as CorpusCourse[]).push(corpusFirstLoad[0]);
+    }).toThrow(TypeError);
+
+    const corpusSecondLoad = loadCorpusFixture();
+    expect(corpusSecondLoad).toHaveLength(300);
+    expect(corpusSecondLoad[0].goals).toBe(corpus[0].goals);
   });
 
   it("covers every department in the catalogue", () => {
