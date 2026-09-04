@@ -36,6 +36,10 @@
   --warnInk: #7a5309;
   --warnBtn: #1751a6;
   --warnBtnFg: #ffffff;
+  --success: #1c7a4a;
+  --successFg: #ffffff;
+  --danger: #b3261e;
+  --dangerFg: #ffffff;
 }
 
 [data-cc-theme="dark"] {
@@ -63,6 +67,10 @@
   --warnInk: #f2c879;
   --warnBtn: #dfa53c;
   --warnBtnFg: #1a1305;
+  --success: #5fd08a;
+  --successFg: #0c2417;
+  --danger: #ff8a80;
+  --dangerFg: #2b0a08;
 }
 
 /* Colour changes cross-fade; nothing else about a page animates from here. */
