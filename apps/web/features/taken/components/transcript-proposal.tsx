@@ -9,7 +9,12 @@ type Props = {
   /** The reader's grades switch, applied to what is shown and to what is written. */
   includeGrades: boolean;
   isConfirming: boolean;
-  /** Set when `transcript.confirm` refused the rows. Nothing was written. */
+  /**
+   * Set when a confirm did not finish. Some of it may already have landed, so
+   * the message says what confirming again will do rather than claiming
+   * nothing was written — the screen re-reads the list and asks only for the
+   * rows that are still missing.
+   */
   error?: string | null;
   onConfirm: () => void;
   onCancel: () => void;
@@ -31,8 +36,8 @@ function unmatchedTitle(count: number): string {
  *
  * Two rules from #66's server work are visible here and must stay that way.
  * **Nothing is stored until "Looks right".** The rows on this screen came back
- * from a parse that wrote nothing; `transcript.confirm` is the only write, and
- * it is behind that button.
+ * from a parse that wrote nothing; every write this flow makes is behind that
+ * button, and `planTranscriptImport` decides what they are.
  *
  * **Unmatched codes are reported, never invented.** A row whose course code the
  * catalogue does not have cannot become a taken course — `user_taken_courses`
@@ -130,7 +135,7 @@ export function TranscriptProposalReview({
             role="alert"
             className="m-0 mt-4 rounded-[10px] border border-cc-danger/40 bg-cc-surface px-[13px] py-[11px] text-[12.5px] text-cc-danger"
           >
-            {error} Nothing was saved.
+            {error} Confirming again writes only what is still missing.
           </p>
         ) : null}
 

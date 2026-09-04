@@ -27,7 +27,13 @@ vi.mock("@/features/auth", () => ({
   useRequireSession: () => ({}),
 }));
 vi.mock("@/features/courses", () => ({
-  useTakenCourses: () => ({ data: takenList(), isPending: false }),
+  useTakenCourses: () => ({
+    data: takenList(),
+    isPending: false,
+    // The screen re-reads the list before it plans an import, so the mock has
+    // to answer a refetch the way the real query does.
+    refetch: () => Promise.resolve({ data: takenList() }),
+  }),
   useCourseSummaries: (codes: string[]) =>
     codes.map((courseCode) => ({ data: CATALOGUE[courseCode] })),
 }));
@@ -419,6 +425,25 @@ describe("reading a transcript", () => {
     await userEvent.click(
       await screen.findByRole("button", { name: "Looks right" }),
     );
+
+    await waitFor(() =>
+      expect(
+        screen.getByText("Transcript read — nothing new in it"),
+      ).toBeInTheDocument(),
+    );
+    expect(confirmImport).not.toHaveBeenCalled();
+    expect(updateTaken).not.toHaveBeenCalled();
+  });
+
+  it("plans against the list as it is now, not as it was when the page loaded", async () => {
+    render(<TakenCourses />);
+    await uploadPdf();
+    await screen.findByText("1 course read");
+    // Another tab records DD1337 by hand while the proposal sits on screen.
+    // Planning against the render's snapshot would send it as a create, and
+    // `transcript.confirm`'s upsert would overwrite what that tab entered.
+    takenList.mockReturnValue([takenCourse()]);
+    await userEvent.click(screen.getByRole("button", { name: "Looks right" }));
 
     await waitFor(() =>
       expect(

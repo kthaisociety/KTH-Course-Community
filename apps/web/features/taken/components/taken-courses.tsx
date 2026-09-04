@@ -109,7 +109,8 @@ export function TakenCourses() {
   // `taken.list` is protected, so it waits for a session rather than sending a
   // request that would be refused — the same guard `useUnreviewedTakenCourses`
   // puts on the very same query.
-  const { data: taken, isPending } = useTakenCourses(isAuthenticated);
+  const takenQuery = useTakenCourses(isAuthenticated);
+  const { data: taken, isPending } = takenQuery;
   const { add, update, remove, confirmImport } = useTakenMutations();
 
   const takenCourses = taken ?? [];
@@ -182,13 +183,29 @@ export function TakenCourses() {
    * Courses the reader already has are only touched to fill an empty field,
    * and then through `taken.update`, which cannot overwrite what they
    * corrected by hand — see `planTranscriptImport`.
+   *
+   * **The plan is built against a freshly read list, not the render's copy.**
+   * Two things depend on that. A course added in another tab while this
+   * proposal sat on screen would otherwise be planned as a create, and
+   * `transcript.confirm`'s upsert sets every column from the incoming row — so
+   * it would overwrite that entry and clear its periods. And a confirm that
+   * failed part way through is re-planned against what actually reached the
+   * database, so pressing the button again writes only what is still missing
+   * rather than repeating what already landed.
+   *
+   * It narrows the window rather than closing it: nothing here is one
+   * transaction, and only `transcript.confirm` learning to leave existing rows
+   * alone would make it atomic. That is a change to a server contract #92 does
+   * not own — the issue states outright that "the write upserts on (userId,
+   * courseCode)" — so it is reported on the PR rather than made here.
    */
   async function confirmProposal() {
     if (!proposal) return;
     setConfirmError(null);
+    const current = await takenQuery.refetch();
     const plan = planTranscriptImport(
       proposal.candidates,
-      takenCourses,
+      current.data ?? takenCourses,
       includeGrades,
     );
     try {
@@ -196,7 +213,10 @@ export function TakenCourses() {
         plan.create.length > 0
           ? await confirmImport.mutateAsync({ courses: plan.create })
           : { inserted: 0, updated: 0 };
-      await Promise.all(plan.fill.map((row) => update.mutateAsync(row)));
+      // Sequential, so a failure stops rather than firing the rest at a server
+      // that has just refused one. What did land stays landed, and the retry
+      // re-reads the list and asks only for the remainder.
+      for (const row of plan.fill) await update.mutateAsync(row);
       setProposal(null);
       setBanner(
         importedSummary(written.inserted + written.updated, plan.fill.length),
