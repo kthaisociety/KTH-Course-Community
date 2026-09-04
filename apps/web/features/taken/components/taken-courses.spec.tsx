@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { TranscriptProposal } from "@/server/ingest/transcript/service";
@@ -23,7 +23,7 @@ const toastError = vi.fn();
 const toastSuccess = vi.fn();
 
 vi.mock("@/features/auth", () => ({
-  useMe: () => ({ isLoading: false }),
+  useMe: () => ({ isLoading: false, isAuthenticated: true }),
   useRequireSession: () => ({}),
 }));
 vi.mock("@/features/courses", () => ({
@@ -427,11 +427,11 @@ describe("the unreviewed prompt", () => {
     });
     render(<TakenCourses />);
 
-    const prompt = screen
-      .getByText("You have 1 unreviewed course.")
-      .closest("div")?.parentElement?.parentElement as HTMLElement;
+    // The prompt's own row button, which `UnreviewedCard` renders in place of
+    // its link once a screen passes `onSelect`. Its accessible name is the
+    // course code and title; the table's controls are labelled differently.
     await userEvent.click(
-      within(prompt).getByRole("button", { name: /DD1337/ }),
+      screen.getByRole("button", { name: /^DD1337\s*Programming$/ }),
     );
 
     expect(screen.getByTestId("reviewer")).toHaveTextContent(

@@ -7,7 +7,7 @@ import type { TranscriptProposal } from "@/server/ingest/transcript/service";
  * own `MAX_BYTES`. Checked here so an oversized file is refused before it is
  * uploaded, not after four megabytes have gone over the wire.
  */
-export const MAX_TRANSCRIPT_BYTES = 4 * 1024 * 1024;
+const MAX_TRANSCRIPT_BYTES = 4 * 1024 * 1024;
 
 /** What the drop zone tells the reader the limit is. Kept beside the bound. */
 export const MAX_TRANSCRIPT_LABEL = "4 MB";

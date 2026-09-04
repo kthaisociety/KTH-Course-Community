@@ -109,13 +109,16 @@ function importedSummary(result: {
  */
 export function TakenCourses() {
   useRequireSession();
-  const { isLoading: isSessionLoading } = useMe();
-  const { data: taken, isPending } = useTakenCourses(!isSessionLoading);
+  const { isAuthenticated, isLoading: isSessionLoading } = useMe();
+  // `taken.list` is protected, so it waits for a session rather than sending a
+  // request that would be refused — the same guard `useUnreviewedTakenCourses`
+  // puts on the very same query.
+  const { data: taken, isPending } = useTakenCourses(isAuthenticated);
   const { add, update, remove, confirmImport } = useTakenMutations();
 
   const takenCourses = taken ?? [];
   const courseCodes = takenCourses.map((course) => course.courseCode);
-  const summaries = useCourseSummaries(courseCodes, !isSessionLoading);
+  const summaries = useCourseSummaries(courseCodes, isAuthenticated);
   const names = new Map(
     summaries.flatMap((query) =>
       query.data ? [[query.data.courseCode, query.data.titleEng] as const] : [],
@@ -245,7 +248,9 @@ export function TakenCourses() {
   }
 
   function screen() {
-    if (isSessionLoading || isPending) return <ListSkeleton />;
+    if (isSessionLoading || (isAuthenticated && isPending)) {
+      return <ListSkeleton />;
+    }
 
     if (proposal) {
       return (
