@@ -73,6 +73,27 @@ export async function joinCommunityGraph(userId: string): Promise<GraphNode> {
 }
 
 /**
+ * Place a freshly created account in the community graph.
+ *
+ * Sign-up is the wrong moment to be strict: a member who cannot sign in
+ * because the graph is unavailable has lost their account, while a member
+ * without a node has lost nothing they can see yet — `getNeighbourhood` places
+ * them on their first read. So a failure here is logged and swallowed.
+ */
+export async function joinCommunityGraphOnSignUp(
+  userId: string,
+): Promise<void> {
+  try {
+    await joinCommunityGraph(userId);
+  } catch (error) {
+    console.error(
+      `Could not place app user ${userId} in the community graph at sign-up:`,
+      error,
+    );
+  }
+}
+
+/**
  * The bounded neighbourhood around an app user's own node: the nearby nodes,
  * the backbone edges spanning exactly that set, and the app user's effective
  * personalization tier.
@@ -84,15 +105,19 @@ export async function joinCommunityGraph(userId: string): Promise<GraphNode> {
  *
  * World units come back untouched. Projecting them into screen pixels, and any
  * responsive keep-out adjustment, happens on the client and never returns here.
+ *
+ * An app user without a node is placed rather than refused, so this read can
+ * write on its first call for them.
  */
 export async function getNeighbourhood(
   userId: string,
   now: Date = new Date(),
 ): Promise<Neighbourhood> {
-  const node = await graphRepo.findNode(userId);
-  if (!node) {
-    throw new NotFoundError(`No community graph node for app user ${userId}`);
-  }
+  // Sign-up placement is the primary pathway, but it cannot cover everyone:
+  // it is deliberately fallible, and accounts created before the community
+  // graph existed never saw it. Joining here repairs both, and because joining
+  // is idempotent an app user who already has a node just gets it back.
+  const node = await joinCommunityGraph(userId);
 
   const nodes = await graphRepo.findNearestNodes(
     { x: node.x, y: node.y },
