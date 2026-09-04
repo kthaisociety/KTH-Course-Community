@@ -110,7 +110,7 @@ export function useSearchPage() {
     [router],
   );
 
-  const onAddToComparison = useCallback((_courseCode: string) => {}, []);
+  const onAddToCollection = useCallback((_courseCode: string) => {}, []);
 
   // `toggleSaved` reads the cache at call time. Deriving the target state from
   // `savedCourseCodes` here would reuse this render's value, so two fast clicks
@@ -135,7 +135,7 @@ export function useSearchPage() {
     onCardClick,
     onWriteReview,
     onToggleFavorite,
-    onAddToComparison,
+    onAddToCollection,
     selectedCode,
     courseDetails: selectedCourseDetails,
     courseDetailsLoading,

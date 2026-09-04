@@ -180,7 +180,7 @@ export function Search() {
     onCardClick,
     onWriteReview,
     onToggleFavorite,
-    onAddToComparison,
+    onAddToCollection,
     selectedCode,
     courseDetails,
     courseDetailsLoading,
@@ -365,8 +365,8 @@ export function Search() {
                     onCardClick={() => onCardClick(course.courseCode)}
                     onWriteReview={() => onWriteReview(course.courseCode)}
                     onToggleFavorite={() => onToggleFavorite(course.courseCode)}
-                    onAddToComparison={() =>
-                      onAddToComparison(course.courseCode)
+                    onAddToCollection={() =>
+                      onAddToCollection(course.courseCode)
                     }
                   />
                 </li>

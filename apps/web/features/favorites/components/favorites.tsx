@@ -58,7 +58,7 @@ export function Favorites() {
     [router],
   );
 
-  const onAddToComparison = useCallback((_courseCode: string) => {}, []);
+  const onAddToCollection = useCallback((_courseCode: string) => {}, []);
 
   // Every course on this screen is saved, so the only move here is unsaving.
   async function onToggleFavorite(courseCode: string) {
@@ -104,7 +104,7 @@ export function Favorites() {
                   onCardClick={() => onCardClick(course.courseCode)}
                   onWriteReview={() => onWriteReview(course.courseCode)}
                   onToggleFavorite={() => onToggleFavorite(course.courseCode)}
-                  onAddToComparison={() => onAddToComparison(course.courseCode)}
+                  onAddToCollection={() => onAddToCollection(course.courseCode)}
                 />
               </li>
             ))}

@@ -60,7 +60,7 @@ export type CourseCardWithChartsProps = {
   onCardClick: () => void;
   onWriteReview: () => void;
   onToggleFavorite: () => void;
-  onAddToComparison: () => void;
+  onAddToCollection: () => void;
   onRecommend?: () => void;
   onMarkAsTaken?: () => void;
 };
@@ -87,7 +87,7 @@ export function CourseCardWithCharts({
   isSelected = false,
   onCardClick,
   onToggleFavorite,
-  onAddToComparison,
+  onAddToCollection,
   onWriteReview,
   onRecommend,
   onMarkAsTaken,
@@ -250,7 +250,7 @@ export function CourseCardWithCharts({
           </span>
         </div>
         <div className="flex shrink-0 justify-center">
-          <Button variant="outline" size="sm" onClick={stop(onAddToComparison)}>
+          <Button variant="outline" size="sm" onClick={stop(onAddToCollection)}>
             <Sparkles data-icon="inline-start" />
             Compare
           </Button>
