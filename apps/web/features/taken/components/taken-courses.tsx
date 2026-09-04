@@ -1,6 +1,7 @@
 "use client";
 
 import { CircleCheck, FileWarning, Info, Plus, RefreshCw } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
 import {
@@ -110,7 +111,7 @@ export function TakenCourses() {
   // request that would be refused — the same guard `useUnreviewedTakenCourses`
   // puts on the very same query.
   const takenQuery = useTakenCourses(isAuthenticated);
-  const { data: taken, isPending } = takenQuery;
+  const { data: taken, isPending, isError } = takenQuery;
   const { add, update, remove, confirmImport } = useTakenMutations();
 
   const takenCourses = taken ?? [];
@@ -144,6 +145,7 @@ export function TakenCourses() {
   const [readError, setReadError] = useState<string | null>(null);
   const [confirmError, setConfirmError] = useState<string | null>(null);
   const [banner, setBanner] = useState<string | null>(null);
+  const [isConfirming, setIsConfirming] = useState(false);
   const [reviewQueue, setReviewQueue] = useState<string[]>([]);
 
   const reviewing = reviewQueue[0] ?? null;
@@ -198,17 +200,34 @@ export function TakenCourses() {
    * alone would make it atomic. That is a change to a server contract #92 does
    * not own — the issue states outright that "the write upserts on (userId,
    * courseCode)" — so it is reported on the PR rather than made here.
+   *
+   * **A re-read that fails writes nothing.** The render's copy is the very
+   * snapshot the re-read exists to distrust, so falling back to it would put
+   * back the overwrite this function was written to prevent — quietly, at the
+   * one moment there is most reason to doubt it. A refused refresh stops the
+   * import and says so, and a rejected one is caught here rather than escaping
+   * as an unhandled rejection that leaves the proposal open explaining nothing.
    */
   async function confirmProposal() {
-    if (!proposal) return;
+    if (!proposal || isConfirming) return;
     setConfirmError(null);
-    const current = await takenQuery.refetch();
-    const plan = planTranscriptImport(
-      proposal.candidates,
-      current.data ?? takenCourses,
-      includeGrades,
-    );
+    setIsConfirming(true);
     try {
+      const current = await takenQuery.refetch();
+      // A failed refetch keeps whatever the last good read returned, so the
+      // error flag — not the presence of data — is what says this list can be
+      // planned against.
+      if (current.isError || !current.data) {
+        setConfirmError(
+          "We could not re-read your course list, so nothing was imported.",
+        );
+        return;
+      }
+      const plan = planTranscriptImport(
+        proposal.candidates,
+        current.data,
+        includeGrades,
+      );
       const written =
         plan.create.length > 0
           ? await confirmImport.mutateAsync({ courses: plan.create })
@@ -227,6 +246,8 @@ export function TakenCourses() {
           ? error.message
           : "That import did not reach the server.",
       );
+    } finally {
+      setIsConfirming(false);
     }
   }
 
@@ -295,11 +316,15 @@ export function TakenCourses() {
     }
 
     if (proposal) {
+      // `isConfirming` is the whole confirm, not just the create call: the
+      // re-read before it and the fills after it are as much of the import as
+      // the create is, and a button that went live between them would invite a
+      // second one over a list the first is still changing.
       return (
         <TranscriptProposalReview
           proposal={proposal}
           includeGrades={includeGrades}
-          isConfirming={confirmImport.isPending}
+          isConfirming={isConfirming}
           error={confirmError}
           onConfirm={() => void confirmProposal()}
           onCancel={() => {
@@ -323,6 +348,15 @@ export function TakenCourses() {
           }}
         />
       );
+    }
+
+    // An empty `rows` is what a failed read leaves behind, and the screen
+    // below it is the first-run one: it would tell a reader whose list simply
+    // did not arrive that they have taken nothing yet, and invite them to
+    // import a transcript over a list nobody can see. A failed read is not an
+    // empty list, so it says which of the two this is.
+    if (isError) {
+      return <ListFailed onRetry={() => void takenQuery.refetch()} />;
     }
 
     if (rows.length === 0) {
@@ -599,6 +633,58 @@ function ReadFailed({
           >
             Add courses manually
           </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * The read of `taken.list` did not come back.
+ *
+ * It says outright that nothing was changed, because nothing was: the list is
+ * a read. It offers no transcript drop zone — an import planned against a list
+ * this page cannot see is exactly the overwrite `confirmProposal` re-reads to
+ * avoid — so the one thing on offer is reading the list again.
+ */
+function ListFailed({ onRetry }: { onRetry: () => void }) {
+  return (
+    <div className="flex justify-center px-5 pt-[30px] pb-10">
+      <div className="w-full max-w-[520px]">
+        <div className="flex items-center gap-2.5">
+          <span className="flex size-[26px] items-center justify-center rounded-full bg-cc-danger/12 text-cc-danger">
+            <FileWarning size={15} strokeWidth={2.2} aria-hidden />
+          </span>
+          <p className="m-0 font-semibold text-[11px] text-cc-danger uppercase tracking-[0.09em]">
+            Could not load
+          </p>
+        </div>
+        <h2 className="m-0 mt-3 font-semibold text-[22px] leading-[1.2] tracking-[-0.015em]">
+          Your taken courses did not load
+        </h2>
+        <p
+          role="alert"
+          className="m-0 mt-2 text-[14px] text-cc-muted leading-[1.55]"
+        >
+          The request for your course list did not come back, so this page
+          cannot say what is in it. Nothing is lost — this is a read, and
+          nothing of yours was changed.
+        </p>
+        <div className="mt-[18px] flex items-center gap-[11px]">
+          <button
+            type="button"
+            onClick={onRetry}
+            className="flex h-11 cursor-pointer items-center gap-2 rounded-[9px] bg-cc-btn px-5 font-semibold text-[14px] text-cc-btn-fg hover:opacity-[0.88]"
+          >
+            <RefreshCw size={15} strokeWidth={1.9} aria-hidden />
+            Try again
+          </button>
+          <Link
+            href="/search"
+            className="flex h-11 items-center rounded-[9px] border border-cc-rule3 bg-cc-surface px-4 font-medium text-[13.5px] text-cc-chip-ink no-underline hover:border-cc-hov"
+          >
+            Browse courses instead
+          </Link>
         </div>
       </div>
     </div>

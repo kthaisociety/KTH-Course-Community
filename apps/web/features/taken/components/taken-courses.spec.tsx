@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { TranscriptProposal } from "@/server/ingest/transcript/service";
@@ -6,6 +6,11 @@ import type { TakenCourse } from "../lib/taken-rows";
 import { TakenCourses } from "./taken-courses";
 
 const takenList = vi.fn<() => TakenCourse[]>();
+const listFailed = vi.fn<() => boolean>();
+const refetchTaken =
+  vi.fn<
+    () => Promise<{ data?: TakenCourse[] | undefined; isError?: boolean }>
+  >();
 const unreviewed =
   vi.fn<
     () => { courses: TakenCourse[]; isLoading: boolean; isUnavailable: boolean }
@@ -30,9 +35,11 @@ vi.mock("@/features/courses", () => ({
   useTakenCourses: () => ({
     data: takenList(),
     isPending: false,
+    isError: listFailed(),
     // The screen re-reads the list before it plans an import, so the mock has
-    // to answer a refetch the way the real query does.
-    refetch: () => Promise.resolve({ data: takenList() }),
+    // to answer a refetch the way the real query does — including on failure,
+    // where TanStack keeps the last good `data` and raises `isError`.
+    refetch: () => refetchTaken(),
   }),
   useCourseSummaries: (codes: string[]) =>
     codes.map((courseCode) => ({ data: CATALOGUE[courseCode] })),
@@ -128,6 +135,10 @@ async function uploadPdf() {
 beforeEach(() => {
   vi.clearAllMocks();
   takenList.mockReturnValue([takenCourse()]);
+  listFailed.mockReturnValue(false);
+  refetchTaken.mockImplementation(() =>
+    Promise.resolve({ data: takenList(), isError: false }),
+  );
   unreviewed.mockReturnValue({
     courses: [],
     isLoading: false,
@@ -179,6 +190,47 @@ describe("the list", () => {
 
     expect(screen.queryByText("Done")).not.toBeInTheDocument();
     expect(screen.queryByText("Not yet")).not.toBeInTheDocument();
+  });
+
+  it("does not mistake a failed read for an empty list", () => {
+    // A failed query holds no rows, and the screen for no rows is the
+    // first-run one: it would tell a reader who has taken twenty courses that
+    // they have taken none, and offer to import a transcript over a list this
+    // page cannot see.
+    listFailed.mockReturnValue(true);
+    takenList.mockReturnValue([]);
+    render(<TakenCourses />);
+
+    expect(screen.getByText("Your taken courses did not load")).toBeVisible();
+    expect(
+      screen.queryByText("Drop your Ladok transcript here"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Update transcript" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("counts no courses off a read that failed", () => {
+    // A failed query can still be holding what an earlier one returned. A
+    // count beside "did not load" would outlive the read it came from.
+    listFailed.mockReturnValue(true);
+    takenList.mockReturnValue([
+      takenCourse(),
+      takenCourse({ courseCode: "DD2380" }),
+    ]);
+    render(<TakenCourses />);
+
+    expect(screen.getByText("Your taken courses did not load")).toBeVisible();
+    expect(screen.queryByText("2")).not.toBeInTheDocument();
+    expect(screen.queryByText("DD1337")).not.toBeInTheDocument();
+  });
+
+  it("offers the read again", async () => {
+    listFailed.mockReturnValue(true);
+    render(<TakenCourses />);
+    await userEvent.click(screen.getByRole("button", { name: "Try again" }));
+
+    expect(refetchTaken).toHaveBeenCalled();
   });
 });
 
@@ -511,6 +563,79 @@ describe("reading a transcript", () => {
     expect(
       await screen.findByText("Drop your Ladok transcript here"),
     ).toBeInTheDocument();
+  });
+
+  it("writes nothing and says so when the list cannot be re-read", async () => {
+    render(<TakenCourses />);
+    await uploadPdf();
+    await screen.findByText("1 course read");
+    // A failed refetch keeps the last good `data`, which is the very snapshot
+    // the re-read exists to distrust. Planning against it would put back the
+    // overwrite this re-read was added to prevent.
+    refetchTaken.mockResolvedValue({ data: takenList(), isError: true });
+    await userEvent.click(screen.getByRole("button", { name: "Looks right" }));
+
+    expect(
+      await screen.findByText(/could not re-read your course list/),
+    ).toBeInTheDocument();
+    expect(confirmImport).not.toHaveBeenCalled();
+    expect(updateTaken).not.toHaveBeenCalled();
+    // The proposal is still there to confirm again once the read works.
+    expect(screen.getByRole("button", { name: "Looks right" })).toBeVisible();
+  });
+
+  it("explains a rejected re-read rather than sitting there silently", async () => {
+    render(<TakenCourses />);
+    await uploadPdf();
+    await screen.findByText("1 course read");
+    refetchTaken.mockRejectedValue(new Error("The list did not come back."));
+    await userEvent.click(screen.getByRole("button", { name: "Looks right" }));
+
+    expect(
+      await screen.findByText(/The list did not come back\./),
+    ).toBeInTheDocument();
+    expect(confirmImport).not.toHaveBeenCalled();
+  });
+
+  it("takes one confirm even when the button is pressed twice", async () => {
+    // A candidate the list does not have yet, so confirming makes a create.
+    uploadTranscript.mockResolvedValue(
+      proposal({
+        candidates: [
+          {
+            courseCode: "DD2380",
+            transcriptName: "Artificiell intelligens",
+            catalogueName: "Artificial Intelligence",
+            grade: "A",
+            earnedCredits: 6,
+            attendanceYear: 2026,
+          },
+        ],
+      }),
+    );
+    let release = () => {};
+    confirmImport.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          release = () => resolve({ inserted: 1, updated: 0 });
+        }),
+    );
+    render(<TakenCourses />);
+    await uploadPdf();
+    const confirm = await screen.findByRole("button", { name: "Looks right" });
+    await userEvent.click(confirm);
+    await waitFor(() => expect(confirmImport).toHaveBeenCalledTimes(1));
+    // "Saving…" holds for the whole confirm, so a second press does nothing.
+    const saving = screen.getByRole("button", { name: "Saving…" });
+    expect(saving).toBeDisabled();
+    await userEvent.click(saving);
+
+    expect(confirmImport).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      release();
+    });
+    expect(screen.queryByText("1 course read")).not.toBeInTheDocument();
+    expect(confirmImport).toHaveBeenCalledTimes(1);
   });
 
   it("says an unreadable file was unreadable, and writes nothing", async () => {
