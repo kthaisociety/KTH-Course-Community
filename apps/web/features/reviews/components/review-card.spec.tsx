@@ -236,4 +236,18 @@ describe("ReviewCard", () => {
     );
     expect(screen.getByText("Not really")).toBeInTheDocument();
   });
+
+  it("uses semantic status tokens for a verdict and a downvote", () => {
+    render(
+      <ReviewCard
+        review={makeReview({ happyTook: false, userVote: "down" })}
+        onVote={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("Not really")).toHaveClass("text-cc-danger-ink");
+    expect(
+      screen.getByRole("button", { name: "Downvote this review" }),
+    ).toHaveStyle({ color: "var(--cc-danger-ink)" });
+  });
 });

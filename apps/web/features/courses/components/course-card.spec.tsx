@@ -307,6 +307,14 @@ describe("CourseCard", () => {
   });
 
   describe("the action control", () => {
+    it("uses the primary button token for the review CTA", () => {
+      render(<CourseCard c={reviewedCard()} geo={EXPANDED_CARD_GEOMETRY} />);
+
+      expect(
+        screen.getByRole("button", { name: "Write a review" }),
+      ).toHaveClass("bg-cc-btn", "text-cc-btn-fg");
+    });
+
     it("is Explore's split Save button under action='save'", async () => {
       const onSave = vi.fn();
       const onPicker = vi.fn();
@@ -366,6 +374,20 @@ describe("CourseCard", () => {
         screen.getByRole("button", { name: "Remove from Saved" }),
       ).toBeVisible();
     });
+  });
+
+  it("keeps a removal action in the semantic danger treatment", () => {
+    const onRemove = vi.fn();
+    render(
+      <CourseCard
+        c={reviewedCard({ onRemove, removeLabel: "Remove from Saved" })}
+        geo={EXPANDED_CARD_GEOMETRY}
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", { name: "Remove from Saved" }),
+    ).toHaveClass("text-cc-danger", "hover:border-cc-danger");
   });
 
   describe("geometry", () => {
