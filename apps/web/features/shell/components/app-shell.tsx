@@ -33,8 +33,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [authReason, setAuthReason] = useState<AuthReason | null>(null);
 
   return (
-    <div className="@container cc-theme flex h-dvh w-full overflow-hidden bg-cc-pg text-cc-ink text-sm">
-      <aside className="hidden w-[236px] shrink-0 @3xl:block">
+    <div className="@container/shell cc-theme flex h-dvh w-full overflow-hidden bg-cc-pg text-cc-ink text-sm">
+      <aside className="hidden w-[236px] shrink-0 @3xl/shell:block">
         <Rail onRequestAuth={setAuthReason} />
       </aside>
 
@@ -54,21 +54,21 @@ export function AppShell({ children }: { children: ReactNode }) {
       </Sheet>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-[66px] shrink-0 items-center gap-2.5 border-cc-rule border-b px-3.5 @3xl:justify-end @3xl:px-7">
+        <header className="flex h-[66px] shrink-0 items-center gap-2.5 border-cc-rule border-b px-3.5 @3xl/shell:justify-end @3xl/shell:px-7">
           <button
             type="button"
             onClick={() => setDrawerOpen(true)}
             aria-label="Open menu"
-            className="flex size-[36px] shrink-0 cursor-pointer items-center justify-center rounded-[9px] text-cc-brand hover:bg-cc-pill @3xl:hidden"
+            className="flex size-[36px] shrink-0 cursor-pointer items-center justify-center rounded-[9px] text-cc-brand hover:bg-cc-pill @3xl/shell:hidden"
           >
             <Menu size={19} strokeWidth={2} aria-hidden />
           </button>
           {/* The page you are on, named the way the Mobile Preview names it —
               from the route, so it is right on the first paint. The brand is
               not lost with the rail: the drawer carries it, as it does there. */}
-          <span className="min-w-0 flex-1 truncate font-semibold text-[16px] leading-[1.2] @3xl:hidden">
+          <h1 className="min-w-0 flex-1 truncate font-semibold text-[16px] leading-[1.2] @3xl/shell:hidden">
             {pageTitleFor(pathname)}
-          </span>
+          </h1>
           <ThemeToggle />
         </header>
 
