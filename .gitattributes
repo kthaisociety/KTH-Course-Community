@@ -25,3 +25,7 @@ package-lock.json -diff linguist-generated
 # out of diffs: lefthook runs `biome check --write` on staged files, which
 # silently rewrote support.js once already.
 docs/design/** -diff linguist-generated
+
+# ...except the README, which is ours rather than mirrored and has to stay
+# readable in diffs and reviews.
+docs/design/README.md diff -linguist-generated

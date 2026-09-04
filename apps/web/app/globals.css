@@ -66,6 +66,11 @@
   --color-cc-btn: var(--cc-btn);
   --color-cc-btn-fg: var(--cc-btn-fg);
   --color-cc-info: var(--cc-info);
+  --color-cc-warn: var(--cc-warn);
+  --color-cc-warn-border: var(--cc-warn-border);
+  --color-cc-warn-ink: var(--cc-warn-ink);
+  --color-cc-warn-btn: var(--cc-warn-btn);
+  --color-cc-warn-btn-fg: var(--cc-warn-btn-fg);
 }
 
 :root {
@@ -110,7 +115,9 @@
      pill chips and tracks  rail the sidebar (brand blue in both themes)
      ink primary text  ink2 secondary  muted supporting  dim/dim2 labels and hints
      chip-ink text on a pill  rule/2/3 hairline, border, strong border
-     hov hover border  brand links and brand text  btn/btn-fg filled button */
+     hov hover border  brand links and brand text  btn/btn-fg filled button
+     warn/warn-border/warn-ink the nudge to write a review, and
+     warn-btn/warn-btn-fg its call to action — amber in dark, blue in light */
   --cc-pg: #faf8f1;
   --cc-surface: #ffffff;
   --cc-inset: #faf8f1;
@@ -130,6 +137,11 @@
   --cc-btn: #1751a6;
   --cc-btn-fg: #ffffff;
   --cc-info: rgba(23, 81, 166, 0.07);
+  --cc-warn: #fdf7ea;
+  --cc-warn-border: #f0e6d2;
+  --cc-warn-ink: #7a5309;
+  --cc-warn-btn: #1751a6;
+  --cc-warn-btn-fg: #ffffff;
 }
 
 .dark {
@@ -188,6 +200,13 @@
   --cc-btn: #f4eee2;
   --cc-btn-fg: #1751a6;
   --cc-info: rgba(226, 236, 251, 0.1);
+  /* The warn button is amber here where light is blue. That hue change is the
+     design's, not a mistake: on the dark blue surface a blue button vanishes. */
+  --cc-warn: rgba(223, 165, 60, 0.16);
+  --cc-warn-border: rgba(223, 165, 60, 0.3);
+  --cc-warn-ink: #f2c879;
+  --cc-warn-btn: #dfa53c;
+  --cc-warn-btn-fg: #1a1305;
 }
 
 @layer base {
