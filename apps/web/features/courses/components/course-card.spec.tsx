@@ -338,6 +338,20 @@ describe("CourseCard", () => {
       expect(screen.queryByText("Add to collection")).toBeNull();
     });
 
+    it("names the split picker when a direct model omits its label", () => {
+      render(
+        <CourseCard
+          c={reviewedCard({ addLabel: "" })}
+          geo={EXPANDED_CARD_GEOMETRY}
+          action="save"
+        />,
+      );
+
+      expect(
+        screen.getByRole("button", { name: "Add to collection" }),
+      ).toBeVisible();
+    });
+
     it("is the picker alone under action='add'", async () => {
       const onPicker = vi.fn();
       render(
