@@ -1,6 +1,28 @@
 import type { Review } from "@/types";
 
 /**
+ * Every review across a set of per-course lists, or `null` if any one of them
+ * is missing.
+ *
+ * A list is missing while its request is in flight *and* after that request has
+ * failed, and the two are indistinguishable from the data. Both mean the same
+ * thing here: we do not know what this course's reviews are. Substituting an
+ * empty list would answer "nobody has reviewed it", which is a different claim
+ * and the one that puts a review prompt in front of somebody who already wrote
+ * theirs.
+ */
+export function reviewsWhenEveryListLoaded<T>(
+  lists: readonly (readonly T[] | undefined)[],
+): T[] | null {
+  const reviews: T[] = [];
+  for (const list of lists) {
+    if (list === undefined) return null;
+    reviews.push(...list);
+  }
+  return reviews;
+}
+
+/**
  * The taken courses this viewer has not reviewed yet.
  *
  * The set arithmetic lives here rather than inside `UnreviewedCard` so the card

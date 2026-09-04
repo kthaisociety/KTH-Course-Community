@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { selectUnreviewedCourses } from "./unreviewed";
+import {
+  reviewsWhenEveryListLoaded,
+  selectUnreviewedCourses,
+} from "./unreviewed";
 
 const TAKEN = [{ courseCode: "DD2424" }, { courseCode: "SF1918" }];
 
@@ -47,5 +50,26 @@ describe("selectUnreviewedCourses", () => {
   // all would be prompting the wrong person.
   it("prompts nobody when there is no viewer", () => {
     expect(selectUnreviewedCourses(TAKEN, [], "")).toEqual([]);
+  });
+});
+
+describe("reviewsWhenEveryListLoaded", () => {
+  it("flattens the lists once they have all arrived", () => {
+    expect(
+      reviewsWhenEveryListLoaded([[{ id: "r1" }], [], [{ id: "r2" }]]),
+    ).toEqual([{ id: "r1" }, { id: "r2" }]);
+  });
+
+  // The failure Greptile proved: a request that has exhausted its retries is
+  // no longer pending and still has no data. Reading that as "no reviews"
+  // would put a prompt in front of somebody who already wrote theirs.
+  it("gives up rather than reading a list that never arrived as empty", () => {
+    expect(
+      reviewsWhenEveryListLoaded([[{ id: "r1" }], undefined, [{ id: "r2" }]]),
+    ).toBeNull();
+  });
+
+  it("has nothing to withhold when there are no lists at all", () => {
+    expect(reviewsWhenEveryListLoaded([])).toEqual([]);
   });
 });

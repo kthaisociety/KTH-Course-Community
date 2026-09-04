@@ -3,7 +3,10 @@
 import { useQueries, useQuery } from "@tanstack/react-query";
 import { useMe } from "@/features/auth";
 import { type RouterOutputs, useTRPC } from "@/trpc/client";
-import { selectUnreviewedCourses } from "../lib/unreviewed";
+import {
+  reviewsWhenEveryListLoaded,
+  selectUnreviewedCourses,
+} from "../lib/unreviewed";
 
 export type ReviewList = RouterOutputs["reviews"]["list"];
 
@@ -32,14 +35,21 @@ export function useReviewList(courseCode: string | undefined) {
  * filter, so it would ship every review in the database, with its author id,
  * to a browser in order to keep a handful.
  *
- * Rows stay hidden until every query has answered. A course whose reviews have
- * not loaded yet is not "unreviewed", it is unknown, and prompting someone to
- * review a course they already reviewed is the one mistake this card must not
- * make.
+ * Rows stay hidden until every list has actually arrived. A course whose
+ * reviews did not load is not "unreviewed", it is unknown — and that holds
+ * whether the request is still in flight or has failed outright, which is why
+ * `isLoading` alone does not gate the difference. Prompting someone to review a
+ * course they already reviewed is the one mistake this card must not make, so
+ * a list that failed leaves the set unavailable rather than empty.
  */
 export function useUnreviewedTakenCourses(): {
   courses: TakenCourse[];
   isLoading: boolean;
+  /**
+   * A list did not load, so the difference cannot be told. Distinct from an
+   * empty `courses`, which means everything taken has been reviewed.
+   */
+  isUnavailable: boolean;
 } {
   const trpc = useTRPC();
   const { userId, isAuthenticated, isLoading: isSessionLoading } = useMe();
@@ -61,14 +71,16 @@ export function useUnreviewedTakenCourses(): {
     (isAuthenticated && takenQuery.isPending) ||
     reviewQueries.some((query) => query.isPending);
 
+  const reviews = reviewsWhenEveryListLoaded(
+    reviewQueries.map((query) => query.data),
+  );
+  const isKnown = !isLoading && !takenQuery.isError && reviews !== null;
+
   return {
-    courses: isLoading
-      ? []
-      : selectUnreviewedCourses(
-          takenCourses,
-          reviewQueries.flatMap((query) => query.data ?? []),
-          userId,
-        ),
+    courses: isKnown
+      ? selectUnreviewedCourses(takenCourses, reviews, userId)
+      : [],
     isLoading,
+    isUnavailable: !isLoading && !isKnown,
   };
 }
