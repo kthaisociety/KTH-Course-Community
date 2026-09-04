@@ -1,6 +1,8 @@
 import { cosineSimilarity, embed, embedMany, gateway } from "ai";
 
-const embeddingModel = gateway.embeddingModel("openai/text-embedding-3-small");
+export const EMBEDDING_MODEL = "openai/text-embedding-3-small";
+
+const embeddingModel = gateway.embeddingModel(EMBEDDING_MODEL);
 
 export async function embedSingle(
   value: string,

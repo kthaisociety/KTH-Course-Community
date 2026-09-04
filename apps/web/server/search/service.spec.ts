@@ -1,11 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { CourseSummary } from "@/types";
+import { embedSingle } from "../ai";
 import { getSummariesByCodes } from "../course/service";
 import {
   getAggregatesByCourseCodes,
   type ReviewAggregate,
 } from "../reviews/service";
-import { searchByKeyword } from "./repository";
+import { searchByEmbedding, searchByKeyword } from "./repository";
 import { searchCourses } from "./service";
 
 vi.mock("./repository");
@@ -132,5 +133,28 @@ describe("searchCourses minimum-rating filter", () => {
 
     expect(results.map((r) => r.courseCode)).toEqual(["SF1625", "DD2421"]);
     expect(getAggregatesByCourseCodes).not.toHaveBeenCalled();
+  });
+
+  it("keeps keyword order and appends only new semantic hits", async () => {
+    vi.mocked(embedSingle).mockResolvedValueOnce({
+      embedding: [0.25, 0.5],
+      usage: { tokens: 2 },
+    });
+    vi.mocked(searchByKeyword).mockResolvedValueOnce([
+      { courseCode: "SF1625", score: null },
+      { courseCode: "DD2421", score: null },
+    ]);
+    vi.mocked(searchByEmbedding).mockResolvedValueOnce([
+      { courseCode: "DD2421", score: 0.95 },
+      { courseCode: "ID2209", score: 0.9 },
+    ]);
+
+    const results = await searchCourses("distributed systems", 3);
+
+    expect(results.map((result) => result.courseCode)).toEqual([
+      "SF1625",
+      "DD2421",
+      "ID2209",
+    ]);
   });
 });
