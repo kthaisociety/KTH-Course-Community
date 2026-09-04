@@ -99,6 +99,25 @@ describe("FeedbackForm", () => {
       expect(screen.getByLabelText("Email")).toHaveValue("elsa-at-kth");
     });
 
+    // The artboard's own regex would let this one through, and `feedback.submit`
+    // would then refuse it — turning a fixable typo into a send failure.
+    it("refuses what the server would refuse, not merely what looks like an address", async () => {
+      const user = userEvent.setup({ delay: null });
+      render(<FeedbackForm />);
+
+      await fillIn(user, {
+        name: "Elsa",
+        email: "elsa@kth.s",
+        message: "Hello",
+      });
+      await send(user);
+
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        "Enter a valid email.",
+      );
+      expect(mutateAsync).not.toHaveBeenCalled();
+    });
+
     it("names the fields it cannot do without", async () => {
       const user = userEvent.setup({ delay: null });
       render(<FeedbackForm />);

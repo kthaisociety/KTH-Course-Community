@@ -2,6 +2,7 @@
 
 import { CircleCheck } from "lucide-react";
 import { type FormEvent, useId, useState } from "react";
+import { z } from "zod";
 import { cn } from "@/lib/utils";
 import { useSubmitFeedback } from "../api/mutations";
 
@@ -23,8 +24,18 @@ type Draft = { name: string; email: string; message: string };
 
 const EMPTY: Draft = { name: "", email: "", message: "" };
 
-/** The artboard's own address test, kept character for character. */
-const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+/**
+ * The address rule `feedback.submit` applies, expressed with the same Zod
+ * primitive the router uses rather than a second regex, so the two cannot mean
+ * different things.
+ *
+ * The artboard's own test — `/^[^\s@]+@[^\s@]+\.[^\s@]+$/` — is looser than the
+ * server's: it accepts a one-character final segment like `you@kth.s`, which the
+ * router refuses. Shipping that gap would turn a typo the visitor could fix into
+ * the generic send failure, so the client keeps invalid addresses in the
+ * validation path where the artboard puts them.
+ */
+const EMAIL = z.string().email();
 
 /**
  * The artboard's two checks in the artboard's own words: one line under the
@@ -38,7 +49,7 @@ function problemWith(draft: Draft): string | null {
   if (!draft.name.trim() || !draft.message.trim()) {
     return "Name and message are required.";
   }
-  if (!EMAIL.test(draft.email.trim())) {
+  if (!EMAIL.safeParse(draft.email.trim()).success) {
     return "Enter a valid email.";
   }
   return null;
