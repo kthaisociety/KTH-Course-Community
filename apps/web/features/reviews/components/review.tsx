@@ -1,8 +1,7 @@
 "use client";
 
 import { useForm } from "@tanstack/react-form";
-import { useEffect, useState } from "react";
-import { z } from "zod";
+import { useEffect, useMemo, useState } from "react";
 import { RichTextEditor } from "@/components/RichEditor";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -35,12 +34,11 @@ import type { ExaminationDistribution } from "@/types";
 import {
   EXAMINATION_DISTRIBUTION_KEYS,
   EXAMINATION_DISTRIBUTION_LABELS,
-  examinationDistributionSchema,
   MAX_REVIEW_SCORE,
-  percentSchema,
-  reviewScoreSchema,
 } from "@/types";
 import { useAddReview } from "../hooks/use-add-review";
+import { useEditReview } from "../hooks/use-edit-review";
+import { reviewFormSchema } from "../lib/review-form-schema";
 
 export type ReviewFormData = {
   happyTook: boolean;
@@ -62,23 +60,7 @@ const EMPTY_DISTRIBUTION: ExaminationDistribution = {
   other: 0,
 };
 
-// The form shares the wire contract from `@/types` and adds only what is
-// specific to writing a review in a dialog: a message that is not just markup.
-const formSchema = z.object({
-  happyTook: z.boolean(),
-  message: z
-    .string()
-    .refine(
-      (html) => html.replace(/<[^>]*>/g, "").trim().length > 0,
-      "Write a review.",
-    ),
-  examinationDistribution: examinationDistributionSchema.nullable(),
-  approachTheoryPercent: percentSchema.nullable(),
-  workloadScore: reviewScoreSchema,
-  learningScore: reviewScoreSchema,
-});
-
-const defaultValues: ReviewFormData = {
+const emptyValues: ReviewFormData = {
   happyTook: false,
   message: "",
   examinationDistribution: null,
@@ -87,25 +69,66 @@ const defaultValues: ReviewFormData = {
   learningScore: 0,
 };
 
+/** A published review being rewritten, as the form needs to see it. */
+export type EditableReview = ReviewFormData & { id: string };
+
 type ReviewProps = {
   courseCode: string;
   openOnLoad?: boolean;
+  /**
+   * The review being rewritten. Given one, the dialog edits rather than
+   * creates: it opens with that review's answers, has no trigger button of its
+   * own, and submits to `reviews.update`. The parent mounts it fresh (a `key`
+   * on the review id) because the form and the rich-text editor both read
+   * their starting values once.
+   *
+   * Only a review's author is offered this, and the server enforces that
+   * independently — an id belonging to someone else is refused there.
+   */
+  editing?: EditableReview;
+  /** Required alongside `editing`: the parent owns the dialog's open state. */
+  onEditingClose?: () => void;
 };
 
 export function Review({
   courseCode,
   openOnLoad = false,
+  editing,
+  onEditingClose,
 }: Readonly<ReviewProps>) {
   const { userId, isLoading } = useMe();
   const addReview = useAddReview();
-  const [dialogIsOpen, setDialogIsOpen] = useState(openOnLoad);
+  const editReview = useEditReview(courseCode);
+  const [dialogIsOpen, setDialogIsOpen] = useState(
+    openOnLoad || Boolean(editing),
+  );
+  // Prose is required to publish a first review, not to keep one. A review
+  // already stored with no message is a valid row, and its author has to be
+  // able to correct a score without inventing text to go with it.
+  const isEditing = Boolean(editing);
+  const formSchema = useMemo(
+    () => reviewFormSchema({ requireMessage: !isEditing }),
+    [isEditing],
+  );
   const form = useForm({
-    defaultValues,
+    defaultValues: editing
+      ? {
+          happyTook: editing.happyTook,
+          message: editing.message,
+          examinationDistribution: editing.examinationDistribution,
+          approachTheoryPercent: editing.approachTheoryPercent,
+          workloadScore: editing.workloadScore,
+          learningScore: editing.learningScore,
+        }
+      : emptyValues,
     validators: { onSubmit: formSchema },
     onSubmit: async ({ value }) => {
-      const success = await addReview(courseCode, value);
+      const success = editing
+        ? await editReview(editing.id, value)
+        : await addReview(courseCode, value);
       if (success) {
         setDialogIsOpen(false);
+        onEditingClose?.();
         form.reset();
       }
     },
@@ -127,19 +150,28 @@ export function Review({
         open={dialogIsOpen}
         onOpenChange={(open) => {
           setDialogIsOpen(open);
-          if (!open) form.reset();
+          if (!open) {
+            form.reset();
+            onEditingClose?.();
+          }
         }}
       >
-        <DialogTrigger asChild>
-          <Button className="flex-1" type="button" aria-label="Add review">
-            Add Review
-          </Button>
-        </DialogTrigger>
+        {editing ? null : (
+          <DialogTrigger asChild>
+            <Button className="flex-1" type="button" aria-label="Add review">
+              Add Review
+            </Button>
+          </DialogTrigger>
+        )}
         <DialogContent className="max-h-[100vh] max-w-4xl min-w-3xl overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Share Your Experience</DialogTitle>
+            <DialogTitle>
+              {editing ? "Edit your review" : "Share Your Experience"}
+            </DialogTitle>
             <DialogDescription>
-              Help other students by sharing your thoughts about this course.
+              {editing
+                ? "Change anything you like. Your review replaces the one already published."
+                : "Help other students by sharing your thoughts about this course."}
             </DialogDescription>
           </DialogHeader>
 
@@ -375,6 +407,7 @@ export function Review({
                     return (
                       <Field data-invalid={isInvalid}>
                         <RichTextEditor
+                          initialHtml={editing?.message}
                           onContentChange={(content) =>
                             field.handleChange(content)
                           }
@@ -412,7 +445,7 @@ export function Review({
                     disabled={isSubmitting}
                   >
                     {isSubmitting ? <Spinner data-icon="inline-start" /> : null}
-                    Submit Review
+                    {editing ? "Save changes" : "Submit Review"}
                   </Button>
                 </>
               )}

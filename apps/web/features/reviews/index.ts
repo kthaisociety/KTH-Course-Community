@@ -11,11 +11,26 @@ export {
   useReviewList,
   useUnreviewedTakenCourses,
 } from "./api/queries";
-export { Post, type PostProps } from "./components/post";
-export { Review, type ReviewFormData } from "./components/review";
+export {
+  type EditableReview,
+  Review,
+  type ReviewFormData,
+} from "./components/review";
+/** One published review, and the list that wires it to the API. */
+export { ReviewCard, type ReviewCardProps } from "./components/review-card";
+export { ReviewList } from "./components/review-list";
 /** The prompt for taken courses with no review — Taken courses and My Page. */
 export {
   UnreviewedCard,
   type UnreviewedCourse,
 } from "./components/unreviewed-card";
 export { useAddReview } from "./hooks/use-add-review";
+export { useEditReview } from "./hooks/use-edit-review";
+export { useRemoveReview } from "./hooks/use-remove-review";
+export {
+  EXAMINATION_COLORS,
+  EXAMINATION_INK,
+  type ExaminationSegment,
+  examinationSegments,
+  examinationSplitLabel,
+} from "./lib/examination-palette";

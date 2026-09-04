@@ -1,5 +1,5 @@
 import { TRPCError } from "@trpc/server";
-import { ArrowLeft, ExternalLink, MessageSquare } from "lucide-react";
+import { ArrowLeft, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
@@ -12,16 +12,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@/components/ui/empty";
 import { Separator } from "@/components/ui/separator";
-import { Post } from "@/features/reviews/components/post";
-import { Review } from "@/features/reviews/components/review";
+import { Review, ReviewList } from "@/features/reviews";
 import { formatHp, formatTerm, kthCourseUrl } from "@/lib/kth";
 import { sanitizeCourseHtml } from "@/lib/sanitize-html";
 import { caller } from "@/trpc/server";
@@ -197,39 +189,7 @@ export async function Course({
           Here are review insights and student comments about the course.
         </p>
         <Review courseCode={details.courseCode} openOnLoad={openReviewOnLoad} />
-        <div className="flex flex-col gap-4">
-          {reviews.length > 0 ? (
-            reviews.map((review) => (
-              <Post
-                key={review.id}
-                className="w-full max-w-full"
-                courseCode={details.courseCode}
-                happyTook={review.happyTook}
-                message={review.message}
-                examinationDistribution={review.examinationDistribution}
-                approachTheoryPercent={review.approachTheoryPercent}
-                workloadScore={review.workloadScore}
-                learningScore={review.learningScore}
-                upvoteCount={review.upvoteCount}
-                downvoteCount={review.downvoteCount}
-                userVote={review.userVote}
-                postId={review.id}
-              />
-            ))
-          ) : (
-            <Empty className="border">
-              <EmptyHeader>
-                <EmptyMedia variant="icon">
-                  <MessageSquare />
-                </EmptyMedia>
-                <EmptyTitle>No reviews yet</EmptyTitle>
-                <EmptyDescription>
-                  Be the first to add a review for this course.
-                </EmptyDescription>
-              </EmptyHeader>
-            </Empty>
-          )}
-        </div>
+        <ReviewList courseCode={details.courseCode} reviews={reviews} />
       </section>
     </div>
   );
