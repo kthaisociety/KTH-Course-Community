@@ -30,7 +30,7 @@ import { Slider } from "@/components/ui/slider";
 import { Spinner } from "@/components/ui/spinner";
 import { Switch } from "@/components/ui/switch";
 import { useMe } from "@/features/auth";
-import type { ExaminationDistribution } from "@/types";
+import type { ExaminationDistribution, Review as ReviewModel } from "@/types";
 import {
   EXAMINATION_DISTRIBUTION_KEYS,
   EXAMINATION_DISTRIBUTION_LABELS,
@@ -71,6 +71,30 @@ const emptyValues: ReviewFormData = {
 
 /** A published review being rewritten, as the form needs to see it. */
 export type EditableReview = ReviewFormData & { id: string };
+
+/**
+ * A stored review as the editor takes it.
+ *
+ * The form needs a string, so a review with no message opens empty — and goes
+ * back as `null`, because the dialog only asks for prose when publishing a
+ * first review and the hooks store an untyped-in editor as nothing written.
+ *
+ * It lives beside `EditableReview` rather than beside either list that offers
+ * editing: a course page's `ReviewList` and My Page's own reviews both open the
+ * same dialog, and two copies of this would be two chances for them to open it
+ * differently.
+ */
+export function toEditableReview(review: ReviewModel): EditableReview {
+  return {
+    id: review.id,
+    happyTook: review.happyTook,
+    message: review.message ?? "",
+    examinationDistribution: review.examinationDistribution,
+    approachTheoryPercent: review.approachTheoryPercent,
+    workloadScore: review.workloadScore,
+    learningScore: review.learningScore,
+  };
+}
 
 type ReviewProps = {
   courseCode: string;

@@ -23,31 +23,13 @@ import { useMe } from "@/features/auth";
 import type { Review as ReviewModel } from "@/types";
 import { useRemoveReview } from "../hooks/use-remove-review";
 import { useReviewVotes } from "../hooks/use-review-votes";
-import { type EditableReview, Review } from "./review";
+import { type EditableReview, Review, toEditableReview } from "./review";
 import { ReviewCard } from "./review-card";
 
 type ReviewListProps = {
   courseCode: string;
   reviews: ReviewModel[];
 };
-
-/**
- * A stored review as the form takes it. The editor needs a string, so a review
- * with no message opens empty — and goes back as `null`, because the dialog
- * only asks for prose when publishing a first review and the hooks store an
- * untyped-in editor as nothing written.
- */
-function toEditable(review: ReviewModel): EditableReview {
-  return {
-    id: review.id,
-    happyTook: review.happyTook,
-    message: review.message ?? "",
-    examinationDistribution: review.examinationDistribution,
-    approachTheoryPercent: review.approachTheoryPercent,
-    workloadScore: review.workloadScore,
-    learningScore: review.learningScore,
-  };
-}
 
 /**
  * A course's reviews, and the wiring the cards cannot own themselves: who the
@@ -92,7 +74,9 @@ export function ReviewList({ courseCode, reviews }: Readonly<ReviewListProps>) {
             onVote={
               userId ? (voteType) => void vote(review.id, voteType) : undefined
             }
-            onEdit={isAuthor ? () => setEditing(toEditable(review)) : undefined}
+            onEdit={
+              isAuthor ? () => setEditing(toEditableReview(review)) : undefined
+            }
             onDelete={
               isAuthor ? () => setPendingDeleteId(review.id) : undefined
             }
