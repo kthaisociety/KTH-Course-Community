@@ -121,6 +121,29 @@ export async function insertTakenCoursesIfAbsent(
   return inserted.map((row) => row.courseCode);
 }
 
+/** Fills only fields that are still null, preserving concurrent edits. */
+export async function fillTakenCourseFieldsIfEmpty(
+  userId: string,
+  row: TakenCourseWrite,
+): Promise<boolean> {
+  const updated = await db
+    .update(schema.userTakenCourses)
+    .set({
+      grade: sql`coalesce(${schema.userTakenCourses.grade}, ${row.grade})`,
+      earnedCredits: sql`coalesce(${schema.userTakenCourses.earnedCredits}, ${row.earnedCredits})`,
+      attendanceYear: sql`coalesce(${schema.userTakenCourses.attendanceYear}, ${row.attendanceYear})`,
+      updatedAt: new Date(),
+    })
+    .where(
+      and(
+        eq(schema.userTakenCourses.userId, userId),
+        eq(schema.userTakenCourses.courseCode, row.courseCode),
+      ),
+    )
+    .returning({ courseCode: schema.userTakenCourses.courseCode });
+  return updated.length > 0;
+}
+
 /**
  * Edits an existing row and nothing else. One statement, so a concurrent
  * delete cannot slip between a check and the write and be undone by it —

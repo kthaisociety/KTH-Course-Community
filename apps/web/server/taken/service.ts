@@ -128,6 +128,20 @@ export async function recordTranscriptCoursesIfAbsent(
   return { inserted: inserted.length, updated: 0 };
 }
 
+/** Atomically fills transcript facts only where the stored row is still empty. */
+export async function fillTranscriptCourseFields(
+  userId: string,
+  rows: TakenCourseInput[],
+): Promise<number> {
+  let updated = 0;
+  for (const row of dedupeByCourseCode(rows)) {
+    if (await takenRepo.fillTakenCourseFieldsIfEmpty(userId, toWrite(row))) {
+      updated += 1;
+    }
+  }
+  return updated;
+}
+
 /** Records one course the user says they took. Idempotent. */
 export async function addTakenCourse(
   userId: string,

@@ -220,13 +220,13 @@ export function TakenCourses() {
         includeGrades,
       );
       const written =
-        plan.create.length > 0
-          ? await confirmImport.mutateAsync({ courses: plan.create })
-          : { inserted: 0, updated: 0 };
-      // Sequential, so a failure stops rather than firing the rest at a server
-      // that has just refused one. What did land stays landed, and the retry
-      // re-reads the list and asks only for the remainder.
-      for (const row of plan.fill) await update.mutateAsync(row);
+        plan.create.length === 0 && plan.fill.length === 0
+          ? { inserted: 0, updated: 0 }
+          : await confirmImport.mutateAsync(
+              plan.fill.length > 0
+                ? { courses: plan.create, fills: plan.fill }
+                : { courses: plan.create },
+            );
       setProposal(null);
       setBanner(
         importedSummary(written.inserted + written.updated, plan.fill.length),

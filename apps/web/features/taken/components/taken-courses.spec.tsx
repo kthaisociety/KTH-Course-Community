@@ -568,15 +568,19 @@ describe("reading a transcript", () => {
     );
 
     await waitFor(() =>
-      expect(updateTaken).toHaveBeenCalledWith({
-        courseCode: "DD1337",
-        grade: "B",
-        earnedCredits: 9,
-        attendanceYear: 2025,
-        attendancePeriods: "P3",
+      expect(confirmImport).toHaveBeenCalledWith({
+        courses: [],
+        fills: [
+          expect.objectContaining({
+            courseCode: "DD1337",
+            grade: "B",
+            earnedCredits: 9,
+            attendanceYear: 2025,
+          }),
+        ],
       }),
     );
-    expect(confirmImport).not.toHaveBeenCalled();
+    expect(updateTaken).not.toHaveBeenCalled();
   });
 
   it("keeps the transcript's grades once the reader asks for them", async () => {

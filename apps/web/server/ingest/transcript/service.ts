@@ -1,6 +1,7 @@
 import { getSummariesByCodes } from "../../course/service";
 import { NotFoundError } from "../../errors";
 import {
+  fillTranscriptCourseFields,
   recordTranscriptCoursesIfAbsent,
   type TakenCourseInput,
 } from "../../taken/service";
@@ -102,6 +103,7 @@ export async function confirmTranscriptImport(
   userId: string,
   rows: ConfirmedTranscriptRow[],
   importedAt: Date,
+  fills: ConfirmedTranscriptRow[] = [],
 ): Promise<{ inserted: number; updated: number }> {
   const inputs: TakenCourseInput[] = rows.map((row) => ({
     courseCode: row.courseCode.trim().toUpperCase(),
@@ -111,7 +113,13 @@ export async function confirmTranscriptImport(
   }));
   if (inputs.length === 0) return { inserted: 0, updated: 0 };
 
-  const codes = inputs.map((input) => input.courseCode);
+  const fillInputs: TakenCourseInput[] = fills.map((row) => ({
+    courseCode: row.courseCode.trim().toUpperCase(),
+    grade: row.grade ?? null,
+    earnedCredits: row.earnedCredits ?? null,
+    attendanceYear: row.attendanceYear ?? null,
+  }));
+  const codes = [...inputs, ...fillInputs].map((input) => input.courseCode);
   const known = new Set(
     (await getSummariesByCodes(codes)).map((summary) => summary.courseCode),
   );
@@ -122,5 +130,16 @@ export async function confirmTranscriptImport(
     );
   }
 
-  return recordTranscriptCoursesIfAbsent(userId, inputs, importedAt);
+  const created = await recordTranscriptCoursesIfAbsent(
+    userId,
+    inputs,
+    importedAt,
+  );
+  return {
+    inserted: created.inserted,
+    updated:
+      fillInputs.length > 0
+        ? await fillTranscriptCourseFields(userId, fillInputs)
+        : 0,
+  };
 }
