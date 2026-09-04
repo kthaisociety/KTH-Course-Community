@@ -71,6 +71,10 @@ function readStars(raw: string | null): number | null {
  *
  * The filters need none of this: each is one discrete click with nothing to keep
  * up with, so the URL simply drives them, and Back undoes a filter for free.
+ *
+ * What the two paths *do* share is `setParams`, and they write through it at
+ * genuinely independent moments — see `issuedParams` for why a write cannot
+ * simply read the URL it is about to change.
  */
 export function useExplore() {
   const router = useRouter();
@@ -90,19 +94,43 @@ export function useExplore() {
   const department = searchParams.get("department") ?? "";
   const minRatingStars = readStars(searchParams.get("rating"));
 
+  const liveParams = searchParams.toString();
+
+  /**
+   * The query string this hook last asked the router for, while the URL has yet
+   * to catch up with it.
+   *
+   * `router.replace` does not land in `searchParams` synchronously, so two
+   * writes inside that window — a school picked while the typed query is still
+   * inside its 300ms debounce — would each build a whole URL from the same
+   * pre-write snapshot, and whichever landed second would drop the other's
+   * parameter. The second write builds on this instead, so they compose.
+   */
+  const issuedParams = useRef<string | null>(null);
+
+  // Any change in the URL — our own write landing, or the reader navigating —
+  // makes `searchParams` the truth again, so the record is only ever consulted
+  // inside the window it exists for. `liveParams` is the trigger rather than
+  // something the body reads, which is the whole point of the effect.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the URL changing is the event
+  useEffect(() => {
+    issuedParams.current = null;
+  }, [liveParams]);
+
   const setParams = useCallback(
     (patch: Record<string, string | null>) => {
-      const next = new URLSearchParams(searchParams.toString());
+      const next = new URLSearchParams(issuedParams.current ?? liveParams);
       for (const [key, value] of Object.entries(patch)) {
         if (value) next.set(key, value);
         else next.delete(key);
       }
       const queryString = next.toString();
+      issuedParams.current = queryString;
       router.replace(queryString ? `${pathname}?${queryString}` : pathname, {
         scroll: false,
       });
     },
-    [router, pathname, searchParams],
+    [router, pathname, liveParams],
   );
 
   // What was searched here goes into the URL.

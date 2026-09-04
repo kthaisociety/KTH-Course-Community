@@ -219,6 +219,50 @@ describe("Explore", () => {
       );
     });
 
+    // `router.replace` does not land in `useSearchParams` synchronously, and the
+    // query's debounce and a filter click fire at independent moments. A write
+    // that read the URL it was about to change would build on a snapshot the
+    // other write had already superseded, and the address bar would end up
+    // holding one of the two — so a reload or a shared link silently lost the
+    // other. The mock router here never updates `search`, which is exactly that
+    // window held open.
+    describe("a filter changed while the typed query is still settling", () => {
+      it("keeps both, with the query committed first", async () => {
+        render(<Explore />);
+
+        await userEvent.type(screen.getByLabelText("Search courses"), "graphs");
+        await waitFor(() =>
+          expect(replace).toHaveBeenCalledWith("/search?q=graphs", {
+            scroll: false,
+          }),
+        );
+        await userEvent.selectOptions(screen.getByLabelText("School"), "EECS");
+
+        expect(replace).toHaveBeenLastCalledWith(
+          "/search?q=graphs&department=EECS",
+          { scroll: false },
+        );
+      });
+
+      it("keeps both, with the filter committed first", async () => {
+        render(<Explore />);
+
+        await userEvent.selectOptions(screen.getByLabelText("School"), "EECS");
+        expect(replace).toHaveBeenLastCalledWith("/search?department=EECS", {
+          scroll: false,
+        });
+
+        await userEvent.type(screen.getByLabelText("Search courses"), "graphs");
+
+        await waitFor(() =>
+          expect(replace).toHaveBeenLastCalledWith(
+            "/search?department=EECS&q=graphs",
+            { scroll: false },
+          ),
+        );
+      });
+    });
+
     it("adopts a query that arrives from outside, rather than overwriting it", async () => {
       search = "q=graphs";
       const { rerender } = render(<Explore />);
