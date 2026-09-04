@@ -72,7 +72,13 @@ export function AppShell({ children }: { children: ReactNode }) {
           <ThemeToggle />
         </header>
 
-        <main className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
+        <main
+          className={
+            pathname === "/search"
+              ? "min-h-0 flex-1 overflow-hidden"
+              : "min-h-0 flex-1 overflow-y-auto overflow-x-hidden"
+          }
+        >
           {children}
         </main>
       </div>

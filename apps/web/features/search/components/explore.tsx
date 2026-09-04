@@ -1,16 +1,26 @@
 "use client";
 
 import { RotateCcw, Search as SearchIcon, TriangleAlert } from "lucide-react";
+import dynamic from "next/dynamic";
 import type { ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AuthReasonDialog } from "@/features/auth";
 import { CourseCardItem, courseCardGeometry } from "@/features/courses";
 import { PageColumn, PageHeader } from "@/features/shell";
+import { useWorkspacePane } from "@/features/workspace";
 import {
   MAX_RATING_STARS,
   RATING_STAR_OPTIONS,
   useExplore,
 } from "../hooks/use-explore";
 import { useResultsWidth } from "../hooks/use-results-width";
+
+// The pane is inactive for ordinary browsing and has its own data-heavy
+// details/review views. Load it only once a desktop reader opens a course.
+const WorkspacePane = dynamic(
+  () => import("@/features/workspace").then((module) => module.WorkspacePane),
+  { ssr: false },
+);
 
 /**
  * Explore: the search-and-browse workspace, and the app's front door to the
@@ -54,20 +64,41 @@ import { useResultsWidth } from "../hooks/use-results-width";
  */
 export function Explore() {
   const explore = useExplore();
+  const workspace = useWorkspacePane();
+  const containerRef = useRef<HTMLDivElement>(null);
+  const desktopWorkspace = useContainerBreakpoint(containerRef, 768);
+  const rowRef = useRef<HTMLDivElement>(null);
+  const pane = useWorkspaceWidth(rowRef, workspace.hasOpenCourses);
   const [resultsRef, resultsWidth] = useResultsWidth();
   const geo = courseCardGeometry(resultsWidth);
 
   const { results, hasQuery, isLoading, isError } = explore;
   const showEmpty = hasQuery && !isLoading && !isError && results.length === 0;
 
+  // The desktop pane intentionally does not replace the mobile course route:
+  // #133 owns the mobile sheet host. Keeping that established route means a
+  // phone's Drawer and course controls remain keyboard-reachable today.
+  function openCourse(courseCode: string, kind: "details" | "review") {
+    if (desktopWorkspace) {
+      workspace.open(courseCode, kind);
+      return;
+    }
+    if (kind === "details") explore.onOpenCourse(courseCode);
+    else explore.onReviewCourse(courseCode);
+  }
+
   return (
-    <PageColumn>
+    <PageColumn
+      className="h-full min-h-0 overflow-hidden"
+      contentClassName="h-full min-h-0 pb-0"
+      containerRef={containerRef}
+    >
       <PageHeader
         title="Explore courses"
         subtitle="Search the KTH catalogue and see what students said about a course before you pick it."
       />
 
-      <search className="flex flex-col items-center gap-2.5 px-6 pt-[18px] pb-3.5">
+      <search className="flex shrink-0 flex-col items-center gap-2.5 px-6 pt-[18px] pb-3.5">
         <form onSubmit={explore.onSubmit} className="w-full max-w-[560px]">
           <div className="flex h-[42px] items-center gap-2.5 rounded-[10px] border border-cc-rule3 bg-cc-surface px-3.5">
             <SearchIcon
@@ -92,68 +123,93 @@ export function Explore() {
         <Filters explore={explore} />
       </search>
 
-      <div
-        ref={resultsRef}
-        className="mx-auto flex w-full max-w-[1148px] flex-col gap-3.5 px-5 pb-5"
-      >
-        {/* The live region stays mounted whatever the column is showing: one
+      <div ref={rowRef} className="flex min-h-0 flex-1 gap-[18px] px-5 pb-5">
+        <div
+          ref={resultsRef}
+          data-testid="explore-results"
+          className={`scrollbar-hidden min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto ${
+            workspace.hasOpenCourses ? "max-w-none" : "mx-auto max-w-[1136px]"
+          }`}
+        >
+          <div className="flex min-w-0 flex-col gap-3.5">
+            {/* The live region stays mounted whatever the column is showing: one
             that appears together with its first message is announced
             unreliably. Before anything is searched it has nothing to say — the
             panel below carries that — so it says nothing. */}
-        <div className="flex items-baseline gap-2 pl-0.5 text-[12px] text-cc-muted">
-          <span aria-live="polite">{resultsLabel(explore)}</span>
-          {hasQuery ? (
-            <button
-              type="button"
-              onClick={explore.onClearQuery}
-              className="cursor-pointer font-medium text-cc-brand hover:underline"
-            >
-              Clear search
-            </button>
-          ) : null}
+            <div className="flex items-baseline gap-2 pl-0.5 text-[12px] text-cc-muted">
+              <span aria-live="polite">{resultsLabel(explore)}</span>
+              {hasQuery ? (
+                <button
+                  type="button"
+                  onClick={explore.onClearQuery}
+                  className="cursor-pointer font-medium text-cc-brand hover:underline"
+                >
+                  Clear search
+                </button>
+              ) : null}
+            </div>
+
+            {isLoading && results.length === 0 ? <ResultsSkeleton /> : null}
+
+            {isError ? <ResultsError onRetry={explore.onRetry} /> : null}
+
+            {showEmpty ? (
+              <Panel dashed>
+                <div className="font-semibold text-[14.5px]">
+                  No courses match “{explore.query}”
+                </div>
+                <div className="mt-[5px] text-[13px] text-cc-muted">
+                  Try a course code, a subject, or{" "}
+                  <button
+                    type="button"
+                    onClick={explore.onClearQuery}
+                    className="cursor-pointer font-medium text-cc-brand hover:underline"
+                  >
+                    clear the search
+                  </button>
+                  .
+                </div>
+              </Panel>
+            ) : null}
+
+            {!hasQuery && !isError ? (
+              <StartHere onSuggest={explore.onSuggestQuery} />
+            ) : null}
+
+            {results.map((course, index) => (
+              <CourseCardItem
+                key={course.courseCode}
+                course={course}
+                stats={explore.statsFor(course.courseCode)}
+                action="save"
+                geo={geo}
+                // The last card's picker would open past the foot of the column.
+                pickerAbove={results.length > 1 && index === results.length - 1}
+                onOpen={() => openCourse(course.courseCode, "details")}
+                onReview={() => openCourse(course.courseCode, "review")}
+                onRequestAuth={explore.setAuthReason}
+              />
+            ))}
+          </div>
         </div>
 
-        {isLoading && results.length === 0 ? <ResultsSkeleton /> : null}
-
-        {isError ? <ResultsError onRetry={explore.onRetry} /> : null}
-
-        {showEmpty ? (
-          <Panel dashed>
-            <div className="font-semibold text-[14.5px]">
-              No courses match “{explore.query}”
-            </div>
-            <div className="mt-[5px] text-[13px] text-cc-muted">
-              Try a course code, a subject, or{" "}
-              <button
-                type="button"
-                onClick={explore.onClearQuery}
-                className="cursor-pointer font-medium text-cc-brand hover:underline"
-              >
-                clear the search
-              </button>
-              .
-            </div>
-          </Panel>
+        {workspace.hasOpenCourses ? (
+          <div
+            data-testid="workspace-pane-host"
+            className="relative hidden min-h-0 min-w-[356px] @3xl:flex"
+            style={{ width: pane.width }}
+          >
+            <WorkspaceResizeHandle pane={pane} />
+            <WorkspacePane
+              className="min-w-0 flex-1"
+              openCourses={workspace.openCourses}
+              activeId={workspace.activeId}
+              onActivate={workspace.activate}
+              onClose={workspace.close}
+              onOpen={workspace.open}
+            />
+          </div>
         ) : null}
-
-        {!hasQuery && !isError ? (
-          <StartHere onSuggest={explore.onSuggestQuery} />
-        ) : null}
-
-        {results.map((course, index) => (
-          <CourseCardItem
-            key={course.courseCode}
-            course={course}
-            stats={explore.statsFor(course.courseCode)}
-            action="save"
-            geo={geo}
-            // The last card's picker would open past the foot of the column.
-            pickerAbove={results.length > 1 && index === results.length - 1}
-            onOpen={() => explore.onOpenCourse(course.courseCode)}
-            onReview={() => explore.onReviewCourse(course.courseCode)}
-            onRequestAuth={explore.setAuthReason}
-          />
-        ))}
       </div>
 
       <AuthReasonDialog
@@ -162,6 +218,116 @@ export function Explore() {
         onClose={() => explore.setAuthReason(null)}
       />
     </PageColumn>
+  );
+}
+
+/** Matches Explore's `@3xl` layout transition against the actual container,
+ * not the wider browser viewport. */
+function useContainerBreakpoint(
+  containerRef: React.RefObject<HTMLDivElement | null>,
+  minimumWidth: number,
+) {
+  const [matches, setMatches] = useState(false);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container || typeof ResizeObserver !== "function") return;
+    const observer = new ResizeObserver(([entry]) => {
+      const width = entry?.contentRect.width ?? container.clientWidth;
+      setMatches(width >= minimumWidth);
+    });
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, [containerRef, minimumWidth]);
+
+  return matches;
+}
+
+const RESULTS_FLOOR = 470;
+const PANE_MIN = 356;
+const PANE_DEFAULT = 504;
+const WORKSPACE_GAP = 18;
+
+function useWorkspaceWidth(
+  rowRef: React.RefObject<HTMLDivElement | null>,
+  active: boolean,
+) {
+  const [width, setWidth] = useState(PANE_DEFAULT);
+  const [rowWidth, setRowWidth] = useState(0);
+
+  useEffect(() => {
+    const row = rowRef.current;
+    if (!row || typeof ResizeObserver !== "function") return;
+    const observer = new ResizeObserver(([entry]) => {
+      setRowWidth(entry?.contentRect.width ?? row.clientWidth);
+    });
+    observer.observe(row);
+    return () => observer.disconnect();
+  }, [rowRef]);
+
+  const max = Math.max(PANE_MIN, rowWidth - RESULTS_FLOOR - WORKSPACE_GAP);
+  const clamp = useCallback(
+    (next: number) => Math.max(PANE_MIN, Math.min(next, max)),
+    [max],
+  );
+
+  useEffect(() => {
+    if (active) setWidth((current) => clamp(current));
+  }, [active, clamp]);
+
+  return {
+    width: clamp(width),
+    resize: (next: number) => setWidth(clamp(next)),
+    reset: () => setWidth(clamp(PANE_DEFAULT)),
+  };
+}
+
+function WorkspaceResizeHandle({
+  pane,
+}: {
+  pane: ReturnType<typeof useWorkspaceWidth>;
+}) {
+  const drag = useRef<{
+    onMove: (event: PointerEvent) => void;
+  } | null>(null);
+
+  const finish = useCallback(() => {
+    const activeDrag = drag.current;
+    if (!activeDrag) return;
+    window.removeEventListener("pointermove", activeDrag.onMove);
+    window.removeEventListener("pointerup", finish);
+    window.removeEventListener("pointercancel", finish);
+    drag.current = null;
+  }, []);
+
+  useEffect(() => finish, [finish]);
+
+  return (
+    <button
+      type="button"
+      aria-label="Resize workspace"
+      title="Drag to resize · double-click to reset"
+      onDoubleClick={pane.reset}
+      onPointerDown={(event) => {
+        event.preventDefault();
+        finish();
+        const startX = event.clientX;
+        const startWidth = pane.width;
+        const onMove = (moveEvent: PointerEvent) => {
+          pane.resize(startWidth - (moveEvent.clientX - startX));
+        };
+        drag.current = { onMove };
+        window.addEventListener("pointermove", onMove);
+        window.addEventListener("pointerup", finish, { once: true });
+        window.addEventListener("pointercancel", finish, { once: true });
+      }}
+      className="-left-[14px] absolute top-0 hidden h-full w-[11px] cursor-col-resize items-center justify-center @3xl:flex"
+    >
+      <span
+        aria-hidden
+        className="h-[34px] w-[2px] rounded-[2px] bg-cc-rule3"
+      />
+    </button>
   );
 }
 

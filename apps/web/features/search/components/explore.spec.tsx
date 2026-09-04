@@ -1,4 +1,10 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { CourseSummary } from "@/types";
@@ -10,6 +16,7 @@ const useMe = vi.fn();
 const useSearchCourses = vi.fn();
 
 let search = "";
+let containerWidth = 500;
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push, replace }),
@@ -46,6 +53,13 @@ vi.mock("@/features/courses/api/mutations", () => ({
 }));
 
 vi.mock("sonner", () => ({ toast: { error: vi.fn() } }));
+
+// Explore owns the viewport contract; the pane's detailed content is covered
+// in its own suite. This keeps the desktop interaction test focused on the
+// host and avoids pulling its editor CSS into this screen test.
+vi.mock("@/features/workspace/components/workspace-pane", () => ({
+  WorkspacePane: () => <section aria-label="Open courses" />,
+}));
 
 // `toSearchCoursesInput` stays real: that the browser sends a star threshold and
 // never a 1-10 score is the point of it (#67).
@@ -88,6 +102,26 @@ function results(...courses: CourseSummary[]) {
 
 beforeEach(() => {
   search = "";
+  containerWidth = 500;
+  window.sessionStorage.clear();
+  push.mockClear();
+  replace.mockClear();
+  vi.stubGlobal(
+    "ResizeObserver",
+    class {
+      constructor(private readonly callback: ResizeObserverCallback) {}
+
+      observe() {
+        this.callback(
+          [{ contentRect: { width: containerWidth } } as ResizeObserverEntry],
+          this as unknown as ResizeObserver,
+        );
+      }
+
+      disconnect() {}
+      unobserve() {}
+    },
+  );
   useMe.mockReturnValue({ user: { userId: "u1", savedCourseCodes: [] } });
   useSearchCourses.mockReturnValue(results());
 });
@@ -145,6 +179,71 @@ describe("Explore", () => {
         ),
       );
       expect(push).toHaveBeenCalledWith("/course/DD2380");
+    });
+
+    it("keeps the results as the only mobile scrolling surface", () => {
+      render(<Explore />);
+
+      expect(screen.getByTestId("explore-results")).toHaveClass(
+        "scrollbar-hidden",
+        "overflow-y-auto",
+        "max-w-[1136px]",
+      );
+      expect(screen.queryByLabelText("Open courses")).not.toBeInTheDocument();
+    });
+
+    it("opens courses in the resizable desktop workspace", async () => {
+      containerWidth = 900;
+      render(<Explore />);
+
+      await userEvent.click(
+        within(screen.getAllByRole("article")[0] as HTMLElement).getByRole(
+          "button",
+          { name: /Artificial Intelligence/ },
+        ),
+      );
+
+      expect(screen.getByLabelText("Open courses")).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Resize workspace" }),
+      ).toHaveAttribute("title", "Drag to resize · double-click to reset");
+      expect(push).not.toHaveBeenCalled();
+    });
+
+    it("continues to route at an intermediate container width", async () => {
+      containerWidth = 767;
+      render(<Explore />);
+
+      await userEvent.click(
+        within(screen.getAllByRole("article")[0] as HTMLElement).getByRole(
+          "button",
+          { name: /Artificial Intelligence/ },
+        ),
+      );
+
+      expect(push).toHaveBeenCalledWith("/course/DD2380");
+      expect(screen.queryByLabelText("Open courses")).not.toBeInTheDocument();
+    });
+
+    it("stops resizing when a pointer gesture is cancelled", async () => {
+      containerWidth = 900;
+      render(<Explore />);
+      await userEvent.click(
+        within(screen.getAllByRole("article")[0] as HTMLElement).getByRole(
+          "button",
+          { name: /Artificial Intelligence/ },
+        ),
+      );
+
+      const host = screen.getByTestId("workspace-pane-host");
+      const resize = screen.getByRole("button", { name: "Resize workspace" });
+      expect(host).toHaveStyle({ width: "412px" });
+
+      fireEvent.pointerDown(resize, { clientX: 500 });
+      fireEvent.pointerCancel(window);
+      fireEvent.pointerMove(window, { clientX: 800 });
+
+      expect(host).toHaveStyle({ width: "412px" });
     });
   });
 
