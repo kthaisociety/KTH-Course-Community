@@ -128,7 +128,7 @@ export function Explore() {
           ref={resultsRef}
           data-testid="explore-results"
           className={`scrollbar-hidden min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto ${
-            workspace.hasOpenCourses ? "max-w-none" : "mx-auto max-w-[1148px]"
+            workspace.hasOpenCourses ? "max-w-none" : "mx-auto max-w-[1136px]"
           }`}
         >
           <div className="flex min-w-0 flex-col gap-3.5">

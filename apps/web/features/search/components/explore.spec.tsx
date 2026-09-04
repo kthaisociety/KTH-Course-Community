@@ -187,6 +187,7 @@ describe("Explore", () => {
       expect(screen.getByTestId("explore-results")).toHaveClass(
         "scrollbar-hidden",
         "overflow-y-auto",
+        "max-w-[1136px]",
       );
       expect(screen.queryByLabelText("Open courses")).not.toBeInTheDocument();
     });
