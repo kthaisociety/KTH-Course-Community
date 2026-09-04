@@ -216,6 +216,22 @@ describe("editing in place", () => {
     });
   });
 
+  it("keeps the editor open holding the draft when the write is refused", async () => {
+    updateTaken.mockRejectedValue(new Error("nope"));
+    render(<TakenCourses />);
+
+    await userEvent.click(
+      screen.getByLabelText("Edit credits, grade and year for DD1337"),
+    );
+    const grade = screen.getByLabelText("Grade for DD1337");
+    await userEvent.clear(grade);
+    await userEvent.type(grade, "A");
+    await userEvent.click(screen.getByLabelText("Save DD1337"));
+
+    await waitFor(() => expect(toastError).toHaveBeenCalled());
+    expect(screen.getByLabelText("Grade for DD1337")).toHaveValue("A");
+  });
+
   it("refuses to send a year that is not one", async () => {
     render(<TakenCourses />);
 
@@ -253,6 +269,28 @@ describe("adding by hand", () => {
       earnedCredits: 6,
       attendanceYear: null,
     });
+  });
+
+  it("keeps the draft when the write is refused", async () => {
+    addTaken.mockRejectedValue(new Error("nope"));
+    render(<TakenCourses />);
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Add a course by hand" }),
+    );
+    await userEvent.type(
+      screen.getByLabelText("Search the KTH catalogue"),
+      "DD2380",
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: /DD2380\s*Artificial Intelligence/ }),
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Add course" }));
+
+    await waitFor(() => expect(toastError).toHaveBeenCalled());
+    // The dialog is still open, still holding the course the reader picked.
+    expect(screen.getByRole("button", { name: "Add course" })).toBeEnabled();
+    expect(screen.getAllByText("DD2380").length).toBeGreaterThan(0);
   });
 
   it("cannot offer a course already on the list", async () => {
@@ -367,6 +405,57 @@ describe("reading a transcript", () => {
         ],
       }),
     );
+  });
+
+  it("leaves a course the reader already corrected exactly as they left it", async () => {
+    // Not the empty list this block sets up: the reader has DD1337 already,
+    // graded A where the transcript says B.
+    takenList.mockReturnValue([takenCourse({ grade: "A" })]);
+    render(<TakenCourses />);
+    await userEvent.click(
+      screen.getByRole("button", { name: "Update transcript" }),
+    );
+    await uploadPdf();
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Looks right" }),
+    );
+
+    await waitFor(() =>
+      expect(
+        screen.getByText("Transcript read — nothing new in it"),
+      ).toBeInTheDocument(),
+    );
+    expect(confirmImport).not.toHaveBeenCalled();
+    expect(updateTaken).not.toHaveBeenCalled();
+  });
+
+  it("fills only an empty field, and keeps the periods while doing it", async () => {
+    takenList.mockReturnValue([
+      takenCourse({ grade: null, earnedCredits: 9, attendancePeriods: "P3" }),
+    ]);
+    render(<TakenCourses />);
+    // The switch lives in the update dialog once the list has courses in it.
+    await userEvent.click(
+      screen.getByRole("button", { name: "Update transcript" }),
+    );
+    await userEvent.click(
+      screen.getByRole("switch", { name: /Read grades from transcript/ }),
+    );
+    await uploadPdf();
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Looks right" }),
+    );
+
+    await waitFor(() =>
+      expect(updateTaken).toHaveBeenCalledWith({
+        courseCode: "DD1337",
+        grade: "B",
+        earnedCredits: 9,
+        attendanceYear: 2025,
+        attendancePeriods: "P3",
+      }),
+    );
+    expect(confirmImport).not.toHaveBeenCalled();
   });
 
   it("keeps the transcript's grades once the reader asks for them", async () => {

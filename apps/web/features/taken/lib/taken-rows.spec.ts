@@ -6,9 +6,9 @@ import {
   type ProposalRow,
   parseCredits,
   parseYear,
+  planTranscriptImport,
   type TakenCourse,
   takenUpdateInput,
-  toConfirmedCourses,
   toTakenRows,
 } from "./taken-rows";
 
@@ -97,9 +97,11 @@ describe("takenUpdateInput", () => {
   });
 });
 
-describe("toConfirmedCourses", () => {
-  it("keeps the transcript's grades when the reader asked for them", () => {
-    expect(toConfirmedCourses([proposalRow()], true)).toEqual([
+describe("planTranscriptImport", () => {
+  it("writes a course the reader does not have yet, grades and all", () => {
+    const plan = planTranscriptImport([proposalRow()], [], true);
+
+    expect(plan.create).toEqual([
       {
         courseCode: "DD1337",
         grade: "B",
@@ -107,22 +109,89 @@ describe("toConfirmedCourses", () => {
         attendanceYear: 2025,
       },
     ]);
+    expect(plan.fill).toEqual([]);
   });
 
-  it("drops every grade when the reader did not, and keeps the rest", () => {
-    const [confirmed] = toConfirmedCourses([proposalRow()], false);
-    expect(confirmed.grade).toBeNull();
-    expect(confirmed.earnedCredits).toBe(7.5);
-    expect(confirmed.attendanceYear).toBe(2025);
+  it("drops every grade the reader did not ask for, and keeps the rest", () => {
+    const [created] = planTranscriptImport([proposalRow()], [], false).create;
+
+    expect(created.grade).toBeNull();
+    expect(created.earnedCredits).toBe(7.5);
+    expect(created.attendanceYear).toBe(2025);
   });
 
   it("never sends a name: a taken course has none to store", () => {
-    const [confirmed] = toConfirmedCourses([proposalRow()], true);
-    expect(Object.keys(confirmed).sort()).toEqual([
+    const [created] = planTranscriptImport([proposalRow()], [], true).create;
+
+    expect(Object.keys(created).sort()).toEqual([
       "attendanceYear",
       "courseCode",
       "earnedCredits",
       "grade",
+    ]);
+  });
+
+  it("leaves a course the reader corrected by hand exactly as they left it", () => {
+    const plan = planTranscriptImport(
+      [proposalRow({ grade: "B", earnedCredits: 7.5, attendanceYear: 2025 })],
+      [takenCourse({ grade: "A", earnedCredits: 9, attendanceYear: 2024 })],
+      true,
+    );
+
+    expect(plan.create).toEqual([]);
+    expect(plan.fill).toEqual([]);
+    expect(plan.unchanged).toBe(1);
+  });
+
+  it("fills only the fields that are empty, and carries the periods", () => {
+    const plan = planTranscriptImport(
+      [proposalRow({ grade: "B", earnedCredits: 7.5, attendanceYear: 2025 })],
+      [
+        takenCourse({
+          grade: null,
+          earnedCredits: 9,
+          attendanceYear: null,
+          attendancePeriods: "P3, P4",
+        }),
+      ],
+      true,
+    );
+
+    expect(plan.create).toEqual([]);
+    expect(plan.fill).toEqual([
+      {
+        courseCode: "DD1337",
+        grade: "B",
+        // The reader's 9 hp survives the transcript's 7.5.
+        earnedCredits: 9,
+        attendanceYear: 2025,
+        attendancePeriods: "P3, P4",
+      },
+    ]);
+  });
+
+  it("never fills a grade the reader asked not to read", () => {
+    const plan = planTranscriptImport(
+      [proposalRow({ grade: "B" })],
+      [takenCourse({ grade: null, earnedCredits: 7.5, attendanceYear: 2025 })],
+      false,
+    );
+
+    expect(plan.fill).toEqual([]);
+    expect(plan.unchanged).toBe(1);
+  });
+
+  it("never clears a grade the reader typed in themselves", () => {
+    const plan = planTranscriptImport(
+      [proposalRow({ grade: null, earnedCredits: 7.5 })],
+      [takenCourse({ grade: "A", earnedCredits: null })],
+      false,
+    );
+
+    // The empty credits are filled; the grade the reader typed is left alone,
+    // even with the transcript's grades switched off.
+    expect(plan.fill).toEqual([
+      expect.objectContaining({ grade: "A", earnedCredits: 7.5 }),
     ]);
   });
 });

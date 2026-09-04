@@ -83,33 +83,92 @@ export function takenUpdateInput(
   };
 }
 
-/**
- * What the reader confirmed, in the shape `transcript.confirm` takes.
- *
- * `includeGrades` is the design's "Read grades from transcript" switch. It is
- * applied here, on the way into the write, because that is the only place it
- * can bite: the parse happens on the server and always reads the grade column,
- * so the switch drops grades from what gets stored rather than from what gets
- * read. Nothing is written either way until this result is sent.
- *
- * `attendancePeriods` is absent by construction — a Ladok transcript has no
- * period column and `ConfirmedTranscriptRow` omits the field for that reason.
- */
-export function toConfirmedCourses(
-  rows: readonly ProposalRow[],
-  includeGrades: boolean,
-): Array<{
+/** One row in the shape `transcript.confirm` takes. It carries no periods. */
+export type ConfirmedCourse = {
   courseCode: string;
   grade: string | null;
   earnedCredits: number | null;
   attendanceYear: number | null;
-}> {
-  return rows.map((row) => ({
-    courseCode: row.courseCode,
-    grade: includeGrades ? row.grade : null,
-    earnedCredits: row.earnedCredits,
-    attendanceYear: row.attendanceYear,
-  }));
+};
+
+/**
+ * What confirming a proposal actually does, split by what the write has to be.
+ *
+ * The design's own rule, from the update dialog: *"Courses already in your list
+ * keep the edits you made — only new rows and missing fields are filled in."*
+ * Two things in the write path make that a split rather than one call.
+ *
+ * `transcript.confirm` upserts, and its conflict clause sets **every**
+ * self-reported column from the incoming row — including `attendance_periods`,
+ * which `ConfirmedTranscriptRow` has no field for and which therefore arrives
+ * as null. Sending a course the reader already has would overwrite the credits,
+ * grade and year they corrected by hand, and erase the periods outright.
+ *
+ * So a course the reader does not have yet goes through `transcript.confirm`,
+ * which is what stamps `transcript_imported_at`. A course they already have is
+ * only touched when the transcript can fill a field that is still empty, and
+ * then through `taken.update`, which writes the whole row — stored values
+ * included, periods carried — and leaves provenance alone.
+ */
+export type TranscriptImportPlan = {
+  /** Courses with no row yet. Written by `transcript.confirm`, stamped imported. */
+  create: ConfirmedCourse[];
+  /** Rows that exist and have an empty field the transcript can fill. */
+  fill: TakenUpdateInput[];
+  /** Rows the reader already has with nothing missing. Nothing writes to these. */
+  unchanged: number;
+};
+
+/**
+ * Turns a proposal and the reader's current list into the writes to make.
+ *
+ * `includeGrades` is the design's "Read grades from transcript" switch. It is
+ * applied here, on the way into the write, because that is the only place it
+ * can bite: the parse runs on the server and always reads the grade column, so
+ * the switch drops grades from what gets *stored* rather than from what gets
+ * read. With the switch off no grade from the file is ever written — and a
+ * grade the reader typed in themselves is still left exactly where it is.
+ *
+ * Nothing is written by this function. It describes writes; the screen makes
+ * them, after the reader has confirmed.
+ */
+export function planTranscriptImport(
+  candidates: readonly ProposalRow[],
+  existing: readonly TakenCourse[],
+  includeGrades: boolean,
+): TranscriptImportPlan {
+  const stored = new Map(existing.map((row) => [row.courseCode, row]));
+  const plan: TranscriptImportPlan = { create: [], fill: [], unchanged: 0 };
+
+  for (const candidate of candidates) {
+    const grade = includeGrades ? candidate.grade : null;
+    const row = stored.get(candidate.courseCode);
+
+    if (!row) {
+      plan.create.push({
+        courseCode: candidate.courseCode,
+        grade,
+        earnedCredits: candidate.earnedCredits,
+        attendanceYear: candidate.attendanceYear,
+      });
+      continue;
+    }
+
+    const filled: TakenEdits = {
+      grade: row.grade ?? grade,
+      earnedCredits: row.earnedCredits ?? candidate.earnedCredits,
+      attendanceYear: row.attendanceYear ?? candidate.attendanceYear,
+    };
+    const fillsSomething =
+      filled.grade !== row.grade ||
+      filled.earnedCredits !== row.earnedCredits ||
+      filled.attendanceYear !== row.attendanceYear;
+
+    if (fillsSomething) plan.fill.push(takenUpdateInput(row, filled));
+    else plan.unchanged += 1;
+  }
+
+  return plan;
 }
 
 /** `null` when the box is empty; `undefined` when what is in it is not credits. */

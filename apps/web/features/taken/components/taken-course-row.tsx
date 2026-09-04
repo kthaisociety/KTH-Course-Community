@@ -30,7 +30,12 @@ type Props = {
   isReviewed: boolean | null;
   /** A write for this row is in flight; its controls wait for it. */
   isBusy: boolean;
-  onSave: (edits: TakenEdits) => void;
+  /**
+   * Saves the corrected fields. Rejecting is how the parent says the write did
+   * not land: the editor stays open holding what the reader typed rather than
+   * closing back over the old values.
+   */
+  onSave: (edits: TakenEdits) => Promise<void>;
   onRemove: () => void;
 };
 
@@ -55,6 +60,7 @@ export function TakenCourseRow({
     credits: string;
     year: string;
   } | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   const edits = draft === null ? null : draftEdits(draft);
 
@@ -66,10 +72,17 @@ export function TakenCourseRow({
     });
   }
 
-  function save() {
-    if (!edits) return;
-    setDraft(null);
-    onSave(edits);
+  async function save() {
+    if (!edits || isSaving) return;
+    setIsSaving(true);
+    try {
+      await onSave(edits);
+      setDraft(null);
+    } catch {
+      // The parent has already said so. The draft stays where it is.
+    } finally {
+      setIsSaving(false);
+    }
   }
 
   return (
@@ -162,8 +175,8 @@ export function TakenCourseRow({
         <div className="flex items-center justify-end gap-2">
           <button
             type="button"
-            onClick={save}
-            disabled={edits === null}
+            onClick={() => void save()}
+            disabled={edits === null || isSaving}
             title={
               edits === null
                 ? "Credits and year have to be a number"
@@ -177,6 +190,7 @@ export function TakenCourseRow({
           <button
             type="button"
             onClick={() => setDraft(null)}
+            disabled={isSaving}
             aria-label={`Cancel editing ${row.courseCode}`}
             className={`${ICON_BUTTON} hover:border-cc-hov`}
           >

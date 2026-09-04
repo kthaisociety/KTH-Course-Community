@@ -24,7 +24,12 @@ type Props = {
   /** Course codes already on the list, so the picker cannot offer one twice. */
   takenCourseCodes: readonly string[];
   onClose: () => void;
-  onAdd: (courseCode: string, edits: TakenEdits) => void;
+  /**
+   * Records the course. Rejecting is how the parent says the write did not
+   * land: the dialog stays open holding the draft, so nothing the reader typed
+   * has to be typed twice.
+   */
+  onAdd: (courseCode: string, edits: TakenEdits) => Promise<void>;
 };
 
 /**
@@ -55,6 +60,7 @@ export function AddTakenCourseDialog({
   const [credits, setCredits] = useState<number | null>(null);
   const [grade, setGrade] = useState<string | null>(null);
   const [year, setYear] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
 
   const search = useSearchCourses({ q: debounced });
   const results = search.data?.results ?? [];
@@ -73,17 +79,23 @@ export function AddTakenCourseDialog({
     onClose();
   }
 
-  function submit() {
-    if (!picked) return;
+  async function submit() {
+    if (!picked || isSaving) return;
     const parsedYear = /^\d{4}$/.test(year) ? Number(year) : null;
-    const course = picked;
-    reset();
-    onClose();
-    onAdd(course.courseCode, {
-      grade,
-      earnedCredits: credits,
-      attendanceYear: parsedYear,
-    });
+    setIsSaving(true);
+    try {
+      await onAdd(picked.courseCode, {
+        grade,
+        earnedCredits: credits,
+        attendanceYear: parsedYear,
+      });
+      reset();
+      onClose();
+    } catch {
+      // The parent has already said so. The draft stays where it is.
+    } finally {
+      setIsSaving(false);
+    }
   }
 
   const creditChoices = [
@@ -286,11 +298,11 @@ export function AddTakenCourseDialog({
             </button>
             <button
               type="button"
-              onClick={submit}
-              disabled={picked === null}
+              onClick={() => void submit()}
+              disabled={picked === null || isSaving}
               className="flex h-[38px] cursor-pointer items-center rounded-[9px] bg-cc-btn px-4 font-semibold text-[13px] text-cc-btn-fg hover:opacity-[0.88] disabled:cursor-not-allowed disabled:opacity-55"
             >
-              Add course
+              {isSaving ? "Adding…" : "Add course"}
             </button>
           </div>
         </div>

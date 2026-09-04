@@ -22,10 +22,10 @@ import { useTakenMutations } from "../api/mutations";
 import { uploadTranscript } from "../api/transcript";
 import {
   lastTranscriptImport,
+  planTranscriptImport,
   type TakenEdits,
   type TakenRow,
   takenUpdateInput,
-  toConfirmedCourses,
   toTakenRows,
 } from "../lib/taken-rows";
 import { AddTakenCourseDialog } from "./add-taken-course-dialog";
@@ -54,21 +54,16 @@ function readDate(iso: string): string {
   });
 }
 
-function importedSummary(result: {
-  inserted: number;
-  updated: number;
-}): string {
+function importedSummary(added: number, filled: number): string {
   const parts: string[] = [];
-  if (result.inserted > 0) {
-    parts.push(
-      result.inserted === 1 ? "1 new course" : `${result.inserted} new courses`,
-    );
+  if (added > 0) {
+    parts.push(added === 1 ? "1 new course" : `${added} new courses`);
   }
-  if (result.updated > 0) {
+  if (filled > 0) {
     parts.push(
-      result.updated === 1
-        ? "1 course updated"
-        : `${result.updated} courses updated`,
+      filled === 1
+        ? "1 course had a missing field filled in"
+        : `${filled} courses had missing fields filled in`,
     );
   }
   return parts.length > 0
@@ -90,9 +85,10 @@ function importedSummary(result: {
  * relationships and this page never lets one stand in for another.
  *
  * **Nothing a transcript says is written until the reader confirms it.**
- * `POST /api/user/transcript` parses and returns a proposal; `transcript.confirm`
- * is the only write, and it upserts on `(userId, courseCode)` so a second read
- * of the same file updates rather than duplicates. The file itself is handed to
+ * `POST /api/user/transcript` parses and returns a proposal; the writes happen
+ * only on "Looks right", and `planTranscriptImport` decides what they are — a
+ * re-read adds courses that are new and fills fields that are empty, and never
+ * overwrites a correction the reader made by hand. The file itself is handed to
  * `uploadTranscript` and never kept — not in state, not in a cache, never in
  * `localStorage`.
  *
@@ -179,15 +175,32 @@ export function TakenCourses() {
     }
   }
 
+  /**
+   * Makes the writes the confirmed proposal describes, and only those.
+   *
+   * New courses go through `transcript.confirm`, which stamps them imported.
+   * Courses the reader already has are only touched to fill an empty field,
+   * and then through `taken.update`, which cannot overwrite what they
+   * corrected by hand — see `planTranscriptImport`.
+   */
   async function confirmProposal() {
     if (!proposal) return;
     setConfirmError(null);
+    const plan = planTranscriptImport(
+      proposal.candidates,
+      takenCourses,
+      includeGrades,
+    );
     try {
-      const result = await confirmImport.mutateAsync({
-        courses: toConfirmedCourses(proposal.candidates, includeGrades),
-      });
+      const written =
+        plan.create.length > 0
+          ? await confirmImport.mutateAsync({ courses: plan.create })
+          : { inserted: 0, updated: 0 };
+      await Promise.all(plan.fill.map((row) => update.mutateAsync(row)));
       setProposal(null);
-      setBanner(importedSummary(result));
+      setBanner(
+        importedSummary(written.inserted + written.updated, plan.fill.length),
+      );
     } catch (error) {
       setConfirmError(
         error instanceof Error && error.message
@@ -197,10 +210,15 @@ export function TakenCourses() {
     }
   }
 
-  function addCourse(courseCode: string, edits: TakenEdits) {
-    add
-      .mutateAsync({ courseCode, ...edits })
-      .catch(() => toast.error(`Could not add ${courseCode} to your courses.`));
+  async function addCourse(courseCode: string, edits: TakenEdits) {
+    try {
+      await add.mutateAsync({ courseCode, ...edits });
+    } catch (error) {
+      toast.error(`Could not add ${courseCode} to your courses.`);
+      // Rethrown so the dialog keeps the draft the reader typed rather than
+      // closing over a write that never landed.
+      throw error;
+    }
   }
 
   /**
@@ -221,10 +239,14 @@ export function TakenCourses() {
       );
   }
 
-  function saveEdits(row: TakenRow, edits: TakenEdits) {
-    update
-      .mutateAsync(takenUpdateInput(row, edits))
-      .catch(() => toast.error(`Could not save your changes to ${row.name}.`));
+  async function saveEdits(row: TakenRow, edits: TakenEdits) {
+    try {
+      await update.mutateAsync(takenUpdateInput(row, edits));
+    } catch (error) {
+      toast.error(`Could not save your changes to ${row.name}.`);
+      // Rethrown so the row stays in its editor holding what the reader typed.
+      throw error;
+    }
   }
 
   function removeCourse(row: TakenRow) {
