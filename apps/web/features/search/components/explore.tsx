@@ -70,7 +70,11 @@ export function Explore() {
   const workspace = useWorkspacePane();
   const containerRef = useRef<HTMLDivElement>(null);
   const desktopWorkspace = useContainerBreakpoint(containerRef, 768);
-  const mobileWorkspace = !useContainerBreakpoint(containerRef, 640);
+  const compactWorkspace = useContainerBreakpoint(containerRef, 640);
+  // A restored workspace may exist before ResizeObserver reports this
+  // container's size. Do not guess a presentation during that window: mounting
+  // a Sheet would briefly lock the desktop page's body before the pane wins.
+  const mobileWorkspace = compactWorkspace === null ? false : !compactWorkspace;
   const rowRef = useRef<HTMLDivElement>(null);
   const pane = useWorkspaceWidth(rowRef, workspace.hasOpenCourses);
   const [resultsRef, resultsWidth] = useResultsWidth();
@@ -244,7 +248,7 @@ function useContainerBreakpoint(
   containerRef: React.RefObject<HTMLDivElement | null>,
   minimumWidth: number,
 ) {
-  const [matches, setMatches] = useState(false);
+  const [matches, setMatches] = useState<boolean | null>(null);
 
   useEffect(() => {
     const container = containerRef.current;

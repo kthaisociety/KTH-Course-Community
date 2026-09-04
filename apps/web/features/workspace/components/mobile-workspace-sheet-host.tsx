@@ -42,18 +42,20 @@ export function MobileWorkspaceSheetHost({
   const activeEntry = active;
 
   function dismiss() {
+    resetDrag();
+    onClose(activeEntry.id);
+  }
+
+  function resetDrag() {
     dragStart.current = null;
     dragOffset.current = 0;
     setDragY(0);
-    onClose(activeEntry.id);
   }
 
   function finishDrag() {
     if (dragStart.current === null) return;
     const shouldDismiss = dragOffset.current >= DISMISS_DISTANCE;
-    dragStart.current = null;
-    dragOffset.current = 0;
-    setDragY(0);
+    resetDrag();
     if (shouldDismiss) onClose(activeEntry.id);
   }
 
@@ -84,7 +86,7 @@ export function MobileWorkspaceSheetHost({
               setDragY(next);
             }}
             onPointerUp={finishDrag}
-            onPointerCancel={finishDrag}
+            onPointerCancel={resetDrag}
             className="absolute inset-x-0 top-0 h-3 cursor-grab touch-none active:cursor-grabbing"
           >
             <span className="mx-auto block h-1 w-9 rounded-full bg-cc-rule3" />

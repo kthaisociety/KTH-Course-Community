@@ -209,6 +209,27 @@ describe("Explore", () => {
       expect(screen.queryByText("DD2380 · Details")).not.toBeInTheDocument();
     });
 
+    it("keeps the workspace sheet open when a drag is cancelled", async () => {
+      render(<Explore />);
+      await userEvent.click(
+        within(screen.getAllByRole("article")[0] as HTMLElement).getByRole(
+          "button",
+          { name: /Artificial Intelligence/ },
+        ),
+      );
+
+      const handle = screen.getByRole("button", {
+        name: "Drag workspace sheet down to dismiss",
+      });
+      fireEvent.pointerDown(handle, { pointerId: 1, clientY: 10 });
+      fireEvent.pointerMove(handle, { pointerId: 1, clientY: 160 });
+      fireEvent.pointerCancel(handle, { pointerId: 1 });
+
+      expect(
+        screen.getByRole("button", { name: "Close DD2380 · Details" }),
+      ).toBeVisible();
+    });
+
     it("keeps the results as the only mobile scrolling surface", () => {
       render(<Explore />);
 
