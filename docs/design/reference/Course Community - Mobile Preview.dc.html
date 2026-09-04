@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet"><link rel="stylesheet" href="cc-theme.css"><style>body{margin:0;background:#e7e2d3;font-family:Geist,system-ui,sans-serif}@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}@keyframes slideIn{from{transform:translateX(-100%)}to{transform:translateX(0)}}@keyframes pulse{0%,100%{opacity:.45}50%{opacity:1}}.cc-mobile-sheet-scroll{scrollbar-width:none}.cc-mobile-sheet-scroll::-webkit-scrollbar{display:none}
+.cc-landing-mobile [style*="z-index: 35"][style*="width: 236px"]{transform:translateX(-236px) !important;pointer-events:none !important}
+.cc-landing-mobile [style*="height: 66px"]{display:none !important}
+.cc-landing-mobile [style*="grid-template-columns: repeat(3, 1fr)"]{display:flex !important;flex-direction:column !important}
+.cc-landing-mobile .omx-th{scrollbar-width:none}
+.cc-landing-mobile .omx-th::-webkit-scrollbar{display:none}
+</style></helmet>
+
+<div style="display:flex;flex-direction:column;align-items:center;gap:14px;padding:40px 20px">
+<div style="font-size:13px;font-weight:600;color:#6b6355;text-align:center;max-width:420px">Mobile concept — collapsed sidebar (tap the icon, top left) switches between Explore, Saved, My Page and Taken courses. Tapping a course opens its own sheet from the bottom (details, or "Write a review"). Sheets stack — open several, dismiss each with the × or by dragging it all the way down. Draft only, does not change the desktop pages.</div>
+
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="390px,844px">
+<div data-cc-theme="{{ theme }}" style="position:relative;height:100%;display:flex;flex-direction:column;background:var(--pg);color:var(--ink);font-size:14px;overflow:hidden;transition:background-color .3s ease,color .3s ease">
+
+<div style="flex:none;display:flex;align-items:center;gap:10px;padding:56px 14px 10px;border-bottom:1px solid var(--rule)">
+<sc-if value="{{ notLanding }}" hint-placeholder-val="{{ true }}">
+<div onClick="{{ onOpenDrawer }}" role="button" tabIndex="0" aria-label="Open menu" style="flex:none;width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:9px;color:var(--brand);cursor:pointer" style-hover="background:var(--pill)">
+<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"></path></svg>
+</div>
+</sc-if>
+<div style="flex:1;min-width:0">
+<div style="font-size:16px;font-weight:600;line-height:1.2">{{ pageTitle }}</div>
+</div>
+<div onClick="{{ onTheme }}" role="button" tabIndex="0" aria-label="{{ themeTitle }}" title="{{ themeTitle }}" style="flex:none;width:34px;height:34px;display:flex;align-items:center;justify-content:center;border-radius:9px;color:var(--chipInk)">
+<sc-if value="{{ notNight }}" hint-placeholder-val="{{ true }}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 14.5A8.5 8.5 0 1 1 9.5 3.5a7 7 0 0 0 11 11z"></path></svg></sc-if>
+<sc-if value="{{ night }}" hint-placeholder-val="{{ false }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"></circle><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M18.4 5.6 17 7M7 17l-1.4 1.4"></path></svg></sc-if>
+</div>
+</div>
+
+<sc-if value="{{ isExplore }}" hint-placeholder-val="{{ true }}">
+<div style="flex:none;padding:10px 14px 12px">
+<div style="width:100%;box-sizing:border-box;display:flex;align-items:center;gap:9px;height:40px;padding:0 13px;border-radius:10px;border:1px solid var(--rule3);background:var(--surface)">
+<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#5c6570" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><line x1="16.5" y1="16.5" x2="21" y2="21"></line></svg>
+<span style="font-size:13.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Search a course, code or subject</span>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isExplore }}" hint-placeholder-val="{{ true }}">
+<div style="flex:1;min-height:0;overflow-y:auto;padding:0 14px 20px;display:flex;flex-direction:column;gap:12px">
+<sc-if value="{{ isLoading }}" hint-placeholder-val="{{ false }}">
+<sc-for list="{{ skeletonRows }}" as="k" hint-placeholder-count="3">
+<div style="height:168px;border-radius:12px;background:var(--surface);border:1px solid var(--rule2);padding:13px;display:flex;flex-direction:column;gap:10px">
+<div style="height:12px;width:60%;border-radius:4px;background:var(--pill);animation:pulse 1.2s ease-in-out infinite"></div>
+<div style="height:20px;width:80%;border-radius:5px;background:var(--pill);animation:pulse 1.2s ease-in-out infinite"></div>
+</div>
+</sc-for>
+</sc-if>
+<sc-if value="{{ isError }}" hint-placeholder-val="{{ false }}">
+<div style="padding:20px;border:1px solid #f0d7cf;border-radius:12px;background:var(--surface);text-align:center">
+<div style="font-size:14px;font-weight:600">Could not load courses</div>
+<div style="margin-top:5px;font-size:12.5px;color:var(--muted)">Something went wrong. Try again.</div>
+</div>
+</sc-if>
+<sc-if value="{{ isEmptyExplore }}" hint-placeholder-val="{{ false }}">
+<div style="padding:24px;border:1px dashed var(--rule3);border-radius:12px;text-align:center">
+<div style="font-size:14px;font-weight:600">No courses found</div>
+<div style="margin-top:5px;font-size:12.5px;color:var(--muted)">Try a different search.</div>
+</div>
+</sc-if>
+<sc-if value="{{ isPopulatedExplore }}" hint-placeholder-val="{{ true }}">
+<sc-for list="{{ mobileCourses }}" as="c" hint-placeholder-count="3">
+<dc-import name="Course Community - Course Card" c="{{ c }}" geo="{{ geo }}" action="save" is-guest="{{ isGuest }}" is-member="{{ true }}" on-sign-up="{{ c.onSignUp }}" on-log-in="{{ c.onLogIn }}" pick-above="{{ true }}" hide-facts="{{ true }}" compact="{{ true }}" hint-size="100%,168px"></dc-import>
+</sc-for>
+</sc-if>
+</div>
+</sc-if>
+
+<sc-if value="{{ isLanding }}" hint-placeholder-val="{{ false }}">
+<div class="cc-landing-mobile cc-mobile-sheet-scroll" style="flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;position:relative">
+<dc-import name="Course Community - Landing" account-count="{{ 14 }}" mobile="{{ true }}" hint-size="100%,100%" style="position:absolute;inset:0"></dc-import>
+</div>
+</sc-if>
+
+<sc-if value="{{ isSaved }}" hint-placeholder-val="{{ false }}">
+<div style="flex:1;min-height:0;overflow-y:auto;padding:12px 14px 20px;display:flex;flex-direction:column;gap:16px">
+<div>
+<div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--dim)">Collections</div>
+<div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:8px">
+<sc-for list="{{ collectionChips }}" as="col" hint-placeholder-count="3">
+<div style="flex:none;height:34px;display:flex;align-items:center;gap:6px;padding:0 12px;border-radius:9px;border:1px solid var(--rule2);background:var(--surface);font-size:12.5px;font-weight:500;color:var(--chipInk);white-space:nowrap">{{ col.name }}<span style="color:var(--dim2);font-weight:400">{{ col.count }}</span></div>
+</sc-for>
+<div style="flex:none;height:34px;display:flex;align-items:center;gap:6px;padding:0 12px;border-radius:9px;border:1px dashed #9dbfe4;background:rgba(23,81,166,.06);color:var(--brand);font-size:12.5px;font-weight:600">+ New</div>
+</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:12px">
+<div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--dim)">Saved courses</div>
+<sc-for list="{{ mobileCourses }}" as="c" hint-placeholder-count="3">
+<dc-import name="Course Community - Course Card" c="{{ c }}" geo="{{ geo }}" action="add" is-guest="{{ isGuest }}" is-member="{{ true }}" on-sign-up="{{ c.onSignUp }}" on-log-in="{{ c.onLogIn }}" pick-above="{{ true }}" hide-facts="{{ true }}" compact="{{ true }}" hint-size="100%,168px"></dc-import>
+</sc-for>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isMyPage }}" hint-placeholder-val="{{ false }}">
+<div style="flex:1;min-height:0;overflow-y:auto;padding:12px 14px 20px;display:flex;flex-direction:column;gap:16px">
+<div style="display:flex;align-items:center;gap:12px">
+<div style="width:46px;height:46px;flex:none;border-radius:999px;background:var(--pill);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600;color:var(--brand)">EL</div>
+<div style="min-width:0">
+<div style="font-size:15px;font-weight:600">Elsa Lindqvist</div>
+<div style="margin-top:2px;font-size:12px;color:var(--muted)">At KTH since 2023 · reviews signed Elsa Lindqvist</div>
+</div>
+</div>
+
+<div style="display:flex;gap:4px;overflow-x:auto;border-bottom:1px solid var(--rule)">
+<sc-for list="{{ myPageTabs }}" as="tb" hint-placeholder-count="4">
+<div onClick="{{ tb.onClick }}" role="button" tabIndex="0" style="flex:none;display:flex;align-items:center;padding:0 11px;height:36px;border-bottom:2px solid {{ tb.line }};color:{{ tb.fg }};font-size:13px;font-weight:{{ tb.weight }};white-space:nowrap">{{ tb.label }}</div>
+</sc-for>
+</div>
+
+<sc-if value="{{ isMyPageOverview }}" hint-placeholder-val="{{ true }}">
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+<div style="border:1px solid var(--rule);border-radius:10px;background:var(--surface);padding:10px 11px">
+<div style="font-size:10.5px;color:var(--dim)">Credits</div>
+<div style="margin-top:4px;font-size:15px;font-weight:600">37.5</div>
+</div>
+<div style="border:1px solid var(--rule);border-radius:10px;background:var(--surface);padding:10px 11px">
+<div style="font-size:10.5px;color:var(--dim)">Average</div>
+<div style="margin-top:4px;font-size:15px;font-weight:600">4.2</div>
+</div>
+<div style="border:1px solid var(--rule);border-radius:10px;background:var(--surface);padding:10px 11px">
+<div style="font-size:10.5px;color:var(--dim)">Reviews</div>
+<div style="margin-top:4px;font-size:15px;font-weight:600">3</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isMyPageReviews }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:12px">
+<div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--dim)">Your reviews</div>
+<sc-for list="{{ myReviews }}" as="r" hint-placeholder-count="2">
+<div style="border:1px solid var(--rule2);border-radius:12px;background:var(--surface);padding:13px 14px;display:flex;flex-direction:column;gap:5px">
+<div style="font-family:'Geist Mono',ui-monospace,monospace;font-size:11px;color:var(--brand);font-weight:500">{{ r.code }}</div>
+<div style="font-size:13.5px;font-weight:600">{{ r.title }}</div>
+<div style="font-size:12.5px;color:var(--muted);line-height:1.4">{{ r.snippet }}</div>
+</div>
+</sc-for>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:12px">
+<div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--dim)">Liked reviews</div>
+<sc-for list="{{ likedReviews }}" as="r" hint-placeholder-count="1">
+<div style="border:1px solid var(--rule2);border-radius:12px;background:var(--surface);padding:13px 14px;display:flex;flex-direction:column;gap:5px">
+<div style="font-family:'Geist Mono',ui-monospace,monospace;font-size:11px;color:var(--brand);font-weight:500">{{ r.code }}</div>
+<div style="font-size:13.5px;font-weight:600">{{ r.title }}</div>
+<div style="font-size:12.5px;color:var(--muted);line-height:1.4">{{ r.snippet }}</div>
+</div>
+</sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{ isMyPageDot }}" hint-placeholder-val="{{ false }}">
+<div style="border:1px solid var(--rule);border-radius:12px;background:var(--surface);padding:14px 15px">
+<div style="font-size:14px;font-weight:600">Your node on the landing page</div>
+<div style="margin-top:5px;font-size:12.5px;line-height:1.5;color:var(--muted)">Review courses to unlock how your dot looks. Go quiet for a while and it settles back to default.</div>
+</div>
+<div style="border:1px solid var(--rule);border-radius:12px;background:var(--surface);overflow:hidden">
+<sc-for list="{{ dotTiers }}" as="dt" hint-placeholder-count="3">
+<div style="padding:13px 15px;border-bottom:{{ dt.divider }}">
+<div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+<div style="font-size:13px;font-weight:600;color:{{ dt.titleColor }}">{{ dt.title }}</div>
+<span style="flex:none;padding:3px 9px;border-radius:999px;background:{{ dt.badgeBg }};color:{{ dt.badgeFg }};font-size:11px;font-weight:600;white-space:nowrap">{{ dt.badgeLabel }}</span>
+</div>
+<sc-if value="{{ dt.unlocked }}" hint-placeholder-val="{{ false }}">
+<div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:7px">
+<sc-for list="{{ dt.options }}" as="o" hint-placeholder-count="3">
+<div onClick="{{ o.onClick }}" role="button" tabIndex="0" style="display:flex;align-items:center;gap:8px;height:32px;padding:0 12px;border-radius:8px;border:1px solid {{ o.border }};background:{{ o.bg }};color:{{ o.fg }};font-size:12.5px;font-weight:{{ o.weight }}">
+<span style="width:13px;height:13px;border-radius:50%;background:{{ o.swatch }};flex:none"></span>{{ o.swatch }}
+</div>
+</sc-for>
+</div>
+</sc-if>
+<sc-if value="{{ dt.locked }}" hint-placeholder-val="{{ true }}">
+<div style="margin-top:5px;font-size:12px;color:var(--dim)">{{ dt.hint }}</div>
+</sc-if>
+</div>
+</sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{ isMyPageSettings }}" hint-placeholder-val="{{ false }}">
+<div style="border:1px solid var(--rule);border-radius:12px;background:var(--surface);overflow:hidden">
+<div style="padding:13px 15px;border-bottom:1px solid var(--rule);display:flex;align-items:center;justify-content:space-between;gap:10px">
+<div style="font-size:13px;font-weight:600">Store grades from my transcript</div>
+<div style="flex:none;width:42px;height:24px;border-radius:99px;background:#1751a6;padding:3px;display:flex;justify-content:flex-end"><div style="width:18px;height:18px;border-radius:50%;background:var(--surface);box-shadow:0 1px 2px rgba(20,30,45,.28)"></div></div>
+</div>
+<div style="padding:13px 15px;display:flex;align-items:center;justify-content:space-between;gap:10px">
+<div style="font-size:13px;font-weight:600;color:#a4402a">Delete account</div>
+</div>
+</div>
+</sc-if>
+</div>
+</sc-if>
+
+<sc-if value="{{ isTaken }}" hint-placeholder-val="{{ false }}">
+<div style="flex:1;min-height:0;overflow-y:auto;padding:12px 14px 20px;display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+<div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--dim)">Your course list</div>
+<div role="button" tabIndex="0" aria-label="Reupload transcript" title="Reupload transcript" style="flex:none;width:34px;height:34px;display:flex;align-items:center;justify-content:center;border-radius:9px;border:1px solid var(--rule3);background:var(--surface);color:var(--chipInk)">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4"></path><path d="m7.5 8.5 4.5-4.5 4.5 4.5"></path><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"></path></svg>
+</div>
+</div>
+<sc-for list="{{ takenCourses }}" as="t" hint-placeholder-count="3">
+<div style="border:1px solid var(--rule2);border-radius:12px;background:var(--surface);padding:13px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px">
+<div style="min-width:0">
+<div style="font-family:'Geist Mono',ui-monospace,monospace;font-size:11px;color:var(--brand);font-weight:500">{{ t.code }}</div>
+<div style="margin-top:3px;font-size:13.5px;font-weight:600;line-height:1.3;min-height:34px">{{ t.title }}</div>
+<div style="margin-top:2px;font-size:12px;color:var(--muted)">{{ t.hp }} · {{ t.year }}</div>
+</div>
+<div style="flex:none;padding:4px 10px;border-radius:7px;background:var(--pill);color:var(--brand);font-size:13px;font-weight:600">{{ t.grade }}</div>
+</div>
+</sc-for>
+<div onClick="{{ onAddCourse }}" role="button" tabIndex="0" style="display:flex;align-items:center;justify-content:center;gap:7px;height:40px;border-radius:9px;border:1px dashed #9dbfe4;background:rgba(23,81,166,.06);color:var(--brand);font-size:13px;font-weight:600">
+<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>Add a course
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ addCourseOpen }}" hint-placeholder-val="{{ false }}">
+<div onClick="{{ onCloseAddCourse }}" style="position:absolute;inset:0;z-index:60;background:rgba(20,30,45,.4)"></div>
+<div style="position:absolute;left:16px;right:16px;top:50%;transform:translateY(-50%);z-index:61;box-sizing:border-box;padding:20px;border-radius:14px;background:var(--surface);box-shadow:0 18px 48px rgba(20,30,45,.24)">
+<div style="font-size:16px;font-weight:600">Add a course by hand</div>
+<div style="margin-top:5px;font-size:12.5px;color:var(--muted)">Type the course in yourself — same as "Add a course by hand" on desktop.</div>
+<input placeholder="Course code, e.g. DD1337" style="margin-top:14px;box-sizing:border-box;width:100%;height:40px;padding:0 12px;border-radius:9px;border:1px solid var(--rule3);outline:none;font-family:inherit;font-size:13.5px;color:var(--ink)">
+<div style="margin-top:14px;display:flex;gap:8px">
+<div onClick="{{ onCloseAddCourse }}" role="button" tabIndex="0" style="flex:1;display:flex;align-items:center;justify-content:center;height:40px;border-radius:9px;background:var(--btn);color:var(--btnFg);font-size:13.5px;font-weight:600">Add course</div>
+<div onClick="{{ onCloseAddCourse }}" role="button" tabIndex="0" style="display:flex;align-items:center;justify-content:center;height:40px;padding:0 16px;border-radius:9px;border:1px solid var(--rule3);background:var(--surface);font-size:13.5px;font-weight:500">Cancel</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ drawerOpen }}" hint-placeholder-val="{{ false }}">
+<div onClick="{{ onCloseDrawer }}" style="position:absolute;inset:0;z-index:40;background:rgba(20,30,45,.4)"></div>
+<div style="position:absolute;top:0;left:0;bottom:0;z-index:41;width:250px;box-sizing:border-box;display:flex;flex-direction:column;gap:6px;padding:56px 12px 16px;background:#1751a6;color:#fff;animation:slideIn .18s ease-out">
+<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 8px 16px">
+<div onClick="{{ onGoLanding }}" role="button" tabIndex="0" style="display:flex;align-items:center;gap:9px;cursor:pointer">
+<img src="assets/ais-symbol-white.png" alt="KTH AI Society" style="height:28px;width:28px;object-fit:contain">
+<div style="font-size:15px;font-weight:600;line-height:1.15">Course<br>Community</div>
+</div>
+<div onClick="{{ onCloseDrawer }}" role="button" tabIndex="0" aria-label="Close menu" style="width:30px;height:30px;display:flex;align-items:center;justify-content:center;border-radius:8px;color:#fff;cursor:pointer" style-hover="background:rgba(255,255,255,.16)">
+<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"></path></svg>
+</div>
+</div>
+<sc-for list="{{ navLinks }}" as="n" hint-placeholder-count="4">
+<div onClick="{{ n.onClick }}" role="button" tabIndex="0" style="display:flex;align-items:center;gap:10px;padding:10px 10px;border-radius:8px;background:{{ n.bg }};font-weight:{{ n.weight }};cursor:pointer">{{ n.label }}</div>
+</sc-for>
+<div style="margin-top:auto;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 10px">
+<div style="font-size:12px;color:rgba(255,255,255,.7)">Signed in as Elsa Lindqvist</div>
+<div onClick="{{ onSignOut }}" role="button" tabIndex="0" aria-label="Sign out" title="Sign out" style="flex:none;width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:7px;color:rgba(255,255,255,.75)">
+<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><path d="M16 17l5-5-5-5"></path><path d="M21 12H9"></path></svg>
+</div>
+</div>
+</div>
+</sc-if>
+
+<sc-for list="{{ sheets }}" as="s" hint-placeholder-count="0">
+<div style="position:absolute;left:0;right:0;bottom:{{ s.bottomOffset }}px;z-index:{{ s.zIndex }};max-height:82%;box-sizing:border-box;display:flex;flex-direction:column;overflow:hidden;border-radius:18px 18px 0 0;background:{{ s.headerTint }};box-shadow:0 -8px 30px rgba(20,30,45,.24),inset 0 3px 0 0 {{ s.accent }};transform:translateY({{ s.dragY }}px);transition:{{ s.transition }}">
+<div onPointerDown="{{ s.onDragStart }}" style="position:absolute;top:8px;left:0;right:0;z-index:3;display:flex;justify-content:center;cursor:grab;touch-action:none">
+<div style="width:36px;height:4px;border-radius:2px;background:var(--rule3)"></div>
+</div>
+<div onClick="{{ s.onClose }}" role="button" tabIndex="0" aria-label="Close" style="flex:none;position:absolute;top:8px;right:10px;z-index:2;width:30px;height:30px;display:flex;align-items:center;justify-content:center;border-radius:8px;background:var(--surface);color:var(--dim);cursor:pointer;box-shadow:0 1px 3px rgba(20,30,45,.15)" style-hover="background:var(--pill)">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"></path></svg>
+</div>
+
+<div class="cc-mobile-sheet-scroll" style="flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;padding:28px 0 18px">
+<dc-import name="Course Community - Workspace Pane" pane-width="100%" pane-grow="1 1 auto" courses="{{ workspaceCourses }}" store-module="{{ workspaceStore }}" locale="en" is-guest="{{ isGuest }}" open-signal="{{ s.openSignal }}" hide-tabs="{{ true }}" on-tabs-change="{{ noop }}" on-authed="{{ noop }}" hint-size="100%,560px"></dc-import>
+</div>
+</sc-for>
+
+</div>
+</x-import>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:480,&quot;height&quot;:900},&quot;session&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;member&quot;,&quot;options&quot;:[&quot;guest&quot;,&quot;member&quot;],&quot;tsType&quot;:&quot;\&quot;guest\&quot; | \&quot;member\&quot;&quot;,&quot;section&quot;:&quot;Session&quot;},&quot;scenario&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;populated&quot;,&quot;options&quot;:[&quot;populated&quot;,&quot;empty&quot;,&quot;loading&quot;,&quot;error&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Prototype state&quot;}}">
+let STORE = null;
+
+function examLabel(segments) {
+  if (!segments || segments.length === 0) return null;
+  const total = segments.reduce((a, x) => a + (x.percent || 0), 0);
+  if (total === 0) return null;
+  let top = 0;
+  for (let i = 1; i < segments.length; i++) if (segments[i].percent > segments[top].percent) top = i;
+  const share = (segments[top].percent / total) * 100;
+  if (share === 100) return "Only " + segments[top].label;
+  if (share > 50) return "Mainly " + segments[top].label;
+  return "Mixed Evaluation Methods";
+}
+const countOf = (v) => parseInt(String(v).replace(/\D/g, ""), 10) || 0;
+const fmtCount = (n) => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, "\u2009");
+const CARD_GEO = {
+  tween: "none", titleSize: "15px", cardGap: "7px", cardPad: "12px",
+  factsGap: "10px", reviewPad: "0 8px", labelMax: "0px", labelOpacity: 0,
+  saveW: "0px", savePad: "8px", railW: "118px", railPad: "12px 11px",
+  summaryMax: "0px", summaryOpacity: 0,
+  showLabel: false, reviewFlex: "0 0 34px", saveFlex: "0 0 68px",
+  cardHeight: "168px"
+};
+
+class Component extends DCLogic {
+  ccDark() {
+    if (this.state.ccNight !== undefined) return this.state.ccNight === true;
+    try { return window.localStorage.getItem("cc:theme") === "dark"; } catch (e) { return false; }
+  }
+  ccSetDark(next) {
+    document.documentElement.setAttribute("data-cc-theme", next ? "dark" : "light");
+    try { window.localStorage.setItem("cc:theme", next ? "dark" : "light"); } catch (e) { /* storage off */ }
+    this.setState({ ccNight: next });
+  }
+  ccApplyTheme() {
+    document.documentElement.setAttribute("data-cc-theme", this.ccDark() ? "dark" : "light");
+  }
+
+  state = { drawerOpen: false, page: "explore", myPageTab: "overview", courses: [], sheets: [], nextId: 1, drags: {}, flags: {}, pickerFor: null, loading: false, error: false, addCourseOpen: false, signedIn: true };
+  DISMISS_THRESHOLD = 130;
+
+  componentDidMount() {
+    this.ccApplyTheme();
+    import("./cc-store.js").then((mod) => {
+      STORE = mod;
+      const scenario = this.props.scenario || "populated";
+      this.setState({
+        loading: scenario === "loading",
+        error: scenario === "error",
+        courses: scenario === "empty" || scenario === "loading" || scenario === "error"
+          ? []
+          : STORE.catalogCards({ locale: "en" }).slice(0, 3)
+      });
+    });
+  }
+
+  openSheet(code, kind) {
+    const id = this.state.nextId;
+    // kind: "r" opens straight to the review draft, "c" to course details —
+    // same shape Explore/Saved use for Workspace Pane's own open-signal.
+    const sheet = { id, openSignal: { code, kind, nonce: Date.now() } };
+    this.setState({ sheets: this.state.sheets.concat([sheet]), nextId: id + 1 });
+  }
+
+  closeSheet(id) {
+    this.setState({ sheets: this.state.sheets.filter((s) => s.id !== id) });
+  }
+
+  onSheetDragStart = (id) => (e) => {
+    e.preventDefault();
+    const startY = e.clientY;
+    const drags = { ...this.state.drags };
+    drags[id] = { dragY: 0, dragging: true };
+    this.setState({ drags });
+    const move = (ev) => {
+      const dy = Math.max(0, ev.clientY - startY);
+      const d = { ...this.state.drags };
+      d[id] = { dragY: dy, dragging: true };
+      this.setState({ drags: d });
+    };
+    const up = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      const dy = (this.state.drags[id] || {}).dragY || 0;
+      if (dy > this.DISMISS_THRESHOLD) { this.closeSheet(id); return; }
+      const d = { ...this.state.drags };
+      d[id] = { dragY: 0, dragging: false };
+      this.setState({ drags: d });
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+  };
+
+  renderVals() {
+    const s = this.state;
+
+    return {
+      drawerOpen: s.drawerOpen,
+      onOpenDrawer: () => this.setState({ drawerOpen: true }),
+      onCloseDrawer: () => this.setState({ drawerOpen: false }),
+
+      navLinks: [
+        ["explore", "Explore"], ["saved", "Saved courses"], ["my-page", "My Page"], ["taken", "Taken courses"]
+      ].map(([key, label]) => ({
+        label,
+        bg: s.page === key ? "rgba(255,255,255,.16)" : "transparent",
+        weight: s.page === key ? "600" : "400",
+        onClick: () => this.setState({ page: key, drawerOpen: false })
+      })),
+
+      theme: this.ccDark() ? "dark" : "light",
+      night: this.ccDark(),
+      notNight: !this.ccDark(),
+      themeTitle: this.ccDark() ? "Switch to light mode" : "Switch to dark mode",
+      onTheme: () => this.ccSetDark(!this.ccDark()),
+      onSignOut: () => this.setState({ signedIn: false, drawerOpen: false, page: "landing" }),
+      onGoLanding: () => this.setState({ page: "landing", drawerOpen: false }),
+      isGuest: !s.signedIn || (this.props.session || "member") === "guest",
+      isLoading: s.loading,
+      isError: s.error,
+      isEmptyExplore: !s.loading && !s.error && s.courses.length === 0,
+      isPopulatedExplore: !s.loading && !s.error && s.courses.length > 0,
+      skeletonRows: [0, 1, 2],
+      isExplore: s.page === "explore",
+      isSaved: s.page === "saved",
+      isMyPage: s.page === "my-page",
+      isTaken: s.page === "taken",
+      isLanding: s.page === "landing",
+      notLanding: s.page !== "landing",
+      pageTitle: { landing: "Course Community", explore: "Explore courses", saved: "Saved courses", "my-page": "My Page", taken: "Taken courses" }[s.page],
+
+      collectionChips: [
+        { name: "Autumn electives", count: " · 3" },
+        { name: "Might swap for ML", count: " · 2" }
+      ],
+      myPageTabs: [
+        ["overview", "Overview"], ["reviews", "Reviews"], ["my-dot", "My dot"], ["settings", "Settings"]
+      ].map(([key, label]) => ({
+        label,
+        line: s.myPageTab === key ? "#1751a6" : "transparent",
+        fg: s.myPageTab === key ? "var(--ink)" : "var(--dim)",
+        weight: s.myPageTab === key ? "600" : "500",
+        onClick: () => this.setState({ myPageTab: key })
+      })),
+      isMyPageOverview: s.myPageTab === "overview",
+      isMyPageReviews: s.myPageTab === "reviews",
+      isMyPageDot: s.myPageTab === "my-dot",
+      isMyPageSettings: s.myPageTab === "settings",
+      dotTiers: (() => {
+        const list = [
+          { title: "Dot color", unlocked: true, hint: "", options: (STORE ? STORE.DOT_COLORS : ["#1751a6", "#1c6b60", "#8a4fae", "#b3541e", "#57646f"]).map((hex, i) => ({ swatch: hex, weight: i === 0 ? "600" : "500", border: i === 0 ? "var(--brand)" : "var(--rule3)", bg: i === 0 ? "var(--pill)" : "var(--surface)", fg: i === 0 ? "var(--brand)" : "var(--ink)", onClick: () => {} })) },
+          { title: "Dot style", unlocked: false, hint: "Unlocks once your uploaded transcript is fully reviewed." },
+          { title: "Signal on click", unlocked: false, hint: "Unlocks once you have referred friends to Course Community." }
+        ];
+        return list.map((t, i) => ({
+          ...t,
+          // Locked tiers say what unlocks them, but not what they actually are.
+          title: t.unlocked ? t.title : "Unknown",
+          locked: !t.unlocked,
+          titleColor: t.unlocked ? "var(--ink)" : "var(--dim)",
+          badgeLabel: t.unlocked ? "Unlocked" : "Locked",
+          badgeBg: t.unlocked ? "var(--pill)" : "var(--pg)",
+          badgeFg: t.unlocked ? "var(--brand)" : "var(--dim)",
+          divider: i < list.length - 1 ? "1px solid var(--rule)" : "none"
+        }));
+      })(),
+      myReviews: [
+        { code: "SK1105", title: "Experimental Physics", snippet: "Labs are the real workload here — budget time for write-ups." },
+        { code: "SF1918", title: "Statistics", snippet: "Manageable if you keep up with the weekly problem sets." }
+      ],
+      addCourseOpen: s.addCourseOpen,
+      // Same mechanism as desktop's "Add a course by hand" — a manual-entry
+      // form for a course the transcript import didn't cover.
+      onAddCourse: () => this.setState({ addCourseOpen: true }),
+      onCloseAddCourse: () => this.setState({ addCourseOpen: false }),
+      likedReviews: [
+        { code: "DD2380", title: "Artificial Intelligence", snippet: "Clear labs, fair exam — a good first AI course." }
+      ],
+      takenCourses: s.courses.map((c, i) => ({
+        code: c.code, title: c.title, hp: c.hp, year: "2025",
+        grade: ["A", "B", "P"][i % 3]
+      })),
+
+      geo: CARD_GEO,
+      mobileCourses: s.courses.map((c) => {
+        const flags = s.flags[c.code] || {};
+        const saved = Boolean(flags.saved);
+        const taken = Boolean(flags.taken);
+        const takenCount = countOf(c.stats ? c.stats[1] : 0) + (taken ? 1 : 0);
+        return {
+          code: c.code,
+          title: c.title,
+          meta: c.hp + " · " + c.code + " · " + c.school,
+          borderColor: "var(--rule2)",
+          keywords: c.keywords || "",
+          hasPrereq: Boolean(c.prereqCourses && c.prereqCourses.length),
+          noPrereq: !(c.prereqCourses && c.prereqCourses.length),
+          prereqCourses: (c.prereqCourses || []).map((p) => {
+            const taken = Boolean((s.flags[p.code] || {}).taken);
+            return { code: p.code, name: p.name, taken: taken, bg: taken ? "rgba(23,81,166,.08)" : "transparent", radius: taken ? "999px" : "6px", padding: "0 8px 0 5px", gap: "5px" };
+          }),
+          summaryClipped: "",
+          hasStats: Boolean(examLabel(c.exSegments)),
+          noStats: !examLabel(c.exSegments),
+          examLabel: examLabel(c.exSegments),
+          hasReviewStats: c.happy != null,
+          noReviewStats: c.happy == null,
+          happyPct: c.happy != null ? c.happy + "%" : "—",
+          statReviews: c.stats ? c.stats[2] : "0",
+          workload: c.wl != null ? (c.wl / 10).toFixed(1) : "—",
+          learning: c.le != null ? (c.le / 10).toFixed(1) : "—",
+          wlW: (c.wl || 0) + "%",
+          leW: (c.le || 0) + "%",
+          statTaken: fmtCount(takenCount),
+          takenTitle: fmtCount(takenCount) + " students have taken this course · " + (taken ? "you marked it as taken" : "click to mark as taken"),
+          takenPickerOpen: false,
+          takenFill: "none",
+          takenBg: taken ? "rgba(23,81,166,.08)" : "transparent",
+          takenCountFg: taken ? "var(--brand)" : "var(--muted)",
+          takenHoverBg: taken ? "rgba(23,81,166,.14)" : "var(--pill)",
+          onTaken: (e) => {
+            if (e && e.stopPropagation) e.stopPropagation();
+            const next = { ...s.flags };
+            next[c.code] = { ...flags, taken: !taken };
+            this.setState({ flags: next });
+          },
+          onSignUp: () => {},
+          onLogIn: () => {},
+          saveLabel: saved ? "Saved" : "Save course",
+          saveFill: "none",
+          saveBorder: saved ? "var(--brand)" : "var(--rule3)",
+          saveBg: saved ? "rgba(23,81,166,.08)" : "var(--surface)",
+          saveFg: saved ? "var(--brand)" : "var(--chipInk)",
+          onSave: (e) => {
+            if (e && e.stopPropagation) e.stopPropagation();
+            const next = { ...s.flags };
+            next[c.code] = { ...flags, saved: !saved };
+            this.setState({ flags: next });
+          },
+          pickerOpen: s.pickerFor === c.code,
+          onPicker: (e) => { if (e && e.stopPropagation) e.stopPropagation(); this.setState({ pickerFor: s.pickerFor === c.code ? null : c.code }); },
+          addLabel: "Add " + c.code + " to a comparison",
+          creating: false,
+          notCreating: true,
+          hasComparisons: (STORE ? STORE.collections.length : 0) > 0,
+          comparisons: (STORE ? STORE.collections : []).map((col) => ({
+            name: col.name,
+            fill: col.codes.indexOf(c.code) >= 0 ? "currentColor" : "none",
+            tick: col.codes.indexOf(c.code) >= 0 ? "M5 12l4 4L19 6" : "",
+            onClick: () => {
+              const inIt = col.codes.indexOf(c.code) >= 0;
+              if (inIt) STORE.removeCourseFromCollection(col.id, c.code); else STORE.addCourseToCollection(col.id, c.code);
+              this.setState({ pickerFor: null });
+            }
+          })),
+          onNewComparison: () => { if (STORE) STORE.createCollection("Collection " + (STORE.collections.length + 1), [c.code]); this.setState({ pickerFor: null }); },
+          onReview: (e) => { if (e && e.stopPropagation) e.stopPropagation(); this.openSheet(c.code, "r"); },
+          onOpen: () => this.openSheet(c.code, "c")
+        };
+      }),
+
+      workspaceCourses: s.courses,
+      workspaceStore: STORE,
+      noop: () => {},
+
+      sheets: s.sheets.map((sh, i) => {
+        const drag = s.drags[sh.id] || { dragY: 0, dragging: false };
+        return {
+          id: sh.id,
+          openSignal: sh.openSignal,
+          accent: sh.openSignal.kind === "r" ? "#dfa53c" : "#1751a6",
+          headerTint: sh.openSignal.kind === "r" ? "var(--warn)" : "var(--info)",
+          zIndex: 50 + i,
+          // Newest sheet sits flush at the bottom; older ones stack behind it,
+          // pushed up a little further each, so their rounded top peeks above it.
+          bottomOffset: (s.sheets.length - 1 - i) * 16,
+          dragY: drag.dragY,
+          transition: drag.dragging ? "none" : "transform .2s ease-out",
+          onDragStart: this.onSheetDragStart(sh.id),
+          onClose: () => this.closeSheet(sh.id)
+        };
+      })
+    };
+  }
+}
+
+</script>
+</body>
+</html>

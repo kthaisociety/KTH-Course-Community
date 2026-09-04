@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<div style="position:relative;display:flex;flex-direction:column;gap:14px">
+
+<sc-if value="{{ authOpen }}" hint-placeholder-val="{{ false }}">
+<div style="position:fixed;inset:0;z-index:80;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(20,30,45,.34)">
+<div style="width:392px;max-width:100%;box-sizing:border-box;padding:24px;border-radius:14px;background:var(--surface);box-shadow:0 18px 48px rgba(20,30,45,.24)">
+<div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+<div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--brand)">One step left</div>
+<div onClick="{{ onAuthCancel }}" title="Close" style="width:26px;height:26px;display:flex;align-items:center;justify-content:center;border-radius:7px;color:var(--dim);font-size:17px;line-height:1;cursor:pointer" style-hover="background:var(--pill)">×</div>
+</div>
+<div style="margin-top:8px;font-size:19px;font-weight:600;line-height:1.25">Sign in to build a comparison</div>
+<div style="margin-top:6px;font-size:13.5px;line-height:1.5;color:var(--muted)">Collections, AI comparisons, and syncing saved courses across devices need an account.</div>
+<div style="margin-top:16px;display:flex;flex-direction:column;gap:8px">
+<div onClick="{{ onAuthCancel }}" style="display:flex;align-items:center;justify-content:center;gap:9px;height:42px;border-radius:9px;background:var(--btn);color:var(--btnFg);font-size:13.5px;font-weight:600;cursor:pointer" style-hover="background:var(--btn)">Continue with KTH account</div>
+<div onClick="{{ onAuthCancel }}" style="display:flex;align-items:center;justify-content:center;height:42px;border-radius:9px;border:1px solid var(--rule3);background:var(--surface);font-size:13.5px;font-weight:500;color:var(--ink);cursor:pointer" style-hover="border-color:var(--hov)">Sign up with email</div>
+</div>
+<div onClick="{{ onAuthCancel }}" style="margin-top:14px;text-align:center;font-size:12.5px;font-weight:500;color:var(--brand);cursor:pointer" style-hover="text-decoration:underline">Back</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ hasNote }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;align-items:center;gap:8px;padding:9px 13px;border-radius:9px;border:1px solid var(--rule2);background:var(--pill);font-size:12.5px;color:var(--brand)">
+<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1751a6" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>{{ note }}
+</div>
+</sc-if>
+
+<sc-if value="{{ isGuest }}" hint-placeholder-val="{{ true }}">
+<div>
+<h2 style="margin:0;font-size:16px;font-weight:600">Collections</h2>
+<div style="margin-top:4px;font-size:12.5px;color:var(--muted)">Group courses you want to compare.</div>
+<div style="margin-top:14px;max-width:520px;padding:16px 17px;border:1px solid var(--rule2);border-radius:11px;background:var(--surface)">
+<div style="display:flex;align-items:center;gap:8px">
+<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6b6355" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10.5" width="16" height="10.5" rx="2.5"></rect><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"></path></svg>
+<div style="font-size:13.5px;font-weight:600">Organize your saved courses</div>
+</div>
+<div style="margin-top:6px;font-size:12.5px;line-height:1.5;color:var(--muted)">Sign up or log in to create collections, compare courses with AI, and sync across devices.</div>
+<div style="margin-top:11px;display:flex;gap:7px">
+<div onClick="{{ onSignUp }}" role="button" tabIndex="0" style="display:flex;align-items:center;justify-content:center;height:32px;padding:0 14px;border-radius:8px;background:var(--btn);color:var(--btnFg);font-size:12.5px;font-weight:600;cursor:pointer" style-hover="background:var(--btn)">Sign up</div>
+<div onClick="{{ onLogIn }}" role="button" tabIndex="0" style="display:flex;align-items:center;justify-content:center;height:32px;padding:0 14px;border-radius:8px;border:1px solid var(--rule3);background:var(--surface);font-size:12.5px;font-weight:500;color:var(--brand);cursor:pointer" style-hover="border-color:var(--hov)">Log in</div>
+</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isMember }}" hint-placeholder-val="{{ false }}">
+
+<sc-if value="{{ inDetail }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:16px">
+<div onClick="{{ onBackToGrid }}" role="button" tabIndex="0" style="align-self:flex-start;display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:500;color:var(--brand);cursor:pointer" style-hover="text-decoration:underline">← All comparisons</div>
+<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap">
+<div>
+<sc-if value="{{ detailRenaming }}" hint-placeholder-val="{{ false }}">
+<input value="{{ renameDraft }}" onChange="{{ onRenameChange }}" onBlur="{{ onRenameCommit }}" onKeyDown="{{ onRenameKey }}" autoFocus="{{ true }}" aria-label="Comparison name" style="box-sizing:border-box;height:34px;padding:0 10px;border-radius:8px;border:1px solid var(--brand);outline:none;font-family:Geist,system-ui,sans-serif;font-size:20px;font-weight:600;color:var(--ink)">
+</sc-if>
+<sc-if value="{{ notRenamingDetail }}" hint-placeholder-val="{{ true }}">
+<h2 style="margin:0;font-size:21px;font-weight:600;letter-spacing:-.015em">{{ detailName }}</h2>
+</sc-if>
+<div style="margin-top:5px;font-size:12.5px;color:var(--muted)">{{ detailCount }}</div>
+</div>
+<div style="display:flex;align-items:center;gap:7px">
+<div onClick="{{ onDetailRename }}" role="button" tabIndex="0" style="height:32px;display:flex;align-items:center;padding:0 11px;border-radius:8px;border:1px solid var(--rule3);background:var(--surface);font-size:12.5px;font-weight:500;color:var(--ink);cursor:pointer" style-hover="border-color:var(--hov)">Rename</div>
+<sc-if value="{{ canAdd }}" hint-placeholder-val="{{ true }}">
+<div style="position:relative">
+<div onClick="{{ onToggleAdd }}" role="button" tabIndex="0" aria-haspopup="true" style="height:32px;display:flex;align-items:center;padding:0 11px;border-radius:8px;border:1px solid var(--rule3);background:var(--surface);font-size:12.5px;font-weight:500;color:var(--ink);cursor:pointer" style-hover="border-color:var(--hov)">Add course</div>
+<sc-if value="{{ addOpen }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;top:36px;right:0;z-index:20;box-sizing:border-box;width:250px;padding:5px;border-radius:10px;border:1px solid var(--rule2);background:var(--surface);box-shadow:0 8px 24px rgba(20,30,45,.14)">
+<sc-for list="{{ detailAddable }}" as="a" hint-placeholder-count="3">
+<div onClick="{{ a.onAdd }}" role="button" tabIndex="0" style="display:flex;align-items:baseline;gap:8px;padding:8px 9px;border-radius:7px;font-size:12.5px;color:var(--ink2);cursor:pointer" style-hover="background:var(--pill)"><span style="font-family:'Geist Mono',ui-monospace,monospace;font-size:11.5px;color:var(--dim)">{{ a.code }}</span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ a.title }}</span></div>
+</sc-for>
+</div>
+</sc-if>
+</div>
+</sc-if>
+<div onClick="{{ onDetailDelete }}" role="button" tabIndex="0" style="height:32px;display:flex;align-items:center;padding:0 11px;border-radius:8px;border:1px solid #ecd9d2;background:var(--surface);font-size:12.5px;font-weight:500;color:#a4402a;cursor:pointer" style-hover="border-color:#d9a08c">Delete</div>
+</div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:8px">
+<sc-for list="{{ detailRows }}" as="r" hint-placeholder-count="3">
+<div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--rule);border-radius:10px;background:var(--surface)">
+<span style="font-family:'Geist Mono',ui-monospace,monospace;font-size:12px;font-weight:500;color:var(--brand)">{{ r.code }}</span>
+<span style="flex:1;min-width:0;font-size:13.5px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.title }}</span>
+<span style="font-size:12px;color:var(--muted);white-space:nowrap">{{ r.meta }}</span>
+<div onClick="{{ r.onRemove }}" role="button" tabIndex="0" aria-label="{{ r.removeLabel }}" title="{{ r.removeLabel }}" style="flex:none;width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:7px;color:var(--dim);cursor:pointer" style-hover="background:var(--pill)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"></path></svg></div>
+</div>
+</sc-for>
+</div>
+
+<div style="padding:16px 17px;border:1px solid var(--rule);border-radius:11px;background:var(--surface)">
+<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+<div>
+<div style="font-size:14.5px;font-weight:600">AI comparison</div>
+<div style="margin-top:4px;font-size:12.5px;color:var(--muted)">Mock result for the prototype — no request is made.</div>
+</div>
+<sc-if value="{{ aiIdle }}" hint-placeholder-val="{{ true }}">
+<div onClick="{{ onGenerate }}" role="button" tabIndex="0" style="height:36px;display:flex;align-items:center;padding:0 14px;border-radius:9px;background:var(--btn);color:var(--btnFg);font-size:13px;font-weight:600;cursor:pointer" style-hover="background:var(--btn)">Generate AI comparison</div>
+</sc-if>
+</div>
+
+<sc-if value="{{ aiShort }}" hint-placeholder-val="{{ false }}">
+<div role="note" style="margin-top:13px;display:flex;align-items:center;gap:8px;padding:11px 13px;border-radius:9px;background:var(--pg);border:1px solid var(--rule2);font-size:12.5px;color:var(--dim)">
+<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6b6355" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="9.5"></circle><path d="M12 8v5M12 16h.01"></path></svg>Add at least 2 courses before generating a comparison.
+</div>
+</sc-if>
+
+<sc-if value="{{ aiLoading }}" hint-placeholder-val="{{ false }}">
+<div aria-live="polite" style="margin-top:13px;display:flex;align-items:center;gap:10px;padding:12px 13px;border-radius:9px;background:var(--pill);border:1px solid var(--rule2);font-size:12.5px;color:var(--brand)">
+<span style="flex:none;width:14px;height:14px;border-radius:50%;border:2px solid var(--hov);border-top-color:var(--brand);animation:om-spin .9s linear infinite"></span>
+Comparing course content, workload, assessment, and student feedback…
+</div>
+</sc-if>
+
+<sc-if value="{{ aiError }}" hint-placeholder-val="{{ false }}">
+<div role="alert" style="margin-top:13px;display:flex;align-items:center;gap:10px;padding:12px 13px;border-radius:9px;background:#fdf3ef;border:1px solid #ecd9d2;font-size:12.5px;color:#8f3a24">
+<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#a4402a" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9.5"></circle><path d="M12 7.5v5.5M12 16.5h.01"></path></svg>
+<span style="flex:1">The comparison could not be generated. Nothing was saved.</span>
+<span onClick="{{ onRetry }}" role="button" tabIndex="0" style="font-weight:600;color:var(--brand);cursor:pointer" style-hover="text-decoration:underline">Try again</span>
+</div>
+</sc-if>
+
+<sc-if value="{{ aiDone }}" hint-placeholder-val="{{ false }}">
+<div aria-live="polite" style="margin-top:14px">
+<div style="display:inline-flex;align-items:center;gap:6px;padding:2px 8px;border-radius:6px;background:var(--pill);font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--dim)">Mock result</div>
+<div style="margin-top:11px;overflow:auto">
+<table style="width:100%;border-collapse:collapse;font-size:12.5px">
+<thead>
+<tr>
+<th style="text-align:left;padding:8px 10px;border-bottom:1px solid var(--rule);font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--dim)">Field</th>
+<sc-for list="{{ aiHeads }}" as="h" hint-placeholder-count="3">
+<th style="text-align:left;padding:8px 10px;border-bottom:1px solid var(--rule);font-family:'Geist Mono',ui-monospace,monospace;font-size:11.5px;font-weight:500;color:var(--brand)">{{ h.code }}</th>
+</sc-for>
+</tr>
+</thead>
+<tbody>
+<sc-for list="{{ aiRows }}" as="row" hint-placeholder-count="7">
+<tr>
+<td style="padding:9px 10px;border-bottom:1px solid #f2efe6;font-weight:500;color:var(--chipInk);white-space:nowrap">{{ row.label }}</td>
+<sc-for list="{{ row.cells }}" as="cell" hint-placeholder-count="3">
+<td style="padding:9px 10px;border-bottom:1px solid #f2efe6;color:var(--ink2);line-height:1.45">{{ cell.text }}</td>
+</sc-for>
+</tr>
+</sc-for>
+</tbody>
+</table>
+</div>
+<sc-if value="{{ hasGaps }}" hint-placeholder-val="{{ false }}">
+<div style="margin-top:12px;padding:11px 13px;border-radius:9px;background:var(--pg);border:1px solid var(--rule2)">
+<div style="font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--dim)">Missing data</div>
+<sc-for list="{{ aiGaps }}" as="g" hint-placeholder-count="1">
+<div style="margin-top:6px;font-size:12.5px;color:var(--muted)">{{ g.text }}</div>
+</sc-for>
+</div>
+</sc-if>
+</div>
+</sc-if>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ notInDetail }}" hint-placeholder-val="{{ true }}">
+<div>
+<h2 style="margin:0;font-size:16px;font-weight:600">Collections</h2>
+<div style="margin-top:4px;font-size:12.5px;color:var(--muted)">Group courses you want to compare.</div>
+
+<sc-if value="{{ compact }}" hint-placeholder-val="{{ false }}">
+<div style="margin-top:14px;display:flex;flex-wrap:wrap;gap:8px">
+<div onClick="{{ onOpenDlg }}" role="button" tabIndex="0" style="flex:none;box-sizing:border-box;height:40px;display:flex;align-items:center;gap:6px;padding:0 13px;border:1px dashed #9dbfe4;border-radius:9px;background:rgba(23,81,166,.06);cursor:pointer;white-space:nowrap" style-hover="border-color:var(--brand);background:rgba(23,81,166,.11)">
+<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1751a6" stroke-width="2.2" stroke-linecap="round"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg><span style="font-size:13px;font-weight:600;color:var(--brand);white-space:nowrap">New collection</span>
+</div>
+<sc-for list="{{ collections }}" as="col" hint-placeholder-count="3">
+<div onClick="{{ col.onOpen }}" role="button" tabIndex="0" aria-label="{{ col.openLabel }}" style="flex:none;position:relative;box-sizing:border-box;height:40px;display:flex;align-items:center;gap:9px;padding:0 12px;border:1px solid var(--rule);border-radius:9px;background:var(--surface);cursor:pointer;white-space:nowrap" style-hover="border-color:var(--hov)">
+<sc-if value="{{ col.renaming }}" hint-placeholder-val="{{ false }}">
+<input value="{{ renameDraft }}" onChange="{{ onRenameChange }}" onBlur="{{ onRenameCommit }}" onKeyDown="{{ onRenameKey }}" onClick="{{ stop }}" autoFocus="{{ true }}" aria-label="Comparison name" style="box-sizing:border-box;width:120px;height:26px;padding:0 7px;border-radius:6px;border:1px solid var(--brand);outline:none;font-family:Geist,system-ui,sans-serif;font-size:13px;font-weight:600;color:var(--ink)">
+</sc-if>
+<sc-if value="{{ col.notRenaming }}" hint-placeholder-val="{{ true }}">
+<span style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:160px">{{ col.name }}</span>
+</sc-if>
+<span style="font-size:12px;color:var(--dim2);white-space:nowrap">{{ col.count }}</span>
+<div onClick="{{ col.onMenu }}" role="button" tabIndex="0" aria-label="{{ col.menuLabel }}" title="{{ col.menuLabel }}" style="flex:none;width:22px;height:22px;display:flex;align-items:center;justify-content:center;border-radius:6px;color:var(--dim);cursor:pointer" style-hover="background:var(--pill)">⋯</div>
+<sc-if value="{{ col.menuOpen }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;top:42px;right:0;z-index:20;width:150px;padding:4px;border-radius:9px;border:1px solid var(--rule2);background:var(--surface);box-shadow:0 8px 24px rgba(20,30,45,.14)">
+<div onClick="{{ col.onRename }}" role="button" tabIndex="0" style="padding:8px 9px;border-radius:6px;font-size:12.5px;color:var(--ink2);cursor:pointer" style-hover="background:var(--pill)">Rename</div>
+<div onClick="{{ col.onDelete }}" role="button" tabIndex="0" style="padding:8px 9px;border-radius:6px;font-size:12.5px;color:#a4402a;cursor:pointer" style-hover="background:#fdf3ef">Delete</div>
+</div>
+</sc-if>
+</div>
+</sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{ notCompact }}" hint-placeholder-val="{{ true }}">
+<div style="margin-top:14px;display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px">
+<div onClick="{{ onOpenDlg }}" role="button" tabIndex="0" style="box-sizing:border-box;min-height:150px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;padding:15px 16px;border:1px dashed #9dbfe4;border-radius:11px;background:rgba(23,81,166,.06);cursor:pointer" style-hover="border-color:var(--brand);background:rgba(23,81,166,.11)">
+<div style="display:flex;align-items:center;gap:8px;font-size:16px;font-weight:600;color:var(--brand)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1751a6" stroke-width="2.2" stroke-linecap="round"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>New comparison</div>
+<div style="font-size:12px;line-height:1.5;color:var(--muted);text-align:center;max-width:190px">Group specific courses and compare them side by side.</div>
+</div>
+<sc-for list="{{ collections }}" as="col" hint-placeholder-count="3">
+<div onClick="{{ col.onOpen }}" role="button" tabIndex="0" aria-label="{{ col.openLabel }}" style="position:relative;box-sizing:border-box;min-height:150px;display:flex;flex-direction:column;gap:9px;padding:14px 15px;border:1px solid var(--rule);border-radius:11px;background:var(--surface);cursor:pointer" style-hover="border-color:var(--hov)">
+<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+<div style="min-width:0">
+<sc-if value="{{ col.renaming }}" hint-placeholder-val="{{ false }}">
+<input value="{{ renameDraft }}" onChange="{{ onRenameChange }}" onBlur="{{ onRenameCommit }}" onKeyDown="{{ onRenameKey }}" onClick="{{ stop }}" autoFocus="{{ true }}" aria-label="Comparison name" style="box-sizing:border-box;width:100%;height:28px;padding:0 8px;border-radius:6px;border:1px solid var(--brand);outline:none;font-family:Geist,system-ui,sans-serif;font-size:13.5px;font-weight:600;color:var(--ink)">
+</sc-if>
+<sc-if value="{{ col.notRenaming }}" hint-placeholder-val="{{ true }}">
+<div style="font-size:14px;font-weight:600;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ col.name }}</div>
+</sc-if>
+</div>
+<div onClick="{{ col.onMenu }}" role="button" tabIndex="0" aria-label="{{ col.menuLabel }}" title="{{ col.menuLabel }}" style="flex:none;width:26px;height:26px;display:flex;align-items:center;justify-content:center;border-radius:7px;color:var(--dim);cursor:pointer" style-hover="background:var(--pill)">⋯</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:3px">
+<sc-for list="{{ col.previews }}" as="p" hint-placeholder-count="3">
+<div style="display:flex;align-items:baseline;gap:7px;font-size:11.5px;color:var(--ink2)"><span style="font-family:'Geist Mono',ui-monospace,monospace;font-size:11px;color:var(--dim)">{{ p.code }}</span><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ p.title }}</span></div>
+</sc-for>
+<sc-if value="{{ col.overflow }}" hint-placeholder-val="{{ false }}">
+<div style="font-size:11.5px;font-weight:500;color:var(--brand)">{{ col.overflowLabel }}</div>
+</sc-if>
+</div>
+<div style="margin-top:auto;display:flex;align-items:baseline;justify-content:space-between;gap:10px;font-size:11px;color:var(--dim2)"><span>{{ col.updated }}</span><span>{{ col.count }}</span></div>
+<sc-if value="{{ col.menuOpen }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;top:38px;right:12px;z-index:20;width:150px;padding:4px;border-radius:9px;border:1px solid var(--rule2);background:var(--surface);box-shadow:0 8px 24px rgba(20,30,45,.14)">
+<div onClick="{{ col.onRename }}" role="button" tabIndex="0" style="padding:8px 9px;border-radius:6px;font-size:12.5px;color:var(--ink2);cursor:pointer" style-hover="background:var(--pill)">Rename</div>
+<div onClick="{{ col.onDelete }}" role="button" tabIndex="0" style="padding:8px 9px;border-radius:6px;font-size:12.5px;color:#a4402a;cursor:pointer" style-hover="background:#fdf3ef">Delete</div>
+</div>
+</sc-if>
+</div>
+</sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{ noCollections }}" hint-placeholder-val="{{ false }}">
+<div style="margin-top:14px;padding:24px;border:1px solid var(--rule);border-radius:11px;background:var(--surface);text-align:center">
+<div style="font-size:14.5px;font-weight:600">No comparisons yet</div>
+<div style="margin-top:5px;font-size:12.5px;color:var(--muted)">Create a comparison to organize courses you are considering together.</div>
+<div onClick="{{ onOpenDlg }}" role="button" tabIndex="0" style="margin:13px auto 0;width:max-content;height:34px;display:flex;align-items:center;padding:0 14px;border-radius:9px;background:var(--btn);color:var(--btnFg);font-size:13px;font-weight:600;cursor:pointer" style-hover="background:var(--btn)">Create comparison</div>
+</div>
+</sc-if>
+</div>
+</sc-if>
+
+<sc-if value="{{ dlgOpen }}" hint-placeholder-val="{{ false }}">
+<div onClick="{{ onCloseDlg }}" style="position:fixed;inset:0;z-index:75;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(20,30,45,.34)">
+<div onClick="{{ stop }}" onKeyDown="{{ onDlgKey }}" role="dialog" aria-modal="true" aria-label="New comparison" style="width:440px;max-width:100%;box-sizing:border-box;padding:22px;border-radius:14px;background:var(--surface);box-shadow:0 18px 48px rgba(20,30,45,.24)">
+<div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+<div style="font-size:18px;font-weight:600">New comparison</div>
+<div onClick="{{ onCloseDlg }}" role="button" tabIndex="0" aria-label="Cancel" style="width:26px;height:26px;display:flex;align-items:center;justify-content:center;border-radius:7px;color:var(--dim);font-size:17px;cursor:pointer" style-hover="background:var(--pill)">×</div>
+</div>
+<input value="{{ dlgName }}" onChange="{{ onDlgName }}" autoFocus="{{ true }}" placeholder="Comparison name" aria-label="Comparison name" style="margin-top:14px;box-sizing:border-box;width:100%;height:38px;padding:0 12px;border-radius:9px;border:1px solid var(--rule3);outline:none;font-family:Geist,system-ui,sans-serif;font-size:13.5px;color:var(--ink)">
+<input value="{{ dlgQuery }}" onChange="{{ onDlgQuery }}" placeholder="Filter saved courses" aria-label="Filter saved courses" style="margin-top:8px;box-sizing:border-box;width:100%;height:34px;padding:0 12px;border-radius:9px;border:1px solid var(--rule);background:var(--pg);outline:none;font-family:Geist,system-ui,sans-serif;font-size:12.5px;color:var(--ink)">
+<div style="margin-top:10px;max-height:210px;overflow:auto;border:1px solid var(--rule);border-radius:9px">
+<sc-for list="{{ dlgList }}" as="p" hint-placeholder-count="5">
+<div onClick="{{ p.onToggle }}" role="checkbox" tabIndex="0" aria-checked="{{ p.checked }}" style="display:flex;align-items:center;gap:10px;padding:9px 11px;border-bottom:1px solid #f2efe6;cursor:pointer" style-hover="background:var(--pg)">
+<span style="flex:none;width:16px;height:16px;border-radius:4px;border:1px solid {{ p.boxBorder }};background:{{ p.boxBg }};display:flex;align-items:center;justify-content:center"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="{{ p.tick }}"></path></svg></span>
+<span style="font-family:'Geist Mono',ui-monospace,monospace;font-size:11.5px;color:var(--dim)">{{ p.code }}</span>
+<span style="flex:1;min-width:0;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ p.title }}</span>
+</div>
+</sc-for>
+</div>
+<div style="margin-top:9px;display:flex;align-items:center;justify-content:space-between;gap:12px">
+<div style="font-size:12px;color:var(--muted)">{{ dlgPickedLabel }}</div>
+<sc-if value="{{ hasDlgError }}" hint-placeholder-val="{{ false }}">
+<div role="alert" style="font-size:12px;font-weight:500;color:#a4402a">{{ dlgError }}</div>
+</sc-if>
+</div>
+<div style="margin-top:14px;display:flex;gap:8px">
+<div onClick="{{ onDlgCreate }}" role="button" tabIndex="0" style="flex:1;display:flex;align-items:center;justify-content:center;height:40px;border-radius:9px;background:var(--btn);color:var(--btnFg);font-size:13.5px;font-weight:600;cursor:pointer" style-hover="background:var(--btn)">Create comparison</div>
+<div onClick="{{ onCloseDlg }}" role="button" tabIndex="0" style="display:flex;align-items:center;justify-content:center;height:40px;padding:0 16px;border-radius:9px;border:1px solid var(--rule3);background:var(--surface);font-size:13.5px;font-weight:500;color:var(--ink);cursor:pointer" style-hover="border-color:var(--hov)">Cancel</div>
+</div>
+</div>
+</div>
+</sc-if>
+
+</sc-if>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:900,&quot;height&quot;:620},&quot;storeModule&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;any&quot;},&quot;courses&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;any[]&quot;},&quot;savedCodes&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;string[]&quot;},&quot;isGuest&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;compact&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;onChange&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onDetailChange&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;(id: string | null) =&gt; void&quot;}}">
+const libOfFrom = (courses, code) => courses.find((c) => c.code === code) || null;
+
+class Component extends DCLogic {
+  state = {
+    detail: null, dlg: false, dlgName: "", dlgPicked: [], dlgQuery: "", dlgError: "",
+    menuFor: null, renameId: null, renameDraft: "", addOpen: false,
+    aiState: "idle", note: null, authOpen: false
+  };
+
+  stop = (e) => e.stopPropagation();
+
+  onDocDown = (e) => {
+    if (e.target.closest && e.target.closest("[data-pop]")) return;
+    if (this.state.menuFor || this.state.addOpen) this.setState({ menuFor: null, addOpen: false });
+  };
+
+  componentDidMount() {
+    document.addEventListener("pointerdown", this.onDocDown, true);
+  }
+  componentWillUnmount() {
+    document.removeEventListener("pointerdown", this.onDocDown, true);
+  }
+
+  clearNote() {
+    clearTimeout(this.noteTimer);
+    this.noteTimer = setTimeout(() => this.setState({ note: null }), 3000);
+  }
+
+  renderVals() {
+    const s = this.state;
+    const STORE = this.props.storeModule;
+    const courses = this.props.courses || [];
+    const savedCodes = this.props.savedCodes || [];
+    const isGuest = Boolean(this.props.isGuest);
+    const isMember = !isGuest;
+    const collections = (STORE && STORE.collections) || [];
+    const libOf = (code) => libOfFrom(courses, code);
+
+    const detail = collections.find((c) => c.id === s.detail) || null;
+
+    const collectionCard = (c) => {
+      const shown = c.codes.slice(0, 3).map((code) => {
+        const lc = libOf(code) || { code: code, title: code };
+        return { code: lc.code, title: lc.title };
+      });
+      return {
+        id: c.id, name: c.name, updated: c.updated,
+        previews: shown,
+        overflow: c.codes.length > 3,
+        overflowLabel: "+" + (c.codes.length - 3) + " more",
+        count: c.codes.length + (c.codes.length === 1 ? " course" : " courses"),
+        onOpen: () => { this.setState({ detail: c.id, aiState: "idle", menuFor: null }); if (this.props.onDetailChange) this.props.onDetailChange(c.id); },
+        openLabel: "Open comparison " + c.name,
+        menuOpen: s.menuFor === c.id,
+        notRenaming: s.renameId !== c.id,
+        onMenu: (ev) => { ev.stopPropagation(); this.setState({ menuFor: s.menuFor === c.id ? null : c.id }); },
+        menuLabel: "More actions for " + c.name,
+        onRename: (ev) => { ev.stopPropagation(); this.setState({ renameId: c.id, renameDraft: c.name, menuFor: null }); },
+        onDelete: (ev) => {
+          ev.stopPropagation();
+          if (STORE) STORE.deleteCollection(c.id);
+          this.setState({ menuFor: null, note: "Comparison deleted" });
+          this.clearNote();
+          notify();
+        },
+        renaming: s.renameId === c.id
+      };
+    };
+
+    const pickable = savedCodes.map((code) => {
+      const c = libOf(code) || { code: code, title: code };
+      const on = s.dlgPicked.indexOf(code) >= 0;
+      const q = s.dlgQuery.trim().toLowerCase();
+      return {
+        code: c.code, title: c.title, checked: on,
+        boxBorder: on ? "var(--brand)" : "var(--rule3)",
+        boxBg: on ? "var(--brand)" : "transparent",
+        tick: on ? "M20 6 9 17l-5-5" : "",
+        onToggle: () => this.setState({
+          dlgPicked: on ? s.dlgPicked.filter((k) => k !== code) : s.dlgPicked.concat([code]),
+          dlgError: ""
+        }),
+        _match: !q || (c.code + " " + c.title).toLowerCase().indexOf(q) >= 0
+      };
+    }).filter((p) => p._match);
+
+    const detailRows = detail ? detail.codes.map((code) => {
+      const c = libOf(code) || { code: code, title: code };
+      return {
+        code: code, title: c.title, meta: (c.hp || "") + " · " + (c.period || "") + " · " + (c.school || ""),
+        onRemove: () => {
+          if (STORE) STORE.removeCourseFromCollection(detail.id, code);
+          this.forceUpdate();
+          notify();
+        },
+        removeLabel: "Remove " + code + " from this comparison"
+      };
+    }) : [];
+
+    const addable = detail ? savedCodes.filter((k) => detail.codes.indexOf(k) < 0).map((code) => {
+      const c = libOf(code) || { code: code, title: code };
+      return {
+        code: code, title: c.title,
+        onAdd: () => {
+          if (STORE) STORE.addCourseToCollection(detail.id, code);
+          this.setState({ addOpen: false });
+          notify();
+        }
+      };
+    }) : [];
+
+    const aiRows = detail ? [
+      { label: "Credits", vals: detail.codes.map((k) => (libOf(k) || {}).hp || "—") },
+      { label: "Study period", vals: detail.codes.map((k) => (libOf(k) || {}).period || "—") },
+      { label: "Prerequisites", vals: detail.codes.map((k) => (libOf(k) || {}).prereq || "—") },
+      { label: "Workload", vals: detail.codes.map((k) => (libOf(k) || {}).workload || "—") },
+      { label: "Assessment", vals: detail.codes.map((k) => (libOf(k) || {}).assessment || "—") },
+      { label: "Content", vals: detail.codes.map((k) => (libOf(k) || {}).content || "—") },
+      { label: "Review themes", vals: detail.codes.map((k) => (libOf(k) || {}).themes || "—") }
+    ].map((r) => ({ label: r.label, cells: r.vals.map((t) => ({ text: t })) })) : [];
+
+    const gaps = detail ? detail.codes.map((k) => (libOf(k) || {}).missing).filter(Boolean) : [];
+
+    const notify = () => { if (this.props.onChange) this.props.onChange(); };
+
+    return {
+      compact: Boolean(this.props.compact),
+      notCompact: !this.props.compact,
+      isGuest, isMember,
+      onSignUp: () => this.setState({ authOpen: true }),
+      onLogIn: () => this.setState({ authOpen: true }),
+      authOpen: s.authOpen,
+      onAuthCancel: () => this.setState({ authOpen: false }),
+
+      hasNote: Boolean(s.note),
+      note: s.note,
+
+      inDetail: Boolean(detail),
+      notInDetail: !detail,
+
+      collections: collections.map(collectionCard),
+      noCollections: collections.length === 0,
+      onOpenDlg: () => this.setState({ dlg: true, dlgName: "", dlgPicked: [], dlgQuery: "", dlgError: "" }),
+
+      renameDraft: s.renameDraft,
+      onRenameChange: (ev) => this.setState({ renameDraft: ev.target.value }),
+      onRenameCommit: () => {
+        const name = (s.renameDraft || "").trim();
+        if (STORE && s.renameId) STORE.renameCollection(s.renameId, name);
+        this.setState({ renameId: null, renameDraft: "" });
+      },
+      onRenameKey: (ev) => {
+        if (ev.key === "Enter") ev.target.blur();
+        if (ev.key === "Escape") this.setState({ renameId: null, renameDraft: "" });
+      },
+
+      dlgOpen: s.dlg,
+      dlgName: s.dlgName,
+      onDlgName: (ev) => this.setState({ dlgName: ev.target.value, dlgError: "" }),
+      dlgQuery: s.dlgQuery,
+      onDlgQuery: (ev) => this.setState({ dlgQuery: ev.target.value }),
+      dlgList: pickable,
+      dlgPickedLabel: s.dlgPicked.length + " selected",
+      hasDlgError: Boolean(s.dlgError),
+      dlgError: s.dlgError,
+      onCloseDlg: () => this.setState({ dlg: false, dlgError: "" }),
+      onDlgKey: (ev) => { if (ev.key === "Escape") this.setState({ dlg: false, dlgError: "" }); },
+      onDlgCreate: () => {
+        const name = (s.dlgName || "").trim();
+        if (!name) return this.setState({ dlgError: "Give this comparison a name" });
+        if (!STORE) return;
+        const col = STORE.createCollection(name, s.dlgPicked);
+        this.setState({ dlg: false, dlgName: "", dlgPicked: [], dlgQuery: "", dlgError: "", note: "Comparison \u201C" + name + "\u201D created", detail: col.id, aiState: "idle" });
+        this.clearNote();
+        notify();
+        if (this.props.onDetailChange) this.props.onDetailChange(col.id);
+      },
+      stop: this.stop,
+
+      detailName: detail ? detail.name : "",
+      detailCount: detail ? detail.codes.length + (detail.codes.length === 1 ? " course" : " courses") : "",
+      detailRenaming: Boolean(detail) && s.renameId === (detail && detail.id),
+      notRenamingDetail: !(detail && s.renameId === detail.id),
+      onDetailRename: () => { if (detail) this.setState({ renameId: detail.id, renameDraft: detail.name }); },
+      onDetailDelete: () => {
+        if (!detail) return;
+        if (STORE) STORE.deleteCollection(detail.id);
+        this.setState({ detail: null, note: "Comparison deleted" });
+        this.clearNote();
+        notify();
+        if (this.props.onDetailChange) this.props.onDetailChange(null);
+      },
+      onBackToGrid: () => { this.setState({ detail: null, addOpen: false, aiState: "idle" }); if (this.props.onDetailChange) this.props.onDetailChange(null); },
+      canAdd: addable.length > 0,
+      onToggleAdd: () => this.setState({ addOpen: !s.addOpen }),
+      addOpen: s.addOpen,
+      detailAddable: addable,
+      detailRows: detailRows,
+
+      aiIdle: s.aiState === "idle" && Boolean(detail) && detail.codes.length > 1,
+      aiShort: s.aiState === "short" || (Boolean(detail) && detail.codes.length < 2),
+      aiLoading: s.aiState === "loading",
+      aiDone: s.aiState === "done",
+      aiError: s.aiState === "error",
+      aiHeads: detail ? detail.codes.map((k) => ({ code: k })) : [],
+      aiRows: aiRows,
+      hasGaps: gaps.length > 0,
+      aiGaps: gaps.map((g) => ({ text: g })),
+      onGenerate: () => {
+        if (!detail || detail.codes.length < 2) return this.setState({ aiState: "short" });
+        this.setState({ aiState: "loading" });
+        clearTimeout(this.aiTimer);
+        this.aiTimer = setTimeout(() => {
+          this.setState({ aiState: detail.id === "c2" ? "error" : "done" });
+        }, 1800);
+      },
+      onRetry: () => {
+        this.setState({ aiState: "loading" });
+        clearTimeout(this.aiTimer);
+        this.aiTimer = setTimeout(() => this.setState({ aiState: "done" }), 1200);
+      }
+    };
+  }
+}
+
+</script>
+</body>
+</html>
