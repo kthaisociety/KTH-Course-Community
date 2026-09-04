@@ -130,7 +130,7 @@ function ReviewsSummary({
           <ScoreBar
             label="Workload"
             mean={stats.workloadMean}
-            fill="var(--cc-warn-ink)"
+            fill="var(--cc-score-workload)"
           />
           <div className="mt-[18px]">
             <ScoreBar
@@ -244,7 +244,11 @@ export function CourseDetailsPanel({
 
   return (
     <div className="@container">
-      <div className="border-cc-rule border-b bg-cc-info px-5 pt-[18px] pb-[15px]">
+      {/* The solid tint, not the `--cc-info` wash: on mobile this header is
+          what tints the sheet a course opens into, and two stacked sheets in a
+          low-alpha wash cannot be told apart. Details blue, review draft
+          amber — the distinction that survives when the tab strip is hidden. */}
+      <div className="border-cc-rule border-b bg-cc-info-solid px-5 pt-[18px] pb-[15px]">
         <div className="font-semibold text-[11px] text-cc-brand uppercase tracking-[0.06em]">
           Course details
         </div>

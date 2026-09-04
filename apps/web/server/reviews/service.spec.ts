@@ -61,7 +61,9 @@ describe("reviews", () => {
   });
 
   it("createReview refuses a second review of the same course", async () => {
-    vi.mocked(reviewsRepo.findByUserAndCourse).mockResolvedValue(review);
+    // The repository writes only if there is no review yet, and says so by
+    // returning nothing — the check and the insert are one operation there.
+    vi.mocked(reviewsRepo.insertReviewIfFirst).mockResolvedValue(undefined);
 
     await expect(
       createReview("SF1625", "user-456", {
@@ -73,12 +75,13 @@ describe("reviews", () => {
         message: null,
       }),
     ).rejects.toThrow(ValidationError);
-    expect(reviewsRepo.insertReview).not.toHaveBeenCalled();
+    expect(reviewsRepo.insertReviewIfFirst).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: "user-456", courseCode: "SF1625" }),
+    );
   });
 
   it("createReview round-trips a review through the target columns only", async () => {
-    vi.mocked(reviewsRepo.findByUserAndCourse).mockResolvedValue(undefined);
-    vi.mocked(reviewsRepo.insertReview).mockResolvedValue(review);
+    vi.mocked(reviewsRepo.insertReviewIfFirst).mockResolvedValue(review);
 
     const created = await createReview("SF1625", "user-456", {
       examinationDistribution: review.examinationDistribution,
@@ -90,7 +93,7 @@ describe("reviews", () => {
     });
 
     expect(
-      vi.mocked(reviewsRepo.insertReview).mock.calls[0]?.[0],
+      vi.mocked(reviewsRepo.insertReviewIfFirst).mock.calls[0]?.[0],
     ).toMatchObject({
       courseCode: "SF1625",
       userId: "user-456",
@@ -125,7 +128,7 @@ describe("reviews", () => {
       examinationDistribution: null,
       approachTheoryPercent: null,
     };
-    vi.mocked(reviewsRepo.insertReview).mockResolvedValue(forgetful);
+    vi.mocked(reviewsRepo.insertReviewIfFirst).mockResolvedValue(forgetful);
 
     const created = await createReview("SF1625", "user-456", {
       examinationDistribution: null,
@@ -136,7 +139,8 @@ describe("reviews", () => {
       message: "Great course content!",
     });
 
-    const written = vi.mocked(reviewsRepo.insertReview).mock.calls[0]?.[0];
+    const written = vi.mocked(reviewsRepo.insertReviewIfFirst).mock
+      .calls[0]?.[0];
     expect(written?.examinationDistribution).toBeNull();
     expect(written?.approachTheoryPercent).toBeNull();
     expect(created.examinationDistribution).toBeNull();
@@ -186,7 +190,7 @@ describe("reviews", () => {
         message: "Great course content!",
       }),
     ).rejects.toBeInstanceOf(ValidationError);
-    expect(reviewsRepo.insertReview).not.toHaveBeenCalled();
+    expect(reviewsRepo.insertReviewIfFirst).not.toHaveBeenCalled();
   });
 
   it("createReview rejects a distribution that does not add up to 100", async () => {
@@ -203,7 +207,7 @@ describe("reviews", () => {
         message: null,
       }),
     ).rejects.toBeInstanceOf(ValidationError);
-    expect(reviewsRepo.insertReview).not.toHaveBeenCalled();
+    expect(reviewsRepo.insertReviewIfFirst).not.toHaveBeenCalled();
   });
 
   it.each([0, 11, 5.5])(
@@ -219,12 +223,12 @@ describe("reviews", () => {
           message: null,
         }),
       ).rejects.toBeInstanceOf(ValidationError);
-      expect(reviewsRepo.insertReview).not.toHaveBeenCalled();
+      expect(reviewsRepo.insertReviewIfFirst).not.toHaveBeenCalled();
     },
   );
 
   it("createReview stores a blank message as null", async () => {
-    vi.mocked(reviewsRepo.insertReview).mockResolvedValue({
+    vi.mocked(reviewsRepo.insertReviewIfFirst).mockResolvedValue({
       ...review,
       message: null,
     });
@@ -238,9 +242,9 @@ describe("reviews", () => {
       message: "   ",
     });
 
-    expect(vi.mocked(reviewsRepo.insertReview).mock.calls[0]?.[0].message).toBe(
-      null,
-    );
+    expect(
+      vi.mocked(reviewsRepo.insertReviewIfFirst).mock.calls[0]?.[0].message,
+    ).toBe(null);
   });
 
   it("toggleVote records an upvote when the reviewer has not voted", async () => {

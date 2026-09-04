@@ -295,7 +295,8 @@ export function ReviewDraftPanel({
 
   return (
     <div className="flex min-h-full flex-col">
-      <div className="bg-cc-warn px-5 pt-[18px] pb-3.5">
+      {/* Solid, for the same reason the details header is — see there. */}
+      <div className="bg-cc-warn-solid px-5 pt-[18px] pb-3.5">
         <div className="flex items-center justify-between gap-3">
           <div className="font-semibold text-[11px] text-cc-warn-ink uppercase tracking-[0.06em]">
             Review draft
@@ -310,7 +311,7 @@ export function ReviewDraftPanel({
         <p className="mt-[3px] text-[13px] text-cc-muted">{meta}</p>
       </div>
 
-      <div className="sticky top-0 z-[4] border-cc-warn-border border-b bg-cc-warn px-5 pt-[11px] pb-3">
+      <div className="sticky top-0 z-[4] border-cc-warn-border border-b bg-cc-warn-solid px-5 pt-[11px] pb-3">
         <div className="text-[11.5px] text-cc-dim">
           {done} of {REVIEW_DRAFT_SECTIONS} sections done
         </div>

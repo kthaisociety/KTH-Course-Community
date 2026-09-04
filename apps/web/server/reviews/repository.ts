@@ -125,11 +125,50 @@ export type ReviewWithVotes = ReviewRecord & {
   userVote: ReviewVoteType | null;
 };
 
-export async function insertReview(
+/**
+ * Insert a review only if this app user has not reviewed this course, and
+ * return `undefined` when they already have.
+ *
+ * `CONTEXT.md` holds a review to be "at most one per user per course". The
+ * table cannot yet: there is no unique key on `(user_id, course_code)`, and
+ * adding one needs a migration and a pass over whatever duplicates are already
+ * stored — the schema track's call, not a frontend issue's. Read-then-insert
+ * is not enough on its own, because two overlapping requests both read no row
+ * and both write one.
+ *
+ * So the pair is serialized on the transaction: a session-independent advisory
+ * lock keyed on the user and the course makes overlapping publishes of *this*
+ * pair queue up, while publishes of any other pair are untouched. The lock is
+ * held to the end of the transaction and released with it, so nothing has to
+ * unlock on the error path. Replace all of this with `ON CONFLICT DO NOTHING`
+ * the day the unique key lands.
+ */
+export async function insertReviewIfFirst(
   values: ReviewWrite & { id: string; userId: string; courseCode: string },
-) {
-  const [inserted] = await db.insert(schema.reviews).values(values).returning();
-  return inserted;
+): Promise<ReviewRecord | undefined> {
+  return db.transaction(async (tx) => {
+    await tx.execute(
+      sql`select pg_advisory_xact_lock(hashtextextended(${`review:${values.userId}:${values.courseCode}`}, 0))`,
+    );
+
+    const [existing] = await tx
+      .select({ id: schema.reviews.id })
+      .from(schema.reviews)
+      .where(
+        and(
+          eq(schema.reviews.userId, values.userId),
+          eq(schema.reviews.courseCode, values.courseCode),
+        ),
+      )
+      .limit(1);
+    if (existing) return undefined;
+
+    const [inserted] = await tx
+      .insert(schema.reviews)
+      .values(values)
+      .returning();
+    return inserted;
+  });
 }
 
 export async function listReviews(
@@ -179,32 +218,6 @@ export async function listReviews(
   return courseCode
     ? await baseQuery.where(eq(schema.reviews.courseCode, courseCode))
     : await baseQuery;
-}
-
-/**
- * This app user's review of this course, if they wrote one.
- *
- * `CONTEXT.md` holds a review to be "at most one per user per course", and
- * this is the read that lets the service enforce it. There is no unique key on
- * `(user_id, course_code)` yet — adding one needs a migration, which belongs
- * to the schema track and to a pass over whatever duplicates are already
- * stored — so `reviews_user_id_idx` carries this lookup meanwhile.
- */
-export async function findByUserAndCourse(
-  userId: string,
-  courseCode: string,
-): Promise<ReviewRecord | undefined> {
-  const [review] = await db
-    .select()
-    .from(schema.reviews)
-    .where(
-      and(
-        eq(schema.reviews.userId, userId),
-        eq(schema.reviews.courseCode, courseCode),
-      ),
-    )
-    .limit(1);
-  return review;
 }
 
 export async function findById(id: string): Promise<ReviewRecord | undefined> {

@@ -219,6 +219,19 @@ describe("WorkspacePane", () => {
     ).not.toBeInTheDocument();
     expect(screen.getByText("Artificial Intelligence")).toBeInTheDocument();
   });
+
+  it("still says which of the two things a sheet opened to", () => {
+    // The mobile sheet hides the strip, so the header is the only thing left
+    // saying whether this course opened to its details or to a review draft.
+    const { unmount } = renderPane([openCourse("details")], {
+      hideTabs: true,
+    });
+    expect(screen.getByText("Course details")).toBeInTheDocument();
+    unmount();
+
+    renderPane([openCourse("review")], { hideTabs: true });
+    expect(screen.getByText("Review draft")).toBeInTheDocument();
+  });
 });
 
 describe("the details tab", () => {
