@@ -25,5 +25,5 @@ export function proxy(request: NextRequest) {
  * same commit that moved the page (#90).
  */
 export const config = {
-  matcher: ["/profile/:path*", "/saved/:path*"],
+  matcher: ["/profile/:path*", "/saved/:path*", "/taken/:path*"],
 };

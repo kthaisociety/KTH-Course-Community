@@ -88,6 +88,63 @@ export async function upsertTakenCourses(
 }
 
 /**
+ * Inserts transcript rows without replacing a row that another client already
+ * recorded. The primary-key conflict decision happens in PostgreSQL with the
+ * insert, so a manual write that lands between a browser's list refresh and
+ * transcript confirmation is preserved.
+ *
+ * Returns the codes that this statement actually inserted. `ON CONFLICT DO
+ * NOTHING` also handles a course duplicated within one transcript batch.
+ */
+export async function insertTakenCoursesIfAbsent(
+  userId: string,
+  rows: TakenCourseWrite[],
+  importedAt: Date,
+): Promise<string[]> {
+  if (rows.length === 0) return [];
+  const inserted = await db
+    .insert(schema.userTakenCourses)
+    .values(
+      rows.map((row) => ({
+        userId,
+        ...row,
+        transcriptImportedAt: importedAt,
+      })),
+    )
+    .onConflictDoNothing({
+      target: [
+        schema.userTakenCourses.userId,
+        schema.userTakenCourses.courseCode,
+      ],
+    })
+    .returning({ courseCode: schema.userTakenCourses.courseCode });
+  return inserted.map((row) => row.courseCode);
+}
+
+/** Fills only fields that are still null, preserving concurrent edits. */
+export async function fillTakenCourseFieldsIfEmpty(
+  userId: string,
+  row: TakenCourseWrite,
+): Promise<boolean> {
+  const updated = await db
+    .update(schema.userTakenCourses)
+    .set({
+      grade: sql`coalesce(${schema.userTakenCourses.grade}, ${row.grade})`,
+      earnedCredits: sql`coalesce(${schema.userTakenCourses.earnedCredits}, ${row.earnedCredits})`,
+      attendanceYear: sql`coalesce(${schema.userTakenCourses.attendanceYear}, ${row.attendanceYear})`,
+      updatedAt: new Date(),
+    })
+    .where(
+      and(
+        eq(schema.userTakenCourses.userId, userId),
+        eq(schema.userTakenCourses.courseCode, row.courseCode),
+      ),
+    )
+    .returning({ courseCode: schema.userTakenCourses.courseCode });
+  return updated.length > 0;
+}
+
+/**
  * Edits an existing row and nothing else. One statement, so a concurrent
  * delete cannot slip between a check and the write and be undone by it —
  * unlike `upsertTakenCourses`, this never inserts.

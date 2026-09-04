@@ -5,6 +5,7 @@ import {
   addTakenCourse,
   listTakenCourses,
   recordTakenCourses,
+  recordTranscriptCoursesIfAbsent,
   removeTakenCourse,
   updateTakenCourse,
 } from "./service";
@@ -140,6 +141,35 @@ describe("recordTakenCourses", () => {
     const result = await recordTakenCourses("u1", [], { source: "manual" });
 
     expect(result).toEqual({ inserted: 0, updated: 0 });
+    expect(takenRepo.upsertTakenCourses).not.toHaveBeenCalled();
+  });
+});
+
+describe("recordTranscriptCoursesIfAbsent", () => {
+  it("uses an atomic insert-only write so an existing row is preserved", async () => {
+    vi.mocked(takenRepo.insertTakenCoursesIfAbsent).mockResolvedValue([]);
+
+    await expect(
+      recordTranscriptCoursesIfAbsent(
+        "u1",
+        [{ courseCode: "SF1625", grade: "A" }],
+        importedAt,
+      ),
+    ).resolves.toEqual({ inserted: 0, updated: 0 });
+
+    expect(takenRepo.insertTakenCoursesIfAbsent).toHaveBeenCalledWith(
+      "u1",
+      [
+        {
+          courseCode: "SF1625",
+          grade: "A",
+          earnedCredits: null,
+          attendancePeriods: null,
+          attendanceYear: null,
+        },
+      ],
+      importedAt,
+    );
     expect(takenRepo.upsertTakenCourses).not.toHaveBeenCalled();
   });
 });

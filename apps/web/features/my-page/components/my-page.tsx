@@ -409,7 +409,7 @@ export function MyPage() {
           key={editing.review.id}
           courseCode={editing.courseCode}
           editing={editing.review}
-          onEditingClose={() => setEditing(null)}
+          onClose={() => setEditing(null)}
         />
       ) : null}
 

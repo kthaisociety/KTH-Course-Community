@@ -108,6 +108,40 @@ export async function recordTakenCourses(
   return { inserted: deduped.length - updated, updated };
 }
 
+/**
+ * Records transcript rows only when no taken-course row exists yet.
+ *
+ * Unlike the manual upsert path, transcript confirmation must never overwrite
+ * a course the reader added or corrected in another session. The repository
+ * makes that decision atomically with `ON CONFLICT DO NOTHING`.
+ */
+export async function recordTranscriptCoursesIfAbsent(
+  userId: string,
+  rows: TakenCourseInput[],
+  importedAt: Date,
+): Promise<{ inserted: number; updated: number }> {
+  const inserted = await takenRepo.insertTakenCoursesIfAbsent(
+    userId,
+    dedupeByCourseCode(rows).map(toWrite),
+    importedAt,
+  );
+  return { inserted: inserted.length, updated: 0 };
+}
+
+/** Atomically fills transcript facts only where the stored row is still empty. */
+export async function fillTranscriptCourseFields(
+  userId: string,
+  rows: TakenCourseInput[],
+): Promise<number> {
+  let updated = 0;
+  for (const row of dedupeByCourseCode(rows)) {
+    if (await takenRepo.fillTakenCourseFieldsIfEmpty(userId, toWrite(row))) {
+      updated += 1;
+    }
+  }
+  return updated;
+}
+
 /** Records one course the user says they took. Idempotent. */
 export async function addTakenCourse(
   userId: string,
