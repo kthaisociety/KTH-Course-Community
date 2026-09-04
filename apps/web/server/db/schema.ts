@@ -54,7 +54,6 @@ export const courses = pgTable(
   "courses",
   {
     code: text("code").primaryKey(),
-    name: text("name").notNull(), // TODO: remove this, redudant info
     titleSwe: text("name_swedish").notNull(),
     titleEng: text("name_english").notNull(),
     state: courseState("state").notNull(),
@@ -77,19 +76,8 @@ export const courses = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
-    embedding: vector("embedding", { dimensions: 1536 }),
-    embeddingHash: text("embedding_hash"),
-    searchVector: tsvector("search_vector").generatedAlwaysAs(
-      sql`to_tsvector('simple', coalesce(name_english, '') || ' ' || coalesce(name_swedish, '') || ' ' || coalesce(code, '') || ' ' || coalesce(goals, '') || ' ' || coalesce(content, ''))`,
-    ),
   },
   (table) => [
-    index("courses_search_vector_idx").using("gin", table.searchVector),
-    index("courses_embedding_idx").using(
-      "hnsw",
-      table.embedding.op("vector_cosine_ops"),
-    ),
-    index("courses_name_trgm_idx").using("gin", table.name.op("gin_trgm_ops")),
     index("courses_code_trgm_idx").using("gin", table.code.op("gin_trgm_ops")),
   ],
 );
