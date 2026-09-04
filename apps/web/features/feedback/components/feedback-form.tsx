@@ -45,8 +45,15 @@ function problemWith(draft: Draft): string | null {
 }
 
 const LABEL = "mb-1.5 block font-medium text-[12.5px] text-cc-ink2";
+
+/**
+ * The artboard sets `outline:none` and draws no focus state at all, which would
+ * leave a keyboard with nothing to follow. The border moves to `--cc-hov` — the
+ * palette's own emphasis border — rather than a new colour, so the focus ring is
+ * added without changing the design.
+ */
 const CONTROL =
-  "w-full rounded-[9px] border border-cc-rule3 bg-cc-surface text-[14px] text-cc-ink outline-none";
+  "w-full rounded-[9px] border border-cc-rule3 bg-cc-surface text-[14px] text-cc-ink outline-none focus-visible:border-cc-hov focus-visible:ring-2 focus-visible:ring-cc-hov/40";
 
 export function FeedbackForm() {
   const submitFeedback = useSubmitFeedback();
@@ -85,6 +92,15 @@ export function FeedbackForm() {
     return (
       // `output` is the element for a result the page computed; its implicit
       // role is `status`, which is what announces the confirmation.
+      //
+      // The artboard paints this panel green — `#e9f3ef` on `#cfe4de` with
+      // `#1c6b60` ink — and the palette has no green. There is no success or
+      // danger family among the 24 `--cc-*` tokens at all, and inventing one
+      // here would desynchronise `globals.css` from `cc-theme.css`, which it
+      // mirrors. So the panel takes the nearest family that swaps correctly for
+      // dark — `--cc-info` on `--cc-rule` with `--cc-brand` ink — and the tick
+      // carries the "this worked" reading that the hue no longer does. The PR
+      // reports the gap so the design gets a success token at source.
       <output className="mt-4 flex animate-in items-start gap-[11px] rounded-[12px] border border-cc-rule bg-cc-info px-4 py-[15px] duration-200 ease-out fade-in slide-in-from-bottom-[6px]">
         <CircleCheck
           size={17}
@@ -184,6 +200,10 @@ export function FeedbackForm() {
         >
           {submitFeedback.isPending ? "Sending…" : "Send message"}
         </button>
+        {/* The artboard's `#a3452a` has no token either, and `--cc-warn-ink` is
+            the palette's only ink that means "look at this" and swaps for dark.
+            `role="alert"` is what actually carries the message, so the reading
+            does not rest on the hue. Reported in the PR with the panel above. */}
         {error ? (
           <p className="mt-2 text-[12.5px] text-cc-warn-ink" role="alert">
             {error}

@@ -1,4 +1,4 @@
-import { PageHeader } from "@/features/shell";
+import { PageColumn, PageHeader } from "@/features/shell";
 import { FeedbackForm } from "./feedback-form";
 
 /**
@@ -12,16 +12,14 @@ import { FeedbackForm } from "./feedback-form";
  */
 export function Contact() {
   return (
-    <div className="@container">
-      <div className="mx-auto flex w-full max-w-[1216px] flex-col pb-15 @2xl:px-5">
-        <PageHeader
-          title="Get in touch"
-          subtitle="Bug, idea, or just want to say hi — we read everything."
-        />
-        <div className="px-7">
-          <FeedbackForm />
-        </div>
+    <PageColumn>
+      <PageHeader
+        title="Get in touch"
+        subtitle="Bug, idea, or just want to say hi — we read everything."
+      />
+      <div className="px-7">
+        <FeedbackForm />
       </div>
-    </div>
+    </PageColumn>
   );
 }
