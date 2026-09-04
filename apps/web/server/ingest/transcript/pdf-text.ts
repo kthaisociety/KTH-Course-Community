@@ -17,6 +17,56 @@ import { TranscriptParseError } from "./parse";
 const DEFAULT_BUDGET_MS = 5_000;
 
 /**
+ * How many transcripts may be parsed at once, and how many may wait.
+ *
+ * A worker bounds the CPU one upload can spend; it does nothing about how many
+ * uploads spend it at the same time. Left ungated, each concurrent request
+ * starts its own parser thread, so a signed-in user can hold a core per
+ * request for a whole budget each — the request thread is no longer the thing
+ * that serialises them. Two at a time keeps the heaviest admissible document
+ * (~1150ms) well inside the budget while leaving the box able to serve
+ * everything else; the queue absorbs an ordinary burst without turning it into
+ * an error.
+ */
+const MAX_CONCURRENT_EXTRACTIONS = 2;
+const MAX_QUEUED_EXTRACTIONS = 8;
+
+/** Raised when too many transcripts are already being parsed. */
+export class TranscriptBusyError extends Error {
+  readonly code = "TRANSCRIPT_BUSY" as const;
+  constructor() {
+    super("Transcript parsing is at capacity");
+    this.name = "TranscriptBusyError";
+  }
+}
+
+let running = 0;
+const queued: Array<() => void> = [];
+
+/**
+ * Takes a parsing slot, waiting for one if the queue has room.
+ *
+ * Rejecting past the queue is deliberate: making a caller wait an unbounded
+ * time is the same denial of service by a slower route, and the client would
+ * rather be told to come back than hold a connection open.
+ */
+async function acquireSlot(): Promise<void> {
+  if (running < MAX_CONCURRENT_EXTRACTIONS) {
+    running++;
+    return;
+  }
+  if (queued.length >= MAX_QUEUED_EXTRACTIONS) throw new TranscriptBusyError();
+  await new Promise<void>((resume) => queued.push(resume));
+  running++;
+}
+
+/** Hands the slot to whoever is next in line. */
+function releaseSlot(): void {
+  running--;
+  queued.shift()?.();
+}
+
+/**
  * Runs inside the worker. Kept to one job so there is little to go wrong in a
  * context that cannot be debugged from a request.
  *
@@ -98,6 +148,9 @@ export async function extractTranscriptText(
   bytes: Uint8Array,
   { budgetMs = DEFAULT_BUDGET_MS }: { budgetMs?: number } = {},
 ): Promise<string> {
+  // Before the thread exists: the point is to not create it under load.
+  await acquireSlot();
+
   const worker = new Worker(WORKER_SOURCE, {
     eval: true,
     workerData: { unpdfUrl: resolveUnpdfUrl(), bytes },
@@ -135,6 +188,9 @@ export async function extractTranscriptText(
   } finally {
     // Unconditional: on the timeout path this is what actually reclaims the
     // CPU, and on every other path the thread is done and must not be leaked.
+    // The slot is handed on only once the thread is genuinely gone, or the cap
+    // would let the next parse start alongside one still winding down.
     await worker.terminate();
+    releaseSlot();
   }
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { TranscriptParseError } from "./parse";
-import { extractTranscriptText } from "./pdf-text";
+import { extractTranscriptText, TranscriptBusyError } from "./pdf-text";
 
 /**
  * A syntactically valid PDF of `pages` text pages.
@@ -85,6 +85,21 @@ describe("extractTranscriptText", () => {
       extractTranscriptText(heavy, { budgetMs: 1000 }),
     ).rejects.toBeInstanceOf(TranscriptParseError);
   }, 30_000);
+
+  it("refuses a new parse once the queue behind the cap is full", async () => {
+    // Two run, eight wait, and anything beyond that is turned away rather than
+    // being allowed to start a thread of its own.
+    const heavy = textPdf(3000);
+    const inFlight = Array.from({ length: 10 }, () =>
+      extractTranscriptText(heavy, { budgetMs: 2_000 }).catch(() => undefined),
+    );
+
+    await expect(extractTranscriptText(textPdf(2))).rejects.toBeInstanceOf(
+      TranscriptBusyError,
+    );
+
+    await Promise.all(inFlight);
+  }, 60_000);
 
   it("gives up at the budget instead of finishing the parse", async () => {
     const heavy = textPdf(3000);
