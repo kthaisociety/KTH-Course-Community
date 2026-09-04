@@ -41,6 +41,36 @@ export type ReviewCardProps = {
   onDelete?: () => void;
 };
 
+/** The dashed panel that stands in for a chart nobody answered. */
+function UnansweredPanel() {
+  return (
+    <div className="mt-[11px] flex h-[38px] items-center rounded-lg border border-cc-rule3 border-dashed bg-cc-surface px-[13px] text-[12.5px] text-cc-dim">
+      {UNANSWERED_NOTE}
+    </div>
+  );
+}
+
+type SectionHeadProps = {
+  title: string;
+  /** The pill beside the heading; "Not recorded" when there is no answer. */
+  value: string;
+  className?: string;
+};
+
+/** A detail block's heading and the figure that goes with it. */
+function SectionHead({ title, value, className }: Readonly<SectionHeadProps>) {
+  return (
+    <div
+      className={cn("flex items-baseline justify-between gap-2.5", className)}
+    >
+      <div className="font-semibold text-[14.5px]">{title}</div>
+      <div className="flex-none rounded-full bg-cc-pill px-[9px] py-0.5 font-semibold text-[12px] text-cc-brand tabular-nums">
+        {value}
+      </div>
+    </div>
+  );
+}
+
 type MeterProps = {
   label: string;
   score: number;
@@ -55,12 +85,11 @@ type MeterProps = {
 function Meter({ label, score, low, high }: Readonly<MeterProps>) {
   return (
     <div>
-      <div className="mb-[9px] flex items-baseline justify-between gap-2.5">
-        <div className="font-semibold text-[14.5px]">{label}</div>
-        <div className="flex-none rounded-full bg-cc-pill px-[9px] py-0.5 font-semibold text-[12px] text-cc-brand tabular-nums">
-          {score} / {MAX_REVIEW_SCORE}
-        </div>
-      </div>
+      <SectionHead
+        title={label}
+        value={`${score} / ${MAX_REVIEW_SCORE}`}
+        className="mb-[9px]"
+      />
       <div className="h-2 w-full overflow-hidden rounded-[4px] bg-cc-rule">
         <div
           className="h-full bg-cc-btn"
@@ -70,32 +99,6 @@ function Meter({ label, score, low, high }: Readonly<MeterProps>) {
       <div className="mt-[5px] flex justify-between text-[11.5px] text-cc-muted">
         <span>{low}</span>
         <span>{high}</span>
-      </div>
-    </div>
-  );
-}
-
-/** The dashed panel that stands in for a chart nobody answered. */
-function UnansweredPanel() {
-  return (
-    <div className="mt-[11px] flex h-[38px] items-center rounded-lg border border-cc-rule3 border-dashed bg-cc-surface px-[13px] text-[12.5px] text-cc-dim">
-      {UNANSWERED_NOTE}
-    </div>
-  );
-}
-
-type SectionHeadProps = {
-  title: string;
-  /** The pill beside the heading; "Not recorded" when there is no answer. */
-  value: string;
-};
-
-function SectionHead({ title, value }: Readonly<SectionHeadProps>) {
-  return (
-    <div className="flex items-baseline justify-between gap-2.5">
-      <div className="font-semibold text-[14.5px]">{title}</div>
-      <div className="flex-none rounded-full bg-cc-pill px-[9px] py-0.5 font-semibold text-[12px] text-cc-brand tabular-nums">
-        {value}
       </div>
     </div>
   );
@@ -194,6 +197,7 @@ export function ReviewCard({
                 />
               </button>
               <span className="min-w-5 text-center font-bold text-[11px] text-cc-ink2 tabular-nums">
+                <span className="sr-only">Net score: </span>
                 {netScore}
               </span>
               <button
@@ -232,12 +236,11 @@ export function ReviewCard({
             <div className="font-semibold text-[10.5px] text-cc-dim uppercase tracking-[0.09em]">
               Format
             </div>
-            <div className="mt-1.5">
-              <SectionHead
-                title="How it was examined"
-                value={splitLabel ?? "Not recorded"}
-              />
-            </div>
+            <SectionHead
+              title="How it was examined"
+              value={splitLabel ?? "Not recorded"}
+              className="mt-1.5"
+            />
             {segments.length > 0 ? (
               <div className="mt-[11px] flex h-[38px] overflow-hidden rounded-lg bg-cc-rule">
                 {segments.map((segment) => (

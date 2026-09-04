@@ -4,7 +4,7 @@ import { useCallback } from "react";
 import { toast } from "sonner";
 import { useUpdateReview } from "../api/mutations";
 import type { ReviewFormData } from "../components/review";
-import { findProfanity } from "../lib/profanity";
+import { warnAboutProfanity } from "../lib/profanity";
 
 /**
  * Rewrites a review the viewer already published. The same draft check as
@@ -17,13 +17,7 @@ export function useEditReview(courseCode: string) {
 
   return useCallback(
     async (id: string, reviewForm: ReviewFormData): Promise<boolean> => {
-      const profoundMatches = findProfanity(reviewForm.message);
-      if (profoundMatches.length > 0) {
-        toast("Please refrain from using profane language", {
-          description: `Dissaproved words: ${profoundMatches.join(", ")}`,
-        });
-        return false;
-      }
+      if (warnAboutProfanity(reviewForm.message)) return false;
       try {
         await updateReview.mutateAsync({ id, ...reviewForm });
         toast.success("Review updated");

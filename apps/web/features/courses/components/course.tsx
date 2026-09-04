@@ -13,8 +13,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Review } from "@/features/reviews/components/review";
-import { ReviewList } from "@/features/reviews/components/review-list";
+import { Review, ReviewList } from "@/features/reviews";
 import { formatHp, formatTerm, kthCourseUrl } from "@/lib/kth";
 import { sanitizeCourseHtml } from "@/lib/sanitize-html";
 import { caller } from "@/trpc/server";

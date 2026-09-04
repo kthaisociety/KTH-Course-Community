@@ -1,4 +1,5 @@
 import profoundWords from "profane-words";
+import { toast } from "sonner";
 import { toPlainText } from "./review-text";
 
 function escapeRegex(value: string) {
@@ -19,4 +20,18 @@ export function findProfanity(html: string): string[] {
     .filter((badWord) =>
       new RegExp(`\\b${escapeRegex(String(badWord))}\\b`, "i").test(plainText),
     );
+}
+
+/**
+ * Whether a draft has to go back for rewording, telling the writer why if so.
+ * Writing a review and editing one ask the same question and get the same
+ * answer in the same words, which is the point of it living here.
+ */
+export function warnAboutProfanity(html: string): boolean {
+  const matches = findProfanity(html);
+  if (matches.length === 0) return false;
+  toast("Please refrain from using profane language", {
+    description: `Dissaproved words: ${matches.join(", ")}`,
+  });
+  return true;
 }
