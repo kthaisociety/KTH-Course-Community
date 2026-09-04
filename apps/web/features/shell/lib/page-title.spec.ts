@@ -15,6 +15,7 @@ const ROUTES_INSIDE_THE_SHELL = [
   "/course",
   "/course/DD2380",
   "/favorites",
+  "/collections",
   "/profile",
   "/reviews",
   "/about",
@@ -37,6 +38,7 @@ describe("pageTitleFor", () => {
     expect(pageTitleFor("/contact")).toBe("Contact");
     expect(pageTitleFor("/newsletter")).toBe("Newsletter");
     expect(pageTitleFor("/reviews")).toBe("Reviews");
+    expect(pageTitleFor("/collections")).toBe("Collections");
   });
 
   it.each(ROUTES_INSIDE_THE_SHELL)(

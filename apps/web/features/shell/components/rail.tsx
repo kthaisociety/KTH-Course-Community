@@ -1,6 +1,14 @@
 "use client";
 
-import { Bookmark, BookOpen, LogOut, Search, UserRound, X } from "lucide-react";
+import {
+  Bookmark,
+  BookOpen,
+  Layers,
+  LogOut,
+  Search,
+  UserRound,
+  X,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { AuthReason } from "@/features/auth";
@@ -49,6 +57,16 @@ type NavItem = {
  * which is where and how `Course Community - Explore.dc.html` line 30 draws it.
  * Until then the rail is knowingly one item short of the artboard.
  */
+/**
+ * A second, opposite deferral: "Collections" is *not* in the artboard's rail
+ * either, because `Course Community - Saved.dc.html` reaches Collections by
+ * importing that artboard as a section of the Saved page. Saved does not render
+ * it yet (#90), so without this entry the route is unreachable — and an
+ * unreachable page is a worse deviation than an extra link.
+ *
+ * **#90 should take this out** when Saved embeds `Collections` and the design's
+ * own way in exists.
+ */
 const NAV: readonly NavItem[] = [
   { href: "/search", label: "Explore", icon: Search, strokeWidth: 2.4 },
   {
@@ -57,6 +75,7 @@ const NAV: readonly NavItem[] = [
     icon: Bookmark,
     strokeWidth: 2,
   },
+  { href: "/collections", label: "Collections", icon: Layers, strokeWidth: 2 },
   { href: "/profile", label: "My Page", icon: UserRound, strokeWidth: 2 },
 ];
 
