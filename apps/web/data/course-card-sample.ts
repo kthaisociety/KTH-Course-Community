@@ -40,8 +40,9 @@
  *   #68 settles the concept as Collection, so they are renamed here and
  *   everywhere downstream. Reader-facing copy still follows the design.
  *
- * `apps/web/data/courseCardMockData.ts` is the older, unrelated mock that
- * existing components still use. This file does not replace it.
+ * This is a design/test fixture only. Live screens map tRPC output through
+ * `features/courses/lib/course-card-model.ts`; this sample is never imported
+ * by a shipped screen.
  */
 
 import type { CardGeometry, CourseCardModel } from "@/types";
