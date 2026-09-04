@@ -194,6 +194,32 @@ describe("parseLadokTranscript", () => {
     ]);
   });
 
+  it("rejoins a course row that wraps across a page break", () => {
+    const wrappedAcrossBreak = [
+      "Code Name Scope Grade Date Note",
+      "DD1337 Programming and",
+      "Check the certificate on: https://student.ladok.se/verifiera/ Personal identity number: 19900101-0000",
+      "Verifiable until: 2026-11-27 Control code: AAAA0AAAAA",
+      "Postal address Contact information Page 1 / 2",
+      "KTH Royal Institute of Technology",
+      "100 44 Stockholm",
+      "https://www.kth.se/en",
+      "Code Name Scope Grade Date Note",
+      "Computer Science 6.0 hp P 2023-06-02 2",
+      "Summation",
+    ].join("\n");
+
+    expect(parseLadokTranscript(wrappedAcrossBreak)).toEqual([
+      {
+        courseCode: "DD1337",
+        courseName: "Programming and Computer Science",
+        credits: 6,
+        grade: "P",
+        completedOn: "2023-06-02",
+      },
+    ]);
+  });
+
   it("reports a row whose scope, grade and date it cannot read", () => {
     const oddRow = [
       "Code Name Scope Grade Date Note",

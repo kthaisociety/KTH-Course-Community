@@ -70,10 +70,11 @@ const ROW_HEAD = /^([A-ZÅÄÖ]{2,3}\d{4}[A-Z]?)\s+(.*)$/;
  * verification footer, the address block, the page counter, and the column
  * header repeated at the top of each page.
  *
- * Only the first line of that run has to be recognised — reaching one closes
- * the row being built, and nothing is absorbed again until the next course
- * code. Without this, a row whose columns are missing swallows the footer, and
- * the footer carries the student's personal identity number.
+ * These lines are stepped over rather than joined, so a course name really does
+ * survive a page break — while the footer, which carries the student's personal
+ * identity number, never lands inside a course name. Every line of the run has
+ * to be recognised for that to hold, which is why the address block is listed
+ * as well as the verification lines.
  */
 const PAGE_FURNITURE = [
   TABLE_HEADER,
@@ -85,6 +86,9 @@ const PAGE_FURNITURE = [
   /(?:Personal identity number|Personnummer)\s*:/,
   /(?:Control code|Kontrollkod)\s*:/,
   /^https?:\/\//i,
+  /^(?:KTH Royal Institute of Technology|Kungliga Tekniska högskolan)\b/,
+  // The postal-address line, e.g. "100 44 Stockholm".
+  /^\d{3}\s?\d{2}\s+\S/,
 ];
 
 function isPageFurniture(line: string): boolean {
@@ -103,31 +107,25 @@ function startsRow(line: string): boolean {
  * Splits the table body into one string per course, rejoining the lines a long
  * course name wrapped onto.
  *
- * A row absorbs following lines only until it has all of its columns, and never
- * across page furniture. Both bounds matter at a page break: a complete row
- * stops on its own, and an incomplete one is closed by the footer rather than
- * swallowing it. A row left incomplete by the break is still reported, with
- * null columns — losing a course's grade is recoverable, putting the footer's
- * personal identity number in its name is not.
+ * A row absorbs following lines until it has all of its columns, stepping over
+ * page furniture without joining it. That is what carries a row over a page
+ * break intact: a name wrapped across the boundary is rejoined, while the
+ * footer between the halves — which carries the student's personal identity
+ * number — is never part of a course name. Furniture does not count against
+ * the continuation budget, since a page break is not a wrapped line.
  */
 function rowBlocks(lines: string[]): string[] {
   const blocks: string[] = [];
   let continuations = 0;
-  let openForContinuation = false;
 
   for (const line of lines) {
     if (line === "") continue;
     if (startsRow(line)) {
       blocks.push(line);
       continuations = 0;
-      openForContinuation = true;
       continue;
     }
-    if (isPageFurniture(line)) {
-      openForContinuation = false;
-      continue;
-    }
-    if (!openForContinuation) continue;
+    if (isPageFurniture(line)) continue;
 
     const open = blocks.at(-1);
     if (open === undefined) continue;
