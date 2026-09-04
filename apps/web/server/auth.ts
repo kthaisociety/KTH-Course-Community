@@ -4,6 +4,7 @@ import { magicLink } from "better-auth/plugins/magic-link";
 import { db } from "./db";
 import * as schema from "./db/schema";
 import { sendMagicLinkEmail } from "./email/send";
+import { joinCommunityGraphOnSignUp } from "./graph/service";
 
 function createAuth() {
   return betterAuth({
@@ -13,6 +14,18 @@ function createAuth() {
       usePlural: true,
     }),
     emailAndPassword: { enabled: false },
+    databaseHooks: {
+      user: {
+        create: {
+          // Every account gets its place in the community graph from its first
+          // request. The graph service swallows its own failures, so this hook
+          // cannot fail sign-up.
+          after: async (user) => {
+            await joinCommunityGraphOnSignUp(user.id);
+          },
+        },
+      },
+    },
     socialProviders: {
       google: {
         clientId: process.env.GOOGLE_CLIENT_ID ?? "",
