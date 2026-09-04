@@ -218,6 +218,58 @@ describe("Landing", () => {
         expect(sendMagicLink).not.toHaveBeenCalled();
       });
 
+      // Greptile reproduced this: a rejected request used to leave "Sending…"
+      // standing over a form that could never be submitted again, and closing
+      // the dialog did not clear it either.
+      it("gets its form back when the request never goes through", async () => {
+        sendMagicLink.mockRejectedValue(new Error("offline"));
+        const user = userEvent.setup();
+        render(<Landing />);
+        await openFindYourDot(user);
+        await user.type(
+          await screen.findByLabelText(/email address/i),
+          "elsa@kth.se",
+        );
+        await user.click(
+          screen.getByRole("button", { name: /send private link/i }),
+        );
+
+        expect(
+          await screen.findByText(/could not send the link just now/i),
+        ).toBeInTheDocument();
+        const submit = screen.getByRole("button", {
+          name: /send private link/i,
+        });
+        expect(submit).toBeEnabled();
+
+        sendMagicLink.mockResolvedValue({ error: null });
+        await user.click(submit);
+        expect(
+          await screen.findByText(/check your inbox/i),
+        ).toBeInTheDocument();
+      });
+
+      it("says the send failed, not that the address is wrong", async () => {
+        sendMagicLink.mockResolvedValue({ error: { message: "rate limited" } });
+        const user = userEvent.setup();
+        render(<Landing />);
+        await openFindYourDot(user);
+        await user.type(
+          await screen.findByLabelText(/email address/i),
+          "elsa@kth.se",
+        );
+        await user.click(
+          screen.getByRole("button", { name: /send private link/i }),
+        );
+
+        expect(
+          await screen.findByText(/could not send the link just now/i),
+        ).toBeInTheDocument();
+        expect(
+          screen.queryByText(/enter a valid email address/i),
+        ).not.toBeInTheDocument();
+      });
+
       it("sends the private link back to the landing page", async () => {
         const user = userEvent.setup();
         render(<Landing />);

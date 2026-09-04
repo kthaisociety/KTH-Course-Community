@@ -60,6 +60,7 @@ type Props = {
 export function FindYourDot({ open, status, onClose, onRetry }: Props) {
   const [email, setEmail] = useState("");
   const [invalid, setInvalid] = useState(false);
+  const [failed, setFailed] = useState(false);
   const [sending, setSending] = useState(false);
   const [sentTo, setSentTo] = useState<string | null>(null);
 
@@ -67,30 +68,49 @@ export function FindYourDot({ open, status, onClose, onRetry }: Props) {
   // and the scrim lifts, exactly as the artboard does it.
   const revealing = status === "placed";
 
+  /**
+   * Two different failures, told apart because they ask different things of the
+   * reader: an address that cannot be one is theirs to correct, a request that
+   * did not go through is ours and only wants trying again.
+   *
+   * The button re-enables in `finally` whatever happened. A request that
+   * rejects rather than resolving — the tab went offline mid-send — must not
+   * leave "Sending…" standing over a form nobody can use again.
+   */
   async function sendLink() {
     const address = email.trim();
     if (!EMAIL.test(address)) {
       setInvalid(true);
+      setFailed(false);
       return;
     }
     setInvalid(false);
+    setFailed(false);
     setSending(true);
-    const { error } = await authClient.signIn.magicLink({
-      email: address,
-      callbackURL: DOT_CALLBACK,
-      errorCallbackURL: DOT_ERROR_CALLBACK,
-    });
-    setSending(false);
-    if (error) {
-      setInvalid(true);
-      return;
+    try {
+      const { error } = await authClient.signIn.magicLink({
+        email: address,
+        callbackURL: DOT_CALLBACK,
+        errorCallbackURL: DOT_ERROR_CALLBACK,
+      });
+      if (error) {
+        setFailed(true);
+        return;
+      }
+      setSentTo(address);
+    } catch (error) {
+      console.error(error);
+      setFailed(true);
+    } finally {
+      setSending(false);
     }
-    setSentTo(address);
   }
 
   function close() {
     setSentTo(null);
     setInvalid(false);
+    setFailed(false);
+    setSending(false);
     onClose();
   }
 
@@ -114,10 +134,12 @@ export function FindYourDot({ open, status, onClose, onRetry }: Props) {
           <SignIn
             email={email}
             invalid={invalid}
+            failed={failed}
             sending={sending}
             onEmail={(value) => {
               setEmail(value);
               setInvalid(false);
+              setFailed(false);
             }}
             onSubmit={sendLink}
             onClose={close}
@@ -197,6 +219,7 @@ export function FindYourDot({ open, status, onClose, onRetry }: Props) {
 function SignIn(props: {
   email: string;
   invalid: boolean;
+  failed: boolean;
   sending: boolean;
   onEmail: (value: string) => void;
   onSubmit: () => void;
@@ -227,19 +250,23 @@ function SignIn(props: {
         placeholder="you@kth.se"
         aria-label="Email address"
         aria-invalid={props.invalid}
-        aria-describedby={props.invalid ? "find-your-dot-error" : undefined}
+        aria-describedby={
+          props.invalid || props.failed ? "find-your-dot-error" : undefined
+        }
         className={cn(
           "mt-4 h-10 w-full rounded-[9px] border bg-cc-inset px-3 text-[13.5px] text-cc-ink outline-none",
           props.invalid ? "border-cc-warn-ink" : "border-cc-rule3",
         )}
       />
-      {props.invalid ? (
+      {props.invalid || props.failed ? (
         <p
           id="find-your-dot-error"
           role="alert"
           className="mt-2 text-[12.5px] text-cc-warn-ink"
         >
-          Enter a valid email address.
+          {props.invalid
+            ? "Enter a valid email address."
+            : "We could not send the link just now. Try again."}
         </p>
       ) : null}
       <button
