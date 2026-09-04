@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { ReactNode, RefObject } from "react";
 import { cn } from "@/lib/utils";
 
 /**
@@ -23,13 +23,16 @@ export function PageColumn({
   children,
   className,
   contentClassName,
+  containerRef,
 }: {
   children: ReactNode;
   className?: string;
   contentClassName?: string;
+  /** Lets a route match its layout behavior to this container's breakpoints. */
+  containerRef?: RefObject<HTMLDivElement | null>;
 }) {
   return (
-    <div className={cn("@container", className)}>
+    <div ref={containerRef} className={cn("@container", className)}>
       <div
         className={cn(
           "mx-auto flex w-full max-w-[1216px] flex-col pb-15 @2xl:px-5",

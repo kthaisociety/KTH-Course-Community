@@ -1,4 +1,10 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { CourseSummary } from "@/types";
@@ -10,6 +16,7 @@ const useMe = vi.fn();
 const useSearchCourses = vi.fn();
 
 let search = "";
+let containerWidth = 500;
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push, replace }),
@@ -95,11 +102,26 @@ function results(...courses: CourseSummary[]) {
 
 beforeEach(() => {
   search = "";
-  vi.stubGlobal("matchMedia", () => ({
-    matches: false,
-    addEventListener: vi.fn(),
-    removeEventListener: vi.fn(),
-  }));
+  containerWidth = 500;
+  window.sessionStorage.clear();
+  push.mockClear();
+  replace.mockClear();
+  vi.stubGlobal(
+    "ResizeObserver",
+    class {
+      constructor(private readonly callback: ResizeObserverCallback) {}
+
+      observe() {
+        this.callback(
+          [{ contentRect: { width: containerWidth } } as ResizeObserverEntry],
+          this as unknown as ResizeObserver,
+        );
+      }
+
+      disconnect() {}
+      unobserve() {}
+    },
+  );
   useMe.mockReturnValue({ user: { userId: "u1", savedCourseCodes: [] } });
   useSearchCourses.mockReturnValue(results());
 });
@@ -170,11 +192,7 @@ describe("Explore", () => {
     });
 
     it("opens courses in the resizable desktop workspace", async () => {
-      vi.stubGlobal("matchMedia", () => ({
-        matches: true,
-        addEventListener: vi.fn(),
-        removeEventListener: vi.fn(),
-      }));
+      containerWidth = 900;
       render(<Explore />);
 
       await userEvent.click(
@@ -189,6 +207,42 @@ describe("Explore", () => {
         screen.getByRole("button", { name: "Resize workspace" }),
       ).toHaveAttribute("title", "Drag to resize · double-click to reset");
       expect(push).not.toHaveBeenCalled();
+    });
+
+    it("continues to route at an intermediate container width", async () => {
+      containerWidth = 767;
+      render(<Explore />);
+
+      await userEvent.click(
+        within(screen.getAllByRole("article")[0] as HTMLElement).getByRole(
+          "button",
+          { name: /Artificial Intelligence/ },
+        ),
+      );
+
+      expect(push).toHaveBeenCalledWith("/course/DD2380");
+      expect(screen.queryByLabelText("Open courses")).not.toBeInTheDocument();
+    });
+
+    it("stops resizing when a pointer gesture is cancelled", async () => {
+      containerWidth = 900;
+      render(<Explore />);
+      await userEvent.click(
+        within(screen.getAllByRole("article")[0] as HTMLElement).getByRole(
+          "button",
+          { name: /Artificial Intelligence/ },
+        ),
+      );
+
+      const host = screen.getByTestId("workspace-pane-host");
+      const resize = screen.getByRole("button", { name: "Resize workspace" });
+      expect(host).toHaveStyle({ width: "412px" });
+
+      fireEvent.pointerDown(resize, { clientX: 500 });
+      fireEvent.pointerCancel(window);
+      fireEvent.pointerMove(window, { clientX: 800 });
+
+      expect(host).toHaveStyle({ width: "412px" });
     });
   });
 

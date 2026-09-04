@@ -7,7 +7,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { AuthReasonDialog } from "@/features/auth";
 import { CourseCardItem, courseCardGeometry } from "@/features/courses";
 import { PageColumn, PageHeader } from "@/features/shell";
-import { useWorkspacePane } from "@/features/workspace/hooks/use-workspace-pane";
+import { useWorkspacePane } from "@/features/workspace";
 import {
   MAX_RATING_STARS,
   RATING_STAR_OPTIONS,
@@ -18,10 +18,7 @@ import { useResultsWidth } from "../hooks/use-results-width";
 // The pane is inactive for ordinary browsing and has its own data-heavy
 // details/review views. Load it only once a desktop reader opens a course.
 const WorkspacePane = dynamic(
-  () =>
-    import("@/features/workspace/components/workspace-pane").then(
-      (module) => module.WorkspacePane,
-    ),
+  () => import("@/features/workspace").then((module) => module.WorkspacePane),
   { ssr: false },
 );
 
@@ -68,7 +65,8 @@ const WorkspacePane = dynamic(
 export function Explore() {
   const explore = useExplore();
   const workspace = useWorkspacePane();
-  const [desktopWorkspace, setDesktopWorkspace] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const desktopWorkspace = useContainerBreakpoint(containerRef, 768);
   const rowRef = useRef<HTMLDivElement>(null);
   const pane = useWorkspaceWidth(rowRef, workspace.hasOpenCourses);
   const [resultsRef, resultsWidth] = useResultsWidth();
@@ -80,15 +78,6 @@ export function Explore() {
   // The desktop pane intentionally does not replace the mobile course route:
   // #133 owns the mobile sheet host. Keeping that established route means a
   // phone's Drawer and course controls remain keyboard-reachable today.
-  useEffect(() => {
-    if (typeof window.matchMedia !== "function") return;
-    const query = window.matchMedia("(min-width: 768px)");
-    const sync = () => setDesktopWorkspace(query.matches);
-    sync();
-    query.addEventListener("change", sync);
-    return () => query.removeEventListener("change", sync);
-  }, []);
-
   function openCourse(courseCode: string, kind: "details" | "review") {
     if (desktopWorkspace) {
       workspace.open(courseCode, kind);
@@ -102,6 +91,7 @@ export function Explore() {
     <PageColumn
       className="h-full min-h-0 overflow-hidden"
       contentClassName="h-full min-h-0 pb-0"
+      containerRef={containerRef}
     >
       <PageHeader
         title="Explore courses"
@@ -205,6 +195,7 @@ export function Explore() {
 
         {workspace.hasOpenCourses ? (
           <div
+            data-testid="workspace-pane-host"
             className="relative hidden min-h-0 min-w-[356px] @3xl:flex"
             style={{ width: pane.width }}
           >
@@ -228,6 +219,28 @@ export function Explore() {
       />
     </PageColumn>
   );
+}
+
+/** Matches Explore's `@3xl` layout transition against the actual container,
+ * not the wider browser viewport. */
+function useContainerBreakpoint(
+  containerRef: React.RefObject<HTMLDivElement | null>,
+  minimumWidth: number,
+) {
+  const [matches, setMatches] = useState(false);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container || typeof ResizeObserver !== "function") return;
+    const observer = new ResizeObserver(([entry]) => {
+      const width = entry?.contentRect.width ?? container.clientWidth;
+      setMatches(width >= minimumWidth);
+    });
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, [containerRef, minimumWidth]);
+
+  return matches;
 }
 
 const RESULTS_FLOOR = 470;
@@ -274,18 +287,20 @@ function WorkspaceResizeHandle({
 }: {
   pane: ReturnType<typeof useWorkspaceWidth>;
 }) {
-  const start = useRef<{ x: number; width: number } | null>(null);
+  const drag = useRef<{
+    onMove: (event: PointerEvent) => void;
+  } | null>(null);
 
-  function finish() {
-    start.current = null;
-    window.removeEventListener("pointermove", onMove);
+  const finish = useCallback(() => {
+    const activeDrag = drag.current;
+    if (!activeDrag) return;
+    window.removeEventListener("pointermove", activeDrag.onMove);
     window.removeEventListener("pointerup", finish);
-  }
+    window.removeEventListener("pointercancel", finish);
+    drag.current = null;
+  }, []);
 
-  function onMove(event: PointerEvent) {
-    if (!start.current) return;
-    pane.resize(start.current.width - (event.clientX - start.current.x));
-  }
+  useEffect(() => finish, [finish]);
 
   return (
     <button
@@ -295,9 +310,16 @@ function WorkspaceResizeHandle({
       onDoubleClick={pane.reset}
       onPointerDown={(event) => {
         event.preventDefault();
-        start.current = { x: event.clientX, width: pane.width };
+        finish();
+        const startX = event.clientX;
+        const startWidth = pane.width;
+        const onMove = (moveEvent: PointerEvent) => {
+          pane.resize(startWidth - (moveEvent.clientX - startX));
+        };
+        drag.current = { onMove };
         window.addEventListener("pointermove", onMove);
         window.addEventListener("pointerup", finish, { once: true });
+        window.addEventListener("pointercancel", finish, { once: true });
       }}
       className="-left-[14px] absolute top-0 hidden h-full w-[11px] cursor-col-resize items-center justify-center @3xl:flex"
     >
