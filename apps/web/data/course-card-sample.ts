@@ -122,9 +122,11 @@ export interface CourseCardModel {
   /** Review count, as a string. */
   statReviews: string;
 
-  // Per-instance colours the parent resolves. Components style against the
-  // `--cc-*` tokens; these exist because the artboard has no token for a
-  // value that changes with card state.
+  // Per-instance presentation the parent resolves: colours that change with
+  // card state, plus the taken pill's tooltip. Components style against the
+  // `--cc-*` tokens; these fields exist because the artboard has no token for
+  // a value that varies per card. Order is the artboard's, so the tooltip
+  // sits among the colours.
   borderColor: string;
   takenTitle: string;
   takenCountFg: string;
