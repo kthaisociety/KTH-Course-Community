@@ -5,6 +5,8 @@ import { type RouterOutputs, useTRPC } from "@/trpc/client";
 
 export type CourseDetails = RouterOutputs["course"]["details"];
 export type CourseSummary = RouterOutputs["course"]["summary"];
+/** One of the viewer's collections: its name, and its courses in stored order. */
+export type Collection = RouterOutputs["collections"]["list"][number];
 
 export function useCourseDetails(courseCode: string | undefined) {
   const trpc = useTRPC();

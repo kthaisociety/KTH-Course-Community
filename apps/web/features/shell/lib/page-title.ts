@@ -36,6 +36,7 @@ const TITLES: ReadonlyArray<readonly [string, string]> = [
   ["/favorites", "Saved courses"],
   ["/profile", "My Page"],
   // Routes the design does not key, titled after the page's own heading.
+  ["/collections", "Collections"],
   // #96 owns About and Contact if it wants different words.
   ["/newsletter", "Newsletter"],
   ["/contact", "Contact"],
