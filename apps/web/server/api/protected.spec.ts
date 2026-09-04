@@ -19,13 +19,19 @@ describe("protected procedures", () => {
     await expect(
       caller(null).reviews.create({
         courseCode: "DD2421",
-        examinationMethods: 3,
-        theoreticalVsApplied: 3,
-        workload: 3,
-        learningExperience: 3,
-        wouldRecommend: true,
-        content: "hi",
+        examinationDistribution: null,
+        approachTheoryPercent: null,
+        workloadScore: 3,
+        learningScore: 3,
+        happyTook: true,
+        message: "hi",
       }),
+    ).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+  });
+
+  it("rejects visitors on reviews.vote", async () => {
+    await expect(
+      caller(null).reviews.vote({ id: "review-1", voteType: "up" }),
     ).rejects.toMatchObject({ code: "UNAUTHORIZED" });
   });
 

@@ -57,6 +57,13 @@
       "when": 1788477723351,
       "tag": "0011_saved_contract",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1788480553747,
+      "tag": "0012_review_contract",
+      "breakpoints": true
     }
   ]
 }

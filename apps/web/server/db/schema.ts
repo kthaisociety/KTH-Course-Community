@@ -19,6 +19,11 @@ import {
   vector,
 } from "drizzle-orm/pg-core";
 
+// Type-only, and must stay type-only: `@/types/review` also defines the zod
+// schemas the router, service and review form share, and drizzle-kit loads
+// this file. TypeScript erases the import before drizzle-kit ever evaluates
+// that module, so no runtime dependency reaches the migration tooling.
+import type { ExaminationDistribution } from "@/types/review";
 import { users } from "./auth-schema";
 
 export * from "./auth-schema";
@@ -420,7 +425,7 @@ export type SelectUsersNodeProfile = typeof usersNodeProfiles.$inferSelect;
 
 // --- REVIEW / FORUM TABLES ----------------
 // table for reviews that references users (posters) and courses (reviewed)
-const reviewsTable = pgTable(
+export const reviews = pgTable(
   "reviews",
   {
     id: text("id").primaryKey(), // review id
@@ -434,25 +439,18 @@ const reviewsTable = pgTable(
         onUpdate: "no action",
       }), // foreign key to courses table
 
-    // scores
-    examinationMethods: integer("examination_methods").notNull().default(0), // 1-5
-    theoreticalVsApplied: integer("theoretical_vs_applied")
-      .notNull()
-      .default(0), // 1-5
-    workload: integer("workload").notNull().default(0), // 1-5
-    learningExperience: integer("learning_experience").notNull().default(0), // 1-5
-
-    wouldRecommend: boolean("would_recommend").notNull().default(false),
-    content: text("content").notNull(),
-
-    // Target fields coexist with the legacy fields until the review domain
-    // switches. Scores stay nullable during the expand phase because legacy
-    // zeroes do not represent valid target ratings.
-    examinationDistribution: jsonb("examination_distribution"),
+    // Self-reported recollection. Null is the stored answer for "I don't
+    // remember" — never a zero-filled distribution or a zero percentage.
+    examinationDistribution: jsonb(
+      "examination_distribution",
+    ).$type<ExaminationDistribution>(),
     approachTheoryPercent: integer("approach_theory_percent"),
-    workloadScore: integer("workload_score"),
-    learningScore: integer("learning_score"),
-    happyTook: boolean("happy_took").default(sql`NULL`).notNull(),
+
+    // Two separate axes, each 1-10. Neither is an overall verdict.
+    workloadScore: integer("workload_score").notNull(),
+    learningScore: integer("learning_score").notNull(),
+
+    happyTook: boolean("happy_took").notNull(),
     message: text("message"),
 
     // timestamps
@@ -475,31 +473,8 @@ const reviewsTable = pgTable(
   ],
 );
 
-type FullSelectReview = typeof reviewsTable.$inferSelect;
-type LegacyReviewKey =
-  | "id"
-  | "userId"
-  | "courseCode"
-  | "examinationMethods"
-  | "theoreticalVsApplied"
-  | "workload"
-  | "learningExperience"
-  | "wouldRecommend"
-  | "content"
-  | "createdAt"
-  | "updatedAt";
-
-// Temporary compatibility: current review services infer their read model from
-// this property. B removes the override when it switches to the target fields.
-export const reviews = reviewsTable as Omit<
-  typeof reviewsTable,
-  "$inferSelect"
-> & {
-  $inferSelect: Pick<FullSelectReview, LegacyReviewKey>;
-};
-
-export type InsertReview = typeof reviewsTable.$inferInsert;
-export type SelectReview = Pick<FullSelectReview, LegacyReviewKey>;
+export type InsertReview = typeof reviews.$inferInsert;
+export type SelectReview = typeof reviews.$inferSelect;
 
 export const reviewVotes = pgTable(
   "review_votes",
@@ -533,24 +508,6 @@ export const reviewVotes = pgTable(
 export type InsertReviewVote = typeof reviewVotes.$inferInsert;
 export type SelectReviewVote = typeof reviewVotes.$inferSelect;
 
-// junction table for tracking user likes/dislikes on reviews
-export const reviewLikes = pgTable(
-  "review_likes",
-  {
-    userId: text("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    reviewId: text("review_id")
-      .notNull()
-      .references(() => reviews.id, { onDelete: "cascade" }),
-    voteType: text("vote_type").notNull(), // "like" or "dislike"
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .defaultNow()
-      .notNull(),
-  },
-  (table) => [primaryKey({ columns: [table.userId, table.reviewId] })],
-);
-
 // --- FEEDBACK / FORM TABLES ----------------
 export const feedback_form = pgTable("feedback_form", {
   id: text("id").primaryKey(),
@@ -566,5 +523,3 @@ export type InsertFeedbackForm = typeof feedback_form.$inferInsert;
 export type SelectFeedbackMessage = typeof feedback_form.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 export type SelectUser = typeof users.$inferSelect;
-export type InsertReviewLike = typeof reviewLikes.$inferInsert;
-export type SelectReviewLike = typeof reviewLikes.$inferSelect;

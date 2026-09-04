@@ -1,35 +1,60 @@
 import { nanoid } from "nanoid";
-import type { Review } from "@/types";
-import { ForbiddenError, NotFoundError } from "../errors";
+import type { Review, ReviewInput, ReviewVoteType } from "@/types";
+import { reviewInputSchema } from "@/types";
+import { ForbiddenError, NotFoundError, ValidationError } from "../errors";
 import * as reviewsRepo from "./repository";
 
-export type ReviewInput = reviewsRepo.ReviewWrite;
+export type { ReviewInput };
 
 function toIso(value: Date | string): string {
   return value instanceof Date ? value.toISOString() : value;
 }
 
 function serializeReview(
-  row: reviewsRepo.ReviewRecord & {
-    likeCount?: number | string | null;
-    userVote?: string | null;
-  },
+  row: reviewsRepo.ReviewRecord & Partial<reviewsRepo.ReviewWithVotes>,
 ): Review {
-  const userVote = row.userVote;
   return {
     id: row.id,
     userId: row.userId,
     courseCode: row.courseCode,
-    examinationMethods: row.examinationMethods,
-    theoreticalVsApplied: row.theoreticalVsApplied,
-    workload: row.workload,
-    learningExperience: row.learningExperience,
-    wouldRecommend: row.wouldRecommend,
-    content: row.content,
+    examinationDistribution: row.examinationDistribution ?? null,
+    approachTheoryPercent: row.approachTheoryPercent ?? null,
+    workloadScore: row.workloadScore,
+    learningScore: row.learningScore,
+    happyTook: row.happyTook,
+    message: row.message ?? null,
     createdAt: toIso(row.createdAt),
     updatedAt: toIso(row.updatedAt),
-    likeCount: Number(row.likeCount ?? 0),
-    userVote: userVote === "like" || userVote === "dislike" ? userVote : null,
+    upvoteCount: Number(row.upvoteCount ?? 0),
+    downvoteCount: Number(row.downvoteCount ?? 0),
+    userVote: row.userVote ?? null,
+  };
+}
+
+/**
+ * The last gate before the target columns. It enforces the shared contract —
+ * 1-10 scores, a distribution that adds up to 100 — and normalizes a blank
+ * message to `null`. A `null` recollection is left alone: that is how "I don't
+ * remember" is stored, and filling it with zeroes would claim an answer the
+ * reviewer never gave.
+ *
+ * The router already fed the same `reviewInputSchema` to `.input()`, so over
+ * tRPC this parse is deliberately redundant. It stays because the service is
+ * the enforcement point `planned-database-formats.md` names, and because the
+ * service is called directly by tests and by any future caller that is not a
+ * tRPC procedure. One schema, checked twice — not two sources of truth.
+ */
+function validateReviewInput(input: ReviewInput): ReviewInput {
+  const parsed = reviewInputSchema.safeParse(input);
+  if (!parsed.success) {
+    throw new ValidationError(
+      parsed.error.issues[0]?.message ?? "Invalid review",
+    );
+  }
+
+  return {
+    ...parsed.data,
+    message: parsed.data.message?.trim() ? parsed.data.message : null,
   };
 }
 
@@ -42,7 +67,7 @@ export async function createReview(
     id: nanoid(),
     userId,
     courseCode,
-    ...reviewData,
+    ...validateReviewInput(reviewData),
   });
   return serializeReview(inserted);
 }
@@ -67,7 +92,10 @@ export async function updateReview(
   reviewData: ReviewInput,
 ) {
   await assertAuthor(id, userId);
-  const updated = await reviewsRepo.updateById(id, reviewData);
+  const updated = await reviewsRepo.updateById(
+    id,
+    validateReviewInput(reviewData),
+  );
   if (!updated) throw new NotFoundError(`Review with id ${id} not found`);
   return serializeReview(updated);
 }
@@ -79,24 +107,30 @@ export async function removeReview(id: string, userId: string) {
   return serializeReview(deleted);
 }
 
+/**
+ * Voting the same way twice takes the vote back; voting the other way flips
+ * it. The read only decides which of those the caller meant — the write itself
+ * is a set or a remove, both idempotent, so two racing requests agree instead
+ * of one of them failing on the composite key. `planned-database-formats.md`
+ * asks for exactly that: "idempotent set/remove operations".
+ */
 export async function toggleVote(
   reviewId: string,
-  userId: string,
-  voteType: "like" | "dislike",
+  voterUserId: string,
+  voteType: ReviewVoteType,
 ) {
-  const existingVote = await reviewsRepo.findVote(reviewId, userId);
+  const existingVote = await reviewsRepo.findVote(reviewId, voterUserId);
 
-  if (existingVote) {
-    if (existingVote.voteType === voteType) {
-      await reviewsRepo.deleteVote(reviewId, userId);
-      return { action: "removed" as const, voteType: null };
-    }
-    await reviewsRepo.updateVote(reviewId, userId, voteType);
-    return { action: "updated" as const, voteType };
+  if (existingVote?.voteType === voteType) {
+    await reviewsRepo.deleteVote(reviewId, voterUserId);
+    return { action: "removed" as const, voteType: null };
   }
 
-  await reviewsRepo.insertVote(reviewId, userId, voteType);
-  return { action: "added" as const, voteType };
+  await reviewsRepo.upsertVote(reviewId, voterUserId, voteType);
+  return {
+    action: existingVote ? ("updated" as const) : ("added" as const),
+    voteType,
+  };
 }
 
 async function assertAuthor(reviewId: string, userId: string) {

@@ -199,7 +199,8 @@ SET
 	"happy_took" = "would_recommend",
 	"message" = NULLIF("content", '');--> statement-breakpoint
 
--- Keep old application writes valid until B switches the review repository.
+-- Keep old application writes valid until #75 switches the review repository.
+-- (Dropped in 0012_review_contract.sql.)
 CREATE FUNCTION "sync_legacy_review_fields_to_target"()
 RETURNS trigger
 LANGUAGE plpgsql

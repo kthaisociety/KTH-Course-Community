@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { z } from "zod";
 import { RichTextEditor } from "@/components/RichEditor";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogClose,
@@ -24,44 +25,66 @@ import {
   FieldLegend,
   FieldSet,
 } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 import { Rating, RatingButton } from "@/components/ui/shadcn-io/rating";
+import { Slider } from "@/components/ui/slider";
 import { Spinner } from "@/components/ui/spinner";
 import { Switch } from "@/components/ui/switch";
 import { useMe } from "@/features/auth";
+import type { ExaminationDistribution } from "@/types";
+import {
+  EXAMINATION_DISTRIBUTION_KEYS,
+  EXAMINATION_DISTRIBUTION_LABELS,
+  examinationDistributionSchema,
+  MAX_REVIEW_SCORE,
+  percentSchema,
+  reviewScoreSchema,
+} from "@/types";
 import { useAddReview } from "../hooks/use-add-review";
 
 export type ReviewFormData = {
-  wouldRecommend: boolean;
-  content: string;
-  examinationMethods: number;
-  theoreticalVsApplied: number;
-  workload: number;
-  learningExperience: number;
+  happyTook: boolean;
+  message: string;
+  /** `null` is the stored answer for "I don't remember". */
+  examinationDistribution: ExaminationDistribution | null;
+  /** `null` is the stored answer for "I don't remember". */
+  approachTheoryPercent: number | null;
+  workloadScore: number;
+  learningScore: number;
 };
 
-const ratingSchema = z.number().int().min(1, "Select a rating.");
+const EMPTY_DISTRIBUTION: ExaminationDistribution = {
+  exam: 0,
+  assignments: 0,
+  labs: 0,
+  projects: 0,
+  seminars: 0,
+  other: 0,
+};
 
+// The form shares the wire contract from `@/types` and adds only what is
+// specific to writing a review in a dialog: a message that is not just markup.
 const formSchema = z.object({
-  wouldRecommend: z.boolean(),
-  content: z
+  happyTook: z.boolean(),
+  message: z
     .string()
     .refine(
       (html) => html.replace(/<[^>]*>/g, "").trim().length > 0,
       "Write a review.",
     ),
-  examinationMethods: ratingSchema,
-  theoreticalVsApplied: ratingSchema,
-  workload: ratingSchema,
-  learningExperience: ratingSchema,
+  examinationDistribution: examinationDistributionSchema.nullable(),
+  approachTheoryPercent: percentSchema.nullable(),
+  workloadScore: reviewScoreSchema,
+  learningScore: reviewScoreSchema,
 });
 
 const defaultValues: ReviewFormData = {
-  wouldRecommend: false,
-  content: "",
-  examinationMethods: 0,
-  theoreticalVsApplied: 0,
-  workload: 0,
-  learningExperience: 0,
+  happyTook: false,
+  message: "",
+  examinationDistribution: null,
+  approachTheoryPercent: null,
+  workloadScore: 0,
+  learningScore: 0,
 };
 
 type ReviewProps = {
@@ -130,60 +153,12 @@ export function Review({
             <FieldGroup className="py-6">
               <FieldSet>
                 <FieldLegend>Rate the Course</FieldLegend>
+                <FieldDescription>
+                  Two separate axes, each from 1 to {MAX_REVIEW_SCORE}. Neither
+                  is an overall verdict.
+                </FieldDescription>
                 <FieldGroup>
-                  <form.Field name="examinationMethods">
-                    {(field) => {
-                      const isInvalid =
-                        field.state.meta.isTouched && !field.state.meta.isValid;
-                      return (
-                        <Field
-                          orientation="horizontal"
-                          data-invalid={isInvalid}
-                        >
-                          <FieldLabel>Examination methods</FieldLabel>
-                          <Rating
-                            value={field.state.value}
-                            onValueChange={(value) => field.handleChange(value)}
-                          >
-                            {Array.from({ length: 5 }, (_, i) => (
-                              <RatingButton key={`difficulty-star-${i + 1}`} />
-                            ))}
-                          </Rating>
-                          {isInvalid && (
-                            <FieldError errors={field.state.meta.errors} />
-                          )}
-                        </Field>
-                      );
-                    }}
-                  </form.Field>
-
-                  <form.Field name="theoreticalVsApplied">
-                    {(field) => {
-                      const isInvalid =
-                        field.state.meta.isTouched && !field.state.meta.isValid;
-                      return (
-                        <Field
-                          orientation="horizontal"
-                          data-invalid={isInvalid}
-                        >
-                          <FieldLabel>Theory vs applied</FieldLabel>
-                          <Rating
-                            value={field.state.value}
-                            onValueChange={(value) => field.handleChange(value)}
-                          >
-                            {Array.from({ length: 5 }, (_, i) => (
-                              <RatingButton key={`usefulness-star-${i + 1}`} />
-                            ))}
-                          </Rating>
-                          {isInvalid && (
-                            <FieldError errors={field.state.meta.errors} />
-                          )}
-                        </Field>
-                      );
-                    }}
-                  </form.Field>
-
-                  <form.Field name="workload">
+                  <form.Field name="workloadScore">
                     {(field) => {
                       const isInvalid =
                         field.state.meta.isTouched && !field.state.meta.isValid;
@@ -197,9 +172,12 @@ export function Review({
                             value={field.state.value}
                             onValueChange={(value) => field.handleChange(value)}
                           >
-                            {Array.from({ length: 5 }, (_, i) => (
-                              <RatingButton key={`workload-star-${i + 1}`} />
-                            ))}
+                            {Array.from(
+                              { length: MAX_REVIEW_SCORE },
+                              (_, i) => (
+                                <RatingButton key={`workload-star-${i + 1}`} />
+                              ),
+                            )}
                           </Rating>
                           {isInvalid && (
                             <FieldError errors={field.state.meta.errors} />
@@ -209,7 +187,7 @@ export function Review({
                     }}
                   </form.Field>
 
-                  <form.Field name="learningExperience">
+                  <form.Field name="learningScore">
                     {(field) => {
                       const isInvalid =
                         field.state.meta.isTouched && !field.state.meta.isValid;
@@ -218,14 +196,17 @@ export function Review({
                           orientation="horizontal"
                           data-invalid={isInvalid}
                         >
-                          <FieldLabel>Learning experience</FieldLabel>
+                          <FieldLabel>Learning</FieldLabel>
                           <Rating
                             value={field.state.value}
                             onValueChange={(value) => field.handleChange(value)}
                           >
-                            {Array.from({ length: 5 }, (_, i) => (
-                              <RatingButton key={`learning-star-${i + 1}`} />
-                            ))}
+                            {Array.from(
+                              { length: MAX_REVIEW_SCORE },
+                              (_, i) => (
+                                <RatingButton key={`learning-star-${i + 1}`} />
+                              ),
+                            )}
                           </Rating>
                           {isInvalid && (
                             <FieldError errors={field.state.meta.errors} />
@@ -238,8 +219,135 @@ export function Review({
               </FieldSet>
 
               <FieldSet>
-                <FieldLegend>Recommendation</FieldLegend>
-                <form.Field name="wouldRecommend">
+                <FieldLegend>Examination</FieldLegend>
+                <FieldDescription>
+                  How was assessment split across the course? Leave "I don't
+                  remember" checked if you are not sure — a guess helps nobody.
+                </FieldDescription>
+                <form.Field name="examinationDistribution">
+                  {(field) => {
+                    const distribution = field.state.value;
+                    const isInvalid =
+                      field.state.meta.isTouched && !field.state.meta.isValid;
+                    const total =
+                      distribution === null
+                        ? 0
+                        : EXAMINATION_DISTRIBUTION_KEYS.reduce(
+                            (sum, key) => sum + distribution[key],
+                            0,
+                          );
+                    return (
+                      <Field data-invalid={isInvalid}>
+                        <Field orientation="horizontal">
+                          <Checkbox
+                            id="examination-not-remembered"
+                            checked={distribution === null}
+                            onCheckedChange={(checked) =>
+                              field.handleChange(
+                                checked === true
+                                  ? null
+                                  : { ...EMPTY_DISTRIBUTION },
+                              )
+                            }
+                          />
+                          <FieldLabel htmlFor="examination-not-remembered">
+                            I don't remember
+                          </FieldLabel>
+                        </Field>
+
+                        {distribution !== null && (
+                          <>
+                            <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+                              {EXAMINATION_DISTRIBUTION_KEYS.map((key) => (
+                                <Field key={key}>
+                                  <FieldLabel
+                                    htmlFor={`examination-share-${key}`}
+                                  >
+                                    {EXAMINATION_DISTRIBUTION_LABELS[key]}
+                                  </FieldLabel>
+                                  <Input
+                                    id={`examination-share-${key}`}
+                                    type="number"
+                                    min={0}
+                                    max={100}
+                                    step={1}
+                                    value={distribution[key]}
+                                    onChange={(event) =>
+                                      field.handleChange({
+                                        ...distribution,
+                                        [key]:
+                                          Number.parseInt(
+                                            event.target.value,
+                                            10,
+                                          ) || 0,
+                                      })
+                                    }
+                                  />
+                                </Field>
+                              ))}
+                            </div>
+                            <FieldDescription>
+                              Total: {total}% (must be 100%)
+                            </FieldDescription>
+                          </>
+                        )}
+                        {isInvalid && (
+                          <FieldError errors={field.state.meta.errors} />
+                        )}
+                      </Field>
+                    );
+                  }}
+                </form.Field>
+              </FieldSet>
+
+              <FieldSet>
+                <FieldLegend>Approach</FieldLegend>
+                <FieldDescription>
+                  How theoretical rather than applied did you find the course?
+                </FieldDescription>
+                <form.Field name="approachTheoryPercent">
+                  {(field) => {
+                    const percent = field.state.value;
+                    return (
+                      <Field>
+                        <Field orientation="horizontal">
+                          <Checkbox
+                            id="approach-not-remembered"
+                            checked={percent === null}
+                            onCheckedChange={(checked) =>
+                              field.handleChange(checked === true ? null : 50)
+                            }
+                          />
+                          <FieldLabel htmlFor="approach-not-remembered">
+                            I don't remember
+                          </FieldLabel>
+                        </Field>
+                        {percent !== null && (
+                          <>
+                            <Slider
+                              aria-label="Percent theory"
+                              min={0}
+                              max={100}
+                              step={1}
+                              value={[percent]}
+                              onValueChange={([value]) =>
+                                field.handleChange(value)
+                              }
+                            />
+                            <FieldDescription>
+                              {percent}% theory / {100 - percent}% applied
+                            </FieldDescription>
+                          </>
+                        )}
+                      </Field>
+                    );
+                  }}
+                </form.Field>
+              </FieldSet>
+
+              <FieldSet>
+                <FieldLegend>Looking back</FieldLegend>
+                <form.Field name="happyTook">
                   {(field) => (
                     <Field orientation="horizontal">
                       <Switch
@@ -251,7 +359,7 @@ export function Review({
                         }
                       />
                       <FieldLabel htmlFor={field.name}>
-                        I would recommend this course
+                        I'm glad I took this course
                       </FieldLabel>
                     </Field>
                   )}
@@ -260,7 +368,7 @@ export function Review({
 
               <FieldSet>
                 <FieldLegend>Your Review</FieldLegend>
-                <form.Field name="content">
+                <form.Field name="message">
                   {(field) => {
                     const isInvalid =
                       field.state.meta.isTouched && !field.state.meta.isValid;

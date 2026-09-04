@@ -11,6 +11,14 @@ import {
 
 export type { SearchHit };
 
+/**
+ * The search filter asks for a minimum in stars, 1-5, because that is how the
+ * dropdown renders. Review scores are stored 1-10. Convert the threshold up
+ * rather than the averages down: the comparison then happens in the scale the
+ * columns actually use, and no rounding is invented on the way.
+ */
+const SCORE_POINTS_PER_STAR = 2;
+
 const embeddingCache = new Map<string, number[]>();
 const embeddingInflight = new Map<string, Promise<number[]>>();
 let embeddingSearchFailures = 0;
@@ -96,6 +104,7 @@ async function searchWithEmbedding(
 export async function searchCourses(
   query: string,
   size = 10,
+  /** `minRating` is in stars (1-5), not in stored score points (1-10). */
   filters?: { department?: string; minRating?: number },
 ): Promise<CourseSummary[]> {
   if (!query?.trim()) return [];
@@ -121,7 +130,8 @@ export async function searchCourses(
   const minRating = filters?.minRating;
   if (minRating) {
     const ratingByCode = await averageRatings(codes);
-    codes = codes.filter((c) => (ratingByCode.get(c) ?? 0) >= minRating);
+    const threshold = minRating * SCORE_POINTS_PER_STAR;
+    codes = codes.filter((c) => (ratingByCode.get(c) ?? 0) >= threshold);
   }
 
   codes = codes.slice(0, size);

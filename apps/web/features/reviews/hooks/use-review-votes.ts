@@ -3,34 +3,26 @@
 import { useCallback } from "react";
 import { toast } from "sonner";
 import { useSessionData } from "@/features/auth";
-import { useLikeReview } from "../api/mutations";
+import type { ReviewVoteType } from "@/types";
+import { useVoteOnReview } from "../api/mutations";
 
 export function useReviewVotes(courseCode: string) {
   const { userId } = useSessionData();
-  const likeMutation = useLikeReview(courseCode);
+  const voteMutation = useVoteOnReview(courseCode);
 
-  const like = useCallback(
-    async (postId: string) => {
+  const vote = useCallback(
+    async (reviewId: string, voteType: ReviewVoteType) => {
       if (!userId) return;
       try {
-        await likeMutation.mutateAsync({ id: postId });
+        await voteMutation.mutateAsync({ id: reviewId, voteType });
       } catch {
         toast.error("Failed to update vote", {
           description: "Try again later",
         });
       }
     },
-    [likeMutation, userId],
+    [voteMutation, userId],
   );
 
-  const dislike = useCallback(
-    async (postId: string) => {
-      if (!userId) return;
-      void postId;
-      toast.info("Dislike is temporarily unavailable");
-    },
-    [userId],
-  );
-
-  return { like, dislike };
+  return { vote };
 }

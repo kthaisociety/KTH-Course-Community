@@ -1,7 +1,10 @@
 ALTER TABLE "reviews" ALTER COLUMN "happy_took" SET DEFAULT NULL;--> statement-breakpoint
 
--- Temporary expand/contract compatibility. B must drop these triggers and
--- functions after every repository writes the target tables and columns.
+-- Temporary expand/contract compatibility. Each trigger below is dropped by
+-- the issue that owns its domain, once that repository writes the target
+-- tables and columns: the review triggers (reviews_legacy_target_sync,
+-- review_likes_target_sync) belong to #75, user_favorites_target_sync to #64,
+-- and courses_explore_target_sync to #77.
 CREATE OR REPLACE FUNCTION "sync_legacy_review_fields_to_target"()
 RETURNS trigger
 LANGUAGE plpgsql

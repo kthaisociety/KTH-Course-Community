@@ -12,6 +12,12 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { sanitizeHtml } from "@/lib/sanitize-html";
 import { cn } from "@/lib/utils";
+import type { ExaminationDistribution, ReviewVoteType } from "@/types";
+import {
+  EXAMINATION_DISTRIBUTION_KEYS,
+  EXAMINATION_DISTRIBUTION_LABELS,
+  MAX_REVIEW_SCORE,
+} from "@/types";
 import { useReviewVotes } from "../hooks/use-review-votes";
 import PostActionBar from "./post-action-bar";
 
@@ -80,91 +86,113 @@ function truncateHtmlAtWord(html: string, max: number) {
   return result;
 }
 
-function normalizeRating(r: number | undefined | null) {
-  if (typeof r !== "number" || Number.isNaN(r)) return null;
-  return Math.min(5, Math.max(0, Math.round(r)));
-}
-
-function ratingLabel(rating: number | null) {
-  if (rating === null) return "N/A";
-  if (rating >= 5) return "Excellent";
-  if (rating >= 4) return "Good";
-  if (rating >= 3) return "Average";
-  if (rating >= 2) return "Poor";
-  if (rating >= 1) return "Bad";
-  return "Terrible";
-}
-
-function ratingVariant(rating: number | null) {
-  if (rating === null) return "secondary" as const;
-  if (rating >= 4) return "default" as const;
-  if (rating >= 3) return "outline" as const;
+function scoreVariant(score: number) {
+  if (score >= 8) return "default" as const;
+  if (score >= 5) return "outline" as const;
   return "destructive" as const;
 }
 
-type RatingPillProps = {
+type ScorePillProps = {
   name: string;
-  rating: number | null;
+  score: number;
 };
 
-function RatingPill({ name, rating }: Readonly<RatingPillProps>) {
-  const label = ratingLabel(rating);
-  const value = rating ?? "-";
-  const aria =
-    rating === null
-      ? `${name}: not available`
-      : `${name}: ${value} out of 5 (${label})`;
+function ScorePill({ name, score }: Readonly<ScorePillProps>) {
+  const aria = `${name}: ${score} out of ${MAX_REVIEW_SCORE}`;
 
   return (
     <div className="flex items-center gap-2" title={aria}>
-      <span className="w-20 text-sm text-muted-foreground">{name}</span>
-      <Badge variant={ratingVariant(rating)}>{value}</Badge>
+      <span className="w-24 text-sm text-muted-foreground">{name}</span>
+      <Badge variant={scoreVariant(score)}>
+        {score}/{MAX_REVIEW_SCORE}
+      </Badge>
     </div>
   );
 }
 
-type RecommendChipProps = {
-  wouldRecommend: boolean;
+type ApproachPillProps = {
+  /** `null` when the reviewer did not remember. */
+  percent: number | null;
 };
 
-function RecommendChip(props: Readonly<RecommendChipProps>) {
-  const label = props.wouldRecommend ? "Yes" : "No";
-  const aria = `Would recommend: ${label}`;
+function ApproachPill({ percent }: Readonly<ApproachPillProps>) {
+  const aria =
+    percent === null
+      ? "Approach: reviewer did not remember"
+      : `Approach: ${percent}% theory, ${100 - percent}% applied`;
+
   return (
     <div className="flex items-center gap-2" title={aria}>
-      <span className="w-20 text-sm text-muted-foreground">Recommend</span>
-      <Badge variant={props.wouldRecommend ? "default" : "secondary"}>
-        {label}
+      <span className="w-24 text-sm text-muted-foreground">Approach</span>
+      <Badge variant={percent === null ? "secondary" : "outline"}>
+        {percent === null ? "Not remembered" : `${percent}% theory`}
       </Badge>
+    </div>
+  );
+}
+
+type HappyTookChipProps = {
+  happyTook: boolean;
+};
+
+function HappyTookChip(props: Readonly<HappyTookChipProps>) {
+  const label = props.happyTook ? "Yes" : "No";
+  const aria = `Glad they took it: ${label}`;
+  return (
+    <div className="flex items-center gap-2" title={aria}>
+      <span className="w-24 text-sm text-muted-foreground">Glad they took</span>
+      <Badge variant={props.happyTook ? "default" : "secondary"}>{label}</Badge>
+    </div>
+  );
+}
+
+type ExaminationSummaryProps = {
+  /** `null` when the reviewer did not remember. */
+  distribution: ExaminationDistribution | null;
+};
+
+function ExaminationSummary({
+  distribution,
+}: Readonly<ExaminationSummaryProps>) {
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <span className="w-24 text-sm text-muted-foreground">Examination</span>
+      {distribution === null ? (
+        <Badge variant="secondary">Not remembered</Badge>
+      ) : (
+        EXAMINATION_DISTRIBUTION_KEYS.filter(
+          (key) => distribution[key] > 0,
+        ).map((key) => (
+          <Badge key={key} variant="outline">
+            {EXAMINATION_DISTRIBUTION_LABELS[key]} {distribution[key]}%
+          </Badge>
+        ))
+      )}
     </div>
   );
 }
 
 export type PostProps = {
   courseCode: string;
-  examinationMethods: number;
-  theoreticalVsApplied: number;
-  workload: number;
-  learningExperience: number;
-  wouldRecommend: boolean;
-  content: string;
-  likeCount?: number;
-  dislikeCount?: number;
-  userVote?: "like" | "dislike" | null;
+  examinationDistribution: ExaminationDistribution | null;
+  approachTheoryPercent: number | null;
+  workloadScore: number;
+  learningScore: number;
+  happyTook: boolean;
+  message: string | null;
+  upvoteCount?: number;
+  downvoteCount?: number;
+  userVote?: ReviewVoteType | null;
   postId?: string;
   /** Merged onto the outer `Card` (e.g. full-width on course detail). */
   className?: string;
 };
 
 export function Post(props: Readonly<PostProps>) {
-  const examinationMethods = normalizeRating(props.examinationMethods);
-  const theoreticalVsApplied = normalizeRating(props.theoreticalVsApplied);
-  const workload = normalizeRating(props.workload);
-  const learningExperience = normalizeRating(props.learningExperience);
-  const { like, dislike } = useReviewVotes(props.courseCode);
+  const { vote } = useReviewVotes(props.courseCode);
 
   const [expanded, setExpanded] = useState(false);
-  const content = props.content ?? "";
+  const content = props.message ?? "";
   const isLong = content.length > MAX_COLLAPSED_CHARS;
   const displayContent =
     expanded || !isLong
@@ -174,12 +202,14 @@ export function Post(props: Readonly<PostProps>) {
   return (
     <Card className={cn("w-[48rem] max-w-full", props.className)}>
       <CardHeader>
-        <div className="grid grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-5">
-          <RatingPill name="Exam methods" rating={examinationMethods} />
-          <RatingPill name="Theory vs applied" rating={theoreticalVsApplied} />
-          <RatingPill name="Workload" rating={workload} />
-          <RatingPill name="Learning exp." rating={learningExperience} />
-          <RecommendChip wouldRecommend={props.wouldRecommend} />
+        <div className="grid grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-3">
+          <ScorePill name="Workload" score={props.workloadScore} />
+          <ScorePill name="Learning" score={props.learningScore} />
+          <HappyTookChip happyTook={props.happyTook} />
+          <ApproachPill percent={props.approachTheoryPercent} />
+          <div className="md:col-span-2">
+            <ExaminationSummary distribution={props.examinationDistribution} />
+          </div>
         </div>
       </CardHeader>
 
@@ -204,11 +234,10 @@ export function Post(props: Readonly<PostProps>) {
         <CardFooter className="justify-end">
           <PostActionBar
             postId={props.postId}
-            likeCount={props.likeCount || 0}
-            dislikeCount={props.dislikeCount || 0}
-            userVote={props.userVote || null}
-            onPostLike={like}
-            onPostDislike={dislike}
+            upvoteCount={props.upvoteCount ?? 0}
+            downvoteCount={props.downvoteCount ?? 0}
+            userVote={props.userVote ?? null}
+            onVote={vote}
           />
         </CardFooter>
       )}
