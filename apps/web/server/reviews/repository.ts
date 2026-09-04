@@ -181,6 +181,32 @@ export async function listReviews(
     : await baseQuery;
 }
 
+/**
+ * This app user's review of this course, if they wrote one.
+ *
+ * `CONTEXT.md` holds a review to be "at most one per user per course", and
+ * this is the read that lets the service enforce it. There is no unique key on
+ * `(user_id, course_code)` yet — adding one needs a migration, which belongs
+ * to the schema track and to a pass over whatever duplicates are already
+ * stored — so `reviews_user_id_idx` carries this lookup meanwhile.
+ */
+export async function findByUserAndCourse(
+  userId: string,
+  courseCode: string,
+): Promise<ReviewRecord | undefined> {
+  const [review] = await db
+    .select()
+    .from(schema.reviews)
+    .where(
+      and(
+        eq(schema.reviews.userId, userId),
+        eq(schema.reviews.courseCode, courseCode),
+      ),
+    )
+    .limit(1);
+  return review;
+}
+
 export async function findById(id: string): Promise<ReviewRecord | undefined> {
   const [review] = await db
     .select()

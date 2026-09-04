@@ -74,11 +74,32 @@ function validateReviewInput(input: ReviewInput): ReviewInput {
   };
 }
 
+/**
+ * Publish one app user's review of one course.
+ *
+ * At most one per user per course — `CONTEXT.md`'s rule, enforced here because
+ * nothing else enforced it. The table has no unique key on
+ * `(user_id, course_code)`, so a second create used to insert a second row and
+ * move the course's averages with it. A reviewer who has changed their mind
+ * has `updateReview`; this is the write that publishes a first one.
+ *
+ * Two racing requests can still both pass this read. That is what the unique
+ * key is for, and it needs a migration and a decision about the duplicates
+ * already stored — the schema track's call, not this one's. The check closes
+ * the ordinary path meanwhile.
+ */
 export async function createReview(
   courseCode: string,
   userId: string,
   reviewData: ReviewInput,
 ) {
+  const existing = await reviewsRepo.findByUserAndCourse(userId, courseCode);
+  if (existing) {
+    throw new ValidationError(
+      `You have already reviewed ${courseCode}. Edit that review instead.`,
+    );
+  }
+
   const inserted = await reviewsRepo.insertReview({
     id: nanoid(),
     userId,

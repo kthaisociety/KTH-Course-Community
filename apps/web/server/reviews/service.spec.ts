@@ -60,7 +60,24 @@ describe("reviews", () => {
     ).rejects.toBeInstanceOf(ForbiddenError);
   });
 
+  it("createReview refuses a second review of the same course", async () => {
+    vi.mocked(reviewsRepo.findByUserAndCourse).mockResolvedValue(review);
+
+    await expect(
+      createReview("SF1625", "user-456", {
+        examinationDistribution: null,
+        approachTheoryPercent: null,
+        workloadScore: 8,
+        learningScore: 9,
+        happyTook: true,
+        message: null,
+      }),
+    ).rejects.toThrow(ValidationError);
+    expect(reviewsRepo.insertReview).not.toHaveBeenCalled();
+  });
+
   it("createReview round-trips a review through the target columns only", async () => {
+    vi.mocked(reviewsRepo.findByUserAndCourse).mockResolvedValue(undefined);
     vi.mocked(reviewsRepo.insertReview).mockResolvedValue(review);
 
     const created = await createReview("SF1625", "user-456", {
