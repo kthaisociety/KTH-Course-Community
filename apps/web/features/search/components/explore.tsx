@@ -1,10 +1,15 @@
 "use client";
 
 import { RotateCcw, Search as SearchIcon, TriangleAlert } from "lucide-react";
+import type { ReactNode } from "react";
 import { AuthReasonDialog } from "@/features/auth";
 import { CourseCardItem, courseCardGeometry } from "@/features/courses";
 import { PageColumn, PageHeader } from "@/features/shell";
-import { useExplore } from "../hooks/use-explore";
+import {
+  MAX_RATING_STARS,
+  RATING_STAR_OPTIONS,
+  useExplore,
+} from "../hooks/use-explore";
 import { useResultsWidth } from "../hooks/use-results-width";
 
 /**
@@ -35,6 +40,17 @@ import { useResultsWidth } from "../hooks/use-results-width";
  *   it just returned. A pager over that would invent pages that do not exist.
  * - The artboard's **filter row does not exist** at all; #89 requires one. It is
  *   built here in the artboard's own control vocabulary.
+ * - The artboard's **shared-element handoff from the landing hero** is not
+ *   built, deliberately. It works by the landing page stashing its search bar's
+ *   rect in `sessionStorage` and Explore translating its own bar out of it,
+ *   fading the surroundings in behind and sliding the rail in on the same curve
+ *   so the two read as one gesture. Both halves would have to be written:
+ *   `features/landing/` stores nothing today, and the rail and topbar belong to
+ *   `AppShell`, so Explore would be animating chrome it does not own. That is a
+ *   lot of coupling across three merged features for 280ms that the artboard
+ *   itself already drops under `prefers-reduced-motion` — and the receiving bar
+ *   is the same element either way, so it can be added later without reshaping
+ *   anything here.
  */
 export function Explore() {
   const explore = useExplore();
@@ -80,6 +96,10 @@ export function Explore() {
         ref={resultsRef}
         className="mx-auto flex w-full max-w-[1148px] flex-col gap-3.5 px-5 pb-5"
       >
+        {/* The live region stays mounted whatever the column is showing: one
+            that appears together with its first message is announced
+            unreliably. Before anything is searched it has nothing to say — the
+            panel below carries that — so it says nothing. */}
         <div className="flex items-baseline gap-2 pl-0.5 text-[12px] text-cc-muted">
           <span aria-live="polite">{resultsLabel(explore)}</span>
           {hasQuery ? (
@@ -158,7 +178,9 @@ export function Explore() {
 function resultsLabel(explore: ReturnType<typeof useExplore>): string {
   if (explore.isError) return "Catalogue unavailable";
   if (explore.isLoading) return "Loading courses…";
-  if (!explore.hasQuery) return "Search to see courses";
+  // Nothing searched: the artboard counts its whole mock catalogue here, and
+  // `StartHere` says what this column is for instead of repeating it.
+  if (!explore.hasQuery) return "";
   const count = explore.results.length;
   if (count === 0) return `No courses for “${explore.query}”`;
   return `Showing ${count} course${count === 1 ? "" : "s"} for “${explore.query}”`;
@@ -170,7 +192,7 @@ function Panel({
   children,
 }: {
   dashed?: boolean;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
     <div
@@ -339,9 +361,9 @@ function Filters({ explore }: { explore: ReturnType<typeof useExplore> }) {
         className={SELECT_CLASS}
       >
         <option value="">Any rating</option>
-        {[1, 2, 3, 4, 5].map((stars) => (
+        {RATING_STAR_OPTIONS.map((stars) => (
           <option key={stars} value={stars}>
-            {stars === 5 ? "5 stars" : `${stars}+ stars`}
+            {stars === MAX_RATING_STARS ? `${stars} stars` : `${stars}+ stars`}
           </option>
         ))}
       </select>

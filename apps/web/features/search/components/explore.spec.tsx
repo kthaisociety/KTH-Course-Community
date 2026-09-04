@@ -200,6 +200,44 @@ describe("Explore", () => {
     });
   });
 
+  // The field and `?q=` are two copies of one thing, and the hook has to decide
+  // which of them moved. Getting it wrong is silent: the mirror wins every
+  // argument and a Back click is undone before the reader sees it.
+  describe("the query, in the URL and in the field", () => {
+    it("writes what was typed into the URL, so the search can be shared", async () => {
+      render(<Explore />);
+
+      await userEvent.type(
+        screen.getByLabelText("Search courses"),
+        "graph theory",
+      );
+
+      await waitFor(() =>
+        expect(replace).toHaveBeenCalledWith("/search?q=graph+theory", {
+          scroll: false,
+        }),
+      );
+    });
+
+    it("adopts a query that arrives from outside, rather than overwriting it", async () => {
+      search = "q=graphs";
+      const { rerender } = render(<Explore />);
+      expect(screen.getByLabelText("Search courses")).toHaveValue("graphs");
+
+      // What Back does: the URL moves under a mounted page.
+      search = "q=compilers";
+      rerender(<Explore />);
+
+      await waitFor(() =>
+        expect(screen.getByLabelText("Search courses")).toHaveValue(
+          "compilers",
+        ),
+      );
+      // And the mirror does not push the old query back over it.
+      expect(replace).not.toHaveBeenCalled();
+    });
+  });
+
   describe("a visitor", () => {
     beforeEach(() => {
       useMe.mockReturnValue({ user: null });

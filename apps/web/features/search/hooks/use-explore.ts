@@ -1,7 +1,13 @@
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import {
+  type FormEvent,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import type { AuthReason } from "@/features/auth";
 import { NO_COURSE_STATS, useCourseStats } from "@/features/courses";
 import type { CourseStats, CourseSummary } from "@/types";
@@ -14,8 +20,19 @@ import {
 import { useDebouncedQuery } from "./use-debounced-query";
 
 /** The lowest and highest thresholds the rating dropdown offers, in stars. */
-export const MIN_RATING_STARS = 1;
+const MIN_RATING_STARS = 1;
 export const MAX_RATING_STARS = 5;
+
+/**
+ * Every threshold the dropdown offers.
+ *
+ * The control renders this and `readStars` below accepts exactly it, so the two
+ * cannot drift into a filter the reader can pick and the page then discards.
+ */
+export const RATING_STAR_OPTIONS = Array.from(
+  { length: MAX_RATING_STARS - MIN_RATING_STARS + 1 },
+  (_, index) => MIN_RATING_STARS + index,
+);
 
 /**
  * A star threshold as the URL can carry it, or `null` for "any rating".
@@ -38,16 +55,22 @@ function readStars(raw: string | null): number | null {
  *
  * ## The query lives in two places on purpose
  *
- * `?q=` seeds the field once, so a link shared out of Explore — or handed over
- * by the landing page's hero — opens on the search it names rather than empty
- * (#95). After that the field owns what is typed, because a text input driven
- * from the URL cannot keep up with a keystroke, and the debounced value is
- * mirrored *back* into `?q=` so the address bar always names the results on
- * screen. `router.replace` rather than `push`: a search that grew a character at
- * a time must not leave twelve entries in the reader's history.
+ * The field owns what is being typed, because an input driven from the URL
+ * cannot keep up with a keystroke. `?q=` owns what is being *searched*: it seeds
+ * the field on arrival, so a link shared out of Explore — or handed over by the
+ * landing page's hero — opens on the search it names rather than empty (#95),
+ * and the debounced value is written back to it so the address bar always names
+ * the results on screen. `router.replace` rather than `push`: a search that grew
+ * a character at a time must not leave twelve entries in the reader's history.
  *
- * The filters are the other way round — the URL drives them, because each is one
- * discrete click with nothing to keep up with, and that makes Back undo a filter.
+ * The two are reconciled by `writtenQuery`, which remembers the last value this
+ * hook itself put in the URL. A `?q=` that differs from it changed from
+ * *outside* — Back, Forward, or a link followed into the page — and the field
+ * adopts it. Without that, the mirror would win every argument and quietly
+ * undo a Back the moment the reader pressed it.
+ *
+ * The filters need none of this: each is one discrete click with nothing to keep
+ * up with, so the URL simply drives them, and Back undoes a filter for free.
  */
 export function useExplore() {
   const router = useRouter();
@@ -56,9 +79,13 @@ export function useExplore() {
 
   const [authReason, setAuthReason] = useState<AuthReason | null>(null);
 
-  const [field, setField] = useState(() => searchParams.get("q")?.trim() ?? "");
+  const urlQuery = searchParams.get("q")?.trim() ?? "";
+  const [field, setField] = useState(urlQuery);
   const [debouncedField, setDebouncedField] = useDebouncedQuery(field);
   const query = debouncedField.trim();
+
+  /** The last `?q=` this hook wrote. Anything else in the URL came from outside. */
+  const writtenQuery = useRef(urlQuery);
 
   const department = searchParams.get("department") ?? "";
   const minRatingStars = readStars(searchParams.get("rating"));
@@ -78,13 +105,22 @@ export function useExplore() {
     [router, pathname, searchParams],
   );
 
-  // Mirror only, and only when it would change something: `setParams` is rebuilt
-  // whenever the params change, so an unguarded write here would replace the URL
-  // with itself on every navigation.
+  // What was searched here goes into the URL.
   useEffect(() => {
-    if ((searchParams.get("q") ?? "") === query) return;
+    if (writtenQuery.current === query) return;
+    writtenQuery.current = query;
     setParams({ q: query || null });
-  }, [query, searchParams, setParams]);
+  }, [query, setParams]);
+
+  // And what arrives in the URL from anywhere else comes back into the field.
+  // Claiming it as written first is what stops the two effects chasing each
+  // other: whichever moves, the other sees its own value and stands down.
+  useEffect(() => {
+    if (writtenQuery.current === urlQuery) return;
+    writtenQuery.current = urlQuery;
+    setField(urlQuery);
+    setDebouncedField(urlQuery);
+  }, [urlQuery, setDebouncedField]);
 
   const filters: ExploreFilters = {
     department: department || undefined,
@@ -105,7 +141,7 @@ export function useExplore() {
 
   /** Enter, or the magnifier: skip the debounce and search what is typed now. */
   const onSubmit = useCallback(
-    (event?: React.FormEvent) => {
+    (event?: FormEvent) => {
       event?.preventDefault?.();
       setDebouncedField(field);
     },
