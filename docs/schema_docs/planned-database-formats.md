@@ -1,6 +1,6 @@
 # Planned database target
 
-Updated: 2026-09-01. This document explains the approved Lucidchart target. The exact column inventory and constraints live in [`planned-schema-lucid.json`](planned-schema-lucid.json).
+Updated: 2026-09-04. This document explains the approved Lucidchart target. The exact column inventory and constraints live in [`planned-schema-lucid.json`](planned-schema-lucid.json).
 
 ## Conventions
 
@@ -21,7 +21,9 @@ Updated: 2026-09-01. This document explains the approved Lucidchart target. The 
 
 `course_prerequisites` represents directed extracted relationships and preserves `courses.eligibility` for full source prose. It cannot express complex AND/OR eligibility logic.
 
-`course_explore` contains derived full-text and semantic-search state keyed one-to-one by `course_code`. `search_vector` and `embedding` serve different retrieval modes and are not duplicates. The source hash prevents unnecessary regeneration, while model and embedding timestamps make generated values traceable. `vector(1536)` follows the embedding model in `apps/web/server/ai.ts` (`openai/text-embedding-3-small`) and matches the shipped `courses.embedding` column, so the width carries over unchanged. Changing models later is a re-embed, not a column tweak — `embedding_model` and `embedded_at` exist to make that generation traceable. Create GIN and vector indexes after the extension and data strategy are settled.
+`course_explore` contains all derived per-course state keyed one-to-one by `course_code`; full-text and semantic-search state are one part of that wider charter. `search_vector` and `embedding` serve different retrieval modes and are not duplicates. The source hash prevents unnecessary search regeneration, while model and embedding timestamps make generated search values traceable. `vector(1536)` follows the embedding model in `apps/web/server/ai.ts` (`openai/text-embedding-3-small`) and matches the previously shipped `courses.embedding` column, so the width carries over unchanged. Changing embedding models later is a re-embed, not a column tweak — `embedding_model` and `embedded_at` exist to make that generation traceable. Create GIN and vector indexes after the extension and data strategy are settled.
+
+`keywords` is the controlled vocabulary and `course_keywords` assigns its terms to courses relationally. Zero keywords for a course is a legal outcome; the vocabulary must not force a bad match merely to create an assignment. Derived summary, keyword and eligibility staleness is tracked by version strings rather than content hashes because the retained source prose can no longer change.
 
 ## Saved and user domains
 
@@ -51,7 +53,7 @@ Review votes are one row per voter/review with enum `up` or `down`; absence mean
 
 ## Examination-method classification
 
-Course-level classification remains a derived-data concern and is not a separate table in the approved 16-table target. Broad labels are Exam, Assignments, Labs, Projects, Seminars/participation, and Other/unspecified. Classify normalized source code/title pairs, use titles as the primary signal, retain original titles, allow mixed labels, and never infer final-exam timing or workload shares.
+Course-level classification remains a derived-data concern and is not a separate table in the approved 18-table target; the two-table increase from the prior target is the relational controlled vocabulary in `keywords` and `course_keywords`. Broad labels are Exam, Assignments, Labs, Projects, Seminars/participation, and Other/unspecified. Classify normalized source code/title pairs, use titles as the primary signal, retain original titles, allow mixed labels, and never infer final-exam timing or workload shares.
 
 If mappings are persisted later, design a separate versioned mapping table or artifact after evaluating the classifier. Do not add model guesses to `course_examinations` source columns.
 

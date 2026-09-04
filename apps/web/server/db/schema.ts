@@ -185,6 +185,15 @@ export const courseExplore = pgTable(
     embedding: vector("embedding", { dimensions: 1536 }),
     sourceHash: text("source_hash"),
     searchVector: tsvector("search_vector"),
+    summary: text("summary"),
+    summaryVersion: text("summary_version"),
+    summaryGeneratedAt: timestamp("summary_generated_at", {
+      withTimezone: true,
+    }),
+    eligibilityVersion: text("eligibility_version"),
+    eligibilityExtractedAt: timestamp("eligibility_extracted_at", {
+      withTimezone: true,
+    }),
     embeddingModel: text("embedding_model"),
     embeddedAt: timestamp("embedded_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -205,6 +214,45 @@ export const courseExplore = pgTable(
 
 export type InsertCourseExplore = typeof courseExplore.$inferInsert;
 export type SelectCourseExplore = typeof courseExplore.$inferSelect;
+
+export const keywords = pgTable("keywords", {
+  id: serial("id").primaryKey(),
+  term: text("term").notNull().unique(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+
+export type InsertKeyword = typeof keywords.$inferInsert;
+export type SelectKeyword = typeof keywords.$inferSelect;
+
+export const courseKeywords = pgTable(
+  "course_keywords",
+  {
+    courseCode: text("course_code")
+      .notNull()
+      .references(() => courses.code, {
+        onDelete: "restrict",
+        onUpdate: "no action",
+      }),
+    keywordId: integer("keyword_id")
+      .notNull()
+      .references(() => keywords.id, {
+        onDelete: "restrict",
+        onUpdate: "no action",
+      }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.courseCode, table.keywordId] }),
+    index("course_keywords_keyword_id_idx").on(table.keywordId),
+  ],
+);
+
+export type InsertCourseKeyword = typeof courseKeywords.$inferInsert;
+export type SelectCourseKeyword = typeof courseKeywords.$inferSelect;
 
 export const userSavedCourses = pgTable(
   "user_saved_courses",

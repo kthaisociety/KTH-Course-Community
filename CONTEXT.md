@@ -55,6 +55,15 @@ The full source prose stating who may take a course, kept verbatim in
 `courses.eligibility`. Authoritative where a prerequisite edge is only a hint.
 _Avoid_: prerequisites, requirements text
 
+**Course summary**:
+A short English account of what a course covers, written for its catalogue card.
+_Avoid_: description, abstract, synopsis, blurb
+
+**Keyword**:
+A term from the controlled vocabulary assigned to a course to name a topic it
+covers. A course may have no keywords.
+_Avoid_: tag, label, category, free-form keyword
+
 ### A user's courses
 
 Saving, taking and reviewing are three independent relationships. None implies
