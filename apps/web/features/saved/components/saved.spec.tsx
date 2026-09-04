@@ -25,7 +25,7 @@ vi.mock("@/features/courses/api/queries", () => ({
       data: summariesPending() ? undefined : CATALOGUE[courseCode],
       isPending: summariesPending(),
     })),
-  useCourseStats: () => ({ data: undefined }),
+  useCourseStats: () => ({ data: {}, isPending: false }),
   useCollections: () => ({ data: [] }),
   useTakenCourses: () => ({ data: takenCourses() }),
 }));
@@ -148,6 +148,35 @@ describe("Saved", { timeout: 20_000 }, () => {
 
       expect(screen.queryByRole("article")).toBeNull();
       expect(screen.queryByText("No saved courses yet")).toBeNull();
+    });
+  });
+
+  /**
+   * A save whose `course.summary` does not answer is still a save: the row is
+   * in `user_saved_courses` and only the catalogue read failed. Dropping it
+   * would make the page under-report what the reader has, and a page where
+   * every read failed would claim they have saved nothing at all.
+   */
+  describe("a course whose details will not load", () => {
+    it("says so, and keeps the courses that did load", () => {
+      saved("DD2380", "ZZ9999");
+      render(<Saved />);
+
+      expect(screen.getAllByRole("article")).toHaveLength(1);
+      expect(
+        screen.getByText(/1 saved course could not be loaded/),
+      ).toBeInTheDocument();
+      expect(screen.getByText(/It is still saved/)).toBeInTheDocument();
+    });
+
+    it("never falls through to the empty state when every one failed", () => {
+      saved("ZZ9999", "ZZ8888");
+      render(<Saved />);
+
+      expect(screen.queryByText("No saved courses yet")).toBeNull();
+      expect(
+        screen.getByText(/2 saved courses could not be loaded/),
+      ).toBeInTheDocument();
     });
   });
 
