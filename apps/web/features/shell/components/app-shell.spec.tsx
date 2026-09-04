@@ -204,8 +204,10 @@ describe("AppShell", () => {
       expect(screen.getByRole("banner")).toHaveTextContent("Explore courses");
     });
 
-    it("falls back to the wordmark on a route the design never titled", () => {
-      pathname = "/reviews";
+    // Every route inside the shell is titled, so this only shows up on a path
+    // that resolves to no page at all.
+    it("falls back to the wordmark where there is no page to name", () => {
+      pathname = "/nothing-here";
       renderShell();
       expect(screen.getByRole("banner")).toHaveTextContent("Course Community");
     });

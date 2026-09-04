@@ -16,22 +16,30 @@
  * and no page renders `PageHeader` yet anyway.
  */
 
-/** The design's `landing` title, and what an unkeyed route falls back to. */
+/**
+ * The design's `landing` title, and the fallback.
+ *
+ * **Every route that renders inside the shell is titled below**, so in practice
+ * this only fires for a path that does not resolve to a page at all. A new
+ * route belongs in `TITLES` — `page-title.spec.ts` holds the list and will fail
+ * if one is added without a title.
+ */
 export const WORDMARK = "Course Community";
 
 /**
  * Longest prefix wins, so `/course/DD2380` and `/profile/settings` inherit
- * their section's title. Ordered longest-first; the lookup relies on that.
+ * their section's title.
  */
 const TITLES: ReadonlyArray<readonly [string, string]> = [
   // The design's own five, less `taken`, whose route #92 still has to build.
   ["/search", "Explore courses"],
   ["/favorites", "Saved courses"],
   ["/profile", "My Page"],
-  // Routes the design does not key. These are the pages' own headings, and
+  // Routes the design does not key, titled after the page's own heading.
   // #96 owns About and Contact if it wants different words.
   ["/newsletter", "Newsletter"],
   ["/contact", "Contact"],
+  ["/reviews", "Reviews"],
   ["/course", "Courses"],
   ["/about", "About"],
 ];
