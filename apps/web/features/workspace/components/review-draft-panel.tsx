@@ -168,7 +168,10 @@ function ScoreSlider({
 export interface ReviewDraftPanelProps {
   courseCode: string;
   draft: ReviewDraft;
+  /** The workspace already sent a review for this course. */
+  publishedEarlier: boolean;
   onDraftChange: (draft: ReviewDraft) => void;
+  onPublished: () => void;
 }
 
 /**
@@ -182,7 +185,9 @@ export interface ReviewDraftPanelProps {
 export function ReviewDraftPanel({
   courseCode,
   draft: openDraft,
+  publishedEarlier,
   onDraftChange,
+  onPublished,
 }: Readonly<ReviewDraftPanelProps>) {
   const { user, userId, isAuthenticated, isLoading: sessionLoading } = useMe();
   const addReview = useAddReview();
@@ -205,7 +210,8 @@ export function ReviewDraftPanel({
   const [publishedDraft, setPublishedDraft] = useState<ReviewDraft | null>(
     null,
   );
-  const published = publishedDraft !== null;
+  const justPublished = publishedDraft !== null;
+  const published = justPublished || publishedEarlier;
   const draft = publishedDraft ?? openDraft;
 
   /** Edits stop at the moment of publishing; after that there is a Review. */
@@ -236,8 +242,9 @@ export function ReviewDraftPanel({
    * averages. Flagged in the PR: that guard belongs in the reviews domain.
    */
   const alreadyReviewed =
-    userId !== "" &&
-    (courseReviews.data ?? []).some((review) => review.userId === userId);
+    published ||
+    (userId !== "" &&
+      (courseReviews.data ?? []).some((review) => review.userId === userId));
   const publishable = canPublish(draft) && !alreadyReviewed;
   const cuts = dividerPositions(draft);
   const examDisabled = draft.examinationForgotten;
@@ -286,6 +293,7 @@ export function ReviewDraftPanel({
     setPublishing(false);
     if (!ok) return;
     setPublishedDraft(draft);
+    onPublished();
     onDraftChange(EMPTY_REVIEW_DRAFT);
   }
 
@@ -636,7 +644,7 @@ export function ReviewDraftPanel({
             back untouched — check it and publish when you are ready.
           </p>
         )}
-        {published && (
+        {justPublished && (
           <p
             className="flex items-center gap-2.5 border-cc-rule border-b px-5 py-2.5 text-[12.5px]"
             style={{
@@ -648,7 +656,7 @@ export function ReviewDraftPanel({
             Published. Thanks — your review is live on the course.
           </p>
         )}
-        {alreadyReviewed && !published && (
+        {alreadyReviewed && !justPublished && (
           <p className="border-cc-rule border-b bg-cc-pill px-5 py-2.5 text-[12.5px] text-cc-brand leading-[1.45]">
             You have already reviewed this course. Edit or delete it from the
             course's reviews — a course takes one review per person.
@@ -679,7 +687,7 @@ export function ReviewDraftPanel({
                 : "cursor-not-allowed bg-cc-pill text-cc-dim",
             )}
           >
-            {published
+            {justPublished
               ? "Published"
               : justSignedIn
                 ? "Publish review"

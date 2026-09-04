@@ -479,6 +479,31 @@ describe("what survives a page load", () => {
     expect(screen.getByRole("button", { name: "Post review" })).toBeDisabled();
   });
 
+  it("refuses a second review even before the list has caught up", async () => {
+    const user = userEvent.setup({ delay: null });
+    const { unmount } = renderPane([openCourse("review")]);
+
+    await user.click(screen.getByRole("button", { name: "Yes, I am" }));
+    setScore("How demanding was this course?", 8);
+    setScore("How much did you learn in this course?", 6);
+    await user.click(screen.getByRole("button", { name: "Post review" }));
+    await screen.findByText(/Published. Thanks/);
+    unmount();
+
+    // `reviews.list` has not refetched — the workspace's own memory of what it
+    // sent is what has to close the door, so a filled-in draft cannot publish.
+    renderPane([openCourse("review")]);
+    await user.click(screen.getByRole("button", { name: "Yes, I am" }));
+    setScore("How demanding was this course?", 4);
+    setScore("How much did you learn in this course?", 4);
+
+    expect(
+      screen.getByText(/You have already reviewed this course/),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Post review" })).toBeDisabled();
+    expect(addReview).toHaveBeenCalledTimes(1);
+  });
+
   it("forgets a draft once it is a published review", async () => {
     const user = userEvent.setup({ delay: null });
     const { unmount } = renderPane([openCourse("review")]);

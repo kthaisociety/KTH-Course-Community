@@ -28,6 +28,7 @@ import { EMPTY_REVIEW_DRAFT, type ReviewDraft } from "./review-draft";
 
 const WORKSPACE_KEY = "cc.workspace.open";
 const DRAFTS_KEY = "cc.workspace.drafts";
+const PUBLISHED_KEY = "cc.workspace.published";
 const AWAITING_SIGN_IN_KEY = "cc.workspace.awaiting-sign-in";
 
 const KINDS: OpenCourseKind[] = ["details", "review"];
@@ -126,6 +127,25 @@ export function readDrafts(): Record<string, ReviewDraft> {
 
 export function writeDrafts(drafts: Record<string, ReviewDraft>): void {
   write(DRAFTS_KEY, drafts);
+}
+
+/**
+ * The courses reviewed from this workspace.
+ *
+ * The review itself is the durable record and `reviews.list` is where the pane
+ * reads it from — but that is a refetch away, and a review tab reopened before
+ * it lands would offer a second draft for a review that already exists. This
+ * is the workspace's own memory of what it sent, which needs no round trip and
+ * survives the tab being closed and reopened.
+ */
+export function readPublished(): string[] {
+  const value = read(PUBLISHED_KEY);
+  if (!Array.isArray(value)) return [];
+  return value.filter((code): code is string => typeof code === "string");
+}
+
+export function writePublished(courseCodes: string[]): void {
+  write(PUBLISHED_KEY, courseCodes);
 }
 
 /**

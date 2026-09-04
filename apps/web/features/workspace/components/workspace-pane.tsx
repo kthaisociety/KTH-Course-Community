@@ -16,7 +16,12 @@ import {
   tabLayout,
 } from "../lib/open-courses";
 import { EMPTY_REVIEW_DRAFT, type ReviewDraft } from "../lib/review-draft";
-import { readDrafts, writeDrafts } from "../lib/workspace-storage";
+import {
+  readDrafts,
+  readPublished,
+  writeDrafts,
+  writePublished,
+} from "../lib/workspace-storage";
 import { CourseDetailsPanel } from "./course-details-panel";
 import { ReviewDraftPanel } from "./review-draft-panel";
 
@@ -68,19 +73,26 @@ export function WorkspacePane({
   className,
 }: Readonly<WorkspacePaneProps>) {
   const [drafts, setDrafts] = useState<Record<string, ReviewDraft>>({});
-  const restoredDrafts = useRef(false);
+  const [published, setPublished] = useState<string[]>([]);
+  const restored = useRef(false);
 
-  // Drafts outlive the tab they were written in, because signing in navigates
-  // the page away and back. Restored in an effect so the first client render
-  // matches the server's.
+  // Drafts, and what has already been published, outlive the tab they were
+  // written in: signing in navigates the page away and back, and a review tab
+  // is a thing you come back to. Restored in an effect so the first client
+  // render matches the server's.
   useEffect(() => {
     setDrafts(readDrafts());
-    restoredDrafts.current = true;
+    setPublished(readPublished());
+    restored.current = true;
   }, []);
 
   useEffect(() => {
-    if (restoredDrafts.current) writeDrafts(drafts);
+    if (restored.current) writeDrafts(drafts);
   }, [drafts]);
+
+  useEffect(() => {
+    if (restored.current) writePublished(published);
+  }, [published]);
 
   const active =
     openCourses.find((entry) => entry.id === activeId) ?? openCourses[0];
@@ -91,6 +103,12 @@ export function WorkspacePane({
 
   function patchDraft(courseCode: string, draft: ReviewDraft) {
     setDrafts((current) => ({ ...current, [courseCode]: draft }));
+  }
+
+  function markPublished(courseCode: string) {
+    setPublished((current) =>
+      current.includes(courseCode) ? current : [...current, courseCode],
+    );
   }
 
   return (
@@ -233,7 +251,9 @@ export function WorkspacePane({
             key={active.id}
             courseCode={active.courseCode}
             draft={drafts[active.courseCode] ?? EMPTY_REVIEW_DRAFT}
+            publishedEarlier={published.includes(active.courseCode)}
             onDraftChange={(draft) => patchDraft(active.courseCode, draft)}
+            onPublished={() => markPublished(active.courseCode)}
           />
         )}
       </section>
