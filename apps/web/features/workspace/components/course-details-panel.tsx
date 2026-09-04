@@ -3,13 +3,16 @@
 import { useCallback, useRef, useState } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCourseDetails, useCourseSummaries } from "@/features/courses";
-import { Post, useReviewList } from "@/features/reviews";
+import {
+  examinationSegments,
+  ReviewList,
+  useReviewList,
+} from "@/features/reviews";
 import { formatHp, kthCourseUrl } from "@/lib/kth";
 import { sanitizeCourseHtml } from "@/lib/sanitize-html";
 import { cn } from "@/lib/utils";
 import type { CourseReviewStats } from "@/types";
 import { EXAMINATION_DISTRIBUTION_LABELS, MAX_REVIEW_SCORE } from "@/types";
-import { EXAMINATION_COLOR_VAR, namedShares } from "../lib/examination-palette";
 import { APPLIED_FILL, Kicker } from "./pane-parts";
 
 function Figure({ label, value }: { label: string; value: string }) {
@@ -59,9 +62,9 @@ function ReviewsSummary({
   stats: CourseReviewStats;
   onReadReviews: () => void;
 }) {
-  const shares = stats.examinationDistribution
-    ? namedShares(stats.examinationDistribution)
-    : [];
+  // The same slices the Review Card draws, from the reviews feature's own
+  // palette — one examination bar in the app, not two that drift apart.
+  const shares = examinationSegments(stats.examinationDistribution);
   const theory = stats.approachTheoryPercent;
 
   return (
@@ -85,10 +88,7 @@ function ReviewsSummary({
             {shares.map((share) => (
               <div
                 key={share.key}
-                style={{
-                  width: `${share.percent}%`,
-                  background: EXAMINATION_COLOR_VAR[share.key],
-                }}
+                style={{ width: `${share.percent}%`, background: share.color }}
               />
             ))}
           </div>
@@ -376,31 +376,15 @@ export function CourseDetailsPanel({
             </div>
 
             {reviewsOpen && (
-              <div className="mt-[13px] flex flex-col gap-3">
-                {reviews.isLoading && <Skeleton className="h-24 w-full" />}
-                {!reviews.isLoading && (reviews.data?.length ?? 0) === 0 && (
-                  <p className="text-[13px] text-cc-dim">
-                    No written review yet — the numbers above are the only
-                    signal so far.
-                  </p>
-                )}
-                {reviews.data?.map((review) => (
-                  <Post
-                    key={review.id}
-                    className="w-full"
-                    postId={review.id}
-                    courseCode={review.courseCode}
-                    examinationDistribution={review.examinationDistribution}
-                    approachTheoryPercent={review.approachTheoryPercent}
-                    workloadScore={review.workloadScore}
-                    learningScore={review.learningScore}
-                    happyTook={review.happyTook}
-                    message={review.message}
-                    upvoteCount={review.upvoteCount}
-                    downvoteCount={review.downvoteCount}
-                    userVote={review.userVote}
+              <div className="mt-[13px]">
+                {reviews.isLoading ? (
+                  <Skeleton className="h-24 w-full" />
+                ) : (
+                  <ReviewList
+                    courseCode={courseCode}
+                    reviews={reviews.data ?? []}
                   />
-                ))}
+                )}
               </div>
             )}
           </div>

@@ -3,7 +3,11 @@
 import { useEffect, useRef, useState } from "react";
 import { type AuthReason, AuthReasonDialog, useMe } from "@/features/auth";
 import { useCourseDetails } from "@/features/courses";
-import { useAddReview } from "@/features/reviews";
+import {
+  EXAMINATION_COLORS,
+  EXAMINATION_INK,
+  useAddReview,
+} from "@/features/reviews";
 import { formatHp } from "@/lib/kth";
 import { cn } from "@/lib/utils";
 import {
@@ -12,10 +16,6 @@ import {
   MAX_REVIEW_SCORE,
   MIN_REVIEW_SCORE,
 } from "@/types";
-import {
-  EXAMINATION_COLOR_VAR,
-  EXAMINATION_INK_VAR,
-} from "../lib/examination-palette";
 import {
   APPROACH_MIDPOINT,
   canPublish,
@@ -348,9 +348,7 @@ export function ReviewDraftPanel({
                     aria-hidden="true"
                     className="size-2 flex-none rounded-[2px]"
                     style={{
-                      background: picked
-                        ? EXAMINATION_COLOR_VAR[key]
-                        : UNSET_FILL,
+                      background: picked ? EXAMINATION_COLORS[key] : UNSET_FILL,
                     }}
                   />
                   {EXAMINATION_DISTRIBUTION_LABELS[key]}
@@ -377,8 +375,8 @@ export function ReviewDraftPanel({
                   className="flex items-center justify-center overflow-hidden whitespace-nowrap font-semibold text-[12px]"
                   style={{
                     width: `${draft.shares[index]}%`,
-                    background: EXAMINATION_COLOR_VAR[key],
-                    color: EXAMINATION_INK_VAR,
+                    background: EXAMINATION_COLORS[key],
+                    color: EXAMINATION_INK[key],
                   }}
                 >
                   {draft.shares[index] >= 24

@@ -24,13 +24,30 @@ vi.mock("@/features/courses", () => ({
   useCourseSummaries: (codes: string[]) => useCourseSummaries(codes),
 }));
 
-// `Post` is the review card the pane renders; #87 replaces it in place. The
-// pane's job is to hand it one review each, which is what this asserts.
-vi.mock("@/features/reviews", () => ({
+// `ReviewList` is the reviews feature's own list of designed Review Cards
+// (#87). The pane's job is to hand it the course and its reviews, which is
+// what this asserts; how a card draws itself is that feature's test.
+// The palette is the real one — the pane draws the same examination bar the
+// Review Card does. The barrel itself is not imported: it reaches the rich
+// text editor, whose stylesheet needs a PostCSS pass Vitest does not run.
+vi.mock("@/features/reviews", async () => ({
+  ...(await import("@/features/reviews/lib/examination-palette")),
   useReviewList: (code: string | undefined) => useReviewList(code),
   useAddReview: () => addReview,
-  Post: ({ postId }: { postId?: string }) => (
-    <article data-testid="review-card">{postId}</article>
+  ReviewList: ({
+    courseCode,
+    reviews,
+  }: {
+    courseCode: string;
+    reviews: { id: string }[];
+  }) => (
+    <div data-testid="review-list" data-course={courseCode}>
+      {reviews.map((review) => (
+        <article key={review.id} data-testid="review-card">
+          {review.id}
+        </article>
+      ))}
+    </div>
   ),
 }));
 
