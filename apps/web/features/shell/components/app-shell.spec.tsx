@@ -74,6 +74,13 @@ describe("AppShell", () => {
     expect(screen.getByText("Page body")).toBeInTheDocument();
   });
 
+  it("does not give Explore a competing page scroll surface", () => {
+    renderShell();
+    expect(screen.getByText("Page body").closest("main")).toHaveClass(
+      "overflow-hidden",
+    );
+  });
+
   describe("signed out", () => {
     it("still offers the whole catalogue — browsing needs no account", () => {
       renderShell();

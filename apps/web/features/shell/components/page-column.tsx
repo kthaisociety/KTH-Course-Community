@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { cn } from "@/lib/utils";
 
 /**
  * The content column every page renders inside, beneath the shell's topbar.
@@ -18,10 +19,23 @@ import type { ReactNode } from "react";
  * nothing for the text. The breakpoint is a container query on the column
  * itself, not the viewport, matching how the artboards respond.
  */
-export function PageColumn({ children }: { children: ReactNode }) {
+export function PageColumn({
+  children,
+  className,
+  contentClassName,
+}: {
+  children: ReactNode;
+  className?: string;
+  contentClassName?: string;
+}) {
   return (
-    <div className="@container">
-      <div className="mx-auto flex w-full max-w-[1216px] flex-col pb-15 @2xl:px-5">
+    <div className={cn("@container", className)}>
+      <div
+        className={cn(
+          "mx-auto flex w-full max-w-[1216px] flex-col pb-15 @2xl:px-5",
+          contentClassName,
+        )}
+      >
         {children}
       </div>
     </div>

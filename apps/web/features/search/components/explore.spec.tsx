@@ -47,6 +47,13 @@ vi.mock("@/features/courses/api/mutations", () => ({
 
 vi.mock("sonner", () => ({ toast: { error: vi.fn() } }));
 
+// Explore owns the viewport contract; the pane's detailed content is covered
+// in its own suite. This keeps the desktop interaction test focused on the
+// host and avoids pulling its editor CSS into this screen test.
+vi.mock("@/features/workspace/components/workspace-pane", () => ({
+  WorkspacePane: () => <section aria-label="Open courses" />,
+}));
+
 // `toSearchCoursesInput` stays real: that the browser sends a star threshold and
 // never a 1-10 score is the point of it (#67).
 vi.mock("../api/queries", async (importOriginal) => ({
@@ -88,6 +95,11 @@ function results(...courses: CourseSummary[]) {
 
 beforeEach(() => {
   search = "";
+  vi.stubGlobal("matchMedia", () => ({
+    matches: false,
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+  }));
   useMe.mockReturnValue({ user: { userId: "u1", savedCourseCodes: [] } });
   useSearchCourses.mockReturnValue(results());
 });
@@ -145,6 +157,38 @@ describe("Explore", () => {
         ),
       );
       expect(push).toHaveBeenCalledWith("/course/DD2380");
+    });
+
+    it("keeps the results as the only mobile scrolling surface", () => {
+      render(<Explore />);
+
+      expect(screen.getByTestId("explore-results")).toHaveClass(
+        "scrollbar-hidden",
+        "overflow-y-auto",
+      );
+      expect(screen.queryByLabelText("Open courses")).not.toBeInTheDocument();
+    });
+
+    it("opens courses in the resizable desktop workspace", async () => {
+      vi.stubGlobal("matchMedia", () => ({
+        matches: true,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      }));
+      render(<Explore />);
+
+      await userEvent.click(
+        within(screen.getAllByRole("article")[0] as HTMLElement).getByRole(
+          "button",
+          { name: /Artificial Intelligence/ },
+        ),
+      );
+
+      expect(screen.getByLabelText("Open courses")).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Resize workspace" }),
+      ).toHaveAttribute("title", "Drag to resize · double-click to reset");
+      expect(push).not.toHaveBeenCalled();
     });
   });
 

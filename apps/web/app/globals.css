@@ -322,6 +322,17 @@
   }
 }
 
+/* Explore owns its list's scroll surface. Hiding its rail keeps that surface
+   visually quiet while retaining wheel, touch, keyboard, and programmatic
+   scrolling. */
+@utility scrollbar-hidden {
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
 /* Course Community surfaces cross-fade between themes. Scoped to the opted-in
    subtree — a global `*` transition would animate every existing screen too. */
 @utility cc-theme {
