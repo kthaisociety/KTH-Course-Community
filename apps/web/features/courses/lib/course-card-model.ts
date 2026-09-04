@@ -249,11 +249,14 @@ export function toCourseCardModel(view: CourseCardView): CourseCardModel {
     collections,
 
     takenPickerOpen: view.takenPickerOpen ?? false,
-    // Reader-facing copy follows the design, which calls this "Add to
-    // comparison"; the identifier behind it is a collection either way
-    // (`CONTEXT.md`, "How to read it"). The card renders this string *and* uses
-    // it as the accessible name, so the two cannot drift apart.
-    addLabel: "Add to comparison",
+    // The artboards read "Add to comparison", and #68's settled decision 1
+    // overrides them: there is no AI-comparison feature, so promising one in
+    // the words a reader sees is the same error as promising it in an
+    // identifier. The panel this button opens is already headed "Add to
+    // collections", and the two disagreeing was the confusion #68 settled. The
+    // card renders this string *and* uses it as the accessible name, so those
+    // two cannot drift apart either.
+    addLabel: "Add to collection",
     removeLabel: view.removeLabel,
   };
 }

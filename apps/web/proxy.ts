@@ -19,6 +19,11 @@ export function proxy(request: NextRequest) {
   return NextResponse.next();
 }
 
+/**
+ * Every route that needs an account. A route renamed without its entry here
+ * silently loses its signed-out redirect, which is why `/saved` moved in the
+ * same commit that moved the page (#90).
+ */
 export const config = {
-  matcher: ["/profile/:path*", "/favorites/:path*"],
+  matcher: ["/profile/:path*", "/saved/:path*"],
 };

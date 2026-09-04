@@ -81,7 +81,7 @@ describe("AppShell", () => {
       expect(
         within(nav).getByRole("link", { name: /explore/i }),
       ).toHaveAttribute("href", "/search");
-      expect(savedLink()).toHaveAttribute("href", "/favorites");
+      expect(savedLink()).toHaveAttribute("href", "/saved");
       expect(
         within(nav).getByRole("link", { name: /my page/i }),
       ).toHaveAttribute("href", "/profile");

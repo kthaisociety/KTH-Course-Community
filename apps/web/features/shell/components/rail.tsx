@@ -70,7 +70,7 @@ type NavItem = {
 const NAV: readonly NavItem[] = [
   { href: "/search", label: "Explore", icon: Search, strokeWidth: 2.4 },
   {
-    href: "/favorites",
+    href: "/saved",
     label: "Saved courses",
     icon: Bookmark,
     strokeWidth: 2,
@@ -182,7 +182,7 @@ export function Rail({ onRequestAuth, onDismiss }: Props) {
                 aria-hidden
               />
               <span className="flex-1">{item.label}</span>
-              {item.href === "/favorites" && savedCount > 0 ? (
+              {item.href === "/saved" && savedCount > 0 ? (
                 <span className="rounded-[9px] bg-white/22 px-[7px] py-px font-semibold text-[11.5px]">
                   {savedCount}
                 </span>

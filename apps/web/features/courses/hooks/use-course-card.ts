@@ -11,7 +11,7 @@ import {
   type CourseCardView,
   toCourseCardModel,
 } from "@/features/courses/lib/course-card-model";
-import { useSetCourseSaved } from "@/features/favorites";
+import { useSetCourseSaved } from "@/features/saved";
 import type {
   CourseCardAction,
   CourseCardModel,

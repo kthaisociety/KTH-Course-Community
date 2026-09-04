@@ -15,7 +15,7 @@ const onRequestAuth = vi.fn();
 const toastError = vi.fn();
 
 vi.mock("@/features/auth", () => ({ useMe: () => useMe() }));
-vi.mock("@/features/favorites", () => ({
+vi.mock("@/features/saved", () => ({
   useSetCourseSaved: () => ({ setSaved }),
 }));
 vi.mock("@/features/courses/api/queries", () => ({

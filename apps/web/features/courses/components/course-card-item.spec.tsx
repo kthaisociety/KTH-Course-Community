@@ -8,7 +8,7 @@ import { CourseCardItem } from "./course-card-item";
 const useMe = vi.fn();
 
 vi.mock("@/features/auth", () => ({ useMe: () => useMe() }));
-vi.mock("@/features/favorites", () => ({
+vi.mock("@/features/saved", () => ({
   useSetCourseSaved: () => ({ setSaved: vi.fn().mockResolvedValue(undefined) }),
 }));
 vi.mock("@/features/courses/api/queries", () => ({
