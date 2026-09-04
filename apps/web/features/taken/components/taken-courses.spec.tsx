@@ -351,6 +351,50 @@ describe("adding by hand", () => {
     expect(screen.getAllByText("DD2380").length).toBeGreaterThan(0);
   });
 
+  it("cannot be dismissed out from under a write still in flight", async () => {
+    // Cancelling clears the draft, and a request that later rejects has
+    // nothing to hand back — the reader would retype everything to retry.
+    let reject = (_: Error) => {};
+    addTaken.mockImplementation(
+      () =>
+        new Promise((_resolve, rejectAdd) => {
+          reject = rejectAdd;
+        }),
+    );
+    render(<TakenCourses />);
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Add a course by hand" }),
+    );
+    await userEvent.type(
+      screen.getByLabelText("Search the KTH catalogue"),
+      "DD2380",
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: /DD2380\s*Artificial Intelligence/ }),
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Add course" }));
+
+    // Every way out is shut while the write is in flight — the × and the
+    // footer button both read "Cancel", and Escape comes through the same
+    // guard because the parent owns `open`.
+    const cancels = screen.getAllByRole("button", { name: "Cancel" });
+    expect(cancels).toHaveLength(2);
+    for (const cancel of cancels) {
+      expect(cancel).toBeDisabled();
+      await userEvent.click(cancel);
+    }
+    await userEvent.keyboard("{Escape}");
+    expect(screen.getByRole("button", { name: "Adding…" })).toBeVisible();
+
+    await act(async () => {
+      reject(new Error("nope"));
+    });
+    // Still open, still holding what the reader picked.
+    expect(screen.getByRole("button", { name: "Add course" })).toBeEnabled();
+    expect(screen.getAllByText("DD2380").length).toBeGreaterThan(0);
+  });
+
   it("cannot offer a course already on the list", async () => {
     searchResults.mockReturnValue([CATALOGUE.DD1337]);
     render(<TakenCourses />);

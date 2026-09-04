@@ -74,7 +74,18 @@ export function AddTakenCourseDialog({
     setYear("");
   }
 
+  /**
+   * Dismissal, but never over a write still in flight.
+   *
+   * Closing clears the draft, and a request that later rejects has nothing
+   * left to hand back — the reader would have to pick the course and retype
+   * the grade, credits and year to try again. So while `isSaving` this is a
+   * no-op, which covers every way out at once: `open` is the parent's state,
+   * so Escape and the overlay come through `onOpenChange` and stop here too,
+   * the same guard the inline row editor puts on its own Cancel.
+   */
   function close() {
+    if (isSaving) return;
     reset();
     onClose();
   }
@@ -125,8 +136,9 @@ export function AddTakenCourseDialog({
           <button
             type="button"
             onClick={close}
+            disabled={isSaving}
             aria-label="Cancel"
-            className="flex size-7 flex-none cursor-pointer items-center justify-center rounded-[7px] text-[18px] text-cc-dim leading-none hover:bg-cc-pill"
+            className="flex size-7 flex-none cursor-pointer items-center justify-center rounded-[7px] text-[18px] text-cc-dim leading-none hover:bg-cc-pill disabled:cursor-not-allowed disabled:opacity-50"
           >
             ×
           </button>
@@ -292,7 +304,8 @@ export function AddTakenCourseDialog({
             <button
               type="button"
               onClick={close}
-              className="flex h-[38px] cursor-pointer items-center rounded-[9px] border border-cc-rule3 bg-cc-surface px-3.5 font-medium text-[13px] text-cc-chip-ink hover:border-cc-hov"
+              disabled={isSaving}
+              className="flex h-[38px] cursor-pointer items-center rounded-[9px] border border-cc-rule3 bg-cc-surface px-3.5 font-medium text-[13px] text-cc-chip-ink hover:border-cc-hov disabled:cursor-not-allowed disabled:opacity-55"
             >
               Cancel
             </button>
