@@ -50,8 +50,6 @@ export function useWorkspacePane() {
     setWorkspace((current) => activateCourse(current, id));
   }, []);
 
-  const closeAll = useCallback(() => setWorkspace(EMPTY_WORKSPACE), []);
-
   return useMemo(
     () => ({
       /** Everything open, in tab order. Empty means the host hides the pane. */
@@ -62,8 +60,7 @@ export function useWorkspacePane() {
       open,
       close,
       activate,
-      closeAll,
     }),
-    [workspace, open, close, activate, closeAll],
+    [workspace, open, close, activate],
   );
 }

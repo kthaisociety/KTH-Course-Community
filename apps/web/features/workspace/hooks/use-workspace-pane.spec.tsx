@@ -47,7 +47,7 @@ describe("useWorkspacePane", () => {
   it("does not restore a workspace that was closed down to nothing", () => {
     const first = renderHook(() => useWorkspacePane());
     act(() => first.result.current.open("DD2380", "details"));
-    act(() => first.result.current.closeAll());
+    act(() => first.result.current.close("details:DD2380"));
     first.unmount();
 
     const { result } = renderHook(() => useWorkspacePane());

@@ -53,7 +53,7 @@ export const EMPTY_REVIEW_DRAFT: ReviewDraft = {
 /** The smallest share a segment may be dragged to, in whole percent. */
 export const MIN_SHARE = 5;
 /** Shares move in these steps, so the split stays a round number. */
-export const SHARE_STEP = 5;
+const SHARE_STEP = 5;
 
 /** The middle of the theory/applied track, where an untouched drag starts. */
 export const APPROACH_MIDPOINT = 50;
@@ -193,7 +193,7 @@ export function canPublish(draft: ReviewDraft): boolean {
 }
 
 /** Clamp a score onto the stored 1–10 scale. */
-export function clampScore(value: number): number {
+function clampScore(value: number): number {
   return Math.max(
     MIN_REVIEW_SCORE,
     Math.min(MAX_REVIEW_SCORE, Math.round(value)),

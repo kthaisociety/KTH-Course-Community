@@ -36,7 +36,7 @@ export interface Workspace {
 export const EMPTY_WORKSPACE: Workspace = { open: [], activeId: null };
 
 /** The id a `(courseCode, kind)` pair always gets, so opening twice is idempotent. */
-export function openCourseId(courseCode: string, kind: OpenCourseKind): string {
+function openCourseId(courseCode: string, kind: OpenCourseKind): string {
   return `${kind}:${courseCode}`;
 }
 
@@ -84,13 +84,6 @@ export function closeCourse(workspace: Workspace, id: string): Workspace {
 export function activateCourse(workspace: Workspace, id: string): Workspace {
   if (!workspace.open.some((entry) => entry.id === id)) return workspace;
   return { ...workspace, activeId: id };
-}
-
-/** The tab in front, or `null` when nothing is open. */
-export function activeCourse(workspace: Workspace): OpenCourse | null {
-  return (
-    workspace.open.find((entry) => entry.id === workspace.activeId) ?? null
-  );
 }
 
 /**
