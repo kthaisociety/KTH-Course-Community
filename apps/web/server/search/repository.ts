@@ -42,7 +42,7 @@ export async function searchByKeyword(
   const result = await db.execute(sql`
       SELECT ${schema.courses.code} AS code
       FROM ${schema.courses}
-      INNER JOIN ${schema.courseExplore}
+      LEFT JOIN ${schema.courseExplore}
         ON ${schema.courseExplore.courseCode} = ${schema.courses.code}
       WHERE ${whereSql}
       ORDER BY
