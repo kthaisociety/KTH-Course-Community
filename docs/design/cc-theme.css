@@ -36,6 +36,9 @@
   --warnInk: #7a5309;
   --warnBtn: #1751a6;
   --warnBtnFg: #ffffff;
+  --scoreWorkload: #b3691f;
+  --infoSolid: #eef4fb;
+  --warnSolid: #fdf7ea;
   --success: #1c7a4a;
   --successFg: #ffffff;
   --danger: #b3261e;
@@ -73,6 +76,9 @@
   --warnInk: #f2c879;
   --warnBtn: #dfa53c;
   --warnBtnFg: #1a1305;
+  --scoreWorkload: #e8b563;
+  --infoSolid: #294c80;
+  --warnSolid: #344b69;
   --success: #5fd08a;
   --successFg: #0c2417;
   --danger: #ff8a80;

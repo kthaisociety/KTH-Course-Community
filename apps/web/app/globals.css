@@ -71,6 +71,9 @@
   --color-cc-warn-ink: var(--cc-warn-ink);
   --color-cc-warn-btn: var(--cc-warn-btn);
   --color-cc-warn-btn-fg: var(--cc-warn-btn-fg);
+  --color-cc-score-workload: var(--cc-score-workload);
+  --color-cc-info-solid: var(--cc-info-solid);
+  --color-cc-warn-solid: var(--cc-warn-solid);
   --color-cc-success: var(--cc-success);
   --color-cc-success-fg: var(--cc-success-fg);
   --color-cc-danger: var(--cc-danger);
@@ -146,6 +149,9 @@
   --cc-warn-ink: #7a5309;
   --cc-warn-btn: #1751a6;
   --cc-warn-btn-fg: #ffffff;
+  --cc-score-workload: #b3691f;
+  --cc-info-solid: #eef4fb;
+  --cc-warn-solid: #fdf7ea;
   --cc-success: #1c7a4a;
   --cc-success-fg: #ffffff;
   --cc-danger: #b3261e;
@@ -233,6 +239,9 @@
   --cc-warn-ink: #f2c879;
   --cc-warn-btn: #dfa53c;
   --cc-warn-btn-fg: #1a1305;
+  --cc-score-workload: #e8b563;
+  --cc-info-solid: #294c80;
+  --cc-warn-solid: #344b69;
   --cc-success: #5fd08a;
   --cc-success-fg: #0c2417;
   --cc-danger: #ff8a80;
