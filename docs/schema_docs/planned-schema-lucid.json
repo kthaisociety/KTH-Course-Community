@@ -1,6 +1,6 @@
 {
   "status": "canonical planned target; not an applied migration",
-  "updated": "2026-09-01",
+  "updated": "2026-09-04",
   "source": {
     "name": "KTH Course Community — Planned schema",
     "url": "https://lucid.app/lucidchart/80b5e812-7b9d-44a7-b0d4-10bdd87941fb/edit?viewport_loc=1847%2C1804%2C805%2C512%2C0_0&invitationId=inv_4fe92980-e309-403d-b227-7c5ec1f1c7fd"
@@ -8,7 +8,7 @@
   "notes": [
     "Lucidchart is the visual authority; this JSON is its canonical machine-readable transcription.",
     "Defaults, referential actions and indexes not shown here are migration-time decisions documented in planned-database-formats.md.",
-    "The classification taxonomy and Better Auth-managed tables are outside this 16-table target.",
+    "The classification taxonomy and Better Auth-managed tables are outside this 18-table target; keywords and course_keywords add the controlled vocabulary to the prior target.",
     "The allowed values for node_style and node_signal_style are product decisions not enumerated in the diagram.",
     "course_rounds keys on a serial id. The planned (course_code, round_code) key required KOPPS round.ladokUID; that API is closed and no key derivable from the retained data distinguishes parallel rounds. See docs/adr/0004-course-round-identity.md."
   ],
@@ -274,6 +274,11 @@
         "embedding": { "type": "vector(1536)", "nullable": true },
         "source_hash": { "type": "text", "nullable": true },
         "search_vector": { "type": "tsvector", "nullable": true },
+        "summary": { "type": "text", "nullable": true },
+        "summary_version": { "type": "text", "nullable": true },
+        "summary_generated_at": { "type": "timestamptz", "nullable": true },
+        "eligibility_version": { "type": "text", "nullable": true },
+        "eligibility_extracted_at": { "type": "timestamptz", "nullable": true },
         "embedding_model": { "type": "text", "nullable": true },
         "embedded_at": { "type": "timestamptz", "nullable": true },
         "created_at": { "type": "timestamptz", "nullable": false },
@@ -284,6 +289,33 @@
         {
           "columns": ["course_code"],
           "references": { "table": "courses", "columns": ["code"] }
+        }
+      ]
+    },
+    "keywords": {
+      "columns": {
+        "id": { "type": "serial", "nullable": false },
+        "term": { "type": "text", "nullable": false },
+        "created_at": { "type": "timestamptz", "nullable": false }
+      },
+      "primaryKey": ["id"],
+      "unique": [["term"]]
+    },
+    "course_keywords": {
+      "columns": {
+        "course_code": { "type": "text", "nullable": false },
+        "keyword_id": { "type": "integer", "nullable": false },
+        "created_at": { "type": "timestamptz", "nullable": false }
+      },
+      "primaryKey": ["course_code", "keyword_id"],
+      "foreignKeys": [
+        {
+          "columns": ["course_code"],
+          "references": { "table": "courses", "columns": ["code"] }
+        },
+        {
+          "columns": ["keyword_id"],
+          "references": { "table": "keywords", "columns": ["id"] }
         }
       ]
     },
