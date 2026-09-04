@@ -1,6 +1,6 @@
 {
-  "id": "7433d8fb-b358-4bcf-9c6c-feb0b654f7fb",
-  "prevId": "3642ca47-7c55-4c74-acb8-20c1d1dadc8d",
+  "id": "ab856fe0-aa82-400a-9c09-cc556bb9a8dd",
+  "prevId": "28130534-2068-45e7-bed5-7a3967dc4c19",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -1181,62 +1181,6 @@
         "user_taken_courses_user_id_course_code_pk": {
           "name": "user_taken_courses_user_id_course_code_pk",
           "columns": ["user_id", "course_code"]
-        }
-      },
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.user_favorites": {
-      "name": "user_favorites",
-      "schema": "",
-      "columns": {
-        "user_id": {
-          "name": "user_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "fav_course_code": {
-          "name": "fav_course_code",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "user_favorites_user_id_users_id_fk": {
-          "name": "user_favorites_user_id_users_id_fk",
-          "tableFrom": "user_favorites",
-          "tableTo": "users",
-          "columnsFrom": ["user_id"],
-          "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "user_favorites_fav_course_code_courses_code_fk": {
-          "name": "user_favorites_fav_course_code_courses_code_fk",
-          "tableFrom": "user_favorites",
-          "tableTo": "courses",
-          "columnsFrom": ["fav_course_code"],
-          "columnsTo": ["code"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {
-        "user_favorites_user_id_fav_course_code_pk": {
-          "name": "user_favorites_user_id_fav_course_code_pk",
-          "columns": ["user_id", "fav_course_code"]
         }
       },
       "uniqueConstraints": {},
