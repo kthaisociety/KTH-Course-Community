@@ -3,8 +3,9 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 
 /**
- * Placeholder while search results load — mirrors {@link CourseCardWithCharts}
- * layout (left column + charts rail), using the same pulsing {@link Skeleton} primitive.
+ * Placeholder while search results load — mirrors the legacy card layout
+ * (left column + statistics rail), using the same pulsing {@link Skeleton}
+ * primitive. Explore now owns its design-specific skeleton.
  */
 export function CourseItemSkeleton() {
   return (
