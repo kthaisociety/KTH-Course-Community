@@ -31,6 +31,12 @@ type ReviewListProps = {
   reviews: ReviewModel[];
 };
 
+/**
+ * A stored review as the form takes it. The editor needs a string, so a review
+ * with no message opens empty — and goes back as `null`, because the dialog
+ * only asks for prose when publishing a first review and the hooks store an
+ * untyped-in editor as nothing written.
+ */
 function toEditable(review: ReviewModel): EditableReview {
   return {
     id: review.id,

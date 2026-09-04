@@ -1,8 +1,7 @@
 "use client";
 
 import { useForm } from "@tanstack/react-form";
-import { useEffect, useState } from "react";
-import { z } from "zod";
+import { useEffect, useMemo, useState } from "react";
 import { RichTextEditor } from "@/components/RichEditor";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -35,13 +34,11 @@ import type { ExaminationDistribution } from "@/types";
 import {
   EXAMINATION_DISTRIBUTION_KEYS,
   EXAMINATION_DISTRIBUTION_LABELS,
-  examinationDistributionSchema,
   MAX_REVIEW_SCORE,
-  percentSchema,
-  reviewScoreSchema,
 } from "@/types";
 import { useAddReview } from "../hooks/use-add-review";
 import { useEditReview } from "../hooks/use-edit-review";
+import { reviewFormSchema } from "../lib/review-form-schema";
 
 export type ReviewFormData = {
   happyTook: boolean;
@@ -62,22 +59,6 @@ const EMPTY_DISTRIBUTION: ExaminationDistribution = {
   seminars: 0,
   other: 0,
 };
-
-// The form shares the wire contract from `@/types` and adds only what is
-// specific to writing a review in a dialog: a message that is not just markup.
-const formSchema = z.object({
-  happyTook: z.boolean(),
-  message: z
-    .string()
-    .refine(
-      (html) => html.replace(/<[^>]*>/g, "").trim().length > 0,
-      "Write a review.",
-    ),
-  examinationDistribution: examinationDistributionSchema.nullable(),
-  approachTheoryPercent: percentSchema.nullable(),
-  workloadScore: reviewScoreSchema,
-  learningScore: reviewScoreSchema,
-});
 
 const emptyValues: ReviewFormData = {
   happyTook: false,
@@ -120,6 +101,14 @@ export function Review({
   const editReview = useEditReview(courseCode);
   const [dialogIsOpen, setDialogIsOpen] = useState(
     openOnLoad || Boolean(editing),
+  );
+  // Prose is required to publish a first review, not to keep one. A review
+  // already stored with no message is a valid row, and its author has to be
+  // able to correct a score without inventing text to go with it.
+  const isEditing = Boolean(editing);
+  const formSchema = useMemo(
+    () => reviewFormSchema({ requireMessage: !isEditing }),
+    [isEditing],
   );
   const form = useForm({
     defaultValues: editing

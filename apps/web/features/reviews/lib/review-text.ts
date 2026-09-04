@@ -35,6 +35,16 @@ export function toPlainText(html: string | null | undefined): string {
 }
 
 /**
+ * The message as the wire wants it. An editor the writer never typed into
+ * still emits markup — an empty paragraph, a stray `&nbsp;` — and storing that
+ * would make a scores-only review look written. `reviews.message` is nullable
+ * precisely so "wrote nothing" has an answer of its own.
+ */
+export function toStoredMessage(html: string): string | null {
+  return toPlainText(html) ? html : null;
+}
+
+/**
  * The one line of the review the collapsed card shows. Cut mid-sentence rather
  * than mid-word, and never left with a dangling comma before the ellipsis —
  * the truncation rule is the artboard's own.

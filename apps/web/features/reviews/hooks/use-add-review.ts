@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { useCreateReview } from "../api/mutations";
 import type { ReviewFormData } from "../components/review";
 import { warnAboutProfanity } from "../lib/profanity";
+import { toStoredMessage } from "../lib/review-text";
 
 export function useAddReview() {
   const createReview = useCreateReview();
@@ -16,7 +17,11 @@ export function useAddReview() {
     ): Promise<boolean> => {
       if (warnAboutProfanity(reviewForm.message)) return false;
       try {
-        await createReview.mutateAsync({ courseCode, ...reviewForm });
+        await createReview.mutateAsync({
+          courseCode,
+          ...reviewForm,
+          message: toStoredMessage(reviewForm.message),
+        });
         toast.success("Review added successfully!");
         return true;
       } catch {

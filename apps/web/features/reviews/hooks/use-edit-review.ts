@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { useUpdateReview } from "../api/mutations";
 import type { ReviewFormData } from "../components/review";
 import { warnAboutProfanity } from "../lib/profanity";
+import { toStoredMessage } from "../lib/review-text";
 
 /**
  * Rewrites a review the viewer already published. The same draft check as
@@ -19,7 +20,11 @@ export function useEditReview(courseCode: string) {
     async (id: string, reviewForm: ReviewFormData): Promise<boolean> => {
       if (warnAboutProfanity(reviewForm.message)) return false;
       try {
-        await updateReview.mutateAsync({ id, ...reviewForm });
+        await updateReview.mutateAsync({
+          id,
+          ...reviewForm,
+          message: toStoredMessage(reviewForm.message),
+        });
         toast.success("Review updated");
         return true;
       } catch {

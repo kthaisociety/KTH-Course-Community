@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { toExcerpt, toPlainText } from "./review-text";
+import { toExcerpt, toPlainText, toStoredMessage } from "./review-text";
 
 describe("toPlainText", () => {
   it("is empty for a review nobody wrote", () => {
@@ -17,6 +17,18 @@ describe("toPlainText", () => {
     expect(toPlainText("<p>Theory &amp; practice</p>")).toBe(
       "Theory & practice",
     );
+  });
+});
+
+describe("toStoredMessage", () => {
+  it("stores nothing for an editor the writer never typed into", () => {
+    expect(toStoredMessage("")).toBeNull();
+    expect(toStoredMessage("<p><br></p>")).toBeNull();
+    expect(toStoredMessage("<p>&nbsp;</p>")).toBeNull();
+  });
+
+  it("stores the markup verbatim once there are words in it", () => {
+    expect(toStoredMessage("<p>Worth it.</p>")).toBe("<p>Worth it.</p>");
   });
 });
 
