@@ -56,6 +56,8 @@ let cachedUnpdfUrl: string | undefined;
  */
 function resolveUnpdfUrl(): string {
   if (!cachedUnpdfUrl) {
+    // `createRequire` wants a file to resolve *from*, not a real file: only
+    // the directory part is used, so `noop.js` never has to exist.
     const from = createRequire(join(process.cwd(), "noop.js"));
     cachedUnpdfUrl = pathToFileURL(from.resolve("unpdf")).href;
   }
@@ -115,15 +117,20 @@ export async function extractTranscriptText(
         outcome();
       };
 
-      budget = setTimeout(() => settle(() => reject(unreadable())), budgetMs);
+      const fail = () => settle(() => reject(unreadable()));
+
+      budget = setTimeout(fail, budgetMs);
 
       worker.on("message", (reply: WorkerReply) => {
         settle(() => (reply.ok ? resolve(reply.text) : reject(unreadable())));
       });
       // A worker that dies outright — an OOM kill, a failure to boot — is
-      // reported the same way as a file the parser rejected.
-      worker.on("error", () => settle(() => reject(unreadable())));
-      worker.on("exit", () => settle(() => reject(unreadable())));
+      // reported the same way as a file the parser rejected. `exit` also fires
+      // on the way out of a successful parse, after `terminate()` below; that
+      // is a no-op because the promise has already settled, and it stays one
+      // because Node delivers a worker's `message` before its `exit`.
+      worker.on("error", fail);
+      worker.on("exit", fail);
     });
   } finally {
     // Unconditional: on the timeout path this is what actually reclaims the
