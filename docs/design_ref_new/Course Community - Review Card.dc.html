@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<div onClick="{{ r.onOpen }}" style="border:1px solid var(--rule);border-left:3px solid {{ r.accent }};border-radius:12px;background:var(--surface);padding:16px 16px 12px;cursor:pointer" style-hover="border-color:var(--hov)">
+<div style="display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:{{ r.happyFg }}"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.5"></circle><sc-if value="{{ r.isHappy }}" hint-placeholder-val="{{ false }}"><path d="m8.5 12.2 2.4 2.4 4.6-5"></path></sc-if><sc-if value="{{ r.isUnhappy }}" hint-placeholder-val="{{ false }}"><path d="M8.5 8.5l7 7M15.5 8.5l-7 7"></path></sc-if><sc-if value="{{ r.isUnset }}" hint-placeholder-val="{{ true }}"><path d="M8 12h8"></path></sc-if></svg>{{ r.happyLabel }}</div>
+<div style="margin-top:9px;font-size:13.5px;line-height:1.5;color:var(--ink)">{{ r.excerpt }}</div>
+<div style="margin-top:11px;display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:11.5px;color:var(--dim2)">
+<span>{{ r.code }} · {{ r.term }}</span>
+<div onClick="{{ stopClick }}" style="display:flex;align-items:center;border:1px solid var(--rule);border-radius:8px;overflow:hidden">
+<div onClick="{{ r.onUpvote }}" title="Helpful" style="display:flex;align-items:center;justify-content:center;width:24px;height:22px;cursor:pointer;color:{{ r.upColor }};transform:{{ r.upScale }};transition:transform .1s ease-out"><svg width="12" height="12" viewBox="0 0 24 24" fill="{{ r.upFill }}" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V6"></path><path d="m6 11 6-6 6 6"></path></svg></div>
+<span style="min-width:20px;text-align:center;font-size:11px;font-weight:700;color:var(--ink2)">{{ r.netScore }}</span>
+<div onClick="{{ r.onDownvote }}" title="Not helpful" style="display:flex;align-items:center;justify-content:center;width:24px;height:22px;cursor:pointer;color:{{ r.downColor }};transform:{{ r.downScale }};transition:transform .1s ease-out"><svg width="12" height="12" viewBox="0 0 24 24" fill="{{ r.downFill }}" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v13"></path><path d="m18 13-6 6-6-6"></path></svg></div>
+</div>
+</div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:420,&quot;height&quot;:130},&quot;review&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;{ code, name, term, author, date, likes?, upvotes?, downvotes?, message, happyTook, workloadScore, onOpen, onUnlike? }&quot;}}">
+/* One review: a colored left edge for happy/not-happy (green/red, the same
+   solid-accent language as the course-page tabs), the message leading,
+   a compact code+term meta line, and an upvote/downvote pair on the right
+   with a net score. A review passed with onUnlike (the Liked column) starts
+   with its upvote already filled in; clicking it off calls onUnlike.
+   Reviews are anonymous, so no name is shown. */
+class Component extends DCLogic {
+  state = { upOverride: null, downOverride: null };
+
+  renderVals() {
+    const r = this.props.review || {};
+    const happy = r.happyTook;
+    const excerpt = r.message && r.message.length > 160
+      ? r.message.slice(0, 157).replace(/[,;\s]+$/, "") + "…"
+      : (r.message || "");
+    const base = r.upvotes != null ? r.upvotes - (r.downvotes || 0) : (r.likes || 0);
+    const initialUp = Boolean(r.onUnlike);
+    const up = this.state.upOverride != null ? this.state.upOverride : initialUp;
+    const down = this.state.downOverride != null ? this.state.downOverride : false;
+    const net = base + ((up ? 1 : 0) - (initialUp ? 1 : 0)) - (down ? 1 : 0);
+    return {
+      r: {
+        code: r.code, term: r.term, excerpt,
+        isHappy: happy === true, isUnhappy: happy === false, isUnset: happy == null,
+        happyLabel: happy === true ? "Happy they took it" : happy === false ? "Not really" : "Not answered",
+        happyFg: happy === true ? "var(--successInk)" : happy === false ? "var(--dangerInk)" : "var(--dim)",
+        accent: happy === true ? "var(--success)" : happy === false ? "var(--warnBtn)" : "var(--rule3)",
+        netScore: net,
+        upColor: up ? "var(--brand)" : "var(--dim)",
+        upFill: up ? "currentColor" : "none",
+        upScale: up ? "scale(1.2)" : "scale(1)",
+        downColor: down ? "#a3452a" : "var(--dim)",
+        downFill: down ? "currentColor" : "none",
+        downScale: down ? "scale(1.2)" : "scale(1)",
+        onUpvote: (e) => {
+          e.stopPropagation();
+          const next = !up;
+          this.setState({ upOverride: next, downOverride: next ? false : this.state.downOverride });
+          if (!next && r.onUnlike) r.onUnlike(e);
+        },
+        onDownvote: (e) => {
+          e.stopPropagation();
+          const next = !down;
+          this.setState({ downOverride: next, upOverride: next ? false : this.state.upOverride });
+        },
+        onOpen: r.onOpen || (() => {})
+      },
+      stopClick: (e) => e.stopPropagation()
+    };
+  }
+}
+
+</script>
+</body>
+</html>

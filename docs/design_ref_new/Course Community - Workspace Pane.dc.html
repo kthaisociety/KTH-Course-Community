@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><style>.cc-pane-scroll{scrollbar-width:none}.cc-pane-scroll::-webkit-scrollbar{display:none}</style></helmet>
+<div style="position:relative;width:{{ paneWidth }};height:100%;box-sizing:border-box;flex:{{ paneGrow }};min-width:0;display:flex;flex-direction:column;min-height:0;overflow:{{ rootOverflow }}">
+
+<sc-if value="{{ authOpen }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(20,30,45,.34)">
+<div style="width:392px;box-sizing:border-box;padding:24px;border-radius:14px;background:var(--surface);box-shadow:0 18px 48px rgba(20,30,45,.24)">
+<div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+<div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--brand)">One step left</div>
+<div onClick="{{ onAuthCancel }}" title="Back to my draft" style="width:26px;height:26px;display:flex;align-items:center;justify-content:center;border-radius:7px;color:var(--dim);font-size:17px;line-height:1;cursor:pointer" style-hover="background:var(--pill)">×</div>
+</div>
+<div style="margin-top:8px;font-size:19px;font-weight:600;line-height:1.25">Sign in to publish your review</div>
+<div style="margin-top:6px;font-size:13.5px;line-height:1.5;color:var(--muted)">Your draft is saved as it is — text, scores and the course all stay put. Nothing is published until you confirm.</div>
+<div style="margin-top:16px;display:flex;flex-direction:column;gap:8px">
+<div onClick="{{ onAuthDone }}" style="display:flex;align-items:center;justify-content:center;gap:9px;height:42px;border-radius:9px;background:var(--btn);color:var(--btnFg);font-size:13.5px;font-weight:600;cursor:pointer" style-hover="background:var(--btn)">Continue with KTH account</div>
+<div onClick="{{ onAuthDone }}" style="display:flex;align-items:center;justify-content:center;height:42px;border-radius:9px;border:1px solid var(--rule3);background:var(--surface);font-size:13.5px;font-weight:500;color:var(--ink);cursor:pointer" style-hover="border-color:var(--hov)">Sign up with email</div>
+</div>
+<div onClick="{{ onAuthCancel }}" style="margin-top:14px;text-align:center;font-size:12.5px;font-weight:500;color:var(--brand);cursor:pointer" style-hover="text-decoration:underline">Back to my draft</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ showTabStrip }}" hint-placeholder-val="{{ true }}">
+<div data-pop="tabs" style="position:relative;display:flex;align-items:flex-end;padding-left:2px">
+<div onClick="{{ onToggleOverflow }}" title="All open panes" style="display:flex;align-items:center;justify-content:center;flex:none;box-sizing:border-box;width:26px;height:30px;margin:0 6px 2px 0;border-radius:7px;border:1px solid var(--rule3);background:{{ caretBg }};color:var(--ink2);font-size:14px;line-height:1;cursor:pointer" style-hover="background:var(--pill)">▾</div>
+<div style="display:flex;align-items:flex-end;gap:{{ tabGap }};min-width:0">
+<sc-for list="{{ tabItems }}" as="t" hint-placeholder-count="3">
+<div onClick="{{ t.onClick }}" title="{{ t.title }}" style="display:flex;align-items:center;gap:7px;box-sizing:border-box;position:relative;z-index:{{ t.z }};width:{{ t.width }};height:34px;margin-bottom:{{ t.dip }};padding:{{ t.padding }};justify-content:{{ t.justify }};border-radius:9px 9px 0 0;border:1px solid var(--rule3);border-bottom:none;background:{{ t.bg }};color:{{ t.fg }};font-size:12.5px;font-weight:{{ t.weight }};box-shadow:inset 0 3px 0 0 {{ t.accent }};cursor:pointer">
+<span style="width:{{ t.dot }};height:{{ t.dot }};flex:none;border-radius:2px;background:{{ t.accent }}"></span>
+<span style="flex:{{ t.labelFlex }};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ t.label }}</span>
+<sc-if value="{{ t.isActive }}" hint-placeholder-val="{{ false }}">
+<span onClick="{{ t.onClose }}" title="Close pane" style="flex:none;color:var(--dim);font-size:15px;line-height:1;cursor:pointer">×</span>
+</sc-if>
+</div>
+</sc-for>
+</div>
+<sc-if value="{{ overflowOpen }}" hint-placeholder-val="{{ false }}">
+<div data-pop-panel="tabs" style="position:absolute;top:38px;left:0;z-index:30;box-sizing:border-box;width:262px;padding:5px;border-radius:10px;border:1px solid var(--rule2);background:var(--surface);box-shadow:0 8px 24px rgba(20,30,45,.14)">
+<div style="box-sizing:border-box;max-height:222px;overflow-y:auto;overflow-x:hidden">
+<sc-for list="{{ switcherItems }}" as="o" hint-placeholder-count="3">
+<div onClick="{{ o.onClick }}" style="display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:7px;background:{{ o.bg }};font-size:12.5px;font-weight:{{ o.weight }};color:{{ o.fg }};cursor:pointer" style-hover="background:var(--pill)">
+<span style="width:7px;height:7px;flex:none;border-radius:2px;background:{{ o.accent }}"></span>
+<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ o.label }}</span>
+<span onClick="{{ o.onClose }}" title="Close pane" style="width:22px;height:22px;flex:none;display:flex;align-items:center;justify-content:center;border-radius:5px;color:var(--dim);font-size:15px;line-height:1;cursor:pointer" style-hover="background:var(--pill)">×</span>
+</div>
+</sc-for>
+<sc-if value="{{ noTabs }}" hint-placeholder-val="{{ false }}">
+<div style="padding:14px 10px;text-align:center;font-size:12px;color:var(--dim)">No open panes</div>
+</sc-if>
+</div>
+</div>
+</sc-if>
+</div>
+</sc-if>
+
+<div ref="{{ paneScrollRef }}" class="cc-pane-scroll" style="flex:0 1 auto;max-height:100%;min-height:0;margin-top:{{ scrollTopInset }};overflow:{{ scrollOverflow }};border:{{ contentBorder }};border-radius:{{ contentRadius }};background:var(--surface);box-shadow:{{ contentShadow }}">
+
+<div style="height:{{ topSpacer }};background:{{ topSpacerBg }}"></div>
+
+<sc-if value="{{ isDetails }}" hint-placeholder-val="{{ true }}">
+<div>
+<div style="padding:18px 20px 15px;border-bottom:1px solid var(--rule);background:var(--info)">
+<div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--brand)">Course details</div>
+<div style="margin-top:6px;font-size:19px;font-weight:600;line-height:1.2">{{ detail.title }}</div>
+<div style="margin-top:3px;font-size:13px;color:var(--muted)">{{ detail.meta }}</div>
+<div style="margin-top:12px;display:flex;gap:8px">
+<div style="display:flex;align-items:center;gap:7px;box-sizing:border-box;height:34px;padding:0 12px;border-radius:8px;border:1px solid var(--rule3);background:var(--surface);font-size:13px;color:var(--chipInk);white-space:nowrap;cursor:pointer" style-hover="border-color:var(--hov)">Open on KTH.se ↗</div>
+</div>
+<div style="margin-top:14px;padding-top:12px;border-top:1px solid #dde7f4">
+<div style="font-size:10.5px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--dim)">Offerings</div>
+<div style="margin-top:7px;display:flex;flex-direction:column;gap:5px;font-size:13px;color:var(--muted)">
+<sc-for list="{{ detail.offerings }}" as="o" hint-placeholder-count="2">
+<div><span style="font-weight:600;color:var(--ink)">{{ o.periods }}</span> · {{ o.language }} · {{ o.tutoring }}</div>
+</sc-for>
+<sc-if value="{{ noOfferings }}" hint-placeholder-val="{{ false }}">
+<div style="color:var(--dim2)">No offering on file.</div>
+</sc-if>
+</div>
+</div>
+</div>
+
+<div style="padding:16px 20px 20px;display:flex;flex-direction:column;gap:14px;background:var(--surface)">
+
+<div style="border:1px solid var(--rule);border-radius:12px;background:var(--pg);padding:15px 16px 14px">
+<div style="font-size:10.5px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--dim)">Content</div>
+<div style="margin-top:9px;font-size:14px;line-height:1.6;color:var(--ink2);display:-webkit-box;-webkit-line-clamp:{{ contentClamp }};-webkit-box-orient:vertical;overflow:hidden">{{ detail.content }}</div>
+<div onClick="{{ onToggleContent }}" style="margin-top:7px;font-size:13px;font-weight:500;color:var(--brand);cursor:pointer" style-hover="text-decoration:underline">{{ contentToggleLabel }}</div>
+</div>
+
+<sc-if value="{{ detail.unreviewed }}" hint-placeholder-val="{{ false }}">
+<div style="border:1px solid var(--rule);border-radius:12px;background:var(--pg);padding:15px 16px 14px;font-size:13px;color:var(--dim)">No reviews yet — be the first to write one.</div>
+</sc-if>
+<sc-if value="{{ detail.reviewed }}" hint-placeholder-val="{{ true }}">
+<div style="border:1px solid var(--rule);border-radius:12px;background:var(--pg);padding:15px 16px 14px">
+<div style="display:grid;grid-template-columns:1fr 0.82fr;gap:30px;align-items:stretch">
+<div>
+<div style="font-size:10.5px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--dim)">Reviews summary</div>
+<div style="margin-top:5px;margin-bottom:14px;font-size:14.5px;font-weight:600">What students report</div>
+<div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px;font-size:11.5px;color:var(--ink)"><span>Examination</span><span style="flex:none;padding:2px 8px;border-radius:999px;background:var(--pill);color:var(--dim);font-size:11px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap">{{ detail.exSplit }}</span></div>
+<div style="margin-top:7px;display:flex;height:14px;border-radius:4px;overflow:hidden;background:var(--pill)">
+<sc-for list="{{ detail.examSegments }}" as="x" hint-placeholder-count="3">
+<div style="width:{{ x.w }};background:{{ x.color }}"></div>
+</sc-for>
+</div>
+<div style="margin-top:6px;font-size:11px;color:var(--dim)">{{ detail.exNames }}</div>
+<div style="margin-top:18px;display:flex;align-items:baseline;justify-content:space-between;gap:8px;font-size:11.5px;color:var(--ink)"><span>Approach</span><span style="flex:none;padding:2px 8px;border-radius:999px;background:var(--pill);color:var(--dim);font-size:11px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap">{{ detail.thSplit }}</span></div>
+<div style="margin-top:7px;display:flex;height:6px;border-radius:3px;overflow:hidden"><div style="width:{{ detail.thW }};background:var(--btn)"></div><div style="width:{{ detail.apW }};background:#9dbfe4"></div></div>
+<div style="margin-top:6px;display:flex;justify-content:space-between;font-size:11px;color:var(--dim)"><span>Theoretical</span><span>Applied</span></div>
+<div style="height:1px;margin:18px 0;background:var(--pill)"></div>
+<div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px;font-size:11.5px;color:var(--ink)"><span>Workload</span><span style="flex:none;padding:2px 8px;border-radius:999px;background:var(--pill);color:var(--dim);font-size:11px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap">{{ detail.wl }} / 10</span></div>
+<div style="margin-top:7px;height:6px;border-radius:3px;background:var(--pill);overflow:hidden"><div style="height:100%;width:{{ detail.wlW }};background:var(--scoreWorkload)"></div></div>
+<div style="margin-top:18px;display:flex;align-items:baseline;justify-content:space-between;gap:8px;font-size:11.5px;color:var(--ink)"><span>Learning experience</span><span style="flex:none;padding:2px 8px;border-radius:999px;background:var(--pill);color:var(--dim);font-size:11px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap">{{ detail.le }} / 10</span></div>
+<div style="margin-top:7px;height:6px;border-radius:3px;background:var(--pill);overflow:hidden"><div style="height:100%;width:{{ detail.leW }};background:var(--btn)"></div></div>
+</div>
+<div style="display:flex;flex-direction:column;gap:10px;align-self:center;padding:16px 17px 15px;border-radius:11px;background:var(--info);border:1px solid var(--rule2)">
+<div>
+<div style="display:flex;justify-content:center">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--dim)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.7 4.8L18.5 9.5l-4.8 1.7L12 16l-1.7-4.8L5.5 9.5l4.8-1.7L12 3z"></path><path d="M18.6 15.4l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7.7-2z"></path></svg>
+</div>
+<div style="margin-top:8px;font-size:12px;line-height:1.5;color:var(--dim)">{{ detail.summaryLine }}</div>
+</div>
+<div onClick="{{ onExpandReviews }}" style="font-size:11.5px;font-weight:600;color:var(--dim);cursor:pointer" style-hover="text-decoration:underline">Read all {{ detail.reviews }} reviews →</div>
+</div>
+</div>
+</div>
+
+<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 13px;border-radius:10px;background:var(--info);border:1px solid var(--rule2)">
+<div style="font-size:12.5px;font-weight:500;line-height:1.45;color:var(--brand)">Taken this course? Your review helps the next student decide.</div>
+<div onClick="{{ onOpenReviewTab }}" style="flex:none;display:flex;align-items:center;gap:7px;white-space:nowrap;box-sizing:border-box;height:34px;padding:0 13px;border-radius:8px;background:var(--btn);color:var(--btnFg);font-size:13px;font-weight:500;cursor:pointer" style-hover="background:var(--btn)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--btnFg)" stroke-width="2" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-8 8H4l2-3.2A8 8 0 1 1 21 12z"></path></svg>Write a review</div>
+</div>
+
+<div>
+<div style="display:flex;border-bottom:1px solid var(--rule)">
+</sc-if>
+<sc-if value="{{ detail.reviewed }}" hint-placeholder-val="{{ true }}">
+<div ref="{{ reviewsRef }}" onClick="{{ onToggleReviews }}" style="display:flex;align-items:center;gap:7px;margin-bottom:-1px;padding-bottom:9px;border-bottom:2px solid {{ reviewsTabBorder }};font-size:13px;font-weight:600;color:{{ reviewsTabFg }};cursor:pointer">Reviews · {{ detail.reviews }}<span style="font-size:9px">{{ reviewsCaret }}</span></div>
+</div>
+<sc-if value="{{ reviewsOpen }}" hint-placeholder-val="{{ false }}">
+<div style="margin-top:13px;display:flex;flex-direction:column;gap:12px">
+<sc-if value="{{ detail.hasReviewCards }}" hint-placeholder-val="{{ true }}">
+<sc-for list="{{ detail.reviewCards }}" as="rv" hint-placeholder-count="2">
+<dc-import name="Course Community - Review Card" review="{{ rv }}" hint-size="100%,150px"></dc-import>
+</sc-for>
+</sc-if>
+<sc-if value="{{ detail.noReviewCards }}" hint-placeholder-val="{{ false }}">
+<div style="font-size:13px;color:var(--dim)">No written review yet — the numbers above are the only signal so far.</div>
+</sc-if>
+</div>
+</sc-if>
+</div>
+
+</div>
+</div>
+</sc-if>
+</sc-if>
+
+<sc-if value="{{ isReview }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;min-height:100%">
+<div style="padding:18px 20px 14px;background:var(--warn)">
+<div style="display:flex;align-items:center;justify-content:space-between">
+<div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--warnInk)">Review draft</div>
+<div style="font-size:11.5px;color:var(--dim)">{{ savedLabel }}</div>
+</div>
+<div style="margin-top:6px;font-size:19px;font-weight:600;line-height:1.2">{{ detail.title }}</div>
+<div style="margin-top:3px;font-size:13px;color:var(--muted)">{{ detail.meta }}</div>
+</div>
+<div style="position:sticky;top:0;z-index:4;padding:11px 20px 12px;border-bottom:1px solid var(--warnBorder);background:var(--warnSolid)">
+<div style="font-size:11.5px;color:var(--dim)">{{ progressLabel }}</div>
+<div style="margin-top:6px;display:flex;gap:6px">
+<sc-for list="{{ progressSegs }}" as="p" hint-placeholder-count="4">
+<div style="flex:1;height:6px;border-radius:99px;background:{{ p.bg }}"></div>
+</sc-for>
+</div>
+</div>
+
+<div style="padding:16px 20px 20px;display:flex;flex-direction:column;gap:14px;background:var(--surface)">
+
+<div style="border:1px solid var(--rule);border-radius:12px;background:var(--pg);padding:15px 16px 14px">
+<div style="font-size:10.5px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--dim)">Format</div>
+<div style="margin-top:5px;display:flex;align-items:baseline;justify-content:space-between;gap:10px">
+<div style="font-size:14.5px;font-weight:600">How was it examined?</div>
+<sc-if value="{{ examUnknownOff }}" hint-placeholder-val="{{ true }}">
+<div style="flex:none;padding:2px 9px;border-radius:999px;background:var(--pill);color:var(--brand);font-size:12px;font-weight:600;font-variant-numeric:tabular-nums">{{ examSplitLabel }}</div>
+</sc-if>
+</div>
+<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:11px">
+<sc-for list="{{ methodChips }}" as="m" hint-placeholder-count="7">
+<div onClick="{{ m.onClick }}" style="display:flex;align-items:center;gap:6px;height:30px;padding:0 11px;border-radius:15px;border:1px solid {{ m.border }};background:{{ m.bg }};color:{{ m.fg }};font-size:12.5px;cursor:pointer" style-hover="border-color:var(--brand)">
+<span style="width:8px;height:8px;flex:none;border-radius:2px;background:{{ m.dot }}"></span>{{ m.label }}
+</div>
+</sc-for>
+</div>
+<div ref="{{ examTrackRef }}" style="position:relative;margin-top:11px;display:flex;height:38px;border-radius:8px;overflow:hidden;background:var(--pill);user-select:none;opacity:{{ examTrackOpacity }};pointer-events:{{ examTrackPointer }}">
+<sc-if value="{{ examEmpty }}" hint-placeholder-val="{{ false }}">
+<div style="flex:1;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--dim)">Click the formats this course used</div>
+</sc-if>
+<sc-for list="{{ examSegs }}" as="s" hint-placeholder-count="3">
+<div style="width:{{ s.width }};background:{{ s.color }};display:flex;align-items:center;justify-content:center;color:{{ s.ink }};font-size:12px;font-weight:600;overflow:hidden;white-space:nowrap;transition:none">{{ s.slotLabel }}</div>
+</sc-for>
+<sc-for list="{{ examDividers }}" as="d" hint-placeholder-count="2">
+<div onPointerDown="{{ d.onDown }}" style="position:absolute;top:0;bottom:0;left:{{ d.left }};width:18px;margin-left:-9px;cursor:ew-resize;display:flex;align-items:center;justify-content:center">
+<div style="width:4px;height:24px;border-radius:2px;background:var(--surface);box-shadow:0 0 0 1px rgba(20,30,45,.18)"></div>
+</div>
+</sc-for>
+</div>
+<div onClick="{{ onToggleExamUnknown }}" role="checkbox" aria-checked="{{ examUnknown }}" tabIndex="0" style="margin-top:9px;display:flex;align-items:center;gap:8px;cursor:pointer">
+<span style="flex:none;width:16px;height:16px;border-radius:4px;border:1px solid {{ examCheckBorder }};background:{{ examCheckBg }};display:flex;align-items:center;justify-content:center"><sc-if value="{{ examUnknown }}" hint-placeholder-val="{{ false }}"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></sc-if></span>
+<span style="font-size:12.5px;color:var(--ink2)">I don't remember</span>
+</div>
+<div style="height:1px;margin:14px 0;background:var(--pill)"></div>
+<div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px">
+<div style="font-size:14.5px;font-weight:600">What was the approach?</div>
+<sc-if value="{{ theoryUnknownOff }}" hint-placeholder-val="{{ true }}">
+<div style="flex:none;padding:2px 9px;border-radius:999px;background:var(--pill);color:var(--brand);font-size:12px;font-weight:600;font-variant-numeric:tabular-nums">{{ theoryLabel }}</div>
+</sc-if>
+</div>
+<div onPointerDown="{{ onTheoryDown }}" style="position:relative;margin-top:11px;display:flex;height:38px;border-radius:8px;overflow:hidden;background:var(--pill);cursor:ew-resize;user-select:none;opacity:{{ theoryTrackOpacity }};pointer-events:{{ theoryTrackPointer }}">
+<div style="display:flex;width:100%;height:100%">
+<div style="width:{{ theoryW1 }};background:{{ theoryFill1 }};display:flex;align-items:center;padding-left:11px;color:{{ theoryInk1 }};font-size:12px;font-weight:600;overflow:hidden;white-space:nowrap">Theoretical</div>
+<div style="width:{{ theoryW2 }};background:{{ theoryFill2 }};display:flex;align-items:center;justify-content:flex-end;padding-right:11px;color:{{ theoryInk2 }};font-size:12px;font-weight:600;overflow:hidden;white-space:nowrap">Applied</div>
+</div>
+<div style="position:absolute;top:0;bottom:0;left:{{ theoryW1 }};width:18px;margin-left:-9px;display:flex;align-items:center;justify-content:center"><div style="width:4px;height:24px;border-radius:2px;background:var(--surface);box-shadow:0 0 0 1px rgba(20,30,45,.18)"></div></div>
+</div>
+<div onClick="{{ onToggleTheoryUnknown }}" role="checkbox" aria-checked="{{ theoryUnknown }}" tabIndex="0" style="margin-top:9px;display:flex;align-items:center;gap:8px;cursor:pointer">
+<span style="flex:none;width:16px;height:16px;border-radius:4px;border:1px solid {{ theoryCheckBorder }};background:{{ theoryCheckBg }};display:flex;align-items:center;justify-content:center"><sc-if value="{{ theoryUnknown }}" hint-placeholder-val="{{ false }}"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></sc-if></span>
+<span style="font-size:12.5px;color:var(--ink2)">I don't remember</span>
+</div>
+</div>
+
+<div style="border:1px solid var(--rule);border-radius:12px;background:var(--pg);padding:15px 16px 14px">
+<div style="font-size:10.5px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--dim);margin-bottom:11px">Course profile</div>
+<div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:9px"><div style="font-size:14.5px;font-weight:600">How demanding was this course?</div><div style="flex:none;padding:2px 9px;border-radius:999px;background:var(--pill);color:var(--brand);font-size:12px;font-weight:600;font-variant-numeric:tabular-nums">{{ workloadLabel }}</div></div>
+<div onPointerDown="{{ onWorkloadDown }}" style="position:relative;height:22px;display:flex;align-items:center;cursor:pointer;user-select:none">
+<div style="height:8px;width:100%;border-radius:4px;background:var(--pill);overflow:hidden"><div style="height:100%;width:{{ workloadW }};background:var(--btn)"></div></div>
+<sc-if value="{{ workloadSet }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;left:{{ workloadW }};width:20px;height:20px;margin-left:-10px;border-radius:50%;background:var(--surface);border:2px solid var(--brand);box-shadow:0 1px 3px rgba(0,0,0,.15)"></div>
+</sc-if>
+</div>
+<div style="display:flex;justify-content:space-between;font-size:11.5px;color:var(--muted);margin-top:4px"><span>Not at all</span><span>Very</span></div>
+<div style="height:1px;margin:14px 0;background:var(--pill)"></div>
+<div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:9px"><div style="font-size:14.5px;font-weight:600">How much did you learn in this course?</div><div style="flex:none;padding:2px 9px;border-radius:999px;background:var(--pill);color:var(--brand);font-size:12px;font-weight:600;font-variant-numeric:tabular-nums">{{ learningLabel }}</div></div>
+<div onPointerDown="{{ onLearningDown }}" style="position:relative;height:22px;display:flex;align-items:center;cursor:pointer;user-select:none">
+<div style="height:8px;width:100%;border-radius:4px;background:var(--pill);overflow:hidden"><div style="height:100%;width:{{ learningW }};background:var(--btn)"></div></div>
+<sc-if value="{{ learningSet }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;left:{{ learningW }};width:20px;height:20px;margin-left:-10px;border-radius:50%;background:var(--surface);border:2px solid var(--brand);box-shadow:0 1px 3px rgba(0,0,0,.15)"></div>
+</sc-if>
+</div>
+<div style="display:flex;justify-content:space-between;font-size:11.5px;color:var(--muted);margin-top:4px"><span>Nothing new</span><span>Transformative</span></div>
+</div>
+
+<div style="border:1px solid var(--rule);border-radius:12px;background:var(--pg);padding:15px 16px 14px">
+<div style="font-size:10.5px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--dim)">Your take</div>
+<div style="margin-top:5px;display:flex;align-items:baseline;justify-content:space-between;gap:10px"><span style="font-size:14.5px;font-weight:600">Are you happy you took this course?</span><sc-if value="{{ happyNotSet }}" hint-placeholder-val="{{ false }}"><span style="flex:none;padding:2px 9px;border-radius:999px;background:var(--pill);color:var(--brand);font-size:12px;font-weight:600">Not set</span></sc-if></div>
+<div style="margin-top:10px;display:flex;gap:8px">
+<sc-for list="{{ happyOpts }}" as="h" hint-placeholder-count="2">
+<div onClick="{{ h.onClick }}" style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px;height:40px;border-radius:9px;border:1px solid {{ h.border }};background:{{ h.bg }};color:{{ h.fg }};font-size:13.5px;font-weight:{{ h.weight }};cursor:pointer" style-hover="border-color:var(--brand)">
+<span style="width:15px;height:15px;flex:none;border-radius:50%;border:1px solid {{ h.dotBorder }};background:{{ h.dot }}"></span>{{ h.label }}
+</div>
+</sc-for>
+</div>
+<div style="height:1px;margin:14px 0;background:var(--pill)"></div>
+<div style="font-size:14.5px;font-weight:600">Write your review</div>
+<div style="margin-top:3px;font-size:12px;color:var(--muted)">Not sure where to start? Tap one:</div>
+<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:9px">
+<sc-for list="{{ promptChips }}" as="p" hint-placeholder-count="3">
+<div onClick="{{ p.onClick }}" style="display:flex;align-items:center;height:28px;padding:0 11px;border-radius:14px;border:1px dashed #9dbfe4;background:var(--pill);color:var(--brand);font-size:11.5px;font-weight:500;cursor:pointer" style-hover="background:var(--pill)">{{ p.label }}</div>
+</sc-for>
+</div>
+<div style="margin-top:10px;border:1px solid var(--rule3);border-radius:10px;overflow:hidden;background:var(--surface)">
+<div style="display:flex;gap:2px;padding:6px 8px;border-bottom:1px solid var(--rule);background:var(--pg);font-size:13px;color:var(--muted)">
+<span style="padding:3px 7px;border-radius:5px;font-weight:700">B</span><span style="padding:3px 7px;border-radius:5px;font-style:italic">I</span><span style="padding:3px 7px;border-radius:5px;text-decoration:underline">U</span><span style="padding:3px 7px;border-radius:5px">• List</span>
+</div>
+<textarea value="{{ reviewText }}" onChange="{{ onReviewChange }}" placeholder="What should the next student know before signing up?" style="display:block;width:100%;box-sizing:border-box;min-height:104px;padding:12px;border:none;outline:none;resize:vertical;background:var(--surface);font-family:Geist,system-ui,sans-serif;font-size:13.5px;line-height:1.55;color:var(--ink2)"></textarea>
+</div>
+<div style="margin-top:6px;font-size:11.5px;color:var(--muted)">Be constructive and respectful</div>
+</div>
+
+</div>
+
+<div style="margin-top:auto;border-top:1px solid var(--rule);background:var(--surface)">
+<sc-if value="{{ justAuthed }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;align-items:center;gap:9px;padding:10px 20px;border-bottom:1px solid var(--rule);background:var(--pill);font-size:12.5px;line-height:1.45;color:var(--brand)">
+<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1751a6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>
+Signed in as Elsa Lindqvist. Your draft came back untouched — check it and publish when you are ready.
+</div>
+</sc-if>
+<sc-if value="{{ posted }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;align-items:center;gap:9px;padding:10px 20px;border-bottom:1px solid var(--rule);background:var(--successTint);font-size:12.5px;color:var(--successInk)">
+<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--successInk)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>
+Published. Thanks — your review is live on the course.
+</div>
+</sc-if>
+<div style="display:flex;justify-content:flex-end;gap:9px;padding:12px 20px">
+<div style="display:flex;align-items:center;height:36px;padding:0 14px;border-radius:8px;border:1px solid var(--rule3);font-size:13px;color:var(--chipInk);cursor:pointer" style-hover="border-color:var(--hov)">Save draft</div>
+<div onClick="{{ onPostReview }}" style="display:flex;align-items:center;height:36px;padding:0 16px;border-radius:8px;background:{{ postBg }};color:{{ postFg }};font-size:13px;font-weight:600;cursor:{{ postCursor }}" title="{{ postHint }}">{{ postLabel }}</div>
+</div>
+</div>
+</div>
+</sc-if>
+
+</div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:560,&quot;height&quot;:700},&quot;courses&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;any[]&quot;},&quot;storeModule&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;any&quot;},&quot;locale&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;en&quot;,&quot;options&quot;:[&quot;en&quot;,&quot;sv&quot;],&quot;tsType&quot;:&quot;string&quot;},&quot;isGuest&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;paneWidth&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;string&quot;},&quot;paneGrow&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;string&quot;},&quot;openSignal&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;any&quot;},&quot;onTabsChange&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;(count:number)=&gt;void&quot;},&quot;onAuthed&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;()=&gt;void&quot;},&quot;hideTabs&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;}}">
+const METHODS = [
+  { key: "exam", label: "On-campus exam", short: "Exam", color: "var(--brand)", ink: "var(--btnFg)" },
+  { key: "assignments", label: "Assignments", short: "Assign.", color: "#dfa53c", ink: "#3a2a06" },
+  { key: "labs", label: "Labs", short: "Labs", color: "#2f9e8e", ink: "#06251f" },
+  { key: "projects", label: "Project", short: "Project", color: "#6a4ea8", ink: "var(--btnFg)" },
+  { key: "other", label: "Other", short: "Other", color: "#57646f", ink: "var(--btnFg)" }
+];
+/** Even split across n segments in 5% steps; the remainder lands on the last. */
+function evenSplit(n) {
+  if (n === 0) return [];
+  const base = Math.max(5, Math.round(100 / n / 5) * 5);
+  const out = new Array(n).fill(base);
+  out[n - 1] = 100 - base * (n - 1);
+  return out;
+}
+const EMPTY_DRAFT = { picked: [], pcts: [], theory: null, examUnknown: false, theoryUnknown: false, workload: null, learning: null, recommend: null, reviewText: "" };
+
+/* Owns every open course-details/review-draft tab and its own drafts. The
+   host tells it which course to open (openSignal) and reads back how many
+   tabs are open (onTabsChange) for its own results-column sizing \u2014
+   otherwise this component is fully self-contained. */
+class Component extends DCLogic {
+  state = {
+    tabs: [], tab: 0, drafts: {},
+    overflowOpen: false, reviewsOpen: false, contentOpen: false,
+    authOpen: false, justAuthed: false, posted: false
+  };
+  examTrackRef = React.createRef();
+  paneScrollRef = React.createRef();
+  reviewsRef = React.createRef();
+  _lastCount = 0;
+
+  componentDidMount() {
+    document.addEventListener("pointerdown", this.onDocDown, true);
+    document.addEventListener("keydown", this.onDocKey, true);
+    document.addEventListener("scroll", this.onDocScroll, true);
+  }
+
+  componentWillUnmount() {
+    document.removeEventListener("pointerdown", this.onDocDown, true);
+    document.removeEventListener("keydown", this.onDocKey, true);
+    document.removeEventListener("scroll", this.onDocScroll, true);
+  }
+
+  /* This runtime never calls componentDidUpdate, so both cross-component
+     effects are driven from renderVals() itself \u2014 deferred a tick with a
+     microtask so the state write never lands mid-render. */
+  checkSignal() {
+    const sig = this.props.openSignal;
+    if (sig && sig.nonce !== this._appliedNonce) {
+      this._appliedNonce = sig.nonce;
+      Promise.resolve().then(() => this.openTab(sig.code, sig.kind));
+    }
+    const count = this.state.tabs.length;
+    if (count !== this._lastCount) {
+      this._lastCount = count;
+      if (this.props.onTabsChange) Promise.resolve().then(() => this.props.onTabsChange(count));
+    }
+  }
+
+  onDocDown = (e) => {
+    if (e.target.closest && e.target.closest("[data-pop]")) return;
+    if (this.state.overflowOpen) this.setState({ overflowOpen: false });
+  };
+  onDocKey = (e) => {
+    if (e.key !== "Escape") return;
+    if (this.state.overflowOpen) this.setState({ overflowOpen: false });
+  };
+  onDocScroll = (e) => {
+    if (e.target.closest && e.target.closest("[data-pop-panel]")) return;
+    if (this.state.overflowOpen) this.setState({ overflowOpen: false });
+  };
+
+  openTab(code, kind) {
+    const tabs = this.state.tabs.slice();
+    const idx = tabs.findIndex((t) => t.code === code && t.kind === kind);
+    if (idx >= 0) { this.setState({ tab: idx, overflowOpen: false }); return; }
+    tabs.push({ id: Date.now(), kind, code, label: code + (kind === "r" ? " · Review draft" : " · Details") });
+    this.setState({ tabs, tab: tabs.length - 1, overflowOpen: false });
+  }
+
+  closeTab(e, i) {
+    e.stopPropagation();
+    const tabs = this.state.tabs.slice();
+    tabs.splice(i, 1);
+    let tab = this.state.tab;
+    if (i < tab) tab -= 1;
+    if (tab >= tabs.length) tab = tabs.length - 1;
+    this.setState({ tabs, tab: Math.max(0, tab) });
+  }
+
+  draftFor(code) {
+    return this.state.drafts[code] || EMPTY_DRAFT;
+  }
+
+  patchDraft(code, patch) {
+    const drafts = { ...this.state.drafts };
+    drafts[code] = { ...this.draftFor(code), ...patch };
+    this.setState({ drafts });
+  }
+
+  drag(onMove) {
+    const move = (ev) => onMove(ev);
+    const up = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+    document.body.style.cursor = "ew-resize";
+    document.body.style.userSelect = "none";
+  }
+
+  dividerDown(i, rect, pcts, setPcts) {
+    const before = pcts.slice(0, i).reduce((a, p) => a + p, 0);
+    const pair = pcts[i] + pcts[i + 1];
+    this.drag((ev) => {
+      let x = ((ev.clientX - rect.left) / rect.width) * 100 - before;
+      x = Math.round(x / 5) * 5;
+      x = Math.max(5, Math.min(pair - 5, x));
+      const next = pcts.slice();
+      next[i] = x;
+      next[i + 1] = pair - x;
+      setPcts(next);
+    });
+  }
+
+  bump(i, delta, pcts, setPcts) {
+    const next = pcts.slice();
+    const j = (i + 1) % next.length;
+    if (i === j) return;
+    if (next[i] + delta < 5 || next[j] - delta < 5) return;
+    next[i] += delta;
+    next[j] -= delta;
+    setPcts(next);
+  }
+
+  toggleMethod(method, picked, setBoth) {
+    const next = picked.slice();
+    const at = next.indexOf(method);
+    if (at >= 0) next.splice(at, 1); else next.push(method);
+    setBoth(next, evenSplit(next.length));
+  }
+
+  startPct(e, scale, apply) {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const run = (ev) => {
+      const raw = ((ev.clientX - rect.left) / rect.width) * 100;
+      apply(scale === 100
+        ? Math.round(Math.max(5, Math.min(95, raw)))
+        : Math.round(Math.max(1, Math.min(10, raw / 10))));
+    };
+    run(e);
+    this.drag(run);
+  }
+
+  revealReviews() {
+    this.setState({ reviewsOpen: true }, () => {
+      requestAnimationFrame(() => {
+        const box = this.paneScrollRef.current;
+        const head = this.reviewsRef.current;
+        if (!box || !head) return;
+        const top = head.getBoundingClientRect().top - box.getBoundingClientRect().top + box.scrollTop;
+        box.scrollTo({ top: Math.max(0, top - 12), behavior: "smooth" });
+      });
+    });
+  }
+
+  renderVals() {
+    this.checkSignal();
+    const s = this.state;
+    const STORE = this.props.storeModule;
+    const courses = this.props.courses || [];
+    const guest = Boolean(this.props.isGuest);
+    const active = s.tabs[s.tab] || s.tabs[0] || { kind: "none", code: "" };
+    const indexed = s.tabs.map((t, i) => ({ ...t, i }));
+    const d = this.draftFor(active.code);
+    const setDraft = (patch) => this.patchDraft(active.code, patch);
+
+    const buildMix = (keys, pcts, ref, setPcts, setBoth) => {
+      const items = keys.map((k) => METHODS.find((m) => m.key === k)).filter(Boolean);
+      let acc = 0;
+      const cuts = [];
+      for (let i = 0; i < items.length - 1; i++) { acc += pcts[i] || 0; cuts.push(acc); }
+      return {
+        items,
+        segs: items.map((m, i) => {
+          const p = pcts[i] || 0;
+          return { label: m.label, short: m.short, color: m.color, ink: m.ink, width: p + "%", slotLabel: p >= 24 ? m.label : p >= 13 ? m.short : "" };
+        }),
+        dividers: cuts.map((left, i) => ({
+          left: left + "%",
+          onDown: (e) => { e.preventDefault(); const el = ref.current; if (el) this.dividerDown(i, el.getBoundingClientRect(), pcts, setPcts); }
+        })),
+        chips: METHODS.map((m) => {
+          const on = keys.indexOf(m.key) >= 0;
+          return {
+            label: m.label, dot: on ? m.color : "#ded8c8",
+            bg: on ? "var(--pill)" : "var(--surface)", fg: on ? "var(--ink)" : "var(--muted)",
+            border: on ? "var(--brand)" : "var(--rule3)",
+            onClick: () => this.toggleMethod(m.key, keys, setBoth)
+          };
+        })
+      };
+    };
+
+    const draftMix = buildMix(d.picked, d.pcts, this.examTrackRef, (pcts) => setDraft({ pcts }), (picked, pcts) => setDraft({ picked, pcts }));
+    const chosen = draftMix.items;
+    const doneCount = [
+      (d.picked.length > 0 || d.examUnknown) && (d.theory != null || d.theoryUnknown),
+      d.workload != null && d.learning != null,
+      d.recommend != null && Boolean(d.reviewText.trim())
+    ].filter(Boolean).length;
+    const untouched = doneCount === 0 && d.recommend == null && !d.reviewText.trim();
+
+    const known = courses.find((x) => x.code === active.code);
+    const c = known || {
+      code: active.code, title: active.code, meta: "7.5 hp · " + active.code + " · SCI",
+      summary: "No description on file yet. Open the course on KTH.se for the official syllabus.",
+      keywords: "", exSegments: [], th: null, wl: 0, le: 0, happy: 0, stats: ["0", "0", "0"]
+    };
+    const segs = c.exSegments || [];
+    const rounds = (STORE && active.code ? (STORE.getCourse(active.code) || { rounds: [] }).rounds : []) || [];
+
+    return {
+      paneWidth: this.props.paneWidth, paneGrow: this.props.paneGrow,
+      showTabStrip: !this.props.hideTabs,
+      // Restores the breathing room the mobile sheet's own scroll container
+      // used to carry as padding-top — moved onto scrolling content instead,
+      // so the sticky bar itself sticks flush with no residual gap once stuck.
+      topSpacer: this.props.hideTabs ? "28px" : "0px",
+      // Leaves the sheet's own 3px accent edge showing above the card's
+      // surface colour, which would otherwise paint straight over it.
+      scrollTopInset: this.props.hideTabs ? "3px" : "0px",
+      // Matches whichever header sits right below it, so the mobile sheet's
+      // rounded top (with its own accent) reads as one continuous tint
+      // instead of the card surface's neutral colour showing through.
+      topSpacerBg: !this.props.hideTabs ? "transparent" : active.kind === "r" ? "var(--warn)" : active.kind === "c" ? "var(--info)" : "transparent",
+      // On the mobile sheet, the sheet's own scroll container is the real
+      // one — an overflow context here (even a non-scrolling one) would
+      // hijack the sticky progress bar's containing block, pinning it to
+      // this box instead of the sheet's visible top.
+      rootOverflow: this.props.hideTabs ? "visible" : "hidden",
+      scrollOverflow: this.props.hideTabs ? "visible" : "auto",
+      contentBorder: this.props.hideTabs ? "none" : "1px solid var(--rule3)",
+      contentRadius: this.props.hideTabs ? "0" : "0 12px 12px 12px",
+      contentShadow: this.props.hideTabs ? "none" : "0 1px 2px rgba(20,30,45,.05)",
+      tabGap: indexed.length > 8 ? "2px" : "4px",
+      caretBg: s.overflowOpen ? "var(--rule2)" : "var(--pill)",
+      tabItems: indexed.map((t) => {
+        const on = t.i === s.tab;
+        const tight = indexed.length > 8;
+        const medium = !tight && indexed.length > 4;
+        const width = tight ? (on ? 44 : 30) : medium ? (on ? 90 : 68) : (on ? 104 : 88);
+        return {
+          title: t.label, label: tight ? "" : medium ? t.code.slice(2) : t.code,
+          labelFlex: tight ? "0 0 0" : "1", justify: tight ? "center" : "flex-start",
+          width: width + "px", padding: tight ? "0" : on ? "0 8px 0 9px" : "0 9px",
+          dot: tight ? "8px" : "7px", accent: t.kind === "r" ? "#dfa53c" : "#1751a6",
+          bg: on ? "var(--surface)" : "var(--pill)", fg: on ? "var(--ink)" : "var(--dim)",
+          weight: on ? "600" : "500", z: on ? "1" : "0", dip: on ? "-1px" : "0", isActive: on,
+          onClick: () => this.setState({ tab: t.i, overflowOpen: false }),
+          onClose: (e) => this.closeTab(e, t.i)
+        };
+      }),
+      overflowOpen: s.overflowOpen,
+      onToggleOverflow: (e) => { e.stopPropagation(); this.setState({ overflowOpen: !s.overflowOpen }); },
+      noTabs: s.tabs.length === 0,
+      switcherItems: indexed.map((t) => ({
+        label: t.label, accent: t.kind === "r" ? "#dfa53c" : "#1751a6",
+        bg: t.i === s.tab ? "var(--pill)" : "transparent", fg: t.i === s.tab ? "var(--brand)" : "var(--ink2)",
+        weight: t.i === s.tab ? "600" : "400",
+        onClick: () => this.setState({ tab: t.i, overflowOpen: false }),
+        onClose: (e) => this.closeTab(e, t.i)
+      })),
+      paneScrollRef: this.paneScrollRef,
+      reviewsRef: this.reviewsRef,
+      reviewsOpen: s.reviewsOpen,
+      reviewsCaret: s.reviewsOpen ? "▴" : "▾",
+      reviewsTabBorder: s.reviewsOpen ? "var(--brand)" : "transparent",
+      reviewsTabFg: s.reviewsOpen ? "var(--brand)" : "var(--muted)",
+      onToggleReviews: () => this.setState({ reviewsOpen: !s.reviewsOpen }),
+      onExpandReviews: () => this.revealReviews(),
+      isDetails: active.kind === "c",
+      isReview: active.kind === "r",
+      noOfferings: rounds.length === 0,
+      contentClamp: s.contentOpen ? "unset" : "3",
+      contentToggleLabel: s.contentOpen ? "Show less" : "Read more",
+      onToggleContent: () => this.setState({ contentOpen: !s.contentOpen }),
+      onOpenReviewTab: () => this.openTab(active.code, "r"),
+      detail: {
+        title: c.title, meta: c.meta, content: c.summary,
+        offerings: rounds.map((r, i) => ({
+          key: r.roundCode || String(i),
+          periods: r.formattedPeriodsAndCredits || r.periodLabel || "—",
+          language: r.language || "—", tutoring: r.tutoringForm || "—"
+        })),
+        reviews: c.stats[2],
+        reviewed: Boolean(known), unreviewed: !known,
+        reviewCards: (STORE && active.code ? STORE.reviewsByCourse(active.code) : []).map((r) => STORE.reviewView(r, { locale: this.props.locale })).map((rv) => ({
+          code: rv.courseCode, name: rv.name, term: rv.startTermLabel,
+          author: rv.author, date: rv.createdAtLabel, likes: rv.helpfulCount,
+          message: rv.message, workloadScore: rv.workloadScore, happyTook: rv.happyTook
+        })),
+        hasReviewCards: STORE && active.code ? STORE.reviewsByCourse(active.code).length > 0 : false,
+        noReviewCards: STORE && active.code ? STORE.reviewsByCourse(active.code).length === 0 : true,
+        summaryLine: known
+          ? "Reviewers single out " + (c.keywords ? c.keywords.split(", ")[0] : "the material") + " as the part of the course that sticks, and flag "
+            + (c.wl >= 80 ? "the workload as the thing to plan around." : "the pace as brisk but manageable.")
+          : "",
+        examSegments: segs.map((x) => ({ w: x.percent + "%", color: x.color })),
+        exSplit: segs.length ? segs.map((x) => x.percent).join(" / ") : "—",
+        exNames: segs.length ? segs.map((x) => x.label).join(" · ") : "No examination breakdown yet",
+        thW: (c.th || 0) + "%", apW: (c.th == null ? 0 : 100 - c.th) + "%",
+        thSplit: c.th == null ? "—" : c.th + " / " + (100 - c.th),
+        wl: c.wl != null ? (c.wl / 10).toFixed(1) : "—", wlW: (c.wl || 0) + "%",
+        le: c.le != null ? (c.le / 10).toFixed(1) : "—", leW: (c.le || 0) + "%"
+      },
+      examTrackRef: this.examTrackRef,
+      examSegs: draftMix.segs,
+      examSplitLabel: chosen.length ? chosen.map((m, i) => d.pcts[i] || 0).join(" / ") : "Not set",
+      examUnknownOff: !d.examUnknown,
+      examEmpty: chosen.length === 0,
+      examUnknown: d.examUnknown,
+      examTrackOpacity: d.examUnknown ? "0.4" : "1",
+      examTrackPointer: d.examUnknown ? "none" : "auto",
+      onToggleExamUnknown: () => setDraft({ examUnknown: !d.examUnknown, picked: [], pcts: [] }),
+      examCheckBorder: d.examUnknown ? "var(--brand)" : "var(--rule3)",
+      examCheckBg: d.examUnknown ? "var(--brand)" : "transparent",
+      savedLabel: untouched ? "Not saved yet" : "Saved just now",
+      examDividers: draftMix.dividers,
+      methodChips: draftMix.chips,
+      theoryW1: (d.theory == null ? 50 : d.theory) + "%",
+      theoryW2: (d.theory == null ? 50 : 100 - d.theory) + "%",
+      theoryFill1: d.theory == null ? "var(--pill)" : "#12417f",
+      theoryFill2: d.theory == null ? "var(--pill)" : "#a9c8ec",
+      theoryInk1: d.theory == null ? "var(--dim)" : "#fff",
+      theoryInk2: d.theory == null ? "var(--dim)" : "#12417f",
+      theoryLabel: d.theory == null ? "Not set" : d.theory + " / " + (100 - d.theory),
+      theoryUnknownOff: !d.theoryUnknown,
+      onTheoryDown: (e) => { if (d.theoryUnknown) return; this.startPct(e, 100, (v) => setDraft({ theory: v })); },
+      theoryUnknown: d.theoryUnknown,
+      theoryTrackOpacity: d.theoryUnknown ? "0.4" : "1",
+      theoryTrackPointer: d.theoryUnknown ? "none" : "auto",
+      onToggleTheoryUnknown: () => setDraft({ theoryUnknown: !d.theoryUnknown, theory: null }),
+      theoryCheckBorder: d.theoryUnknown ? "var(--brand)" : "var(--rule3)",
+      theoryCheckBg: d.theoryUnknown ? "var(--brand)" : "transparent",
+      workloadW: (d.workload == null ? 0 : d.workload * 10) + "%",
+      workloadSet: d.workload != null,
+      workloadLabel: d.workload == null ? "Not set" : d.workload + " / 10",
+      onWorkloadDown: (e) => this.startPct(e, 10, (v) => setDraft({ workload: v })),
+      learningW: (d.learning == null ? 0 : d.learning * 10) + "%",
+      learningSet: d.learning != null,
+      learningLabel: d.learning == null ? "Not set" : d.learning + " / 10",
+      onLearningDown: (e) => this.startPct(e, 10, (v) => setDraft({ learning: v })),
+      reviewText: d.reviewText,
+      onReviewChange: (e) => setDraft({ reviewText: e.target.value }),
+      promptChips: [
+        ["What surprised you?", "One thing that surprised me was "],
+        ["Who is it for?", "This course is a great fit if you "],
+        ["Time it really took?", "Budget more time than you think for "]
+      ].map(([label, starter]) => ({
+        label,
+        onClick: () => setDraft({ reviewText: d.reviewText ? d.reviewText.replace(/\s*$/, "") + "\n" + starter : starter })
+      })),
+      progressLabel: doneCount + " of 3 sections done",
+      progressSegs: [0, 1, 2].map((i) => ({ bg: i < doneCount ? "var(--btn)" : "var(--pill)" })),
+      happyNotSet: d.recommend == null,
+      happyOpts: [[true, "Yes, I am"], [false, "No, I am not"]].map(([v, label]) => {
+        const on = d.recommend === v;
+        return {
+          label, bg: on ? "var(--pill)" : "var(--surface)", fg: on ? "var(--brand)" : "var(--chipInk)",
+          border: on ? "var(--brand)" : "var(--rule3)", weight: on ? "600" : "500",
+          dot: on ? "#1751a6" : "transparent", dotBorder: on ? "var(--brand)" : "#c8c2b2",
+          onClick: () => setDraft({ recommend: v })
+        };
+      }),
+      authOpen: s.authOpen,
+      justAuthed: s.justAuthed && !s.posted,
+      posted: s.posted,
+      postLabel: s.posted ? "Published" : s.justAuthed ? "Publish review" : "Post review",
+      postBg: (d.recommend != null && d.workload != null && d.learning != null) ? "var(--btn)" : "var(--pill)",
+      postFg: (d.recommend != null && d.workload != null && d.learning != null) ? "var(--btnFg)" : "var(--dim)",
+      postCursor: (d.recommend != null && d.workload != null && d.learning != null) ? "pointer" : "not-allowed",
+      postHint: (d.recommend != null && d.workload != null && d.learning != null) ? "" : "Answer happy, workload and learning to publish — the write-up is the only optional part",
+      onPostReview: () => {
+        if (d.recommend == null || d.workload == null || d.learning == null) return;
+        if (guest) { this.setState({ authOpen: true }); return; }
+        if (STORE && !STORE.userTakenCourses.some((r) => r.userId === "u1" && r.courseCode === active.code)) {
+          const now = new Date().toISOString();
+          STORE.userTakenCourses.push({
+            userId: "u1", courseCode: active.code, attendancePeriods: [], attendanceYear: null,
+            grade: null, earnedCredits: null, transcriptImportedAt: null, createdAt: now, updatedAt: now
+          });
+        }
+        if (STORE) {
+          STORE.reviews.push({
+            id: "r" + Date.now(), userId: "u1", courseCode: active.code,
+            examinationDistribution: d.examUnknown ? null : STORE.examinationDistributionFrom(draftMix.items, d.pcts),
+            approachTheoryPercent: d.theoryUnknown ? null : (d.theory == null ? 50 : d.theory),
+            workloadScore: d.workload, learningScore: d.learning, happyTook: d.recommend,
+            message: d.reviewText || "", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString()
+          });
+        }
+        this.setState({ posted: true, justAuthed: false });
+      },
+      onAuthDone: () => {
+        this.setState({ authOpen: false, justAuthed: true });
+        if (this.props.onAuthed) this.props.onAuthed();
+      },
+      onAuthCancel: () => this.setState({ authOpen: false })
+    };
+  }
+}
+
+</script>
+</body>
+</html>
