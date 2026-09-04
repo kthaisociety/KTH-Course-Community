@@ -3,9 +3,9 @@
 import {
   Bookmark,
   CheckCircle,
+  FolderPlus,
   Heart,
   MessageSquare,
-  Sparkles,
 } from "lucide-react";
 import type { MouseEvent } from "react";
 import { Badge } from "@/components/ui/badge";
@@ -251,8 +251,8 @@ export function CourseCardWithCharts({
         </div>
         <div className="flex shrink-0 justify-center">
           <Button variant="outline" size="sm" onClick={stop(onAddToCollection)}>
-            <Sparkles data-icon="inline-start" />
-            Compare
+            <FolderPlus data-icon="inline-start" />
+            Add to collection
           </Button>
         </div>
       </div>
