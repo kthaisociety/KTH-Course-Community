@@ -28,6 +28,18 @@ import type {
 /** The checkbox tick the picker draws for a collection the course is already in. */
 const PICKER_TICK = "m8.5 12 2.4 2.4 4.6-4.9";
 
+/**
+ * Surfaces a failed write in the words of the step that failed.
+ *
+ * The picker's writes throw messages rather than codes, because there is
+ * nothing for the card to do with a failure except say what did not happen.
+ */
+function reportWriteFailure(error: unknown) {
+  toast.error(
+    error instanceof Error ? error.message : "That did not go through.",
+  );
+}
+
 export type UseCourseCardOptions = {
   course: CourseCardCourse;
   /** From `course.stats`, batched for the whole page. `reviews: null` is absent. */
@@ -64,13 +76,20 @@ export type CourseCardProps = {
 /**
  * Binds one course card to the real procedures.
  *
- * This is the seam the pages sit on: a screen fetches its courses and their
- * stats, calls this per card, and spreads the result. Everything that decides
- * what the card *says* is in `toCourseCardModel`, which is pure; everything that
- * decides what a click *does* is here. The card itself does neither.
+ * Everything that decides what the card *says* is in `toCourseCardModel`, which
+ * is pure; everything that decides what a click *does* is here. The card itself
+ * does neither.
  *
- * The picker's open/closed and draft state is local to one card, so a list can
- * have many cards without a screen tracking which one is open.
+ * **Call this from a component that renders exactly one card, keyed by course
+ * code — never from a `courses.map(...)` callback in the screen.** It holds
+ * several hooks, so a parent that calls it once per list item binds that state
+ * to a list *position*: reorder the list and the open picker moves to another
+ * course, shorten it and React throws "Rendered fewer hooks than expected".
+ * `CourseCardItem` is that component, and it is what the barrel exports —
+ * screens should render it rather than reach for this hook.
+ *
+ * The picker's open/closed and draft state is local to one card, which is why a
+ * list can have many cards without a screen tracking which one is open.
  */
 export function useCourseCard({
   course,
@@ -108,11 +127,32 @@ export function useCourseCard({
    * rejects it otherwise, and the composite foreign key would too. The artboard
    * treats the picker as independent of Save, so the minimal fit is for the
    * picker to save first rather than to fail or to hide itself.
+   *
+   * These are two writes and either can fail on its own, so each throws a
+   * message naming the step that actually failed. A save that succeeded before
+   * a failed add is said out loud rather than left as a Save button that
+   * silently flipped.
    */
   const addToCollection = useCallback(
-    async (collectionId: string) => {
-      if (!isSaved) await setSaved(courseCode, true);
-      await addCourse.mutateAsync({ collectionId, courseCode });
+    async (collectionId: string, collectionName: string) => {
+      if (!isSaved) {
+        try {
+          await setSaved(courseCode, true);
+        } catch {
+          throw new Error(
+            `Could not save ${courseCode}, so it was not added to "${collectionName}".`,
+          );
+        }
+      }
+      try {
+        await addCourse.mutateAsync({ collectionId, courseCode });
+      } catch {
+        throw new Error(
+          isSaved
+            ? `Could not add ${courseCode} to "${collectionName}".`
+            : `Saved ${courseCode}, but could not add it to "${collectionName}".`,
+        );
+      }
     },
     [addCourse, courseCode, isSaved, setSaved],
   );
@@ -128,18 +168,15 @@ export function useCourseCard({
           tick: holdsCourse ? PICKER_TICK : "",
           onClick: () => {
             const write = holdsCourse
-              ? removeCourse.mutateAsync({
-                  collectionId: collection.id,
-                  courseCode,
-                })
-              : addToCollection(collection.id);
-            write.catch(() =>
-              toast.error(
-                holdsCourse
-                  ? `Could not remove ${courseCode} from ${collection.name}.`
-                  : `Could not add ${courseCode} to ${collection.name}.`,
-              ),
-            );
+              ? removeCourse
+                  .mutateAsync({ collectionId: collection.id, courseCode })
+                  .catch(() => {
+                    throw new Error(
+                      `Could not remove ${courseCode} from "${collection.name}".`,
+                    );
+                  })
+              : addToCollection(collection.id, collection.name);
+            write.catch(reportWriteFailure);
           },
         };
       }),
@@ -181,14 +218,37 @@ export function useCourseCard({
     clearDraft();
   }
 
-  function onDraftCommit() {
+  /**
+   * Creates a collection and puts the course in it — two writes, reported
+   * apart.
+   *
+   * If the add fails after the collection was made, saying "could not create"
+   * would send the reader back to the name field, and typing the same name
+   * again makes a *second* empty collection: `collections.create` has no
+   * uniqueness on name. So the failure names what really happened and points at
+   * the recovery already on screen — the collection now exists, the picker has
+   * refetched, and its row is one click away.
+   */
+  async function onDraftCommit() {
     const name = draftName.trim();
     clearDraft();
     if (!name) return;
-    create
-      .mutateAsync({ name })
-      .then((collection) => addToCollection(collection.id))
-      .catch(() => toast.error(`Could not create the collection "${name}".`));
+
+    let collection: { id: string };
+    try {
+      collection = await create.mutateAsync({ name });
+    } catch {
+      toast.error(`Could not create the collection "${name}".`);
+      return;
+    }
+
+    try {
+      await addToCollection(collection.id, name);
+    } catch {
+      toast.error(
+        `Created "${name}", but could not add ${courseCode} to it. Pick it from the list to try again.`,
+      );
+    }
   }
 
   const view: CourseCardView = {

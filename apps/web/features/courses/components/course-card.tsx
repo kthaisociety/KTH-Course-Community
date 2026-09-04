@@ -471,11 +471,19 @@ export function CourseCard({
             </div>
 
             <div className="flex flex-col gap-2">
+              {/* The artboard fills this bar with a fixed amber (#dfa53c) that
+                  no `--cc-*` token carries: the palette has no accent family,
+                  and `--cc-warn-btn` is amber only in dark, blue in light —
+                  which would make both score bars one colour here. `--cc-warn-ink`
+                  is the palette's amber-family value in both themes, so it is
+                  substituted rather than a new token invented. In dark it sits
+                  closer to `--cc-btn` than the design intends; the gap is real
+                  and belongs in the palette, not in this file. */}
               <ScoreBar
                 label="Workload"
                 value={c.workload}
                 width={c.wlW}
-                barClass="bg-cc-score-workload"
+                barClass="bg-cc-warn-ink"
               />
               <ScoreBar
                 label="Learning"

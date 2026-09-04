@@ -224,15 +224,77 @@ describe("useCourseCard", () => {
         expect(result.current.c.creating).toBe(false);
       });
 
-      it("says so when a write fails instead of showing a tick that is not there", async () => {
+      // Each write can fail on its own, so the message has to name the step that
+      // actually failed rather than blame the whole gesture.
+      describe("when a write fails", () => {
+        it("does not blame the add for a save that failed", async () => {
+          setSaved.mockRejectedValue(new Error("nope"));
+          const { result } = card();
+          await act(async () => result.current.c.collections[0]?.onClick?.());
+          await waitFor(() =>
+            expect(toastError).toHaveBeenCalledWith(
+              'Could not save DD2380, so it was not added to "Spring P3".',
+            ),
+          );
+          expect(addCourse).not.toHaveBeenCalled();
+        });
+
+        // The save is a real, visible outcome; leaving it unsaid would make the
+        // Save button look like it flipped on its own.
+        it("says the course was saved even though the add failed", async () => {
+          addCourse.mockRejectedValue(new Error("nope"));
+          const { result } = card();
+          await act(async () => result.current.c.collections[0]?.onClick?.());
+          await waitFor(() =>
+            expect(toastError).toHaveBeenCalledWith(
+              'Saved DD2380, but could not add it to "Spring P3".',
+            ),
+          );
+        });
+
+        it("names the collection a removal failed on", async () => {
+          removeCourse.mockRejectedValue(new Error("nope"));
+          const { result } = card();
+          await act(async () => result.current.c.collections[1]?.onClick?.());
+          await waitFor(() =>
+            expect(toastError).toHaveBeenCalledWith(
+              'Could not remove DD2380 from "Maybe".',
+            ),
+          );
+        });
+      });
+
+      // `collections.create` has no uniqueness on name, so sending the reader
+      // back to the name field would make a second empty collection. The
+      // recovery is the row the picker now lists.
+      it("does not call a made collection a failed one when only the add failed", async () => {
         addCourse.mockRejectedValue(new Error("nope"));
         const { result } = card();
-        await act(async () => result.current.c.collections[0]?.onClick?.());
+        act(() => result.current.c.onNewCollection?.());
+        act(() => result.current.onDraftChange("Spring"));
+        await act(async () => result.current.onDraftCommit());
+
+        expect(create).toHaveBeenCalledWith({ name: "Spring" });
         await waitFor(() =>
           expect(toastError).toHaveBeenCalledWith(
-            "Could not add DD2380 to Spring P3.",
+            'Created "Spring", but could not add DD2380 to it. Pick it from the list to try again.',
           ),
         );
+      });
+
+      it("reports a creation that genuinely failed as one", async () => {
+        create.mockRejectedValue(new Error("nope"));
+        const { result } = card();
+        act(() => result.current.c.onNewCollection?.());
+        act(() => result.current.onDraftChange("Spring"));
+        await act(async () => result.current.onDraftCommit());
+
+        await waitFor(() =>
+          expect(toastError).toHaveBeenCalledWith(
+            'Could not create the collection "Spring".',
+          ),
+        );
+        expect(addCourse).not.toHaveBeenCalled();
       });
     });
   });
