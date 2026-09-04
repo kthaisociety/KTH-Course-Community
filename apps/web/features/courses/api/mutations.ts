@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useRef } from "react";
 import { applyReorder } from "@/features/courses/lib/collection-order";
 import { useTRPC } from "@/trpc/client";
 import type { Collection } from "./queries";
@@ -48,12 +49,34 @@ export function useCollectionMutations() {
    * second move from what is on screen, and without this that is still the
    * pre-move order — so the two clicks would send the same swap twice and the
    * course would move one place, not two.
+   *
+   * ## Why a failure does not roll back
+   *
+   * Nudging twice quickly puts two reorders in flight at once, and a snapshot
+   * rollback is wrong for exactly that case: the first request's `onMutate`
+   * captured the list as it was *before either* move, so restoring it when that
+   * request fails also erases the second move — which may well be on its way to
+   * succeeding. There is no snapshot that is right, because the state a
+   * rollback should return to depends on writes that happened after it was
+   * taken.
+   *
+   * So there is no rollback. `collections.reorder` rewrites every position in
+   * one statement from the codes it is given, so the last request to reach the
+   * server decides the order outright, and refetching is the only thing that
+   * can be relied on to agree with it. A failed reorder shows its optimistic
+   * order until that refetch lands — a moment, alongside the toast the caller
+   * raises — rather than showing a different wrong order with more confidence.
+   *
+   * The refetch waits for the last reorder to settle. Invalidating while
+   * another is still in flight would pull the pre-*that*-move order back over
+   * its optimistic state, making the list jump backwards mid-gesture.
    */
+  const pendingReorders = useRef(0);
   const reorder = useMutation(
     trpc.collections.reorder.mutationOptions({
       onMutate: async ({ collectionId, courseCodes }) => {
+        pendingReorders.current += 1;
         await queryClient.cancelQueries({ queryKey: listKey });
-        const previous = queryClient.getQueryData<Collection[]>(listKey);
         queryClient.setQueryData<Collection[]>(listKey, (collections) =>
           collections?.map((collection) =>
             collection.id === collectionId
@@ -67,14 +90,11 @@ export function useCollectionMutations() {
               : collection,
           ),
         );
-        return { previous };
       },
-      onError: (_error, _input, context) => {
-        if (context?.previous) {
-          queryClient.setQueryData(listKey, context.previous);
-        }
+      onSettled: () => {
+        pendingReorders.current -= 1;
+        if (pendingReorders.current === 0) invalidate();
       },
-      onSettled: invalidate,
     }),
   );
 
