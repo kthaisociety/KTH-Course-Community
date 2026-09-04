@@ -36,10 +36,18 @@ type NavItem = {
 
 /**
  * A contradiction between the artboard and the codebase: the rail's fourth link
- * is "Taken courses", and no such route exists — #92 builds it. Per #68 the
- * codebase wins, and the smallest change that keeps the design intact is to drop
- * the one element rather than ship a link that 404s on every page. #92 adds it
- * back here alongside its route.
+ * is "Taken courses", and no such route exists. Per #68 the codebase wins, and
+ * the smallest change that keeps the design intact is to drop the one element
+ * rather than ship a link that 404s on every page.
+ *
+ * This is a deferral, not a design change. **#92 must put it back** when it
+ * builds the route: one more entry here, third in the list, between "Saved
+ * courses" and "My Page" —
+ *
+ *   { href: <its route>, label: "Taken courses", icon: CircleCheck, strokeWidth: 1.8 }
+ *
+ * which is where and how `Course Community - Explore.dc.html` line 30 draws it.
+ * Until then the rail is knowingly one item short of the artboard.
  */
 const NAV: readonly NavItem[] = [
   { href: "/search", label: "Explore", icon: Search, strokeWidth: 2.4 },
