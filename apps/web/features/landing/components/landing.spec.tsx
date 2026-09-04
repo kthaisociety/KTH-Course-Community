@@ -145,8 +145,8 @@ describe("Landing", () => {
     it("uses the artboard's full-height desktop composition", () => {
       const { container } = render(<Landing />);
       expect(container.firstElementChild).toHaveClass(
-        "@lg:h-dvh",
-        "@lg:overflow-y-auto",
+        "lg:h-dvh",
+        "lg:overflow-y-auto",
       );
     });
 

@@ -83,7 +83,7 @@ export function Landing() {
   }
 
   return (
-    <div className="@container cc-theme min-h-dvh bg-cc-pg text-cc-ink text-sm @lg:h-dvh @lg:overflow-y-auto">
+    <div className="@container cc-theme min-h-dvh bg-cc-pg text-cc-ink text-sm lg:h-dvh lg:overflow-y-auto">
       <header className="relative z-10 flex h-[66px] items-center justify-between gap-5 border-cc-rule border-b bg-cc-pg px-4 @lg:px-7">
         <Link
           href="/"
