@@ -1,26 +1,31 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { CourseStats } from "@/types";
 import type { SelectCourse } from "../db/schema";
+import {
+  getAggregatesByCourseCodes,
+  type ReviewAggregate,
+} from "../reviews/service";
+import { getTakenCountsByCourseCodes } from "../taken/service";
 import * as courseRepo from "./repository";
 import { getStatsByCodes, getSummary } from "./service";
 
 vi.mock("./repository");
+vi.mock("../reviews/service");
+vi.mock("../taken/service");
 
 /** The review half of the one course under test, or `null` when absent. */
-function stats(byCode: Map<string, CourseStats>) {
+function reviewsOf(byCode: Map<string, CourseStats>) {
   return byCode.get("SF1625")?.reviews;
 }
 
 beforeEach(() => {
   vi.clearAllMocks();
-  vi.mocked(courseRepo.findReviewAggregatesByCodes).mockResolvedValue([]);
-  vi.mocked(courseRepo.findTakenCountsByCodes).mockResolvedValue([]);
+  vi.mocked(getAggregatesByCourseCodes).mockResolvedValue([]);
+  vi.mocked(getTakenCountsByCourseCodes).mockResolvedValue([]);
 });
 
-/** A row as `findReviewAggregatesByCodes` returns it, with everything answered. */
-function aggregate(
-  overrides: Partial<courseRepo.ReviewAggregateRow> = {},
-): courseRepo.ReviewAggregateRow {
+/** A row as `getAggregatesByCourseCodes` returns it, with everything answered. */
+function aggregate(overrides: Partial<ReviewAggregate> = {}): ReviewAggregate {
   return {
     courseCode: "SF1625",
     reviewCount: 1,
@@ -50,11 +55,9 @@ describe("getStatsByCodes", () => {
   });
 
   it("renders a single review as the numbers the card shows", async () => {
-    vi.mocked(courseRepo.findReviewAggregatesByCodes).mockResolvedValue([
-      aggregate(),
-    ]);
+    vi.mocked(getAggregatesByCourseCodes).mockResolvedValue([aggregate()]);
 
-    expect(stats(await getStatsByCodes(["SF1625"]))).toEqual({
+    expect(reviewsOf(await getStatsByCodes(["SF1625"]))).toEqual({
       reviewCount: 1,
       happyCount: 1,
       happyPercent: 100,
@@ -79,7 +82,7 @@ describe("getStatsByCodes", () => {
     // Four reviews; two remembered the theory split, at 60% and 80%. The mean
     // of those who answered is 70%, not the 35% you get by counting the two
     // "I don't remember" answers as zero.
-    vi.mocked(courseRepo.findReviewAggregatesByCodes).mockResolvedValue([
+    vi.mocked(getAggregatesByCourseCodes).mockResolvedValue([
       aggregate({
         reviewCount: 4,
         happyCount: 3,
@@ -89,7 +92,7 @@ describe("getStatsByCodes", () => {
       }),
     ]);
 
-    const reviews = stats(await getStatsByCodes(["SF1625"]));
+    const reviews = reviewsOf(await getStatsByCodes(["SF1625"]));
 
     expect(reviews).toMatchObject({
       reviewCount: 4,
@@ -101,7 +104,7 @@ describe("getStatsByCodes", () => {
   });
 
   it("drops a recollection nobody had, while still reporting the scores", async () => {
-    vi.mocked(courseRepo.findReviewAggregatesByCodes).mockResolvedValue([
+    vi.mocked(getAggregatesByCourseCodes).mockResolvedValue([
       aggregate({
         reviewCount: 3,
         happyCount: 2,
@@ -114,7 +117,7 @@ describe("getStatsByCodes", () => {
 
     // Workload and learning are NOT NULL columns, so they survive a course
     // where every reviewer answered "I don't remember" to everything else.
-    expect(stats(await getStatsByCodes(["SF1625"]))).toMatchObject({
+    expect(reviewsOf(await getStatsByCodes(["SF1625"]))).toMatchObject({
       reviewCount: 3,
       happyPercent: 67,
       workloadMean: 8,
@@ -130,7 +133,7 @@ describe("getStatsByCodes", () => {
   it("re-rounds a mean distribution back to shares that still add up to 100", async () => {
     // Three reviewers who each split a course three ways average to 33.33%
     // apiece. Rounded on their own that is 99% and the bar chart has a gap.
-    vi.mocked(courseRepo.findReviewAggregatesByCodes).mockResolvedValue([
+    vi.mocked(getAggregatesByCourseCodes).mockResolvedValue([
       aggregate({
         reviewCount: 3,
         examinationAnswerCount: 3,
@@ -145,7 +148,7 @@ describe("getStatsByCodes", () => {
       }),
     ]);
 
-    const reviews = stats(await getStatsByCodes(["SF1625"]));
+    const reviews = reviewsOf(await getStatsByCodes(["SF1625"]));
 
     expect(reviews?.examinationDistribution).toEqual({
       exam: 34,
@@ -159,7 +162,7 @@ describe("getStatsByCodes", () => {
   });
 
   it("names at most three shares and never a share nobody reported", async () => {
-    vi.mocked(courseRepo.findReviewAggregatesByCodes).mockResolvedValue([
+    vi.mocked(getAggregatesByCourseCodes).mockResolvedValue([
       aggregate({
         examinationMeans: {
           exam: 40,
@@ -172,39 +175,39 @@ describe("getStatsByCodes", () => {
       }),
     ]);
 
-    expect(stats(await getStatsByCodes(["SF1625"]))?.examLabel).toBe(
+    expect(reviewsOf(await getStatsByCodes(["SF1625"]))?.examLabel).toBe(
       "Labs 60% · Exam 40%",
     );
   });
 
   it("reports the scores on the stored 1-10 scale, to one decimal", async () => {
     // 8 + 7 + 8 over three reviewers is 7.666…, which the card shows as 7.7.
-    vi.mocked(courseRepo.findReviewAggregatesByCodes).mockResolvedValue([
+    vi.mocked(getAggregatesByCourseCodes).mockResolvedValue([
       aggregate({ reviewCount: 3, workloadMean: 23 / 3, learningMean: 19 / 3 }),
     ]);
 
-    expect(stats(await getStatsByCodes(["SF1625"]))).toMatchObject({
+    expect(reviewsOf(await getStatsByCodes(["SF1625"]))).toMatchObject({
       workloadMean: 7.7,
       learningMean: 6.3,
     });
   });
 
   it("serves a page of cards from one aggregate call per table", async () => {
-    vi.mocked(courseRepo.findReviewAggregatesByCodes).mockResolvedValue([
+    vi.mocked(getAggregatesByCourseCodes).mockResolvedValue([
       aggregate({ courseCode: "DD2421", reviewCount: 2, happyCount: 1 }),
     ]);
-    vi.mocked(courseRepo.findTakenCountsByCodes).mockResolvedValue([
+    vi.mocked(getTakenCountsByCourseCodes).mockResolvedValue([
       { courseCode: "SF1625", takenCount: 1200 },
     ]);
 
     const byCode = await getStatsByCodes(["SF1625", "DD2421", "SF1625"]);
 
-    expect(courseRepo.findReviewAggregatesByCodes).toHaveBeenCalledTimes(1);
-    expect(courseRepo.findReviewAggregatesByCodes).toHaveBeenCalledWith([
+    expect(getAggregatesByCourseCodes).toHaveBeenCalledTimes(1);
+    expect(getAggregatesByCourseCodes).toHaveBeenCalledWith([
       "SF1625",
       "DD2421",
     ]);
-    expect(courseRepo.findTakenCountsByCodes).toHaveBeenCalledTimes(1);
+    expect(getTakenCountsByCourseCodes).toHaveBeenCalledTimes(1);
     expect(byCode.get("SF1625")).toEqual({ reviews: null, takenCount: 1200 });
     expect(byCode.get("DD2421")?.reviews).toMatchObject({
       reviewCount: 2,
@@ -216,8 +219,8 @@ describe("getStatsByCodes", () => {
   it("asks the database nothing when there are no courses to aggregate", async () => {
     await expect(getStatsByCodes([])).resolves.toEqual(new Map());
 
-    expect(courseRepo.findReviewAggregatesByCodes).not.toHaveBeenCalled();
-    expect(courseRepo.findTakenCountsByCodes).not.toHaveBeenCalled();
+    expect(getAggregatesByCourseCodes).not.toHaveBeenCalled();
+    expect(getTakenCountsByCourseCodes).not.toHaveBeenCalled();
   });
 });
 
@@ -251,10 +254,10 @@ describe("getSummary", () => {
   });
 
   it("carries the aggregate numbers the card renders", async () => {
-    vi.mocked(courseRepo.findReviewAggregatesByCodes).mockResolvedValue([
+    vi.mocked(getAggregatesByCourseCodes).mockResolvedValue([
       aggregate({ reviewCount: 4, happyCount: 3 }),
     ]);
-    vi.mocked(courseRepo.findTakenCountsByCodes).mockResolvedValue([
+    vi.mocked(getTakenCountsByCourseCodes).mockResolvedValue([
       { courseCode: "SF1625", takenCount: 1200 },
     ]);
 

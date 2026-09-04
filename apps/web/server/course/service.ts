@@ -13,6 +13,11 @@ import {
   EXAMINATION_DISTRIBUTION_LABELS,
 } from "@/types";
 import type { SelectCourse } from "../db/schema";
+import {
+  getAggregatesByCourseCodes,
+  type ReviewAggregate,
+} from "../reviews/service";
+import { getTakenCountsByCourseCodes } from "../taken/service";
 import * as courseRepo from "./repository";
 
 type ExaminationKey = (typeof EXAMINATION_DISTRIBUTION_KEYS)[number];
@@ -88,7 +93,7 @@ function formatExamLabel(distribution: ExaminationDistribution): string | null {
     .join(" · ");
 }
 
-function toReviewStats(row: courseRepo.ReviewAggregateRow): CourseReviewStats {
+function toReviewStats(row: ReviewAggregate): CourseReviewStats {
   const examinationDistribution =
     row.examinationAnswerCount > 0 && row.examinationMeans
       ? toWholePercentages(row.examinationMeans)
@@ -117,9 +122,11 @@ function toReviewStats(row: courseRepo.ReviewAggregateRow): CourseReviewStats {
  * The aggregate numbers for a page of course cards, keyed by course code.
  *
  * Two grouped queries serve the whole page — one over `reviews`, one over
- * `user_taken_courses` — rather than one query per card. Every requested code
- * gets an entry, so a caller never has to distinguish "not asked for" from
- * "nothing to show".
+ * `user_taken_courses` — rather than one query per card. Each comes from the
+ * domain that owns its table; assembling them into the card's figures is the
+ * course domain's job, which is why the shaping lives here and the SQL does
+ * not. Every requested code gets an entry, so a caller never has to
+ * distinguish "not asked for" from "nothing to show".
  */
 export async function getStatsByCodes(
   codes: string[],
@@ -131,8 +138,8 @@ export async function getStatsByCodes(
   if (uniqueCodes.length === 0) return stats;
 
   const [reviewRows, takenRows] = await Promise.all([
-    courseRepo.findReviewAggregatesByCodes(uniqueCodes),
-    courseRepo.findTakenCountsByCodes(uniqueCodes),
+    getAggregatesByCourseCodes(uniqueCodes),
+    getTakenCountsByCourseCodes(uniqueCodes),
   ]);
 
   for (const row of reviewRows) {

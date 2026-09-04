@@ -147,3 +147,20 @@ export async function removeTakenCourse(
 function notTaken(courseCode: string): NotFoundError {
   return new NotFoundError(`You have not recorded ${courseCode} as taken`);
 }
+
+export type TakenCount = takenRepo.TakenCountRow;
+
+/**
+ * How many app users have recorded taking each of these courses. Courses
+ * nobody has recorded are absent from the result; the course card's zero is
+ * supplied by whoever renders it.
+ *
+ * This is a count over the whole table rather than one user's rows, which is
+ * why it takes no `userId`: it is the "how many have taken it" figure on a
+ * course card, not a person's own history.
+ */
+export function getTakenCountsByCourseCodes(
+  courseCodes: string[],
+): Promise<TakenCount[]> {
+  return takenRepo.countByCourseCodes(courseCodes);
+}

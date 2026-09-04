@@ -5,6 +5,22 @@ import { ForbiddenError, NotFoundError, ValidationError } from "../errors";
 import * as reviewsRepo from "./repository";
 
 export type { ReviewInput };
+export type ReviewAggregate = reviewsRepo.ReviewAggregateRow;
+
+/**
+ * What the reviewers of each of these courses said, reduced to one row per
+ * course. Courses with no reviews are absent from the result rather than
+ * present with zeroes — "nobody has reviewed this" is not a score of nought.
+ *
+ * The course domain composes these into the numbers a course card renders;
+ * this is the reviews domain's own aggregate, so the queries over `reviews`
+ * stay where the table lives.
+ */
+export function getAggregatesByCourseCodes(
+  courseCodes: string[],
+): Promise<ReviewAggregate[]> {
+  return reviewsRepo.findAggregatesByCourseCodes(courseCodes);
+}
 
 function toIso(value: Date | string): string {
   return value instanceof Date ? value.toISOString() : value;
