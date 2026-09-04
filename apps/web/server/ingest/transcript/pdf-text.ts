@@ -151,12 +151,18 @@ export async function extractTranscriptText(
   // Before the thread exists: the point is to not create it under load.
   await acquireSlot();
 
-  const worker = new Worker(WORKER_SOURCE, {
-    eval: true,
-    workerData: { unpdfUrl: resolveUnpdfUrl(), bytes },
-  });
-
+  // Setup sits inside the block that releases the slot. Resolving `unpdf` or
+  // starting the thread can throw, and a slot lost that way is lost for the
+  // life of the process: enough of them and the cap turns into a permanent
+  // outage for a route that is otherwise healthy.
+  let worker: Worker | undefined;
   try {
+    worker = new Worker(WORKER_SOURCE, {
+      eval: true,
+      workerData: { unpdfUrl: resolveUnpdfUrl(), bytes },
+    });
+    const started = worker;
+
     return await new Promise<string>((resolve, reject) => {
       // Whichever outcome lands first wins, and the timer is cleared in every
       // case: an early result would otherwise hold the event loop open until
@@ -174,7 +180,7 @@ export async function extractTranscriptText(
 
       budget = setTimeout(fail, budgetMs);
 
-      worker.on("message", (reply: WorkerReply) => {
+      started.on("message", (reply: WorkerReply) => {
         settle(() => (reply.ok ? resolve(reply.text) : reject(unreadable())));
       });
       // A worker that dies outright — an OOM kill, a failure to boot — is
@@ -182,15 +188,17 @@ export async function extractTranscriptText(
       // on the way out of a successful parse, after `terminate()` below; that
       // is a no-op because the promise has already settled, and it stays one
       // because Node delivers a worker's `message` before its `exit`.
-      worker.on("error", fail);
-      worker.on("exit", fail);
+      started.on("error", fail);
+      started.on("exit", fail);
     });
   } finally {
-    // Unconditional: on the timeout path this is what actually reclaims the
-    // CPU, and on every other path the thread is done and must not be leaked.
-    // The slot is handed on only once the thread is genuinely gone, or the cap
-    // would let the next parse start alongside one still winding down.
-    await worker.terminate();
+    // Terminating is unconditional where a thread exists: on the timeout path
+    // it is what actually reclaims the CPU, and on every other path the thread
+    // is done and must not be leaked. The slot is handed on only once that
+    // thread is genuinely gone, or the cap would let the next parse start
+    // alongside one still winding down — and it is handed on even when there
+    // was never a thread at all.
+    await worker?.terminate();
     releaseSlot();
   }
 }
