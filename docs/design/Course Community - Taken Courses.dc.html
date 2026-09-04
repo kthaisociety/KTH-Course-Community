@@ -1,0 +1,1549 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet"><link rel="stylesheet" href="cc-theme.css"><style>body{background:var(--pg);color:var(--ink)}html,body{margin:0;height:100%;background:var(--pg);font-family:Geist,system-ui,sans-serif;color:var(--ink)}a{color:#1751a6}a:hover{color:#10386f}*{box-sizing:border-box}input,button,textarea{font-family:Geist,system-ui,sans-serif}@keyframes pulse{0%,100%{opacity:.35}50%{opacity:1}}@keyframes sweep{0%{transform:translateX(-100%)}100%{transform:translateX(320%)}}@keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}</style></helmet>
+
+<div style="position:relative;display:flex;height:900px;background:var(--pg);color:var(--ink);font-size:14px">
+<div data-cc-topbar="1" data-cc-fade="1" style="position:absolute;top:0;left:0;right:0;height:66px;z-index:1;box-sizing:border-box;display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:0 28px;border-bottom:1px solid var(--rule);background:var(--pg)">
+<div onClick="{{ onTheme }}" role="button" tabIndex="0" title="{{ themeTitle }}" aria-label="{{ themeTitle }}" style="width:34px;height:34px;display:flex;align-items:center;justify-content:center;border-radius:8px;color:var(--chipInk);cursor:pointer" style-hover="background:rgba(125,145,175,.14)">
+<sc-if value="{{ notNight }}" hint-placeholder-val="{{ true }}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 14.5A8.5 8.5 0 1 1 9.5 3.5a7 7 0 0 0 11 11z"></path></svg></sc-if>
+<sc-if value="{{ night }}" hint-placeholder-val="{{ false }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"></circle><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M18.4 5.6 17 7M7 17l-1.4 1.4"></path></svg></sc-if>
+</div>
+</div>
+
+<div data-cc-sidebar="1" data-cc-fade="1" style="position:relative;z-index:2;box-sizing:border-box;width:236px;flex:none;display:flex;flex-direction:column;gap:6px;padding:14px 10px;background:#1751a6;color:#fff">
+<a href="Course Community - Landing.dc.html" style="display:flex;align-items:center;gap:10px;padding:6px 8px 14px;color:#fff;text-decoration:none">
+<img src="assets/ais-symbol-white.png" alt="KTH AI Society" style="height:34px;width:34px;object-fit:contain">
+<div style="width:1px;height:28px;background:rgba(255,255,255,.35)"></div>
+<div style="font-size:15px;font-weight:600;line-height:1.15">Course<br>Community</div>
+</a>
+<div style="display:flex;flex-direction:column;gap:2px;margin-top:14px">
+<a href="Course Community - Explore.dc.html" style="display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;background:transparent;font-weight:400;color:#fff;text-decoration:none" style-hover="background:rgba(255,255,255,.1)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><line x1="16.5" y1="16.5" x2="21" y2="21"></line></svg><span style="flex:1">Explore</span></a>
+<a href="Course Community - Saved.dc.html" style="display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;background:transparent;font-weight:400;color:#fff;text-decoration:none" style-hover="background:rgba(255,255,255,.1)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg><span style="flex:1">Saved courses</span><sc-if value="{{ hasSavedCount }}" hint-placeholder-val="{{ true }}"><span style="padding:1px 7px;border-radius:9px;background:rgba(255,255,255,.22);font-size:11.5px;font-weight:600">{{ savedCountLabel }}</span></sc-if></a>
+<a href="Course Community - My Page.dc.html" style="display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;background:transparent;font-weight:400;color:#fff;text-decoration:none" style-hover="background:rgba(255,255,255,.1)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"></circle><path d="M5.5 21a6.5 6.5 0 0 1 13 0"></path></svg><span style="flex:1">My Page</span></a>
+<a href="Course Community - Taken Courses.dc.html" style="display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;background:rgba(255,255,255,.16);font-weight:600;color:#fff;text-decoration:none" style-hover="background:rgba(255,255,255,.1)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></svg><span style="flex:1">Taken courses</span></a>
+</div>
+<div style="margin-top:auto;display:flex;flex-direction:column;gap:2px">
+<a href="Course Community - About.dc.html" style="display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;color:rgba(255,255,255,.82);text-decoration:none" style-hover="background:rgba(255,255,255,.1)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"></path><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"></path></svg>About &amp; contact</a>
+<sc-if value="{{ isMember }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;align-items:center;gap:10px;padding:10px;margin-top:8px;border-radius:8px;background:rgba(255,255,255,.1)">
+<div style="width:34px;height:34px;flex:none;border-radius:50%;background:#7ea6d8;color:#0d2f5e;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px">EL</div>
+<div style="flex:1;min-width:0;font-size:13px;font-weight:500">Elsa Lindqvist</div>
+<div onClick="{{ onSignOut }}" role="button" tabIndex="0" aria-label="Sign out" title="Sign out" style="flex:none;width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:7px;color:rgba(255,255,255,.75);cursor:pointer" style-hover="background:rgba(255,255,255,.16);color:#fff"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><path d="M16 17l5-5-5-5"></path><path d="M21 12H9"></path></svg></div>
+</div>
+</sc-if>
+<sc-if value="{{ isGuest }}" hint-placeholder-val="{{ true }}">
+<div style="margin-top:8px;padding-top:12px;border-top:1px solid rgba(255,255,255,.2)">
+<div style="font-size:11.5px;line-height:1.45;color:rgba(255,255,255,.78)">Browsing as a guest. Saving courses and posting reviews need an account.</div>
+<div onClick="{{ onSignUp }}" role="button" tabIndex="0" style="margin-top:10px;display:flex;align-items:center;justify-content:center;height:34px;border-radius:8px;background:#fff;color:#12417f;font-size:13px;font-weight:600;cursor:pointer">Sign up</div>
+<div onClick="{{ onLogIn }}" role="button" tabIndex="0" style="margin-top:6px;display:flex;align-items:center;justify-content:center;height:34px;border-radius:8px;border:1px solid rgba(255,255,255,.4);font-size:13px;font-weight:500;color:#fff;cursor:pointer">Log in</div>
+</div>
+</sc-if>
+</div>
+</div>
+
+<div style="position:relative;flex:1;min-width:0;min-height:0;margin-top:{{ paneTop }};display:flex;flex-direction:column;overflow-y:auto;overflow-x:hidden">
+<div style="width:100%;max-width:{{ pageMaxWidth }};box-sizing:border-box;margin:0 auto;padding:0 {{ pageSidePadding }};flex:1;min-width:0;display:flex;flex-direction:column">
+<dc-import name="Course Community - Page Header" title="Taken courses" subtitle="Your completed courses." hint-size="100%,90px"></dc-import>
+
+<div style="padding:0 20px">
+<sc-if value="{{ isAuth }}" hint-placeholder-val="{{ false }}">
+<div style="flex:1;display:flex;align-items:flex-start;justify-content:center;padding:30px 0 40px">
+<div style="width:100%;max-width:520px">
+<div style="font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--brand)">One step left</div>
+<div style="margin-top:10px;font-size:24px;font-weight:600;line-height:1.2;letter-spacing:-.015em">Sign in to keep this list</div>
+<div style="margin-top:8px;font-size:14px;line-height:1.55;color:var(--muted)">{{ authReturnLine }}</div>
+<div style="margin-top:20px;display:flex;flex-direction:column;gap:9px">
+<div onClick="{{ onSignIn }}" style="display:flex;align-items:center;justify-content:center;height:42px;border-radius:9px;background:var(--btn);color:var(--btnFg);font-size:13.5px;font-weight:600;cursor:pointer">Continue with KTH account</div>
+<div onClick="{{ onSignIn }}" style="display:flex;align-items:center;justify-content:center;height:42px;border-radius:9px;border:1px solid var(--rule3);background:var(--surface);font-size:13.5px;font-weight:500;color:var(--ink);cursor:pointer" style-hover="border-color:var(--hov)">Sign up with email</div>
+</div>
+<div onClick="{{ onBackToWork }}" style="margin-top:14px;font-size:12.5px;font-weight:500;color:var(--brand);cursor:pointer" style-hover="text-decoration:underline">Back to the list</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isEmpty }}" hint-placeholder-val="{{ false }}">
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;padding:14px 20px 40px">
+<div style="width:100%;max-width:480px;text-align:center">
+
+<div style="display:flex;align-items:flex-start;gap:9px;padding:11px 13px;border-radius:10px;background:var(--pill);text-align:left">
+<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none;margin-top:1px;color:var(--dim)"><circle cx="12" cy="12" r="9.5"></circle><path d="M12 8v5"></path><path d="M12 16h.01"></path></svg>
+<div style="font-size:12.5px;line-height:1.5;color:var(--ink2)">Remember to pick <span style="font-weight:600">Resultatintyg</span> in Ladok, and make sure course codes are included.</div>
+</div>
+
+<div onClick="{{ onToggleGrades }}" style="margin-top:14px;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 2px;border-bottom:1px solid var(--rule);cursor:pointer;text-align:left">
+<div style="min-width:0">
+<div style="font-size:13.5px;font-weight:600">Read grades from transcript</div>
+<div style="margin-top:3px;font-size:12.5px;line-height:1.5;color:var(--muted)">{{ gradesHint }}</div>
+</div>
+<div style="flex:none;width:42px;height:24px;border-radius:99px;background:{{ gradesTrack }};padding:3px;display:flex;justify-content:{{ gradesJustify }};transition:background .16s ease-out"><div style="width:18px;height:18px;border-radius:50%;background:var(--surface);box-shadow:0 1px 2px rgba(20,30,45,.28)"></div></div>
+</div>
+
+<div onClick="{{ onUpload }}" onPointerEnter="{{ onDropEnter }}" onPointerLeave="{{ onDropLeave }}" style="margin-top:20px;padding:40px 28px;border-radius:14px;border:2px dashed {{ dropBorder }};background:{{ dropBg }};display:flex;flex-direction:column;align-items:center;cursor:pointer;transition:background .16s ease-out,border-color .16s ease-out">
+<div style="width:48px;height:48px;border-radius:13px;background:var(--pill);display:flex;align-items:center;justify-content:center"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#1751a6" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4"></path><path d="m7.5 8.5 4.5-4.5 4.5 4.5"></path><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"></path></svg></div>
+<div style="margin-top:14px;font-size:16px;font-weight:600">{{ dropTitle }}</div>
+<div style="margin-top:5px;font-size:12.5px;color:var(--muted)">PDF from Ladok · up to 10 MB</div>
+<div style="margin-top:16px;display:flex;align-items:center;gap:8px;height:38px;padding:0 15px;border-radius:9px;background:var(--btn);color:var(--btnFg);font-size:13px;font-weight:600" style-hover="background:var(--btn)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"></path><path d="M14 3v5h5"></path></svg>Choose a PDF</div>
+</div>
+
+<div onClick="{{ onManualStart }}" style="margin-top:16px;font-size:12.5px;font-weight:500;color:var(--brand);cursor:pointer" style-hover="text-decoration:underline">Add courses manually instead</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isParsing }}" hint-placeholder-val="{{ false }}">
+<div style="flex:1;display:flex;align-items:flex-start;justify-content:center;padding:30px 0 40px">
+<div style="width:100%;max-width:520px">
+<div style="font-size:22px;font-weight:600;line-height:1.2;letter-spacing:-.015em">{{ parseHeading }}</div>
+<div style="margin-top:8px;font-size:13.5px;color:var(--muted)">{{ parseFile }} · nothing is saved until you confirm</div>
+<div style="margin-top:20px;height:6px;border-radius:99px;background:var(--pill);overflow:hidden;position:relative">
+<div style="position:absolute;top:0;bottom:0;left:0;width:34%;border-radius:99px;background:var(--btn);animation:sweep 1.1s ease-in-out infinite"></div>
+</div>
+<div onClick="{{ onCancelParse }}" style="margin-top:16px;font-size:12.5px;color:var(--muted);cursor:pointer" style-hover="text-decoration:underline">Cancel</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isFailed }}" hint-placeholder-val="{{ false }}">
+<div style="flex:1;display:flex;align-items:flex-start;justify-content:center;padding:18px 0 40px">
+<div style="width:100%;max-width:620px;animation:rise .2s ease-out">
+<div style="display:flex;align-items:center;gap:10px">
+<span style="width:26px;height:26px;border-radius:50%;background:#fbeceb;display:flex;align-items:center;justify-content:center"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#a3452a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8v5"></path><path d="M12 16.5h.01"></path></svg></span>
+<div style="font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:#a3452a">Reading failed</div>
+</div>
+<div style="margin-top:12px;font-size:22px;font-weight:600;line-height:1.2;letter-spacing:-.015em">{{ errorTitle }}</div>
+<div style="margin-top:8px;font-size:14px;line-height:1.55;color:var(--muted);text-wrap:pretty">{{ errorBody }}</div>
+<div style="margin-top:18px;display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:12px;border:1px solid #f0d7cf;background:#fdf3ef">
+<div style="width:38px;height:38px;flex:none;border-radius:9px;background:#fbeceb;display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#a3452a" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"></path><path d="M14 3v5h5"></path></svg></div>
+<div style="flex:1;min-width:0;font-size:13px;color:#7a3b26">{{ errorFile }}</div>
+<div style="flex:none;font-size:12.5px;font-weight:500;color:#a3452a">Nothing was saved</div>
+</div>
+<div style="margin-top:16px;border:1px solid var(--rule);border-radius:12px;background:var(--surface);padding:15px 16px">
+<div style="font-size:13px;line-height:1.55;color:var(--muted)">Download the certificate straight from Ladok rather than scanning it — if no text selects in the PDF, it is a scan.</div>
+</div>
+<div style="margin-top:18px;display:flex;align-items:center;gap:11px">
+<div onClick="{{ onUpload }}" style="display:flex;align-items:center;gap:9px;height:44px;padding:0 20px;border-radius:9px;background:var(--btn);color:var(--btnFg);font-size:14px;font-weight:600;cursor:pointer" style-hover="background:var(--btn)">Try another file</div>
+<div onClick="{{ onManualStart }}" style="display:flex;align-items:center;height:44px;padding:0 16px;border-radius:9px;border:1px solid var(--rule3);background:var(--surface);font-size:13.5px;font-weight:500;color:var(--chipInk);cursor:pointer" style-hover="border-color:var(--hov)">Add courses manually</div>
+</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isPreview }}" hint-placeholder-val="{{ false }}">
+<div style="flex:1;display:flex;align-items:flex-start;justify-content:center;padding:30px 0 40px">
+<div style="width:100%;max-width:560px">
+<div style="font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--brand)">Transcript read</div>
+<div style="margin-top:9px;font-size:24px;font-weight:600;line-height:1.2;letter-spacing:-.015em">{{ previewHeadline }}</div>
+<div style="margin-top:8px;font-size:14px;line-height:1.55;color:var(--muted)">Nothing is saved to your list until you confirm.</div>
+
+<sc-if value="{{ hasSkipped }}" hint-placeholder-val="{{ false }}">
+<div style="margin-top:16px;display:flex;align-items:flex-start;gap:11px;padding:13px 15px;border-radius:11px;border:1px solid var(--rule2);background:var(--pill)">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none;margin-top:1px;color:var(--dim)"><circle cx="12" cy="12" r="9.5"></circle><path d="M12 8v5"></path><path d="M12 16h.01"></path></svg>
+<div style="flex:1;min-width:0">
+<div style="font-size:13.5px;font-weight:600">{{ skippedTitle }}</div>
+<div style="margin-top:4px;font-size:12.5px;line-height:1.5;color:var(--muted)">These rows don't match a KTH catalog course, so they were left out.</div>
+<div style="margin-top:8px;display:flex;flex-direction:column;gap:4px">
+<sc-for list="{{ skippedItems }}" as="x" hint-placeholder-count="3">
+<div style="display:flex;align-items:baseline;gap:8px;font-size:12.5px;color:var(--ink2)"><span style="flex:none;width:5px;height:5px;margin-top:5px;border-radius:50%;background:var(--rule3)"></span><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ x.label }}</span></div>
+</sc-for>
+</div>
+</div>
+</div>
+</sc-if>
+
+<div style="margin-top:20px;display:flex;align-items:center;gap:11px">
+<div onClick="{{ onConfirm }}" role="button" tabIndex="0" style="display:flex;align-items:center;height:44px;padding:0 20px;border-radius:9px;background:var(--btn);color:var(--btnFg);font-size:14px;font-weight:600;cursor:pointer" style-hover="opacity:.88">{{ confirmCta }}</div>
+</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isList }}" hint-placeholder-val="{{ false }}">
+<div style="flex:1;display:flex;flex-direction:column;min-width:0">
+
+<div style="padding:20px 0 18px;border-bottom:1px solid var(--rule)">
+<div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px 24px">
+<div style="min-width:340px;flex:1">
+<div style="margin-top:9px;font-size:13.5px;color:var(--muted)"><span style="font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums">{{ count }}</span> courses</div>
+</div>
+<div style="flex:1 1 auto;min-width:0;max-width:100%;display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+<div onClick="{{ onUpdateStart }}" style="display:flex;align-items:center;gap:8px;height:38px;padding:0 14px;border-radius:9px;border:1px solid var(--rule3);background:var(--surface);font-size:13px;font-weight:500;color:var(--chipInk);cursor:pointer" style-hover="border-color:var(--hov)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#4a5560" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.6-5.9"></path><path d="M20 4v4h-4"></path></svg>Update transcript</div>
+<div style="font-size:12px;color:var(--dim2);white-space:nowrap">{{ sourceLabel }}</div>
+</div>
+</div>
+
+<sc-if value="{{ hasBanner }}" hint-placeholder-val="{{ false }}">
+<div style="margin-top:16px;display:flex;align-items:flex-start;gap:11px;padding:13px 15px;border-radius:11px;border:1px solid #cfe4de;background:#e9f3ef;animation:rise .22s ease-out">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1c6b60" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" style="flex:none;margin-top:1px"><circle cx="12" cy="12" r="9.5"></circle><path d="m8.5 12.2 2.4 2.4 4.6-5"></path></svg>
+<div style="flex:1;min-width:0">
+<div style="font-size:13.5px;font-weight:600;color:#1c6b60">{{ bannerTitle }}</div>
+<div style="margin-top:4px;font-size:12.5px;line-height:1.5;color:#2b6a60">{{ bannerBody }}</div>
+</div>
+<div onClick="{{ onDismissBanner }}" style="flex:none;width:24px;height:24px;display:flex;align-items:center;justify-content:center;border-radius:6px;color:#1c6b60;font-size:16px;line-height:1;cursor:pointer" style-hover="background:rgba(28,107,96,.1)">×</div>
+</div>
+</sc-if>
+
+<div style="flex:1;padding:18px 0 0;display:flex;flex-direction:column;gap:18px">
+
+<sc-if value="{{ hasPending }}" hint-placeholder-val="{{ true }}">
+<dc-import name="Course Community - Unreviewed Card" courses="{{ unreviewedCourses }}" line="{{ pendingLine }}" on-start="{{ onStartReviewer }}" hint-size="100%,220px"></dc-import>
+</sc-if>
+<div style="border:1px solid var(--rule);border-radius:12px;background:var(--surface);overflow-x:auto;overflow-y:hidden">
+<div style="display:grid;grid-template-columns:minmax(64px,96px) minmax(140px,1fr) minmax(50px,70px) minmax(64px,90px) minmax(50px,70px) minmax(76px,108px) minmax(110px,170px);gap:clamp(8px,1.4vw,18px);width:100%;min-width:640px;box-sizing:border-box;align-items:center;padding:14px 16px;border-bottom:1px solid #f2efe6;background:var(--pg);font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--dim)">
+<div>Code</div><div>Course</div><div>Credits</div><div>Grade</div><div>Year</div><div>Reviewed</div><div style="text-align:right">Actions</div>
+</div>
+<div onClick="{{ onAddStart }}" role="button" tabIndex="0" style="display:flex;align-items:center;gap:9px;width:100%;min-width:600px;box-sizing:border-box;padding:11px 15px;margin:1px;border:1px dashed #9dbfe4;border-radius:9px;background:rgba(23,81,166,.06);color:var(--brand);cursor:pointer" style-hover="border-color:var(--brand);background:rgba(23,81,166,.11)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg><span style="font-size:13.5px;font-weight:500">Add a course by hand</span></div>
+<sc-for list="{{ okRows }}" as="r" hint-placeholder-count="9">
+<div style="display:grid;grid-template-columns:minmax(64px,96px) minmax(140px,1fr) minmax(50px,70px) minmax(64px,90px) minmax(50px,70px) minmax(76px,108px) minmax(110px,170px);gap:clamp(8px,1.4vw,18px);width:100%;min-width:640px;box-sizing:border-box;align-items:center;padding:11px 16px;border-bottom:1px solid #f4f2ea;background:{{ r.rowBg }}" style-hover="background:var(--pg)">
+<div style="font:500 13px Geist Mono,ui-monospace,monospace;color:var(--brand)">{{ r.codeLabel }}</div>
+<div style="min-width:0;display:flex;align-items:center;gap:8px">
+<span style="font-size:13.5px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.name }}</span>
+<sc-if value="{{ r.isNew }}" hint-placeholder-val="{{ false }}">
+<span style="flex:none;padding:2px 7px;border-radius:5px;background:#e9f3ef;color:#1c6b60;font-size:11px;font-weight:600">New</span>
+</sc-if>
+<sc-if value="{{ r.edited }}" hint-placeholder-val="{{ false }}">
+<span style="flex:none;padding:2px 7px;border-radius:5px;background:var(--pill);color:var(--muted);font-size:11px;font-weight:500">Edited</span>
+</sc-if>
+</div>
+<sc-if value="{{ r.isEditing }}" hint-placeholder-val="{{ false }}">
+<input value="{{ r.draftHp }}" onChange="{{ r.onHpChange }}" onClick="{{ stopClick }}" inputMode="decimal" style="box-sizing:border-box;width:56px;height:28px;padding:0 6px;border-radius:6px;border:1px solid var(--brand);outline:none;font-family:inherit;font-size:13px;color:var(--ink)">
+</sc-if>
+<sc-if value="{{ r.notEditing }}" hint-placeholder-val="{{ true }}">
+<div style="font-size:13px;font-variant-numeric:tabular-nums;color:var(--ink2)">{{ r.hpLabel }}</div>
+</sc-if>
+<sc-if value="{{ r.isEditing }}" hint-placeholder-val="{{ false }}">
+<input value="{{ r.draftGrade }}" onChange="{{ r.onGradeChange }}" onClick="{{ stopClick }}" placeholder="—" maxLength="1" style="box-sizing:border-box;width:34px;height:28px;padding:0;text-align:center;border-radius:6px;border:1px solid var(--brand);outline:none;font-family:inherit;font-size:13px;font-weight:600;color:var(--ink);text-transform:uppercase">
+</sc-if>
+<sc-if value="{{ r.notEditing }}" hint-placeholder-val="{{ true }}">
+<div><span style="display:inline-flex;align-items:center;padding:3px 9px;border-radius:7px;background:{{ r.gradeBg }};color:{{ r.gradeFg }};font-size:13px;font-weight:600">{{ r.gradeLabel }}</span></div>
+</sc-if>
+<sc-if value="{{ r.isEditing }}" hint-placeholder-val="{{ false }}">
+<input value="{{ r.draftYear }}" onChange="{{ r.onYearChange }}" onClick="{{ stopClick }}" inputMode="numeric" maxLength="4" placeholder="2025" style="box-sizing:border-box;width:58px;height:28px;padding:0 6px;text-align:center;border-radius:6px;border:1px solid var(--brand);outline:none;font-family:inherit;font-size:13px;color:var(--ink)">
+</sc-if>
+<sc-if value="{{ r.notEditing }}" hint-placeholder-val="{{ true }}">
+<div style="font-size:13px;color:var(--ink2);font-variant-numeric:tabular-nums">{{ r.year }}</div>
+</sc-if>
+<div style="display:flex;align-items:center;min-width:0">
+<sc-if value="{{ r.reviewed }}" hint-placeholder-val="{{ false }}">
+<span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:#1c6b60"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1c6b60" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><circle cx="12" cy="12" r="9.5"></circle><path d="m8.5 12.2 2.4 2.4 4.6-5"></path></svg>Done</span>
+</sc-if>
+<sc-if value="{{ r.canReview }}" hint-placeholder-val="{{ true }}">
+<span style="font-size:11.5px;color:var(--dim2)">Not yet</span>
+</sc-if>
+</div>
+<sc-if value="{{ r.isEditing }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;align-items:center;justify-content:flex-end;gap:8px">
+<div onClick="{{ r.onSaveEdit }}" title="Save" style="width:30px;height:30px;flex:none;display:flex;align-items:center;justify-content:center;border-radius:7px;background:var(--btn);color:var(--btnFg);cursor:pointer" style-hover="opacity:.88"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></div>
+<div onClick="{{ r.onCancelEdit }}" title="Cancel" style="width:30px;height:30px;flex:none;display:flex;align-items:center;justify-content:center;border-radius:7px;border:1px solid var(--rule3);background:var(--surface);cursor:pointer" style-hover="border-color:var(--hov)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b6355" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"></path></svg></div>
+</div>
+</sc-if>
+<sc-if value="{{ r.notEditing }}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;align-items:center;justify-content:flex-end;gap:8px">
+<div onClick="{{ r.onEdit }}" title="Edit credits and grade" style="width:30px;height:30px;flex:none;display:flex;align-items:center;justify-content:center;border-radius:7px;border:1px solid var(--rule3);background:var(--surface);cursor:pointer" style-hover="border-color:var(--brand)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1751a6" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"></path></svg></div>
+<div onClick="{{ r.onRemove }}" title="Remove" style="width:30px;height:30px;flex:none;display:flex;align-items:center;justify-content:center;border-radius:7px;border:1px solid var(--rule3);background:var(--surface);cursor:pointer" style-hover="border-color:#c96a4a"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b6355" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"></path><path d="M9 7V5h6v2"></path><path d="M6 7l1 13h10l1-13"></path></svg></div>
+</div>
+</sc-if>
+</div>
+</sc-for>
+<sc-if value="{{ listEmpty }}" hint-placeholder-val="{{ false }}">
+<div style="padding:40px 20px;display:flex;flex-direction:column;align-items:center;text-align:center">
+<div style="font-size:15px;font-weight:600">No courses in your list</div>
+<div style="margin-top:6px;max-width:400px;font-size:13px;line-height:1.5;color:var(--muted)">Upload a Ladok transcript and we will read the rows out of it, or add one by hand.</div>
+<div style="margin-top:16px;display:flex;gap:10px">
+<div onClick="{{ onAddStart }}" style="display:flex;align-items:center;gap:8px;height:38px;padding:0 15px;border-radius:9px;background:var(--btn);color:var(--btnFg);font-size:13px;font-weight:600;cursor:pointer">Add a course by hand</div>
+<div onClick="{{ onUpdateStart }}" style="display:flex;align-items:center;height:38px;padding:0 15px;border-radius:9px;border:1px solid var(--rule3);background:var(--surface);font-size:13px;font-weight:500;color:var(--chipInk);cursor:pointer">Upload a transcript</div>
+</div>
+</div>
+</sc-if>
+</div>
+
+</div>
+</div>
+
+<div style="padding:18px 0 26px;display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--dim2)">
+<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#8a857a" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-5"></path><path d="M12 8h.01"></path></svg>
+Course Community is run by KTH AI Society, a student organisation. Credits, grades and any average shown here are your own entries — not an official KTH record.
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isReviewer }}" hint-placeholder-val="{{ false }}">
+<div style="flex:1;display:flex;flex-direction:column;min-width:0">
+
+<div style="padding:18px 0 16px;border-bottom:1px solid var(--rule);display:flex;align-items:flex-start;justify-content:space-between;gap:24px">
+<div style="min-width:0">
+<div style="font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:#7a5309">Quick review</div>
+<div style="margin-top:7px;font-size:19px;font-weight:600;line-height:1.25">One card per course</div>
+<div style="margin-top:8px;max-width:560px;font-size:13.5px;line-height:1.5;color:var(--muted)">Four quick questions and a line of text per course. Skip the ones you have no opinion about — they stay in the list as unreviewed.</div>
+</div>
+<div onClick="{{ onCloseReviewer }}" style="flex:none;display:flex;align-items:center;gap:8px;height:38px;padding:0 14px;border-radius:9px;border:1px solid var(--rule3);background:var(--surface);font-size:13px;font-weight:500;color:var(--chipInk);cursor:pointer" style-hover="border-color:var(--hov)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#4a5560" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H6"></path><path d="m11.5 5.5-6.5 6.5 6.5 6.5"></path></svg>Back to courses</div>
+</div>
+
+<div style="padding:16px 0 0;display:flex;align-items:center;gap:14px">
+<div style="flex:none;font-size:12px;font-weight:500;color:var(--dim);font-variant-numeric:tabular-nums">{{ revProgressLabel }}</div>
+<div style="flex:1;display:flex;gap:5px">
+<sc-for list="{{ revSegs }}" as="p" hint-placeholder-count="8">
+<div style="flex:1;height:6px;border-radius:99px;background:{{ p.bg }}"></div>
+</sc-for>
+</div>
+</div>
+
+<sc-if value="{{ revActive }}" hint-placeholder-val="{{ true }}">
+<div style="flex:1;padding:22px 0 36px;display:flex;justify-content:center">
+<div style="position:relative;width:100%;max-width:640px">
+<sc-for list="{{ revPeeks }}" as="p" hint-placeholder-count="2">
+<div style="position:absolute;left:0;right:0;top:0;bottom:0;border-radius:16px;border:1px solid #e4dfd0;background:var(--surface);transform:translateY({{ p.y }}) scale({{ p.scale }});opacity:{{ p.opacity }}"></div>
+</sc-for>
+<div style="position:relative;z-index:3;border-radius:16px;border:1px solid #e4dfd0;background:var(--surface);box-shadow:0 14px 34px rgba(20,30,45,.09)">
+
+<div style="padding:20px 22px 17px;border-bottom:1px solid #f2efe6;display:flex;align-items:flex-start;gap:14px;background:#fdf7ea;border-radius:16px 16px 0 0">
+<div style="flex:1;min-width:0">
+<div style="font:500 12.5px Geist Mono,ui-monospace,monospace;color:var(--brand)">{{ revCode }}</div>
+<div style="margin-top:6px;font-size:20px;font-weight:600;line-height:1.25">{{ revName }}</div>
+<div style="margin-top:5px;font-size:12.5px;color:var(--dim)">{{ revMeta }}</div>
+</div>
+<div style="flex:none;padding:4px 11px;border-radius:999px;background:var(--surface);border:1px solid #f0e6d2;font-size:11.5px;font-weight:500;color:#8a6a1e;font-variant-numeric:tabular-nums">{{ revStackLabel }}</div>
+</div>
+
+<div style="padding:16px 22px 18px;display:flex;flex-direction:column;gap:14px">
+
+<div style="border:1px solid var(--rule);border-radius:12px;background:var(--pg);padding:15px 16px 14px">
+<div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px">
+<div style="font-size:14.5px;font-weight:600">How was it examined?</div>
+<div style="flex:none;padding:2px 9px;border-radius:999px;background:var(--pill);color:var(--brand);font-size:12px;font-weight:600;font-variant-numeric:tabular-nums">{{ revExamSplitLabel }}</div>
+</div>
+<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:11px">
+<sc-for list="{{ revMethodChips }}" as="m" hint-placeholder-count="5">
+<div onClick="{{ m.onClick }}" style="display:flex;align-items:center;gap:6px;height:30px;padding:0 11px;border-radius:15px;border:1px solid {{ m.border }};background:{{ m.bg }};color:{{ m.fg }};font-size:12.5px;cursor:pointer" style-hover="border-color:var(--brand)">
+<span style="width:8px;height:8px;flex:none;border-radius:2px;background:{{ m.dot }}"></span>{{ m.label }}
+</div>
+</sc-for>
+</div>
+<div ref="{{ examTrackRef }}" style="position:relative;margin-top:11px;display:flex;height:38px;border-radius:8px;overflow:hidden;background:#eae6da;user-select:none">
+<sc-if value="{{ revExamEmpty }}" hint-placeholder-val="{{ false }}">
+<div style="flex:1;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--dim)">Click the formats this course used</div>
+</sc-if>
+<sc-for list="{{ revExamSegs }}" as="seg" hint-placeholder-count="3">
+<div style="width:{{ seg.width }};background:{{ seg.color }};display:flex;align-items:center;justify-content:center;color:{{ seg.ink }};font-size:12px;font-weight:600;overflow:hidden;white-space:nowrap">{{ seg.slotLabel }}</div>
+</sc-for>
+<sc-for list="{{ revExamDividers }}" as="d" hint-placeholder-count="2">
+<div onPointerDown="{{ d.onDown }}" style="position:absolute;top:0;bottom:0;left:{{ d.left }};width:18px;margin-left:-9px;cursor:ew-resize;display:flex;align-items:center;justify-content:center">
+<div style="width:4px;height:24px;border-radius:2px;background:var(--surface);box-shadow:0 0 0 1px rgba(20,30,45,.18)"></div>
+</div>
+</sc-for>
+</div>
+<div style="height:1px;margin:14px 0;background:#eae6da"></div>
+<div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px">
+<div style="font-size:14.5px;font-weight:600">What was the approach?</div>
+<div style="flex:none;padding:2px 9px;border-radius:999px;background:var(--pill);color:var(--brand);font-size:12px;font-weight:600;font-variant-numeric:tabular-nums">{{ revTheoryLabel }}</div>
+</div>
+<div onPointerDown="{{ onRevTheoryDown }}" style="position:relative;margin-top:11px;display:flex;height:38px;border-radius:8px;overflow:hidden;background:#eae6da;cursor:ew-resize;user-select:none">
+<div style="display:flex;width:100%;height:100%">
+<div style="width:{{ revTheoryW1 }};background:{{ revTheoryFill1 }};display:flex;align-items:center;padding-left:11px;color:{{ revTheoryInk1 }};font-size:12px;font-weight:600;overflow:hidden;white-space:nowrap">Theoretical</div>
+<div style="width:{{ revTheoryW2 }};background:{{ revTheoryFill2 }};display:flex;align-items:center;justify-content:flex-end;padding-right:11px;color:{{ revTheoryInk2 }};font-size:12px;font-weight:600;overflow:hidden;white-space:nowrap">Applied</div>
+</div>
+<div style="position:absolute;top:0;bottom:0;left:{{ revTheoryW1 }};width:18px;margin-left:-9px;display:flex;align-items:center;justify-content:center"><div style="width:4px;height:24px;border-radius:2px;background:var(--surface);box-shadow:0 0 0 1px rgba(20,30,45,.18)"></div></div>
+</div>
+</div>
+
+<div style="border:1px solid var(--rule);border-radius:12px;background:var(--pg);padding:15px 16px 14px">
+<div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:9px"><div style="font-size:14.5px;font-weight:600">How demanding was this course?</div><div style="flex:none;padding:2px 9px;border-radius:999px;background:var(--pill);color:var(--brand);font-size:12px;font-weight:600;font-variant-numeric:tabular-nums">{{ revWorkloadLabel }}</div></div>
+<div onPointerDown="{{ onRevWorkloadDown }}" style="position:relative;height:22px;display:flex;align-items:center;cursor:pointer;user-select:none">
+<div style="height:8px;width:100%;border-radius:4px;background:#eae6da;overflow:hidden"><div style="height:100%;width:{{ revWorkloadW }};background:var(--btn)"></div></div>
+<sc-if value="{{ revWorkloadSet }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;left:{{ revWorkloadW }};width:20px;height:20px;margin-left:-10px;border-radius:50%;background:var(--surface);border:2px solid var(--brand);box-shadow:0 1px 3px rgba(0,0,0,.15)"></div>
+</sc-if>
+</div>
+<div style="display:flex;justify-content:space-between;font-size:11.5px;color:var(--muted);margin-top:4px"><span>Not at all</span><span>Very</span></div>
+<div style="height:1px;margin:14px 0;background:#eae6da"></div>
+<div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:9px"><div style="font-size:14.5px;font-weight:600">How much did you learn?</div><div style="flex:none;padding:2px 9px;border-radius:999px;background:var(--pill);color:var(--brand);font-size:12px;font-weight:600;font-variant-numeric:tabular-nums">{{ revLearningLabel }}</div></div>
+<div onPointerDown="{{ onRevLearningDown }}" style="position:relative;height:22px;display:flex;align-items:center;cursor:pointer;user-select:none">
+<div style="height:8px;width:100%;border-radius:4px;background:#eae6da;overflow:hidden"><div style="height:100%;width:{{ revLearningW }};background:var(--btn)"></div></div>
+<sc-if value="{{ revLearningSet }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;left:{{ revLearningW }};width:20px;height:20px;margin-left:-10px;border-radius:50%;background:var(--surface);border:2px solid var(--brand);box-shadow:0 1px 3px rgba(0,0,0,.15)"></div>
+</sc-if>
+</div>
+<div style="display:flex;justify-content:space-between;font-size:11.5px;color:var(--muted);margin-top:4px"><span>Nothing new</span><span>Transformative</span></div>
+</div>
+
+<div style="border:1px solid var(--rule);border-radius:12px;background:var(--pg);padding:15px 16px 14px">
+<div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px"><span style="font-size:14.5px;font-weight:600">Are you happy you took this course?</span><sc-if value="{{ revHappyNotSet }}" hint-placeholder-val="{{ false }}"><span style="flex:none;padding:2px 9px;border-radius:999px;background:var(--pill);color:var(--brand);font-size:12px;font-weight:600">Not set</span></sc-if></div>
+<div style="margin-top:10px;display:flex;gap:8px">
+<sc-for list="{{ revHappyOpts }}" as="h" hint-placeholder-count="2">
+<div onClick="{{ h.onClick }}" style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px;height:40px;border-radius:9px;border:1px solid {{ h.border }};background:{{ h.bg }};color:{{ h.fg }};font-size:13.5px;font-weight:{{ h.weight }};cursor:pointer" style-hover="border-color:var(--brand)">
+<span style="width:15px;height:15px;flex:none;border-radius:50%;border:1px solid {{ h.dotBorder }};background:{{ h.dot }}"></span>{{ h.label }}
+</div>
+</sc-for>
+</div>
+<div style="height:1px;margin:14px 0;background:#eae6da"></div>
+<div style="font-size:14.5px;font-weight:600">One line for the next student</div>
+<div style="margin-top:3px;font-size:12px;color:var(--muted)">Optional. You can write the full review later from the course page.</div>
+<div style="margin-top:10px;border:1px solid var(--rule3);border-radius:10px;overflow:hidden;background:var(--surface)">
+<textarea value="{{ revText }}" onChange="{{ onRevText }}" placeholder="What should they know before signing up?" style="display:block;width:100%;box-sizing:border-box;min-height:74px;padding:12px;border:none;outline:none;resize:vertical;background:var(--surface);font-family:Geist,system-ui,sans-serif;font-size:13.5px;line-height:1.55;color:var(--ink2)"></textarea>
+</div>
+</div>
+
+</div>
+
+<sc-if value="{{ revSaveError }}" hint-placeholder-val="{{ false }}">
+<div style="margin:0 22px 4px;display:flex;align-items:center;gap:10px;padding:11px 13px;border-radius:10px;border:1px solid #f0d7cf;background:#fdf3ef">
+<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#a3452a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M12 8v5"></path><path d="M12 16.5h.01"></path><circle cx="12" cy="12" r="9.5"></circle></svg>
+<div style="flex:1;min-width:0;font-size:12.5px;line-height:1.45;color:#7a3b26">{{ revSaveErrorText }}</div>
+<div onClick="{{ onRetrySave }}" style="flex:none;font-size:12.5px;font-weight:600;color:#a3452a;cursor:pointer" style-hover="text-decoration:underline">Try again</div>
+</div>
+</sc-if>
+<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 22px;border-top:1px solid var(--rule)">
+<div onClick="{{ onSkipCard }}" style="font-size:13px;font-weight:500;color:var(--muted);cursor:pointer" style-hover="text-decoration:underline">Skip for now</div>
+<div style="display:flex;align-items:center;gap:13px">
+<div style="font-size:11.5px;color:var(--dim2)">{{ revCardHint }}</div>
+<div onClick="{{ onSaveCard }}" style="display:flex;align-items:center;gap:9px;height:40px;padding:0 18px;border-radius:9px;background:{{ revSaveBg }};color:#fff;font-size:13.5px;font-weight:600;cursor:{{ revSaveCursor }}">{{ revSaveLabel }}<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13"></path><path d="m12.5 5.5 6.5 6.5-6.5 6.5"></path></svg></div>
+</div>
+</div>
+
+</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ revDone }}" hint-placeholder-val="{{ false }}">
+<div style="flex:1;padding:28px 0 40px;display:flex;justify-content:center;align-items:flex-start">
+<div style="width:100%;max-width:520px;border:1px solid var(--rule);border-radius:16px;background:var(--surface);padding:30px 26px 26px;text-align:center;animation:rise .2s ease-out">
+<span style="display:inline-flex;width:44px;height:44px;border-radius:50%;background:#e3f2ef;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1c6b60" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></span>
+<div style="margin-top:14px;font-size:21px;font-weight:600;letter-spacing:-.01em">{{ revDoneTitle }}</div>
+<div style="margin-top:8px;font-size:13.5px;line-height:1.55;color:var(--muted)">{{ revDoneBody }}</div>
+<div style="margin-top:20px;display:flex;justify-content:center;gap:10px">
+<div onClick="{{ onCloseReviewer }}" style="display:flex;align-items:center;height:40px;padding:0 18px;border-radius:9px;background:var(--btn);color:var(--btnFg);font-size:13.5px;font-weight:600;cursor:pointer" style-hover="background:var(--btn)">Back to my courses</div>
+<sc-if value="{{ revHasSkipped }}" hint-placeholder-val="{{ false }}">
+<div onClick="{{ onRoundTwo }}" style="display:flex;align-items:center;height:40px;padding:0 16px;border-radius:9px;border:1px solid var(--rule3);background:var(--surface);font-size:13.5px;font-weight:500;color:var(--chipInk);cursor:pointer" style-hover="border-color:var(--hov)">Go through the skipped ones</div>
+</sc-if>
+</div>
+</div>
+</div>
+</sc-if>
+
+</div>
+</sc-if>
+
+</div>
+
+</div>
+
+</div>
+
+<sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}">
+<div style="position:fixed;left:50%;bottom:26px;transform:translateX(-50%);z-index:80;display:flex;align-items:center;gap:14px;padding:11px 14px;border-radius:10px;background:#16202b;color:#fff;box-shadow:0 10px 30px rgba(20,30,45,.28);animation:rise .18s ease-out">
+<div style="font-size:13px">{{ toastText }}</div>
+<sc-if value="{{ canUndo }}" hint-placeholder-val="{{ true }}">
+<div onClick="{{ onUndo }}" style="font-size:13px;font-weight:600;color:#9dbfe4;cursor:pointer" style-hover="text-decoration:underline">Undo</div>
+</sc-if>
+</div>
+</sc-if>
+
+<sc-if value="{{ modalOpen }}" hint-placeholder-val="{{ false }}">
+<div onClick="{{ onCloseModal }}" style="position:fixed;inset:0;z-index:70;display:flex;align-items:center;justify-content:center;padding:28px;background:rgba(20,30,45,.34)">
+<div onClick="{{ stopClick }}" style="width:{{ modalWidth }};max-height:88vh;overflow:auto;border-radius:14px;background:var(--surface);box-shadow:0 18px 48px rgba(20,30,45,.24);animation:rise .18s ease-out">
+
+<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:20px 22px 0">
+<div>
+<div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--brand)">{{ modalKicker }}</div>
+<div style="margin-top:7px;font-size:19px;font-weight:600;line-height:1.25">{{ modalTitle }}</div>
+</div>
+<div onClick="{{ onCloseModal }}" style="flex:none;width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:7px;color:var(--dim);font-size:18px;line-height:1;cursor:pointer" style-hover="background:var(--pill)">×</div>
+</div>
+
+<sc-if value="{{ isUpdateModal }}" hint-placeholder-val="{{ false }}">
+<div style="padding:14px 22px 22px">
+<div style="font-size:13.5px;line-height:1.55;color:var(--muted)">Upload a newer Resultatintyg. Courses already in your list keep the edits you made — only new rows and missing fields are filled in.</div>
+<div onClick="{{ onToggleGrades }}" style="margin-top:14px;border:1px solid {{ gradesBorder }};border-radius:12px;background:{{ gradesBg }};padding:15px 16px 14px;cursor:pointer">
+<div style="display:flex;align-items:flex-start;gap:12px">
+<div style="flex:none;width:42px;height:24px;border-radius:99px;background:{{ gradesTrack }};padding:3px;display:flex;justify-content:{{ gradesJustify }};transition:background .16s ease-out"><div style="width:18px;height:18px;border-radius:50%;background:var(--surface);box-shadow:0 1px 2px rgba(20,30,45,.28)"></div></div>
+<div style="flex:1;min-width:0">
+<div style="font-size:13.5px;font-weight:600">Read grades from the file</div>
+<div style="margin-top:4px;font-size:12.5px;line-height:1.5;color:var(--muted)">{{ gradesHint }}</div>
+</div>
+</div>
+</div>
+<div onClick="{{ onUpload }}" style="margin-top:16px;padding:30px 22px;border-radius:12px;border:2px dashed var(--hov);background:var(--pill);display:flex;flex-direction:column;align-items:center;text-align:center;cursor:pointer" style-hover="background:var(--pill)">
+<div style="width:46px;height:46px;border-radius:13px;background:var(--pill);display:flex;align-items:center;justify-content:center"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#1751a6" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4"></path><path d="m7.5 8.5 4.5-4.5 4.5 4.5"></path><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"></path></svg></div>
+<div style="margin-top:13px;font-size:15.5px;font-weight:600">Drop the new PDF here</div>
+<div style="margin-top:5px;font-size:12.5px;color:var(--muted)">PDF from Ladok · up to 10 MB</div>
+<div style="margin-top:14px;display:flex;align-items:center;gap:8px;height:38px;padding:0 15px;border-radius:9px;background:var(--btn);color:var(--btnFg);font-size:13px;font-weight:600">Choose a PDF</div>
+</div>
+<div style="margin-top:14px;display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:12.5px;color:var(--dim)">
+<div>{{ lastReadLine }}</div>
+<div onClick="{{ onCloseModal }}" style="font-weight:500;color:var(--brand);cursor:pointer" style-hover="text-decoration:underline">Cancel</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isFormModal }}" hint-placeholder-val="{{ false }}">
+<div style="padding:14px 22px 0">
+
+<sc-if value="{{ isAddModal }}" hint-placeholder-val="{{ false }}">
+<div>
+<div style="font-size:11.5px;font-weight:500;color:var(--dim)">Search the KTH catalog</div>
+<div style="margin-top:6px;display:flex;align-items:center;gap:9px;height:42px;padding:0 13px;border-radius:9px;border:1px solid var(--rule3);background:var(--surface)">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5c6570" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><line x1="16.5" y1="16.5" x2="21" y2="21"></line></svg>
+<input value="{{ search }}" onChange="{{ onSearch }}" placeholder="Course code or name, e.g. DD2421" style="flex:1;min-width:0;border:none;outline:none;background:transparent;font-size:13.5px;color:var(--ink)">
+</div>
+<sc-if value="{{ showResults }}" hint-placeholder-val="{{ false }}">
+<div style="margin-top:8px;border:1px solid var(--rule);border-radius:10px;overflow:hidden">
+<sc-for list="{{ results }}" as="c" hint-placeholder-count="3">
+<div onClick="{{ c.onPick }}" style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-bottom:1px solid #f4f2ea;cursor:pointer" style-hover="background:var(--pill)">
+<span style="flex:none;font:500 12.5px Geist Mono,ui-monospace,monospace;color:var(--brand);width:74px">{{ c.code }}</span>
+<span style="flex:1;min-width:0;font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ c.name }}</span>
+<span style="flex:none;font-size:12.5px;color:var(--dim)">{{ c.hp }} hp</span>
+</div>
+</sc-for>
+<sc-if value="{{ noResults }}" hint-placeholder-val="{{ false }}">
+<div style="padding:13px 14px;background:var(--pg)">
+<div style="font-size:13px;color:var(--muted)">Nothing in the catalog matches “{{ search }}”.</div>
+<div onClick="{{ onFreeForm }}" style="margin-top:9px;display:inline-flex;align-items:center;gap:7px;height:34px;padding:0 12px;border-radius:8px;border:1px dashed var(--hov);background:var(--surface);font-size:12.5px;font-weight:500;color:var(--brand);cursor:pointer" style-hover="background:var(--pill)">Add “{{ search }}” as a free-form course</div>
+</div>
+</sc-if>
+</div>
+</sc-if>
+</div>
+</sc-if>
+
+<sc-if value="{{ showFreeFormNote }}" hint-placeholder-val="{{ false }}">
+<div style="margin-top:14px;display:flex;gap:9px;padding:12px 13px;border-radius:10px;background:var(--pill);border:1px dashed #cfc9b8">
+<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6b6355" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none;margin-top:2px"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-5"></path><path d="M12 8h.01"></path></svg>
+<div style="font-size:12.5px;line-height:1.5;color:var(--muted)">A free-form course counts toward your credits and average, but it has no course page — so there is nothing to review it against, and it will not appear in the fast-track reviewer.</div>
+</div>
+</sc-if>
+
+<div style="margin-top:16px;display:grid;grid-template-columns:130px minmax(0,1fr);gap:12px">
+<div>
+<div style="font-size:11.5px;font-weight:500;color:var(--dim)">Course code</div>
+<input value="{{ formCode }}" onChange="{{ onFormCode }}" placeholder="—" style="margin-top:6px;width:100%;height:40px;padding:0 11px;border-radius:9px;border:1px solid var(--rule3);outline:none;font:500 13.5px Geist Mono,ui-monospace,monospace;color:var(--ink);background:{{ codeFieldBg }}">
+</div>
+<div>
+<div style="font-size:11.5px;font-weight:500;color:var(--dim)">Course name</div>
+<input value="{{ formName }}" onChange="{{ onFormName }}" placeholder="Course name" style="margin-top:6px;width:100%;height:40px;padding:0 11px;border-radius:9px;border:1px solid var(--rule3);outline:none;font-size:13.5px;color:var(--ink)">
+</div>
+</div>
+
+<div style="margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:12px">
+<div>
+<div style="font-size:11.5px;font-weight:500;color:var(--dim)">Credits (hp)</div>
+<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:6px">
+<sc-for list="{{ hpOptions }}" as="h" hint-placeholder-count="4">
+<div onClick="{{ h.onClick }}" style="display:flex;align-items:center;height:34px;padding:0 12px;border-radius:8px;border:1px solid {{ h.border }};background:{{ h.bg }};color:{{ h.fg }};font-size:13px;font-weight:{{ h.weight }};font-variant-numeric:tabular-nums;cursor:pointer" style-hover="border-color:var(--brand)">{{ h.label }}</div>
+</sc-for>
+</div>
+</div>
+<div>
+<div style="font-size:11.5px;font-weight:500;color:var(--dim)">Year</div>
+<input value="{{ formYear }}" onChange="{{ onFormYear }}" inputMode="numeric" maxLength="4" placeholder="2025" style="margin-top:6px;width:100%;height:34px;padding:0 11px;border-radius:8px;border:1px solid var(--rule3);outline:none;font-size:13px;color:var(--ink);font-variant-numeric:tabular-nums">
+</div>
+</div>
+
+<sc-if value="{{ gradesOn }}" hint-placeholder-val="{{ true }}">
+<div style="margin-top:14px">
+<div style="font-size:11.5px;font-weight:500;color:var(--dim)">Grade</div>
+<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:6px">
+<sc-for list="{{ gradeOptions }}" as="g" hint-placeholder-count="8">
+<div onClick="{{ g.onClick }}" style="display:flex;align-items:center;justify-content:center;min-width:{{ g.minW }};height:34px;padding:0 11px;border-radius:8px;border:1px solid {{ g.border }};background:{{ g.bg }};color:{{ g.fg }};font-size:13px;font-weight:{{ g.weight }};cursor:pointer" style-hover="border-color:var(--brand)">{{ g.label }}</div>
+</sc-for>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isEditModal }}" hint-placeholder-val="{{ false }}">
+<div style="margin-top:16px;padding:13px 14px;border-radius:11px;background:var(--pg);border:1px solid var(--rule)">
+<div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+<div style="font-size:10.5px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--dim)">{{ originalLabel }}</div>
+<sc-if value="{{ canRevert }}" hint-placeholder-val="{{ false }}">
+<div onClick="{{ onRevert }}" style="display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:500;color:var(--brand);cursor:pointer" style-hover="text-decoration:underline"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1751a6" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 1 0 2.6-5.9"></path><path d="M4 4v4h4"></path></svg>Revert to the parsed values</div>
+</sc-if>
+</div>
+<div style="margin-top:9px;display:flex;flex-wrap:wrap;gap:8px">
+<sc-for list="{{ originalFields }}" as="o" hint-placeholder-count="4">
+<div style="display:flex;align-items:baseline;gap:7px;padding:4px 9px;border-radius:7px;background:var(--surface);border:1px solid {{ o.border }}">
+<span style="font-size:11px;color:var(--dim)">{{ o.label }}</span>
+<span style="font-size:12.5px;font-weight:500;color:{{ o.fg }};text-decoration:{{ o.strike }}">{{ o.value }}</span>
+</div>
+</sc-for>
+</div>
+</div>
+</sc-if>
+</div>
+
+<div style="position:sticky;bottom:0;margin-top:18px;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 22px;border-top:1px solid var(--rule);background:var(--surface)">
+<div style="font-size:12px;color:var(--dim2)">{{ formHint }}</div>
+<div style="display:flex;gap:9px">
+<div onClick="{{ onCloseModal }}" style="display:flex;align-items:center;height:38px;padding:0 14px;border-radius:9px;border:1px solid var(--rule3);background:var(--surface);font-size:13px;font-weight:500;color:var(--chipInk);cursor:pointer" style-hover="border-color:var(--hov)">Cancel</div>
+<div onClick="{{ onSaveForm }}" style="display:flex;align-items:center;height:38px;padding:0 16px;border-radius:9px;background:{{ saveBg }};color:#fff;font-size:13px;font-weight:600;cursor:{{ saveCursor }}">{{ saveLabel }}</div>
+</div>
+</div>
+</sc-if>
+
+</div>
+</div>
+</sc-if>
+
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:900},&quot;session&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;member&quot;,&quot;options&quot;:[&quot;guest&quot;,&quot;member&quot;],&quot;tsType&quot;:&quot;\&quot;guest\&quot; | \&quot;member\&quot;&quot;,&quot;section&quot;:&quot;Session&quot;},&quot;scenario&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;populated&quot;,&quot;options&quot;:[&quot;populated&quot;,&quot;empty&quot;,&quot;loading&quot;,&quot;error&quot;,&quot;edge-case&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Prototype state&quot;},&quot;transcriptState&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;ready&quot;,&quot;options&quot;:[&quot;idle&quot;,&quot;parsing&quot;,&quot;conflicts&quot;,&quot;ready&quot;,&quot;failed&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Prototype state&quot;},&quot;reviewState&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;idle&quot;,&quot;options&quot;:[&quot;idle&quot;,&quot;editing&quot;,&quot;saving&quot;,&quot;saved&quot;,&quot;failed&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Prototype state&quot;},&quot;locale&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;en&quot;,&quot;options&quot;:[&quot;en&quot;,&quot;sv&quot;],&quot;tsType&quot;:&quot;\&quot;en\&quot; | \&quot;sv\&quot;&quot;,&quot;section&quot;:&quot;Prototype state&quot;}}">
+const POINTS = { A: 5, B: 4, C: 3, D: 2, E: 1 };
+const HP_CHOICES = ["6.0", "7.5", "9.0", "15.0"];
+const TERMS = ["HT24", "VT25", "HT25", "VT26", "HT26"];
+const PERIODS = ["P1", "P2", "P3", "P4"];
+const GRADES = ["A", "B", "C", "D", "E", "F", "P", "no grade"];
+
+/* No course facts live on this page. Names, credits and rounds come from the
+   shared store; transcript rows arrive in userTakenCourse shape. */
+let STORE = null;
+let CATALOG = [];
+
+const creditStr = (n) => Number(n).toFixed(1);
+
+function catalogFromStore(locale) {
+  return STORE.courses.map((c) => ({
+    code: c.code, name: STORE.courseName(c, locale), hp: creditStr(c.credits)
+  }));
+}
+
+/* A row the parser produced, joined with the catalog. `conflict` is a fact
+   about the file or the catalog — never a probability. */
+function rowsFromImport(which, locale) {
+  return STORE.transcriptImports[which].rows.map((r) => {
+    const v = STORE.takenView(r, { locale });
+    const match = !r.courseCode ? "freeform" : v.inCatalog ? "catalog" : "nomatch";
+    const issue = match === "nomatch"
+      ? "No course with this code in the catalog"
+      : match === "freeform"
+        ? "Free-form course — no KTH course page"
+        : v.grade == null ? "No grade in this row of the file" : null;
+    return { code: r.courseCode, name: v.name, hp: creditStr(v.credits),
+      grade: v.grade, term: STORE.termLabel(v.attendanceYear),
+      periods: v.attendancePeriods || [], year: STORE.yearOf(v.attendanceYear), match, issue,
+      // A course is reviewed when a review row exists for it, not when a flag is set here.
+      reviewed: v.reviewed };
+  });
+}
+
+let seq = 1;
+const METHODS = [
+  { key: "exam", label: "On-campus exam", short: "Exam", color: "var(--brand)", ink: "var(--btnFg)" },
+  { key: "assignments", label: "Assignments", short: "Assign.", color: "#dfa53c", ink: "#3a2a06" },
+  { key: "labs", label: "Labs", short: "Labs", color: "#2f9e8e", ink: "#06251f" },
+  { key: "projects", label: "Project", short: "Project", color: "#6a4ea8", ink: "var(--btnFg)" },
+  { key: "other", label: "Other", short: "Other", color: "#57646f", ink: "var(--btnFg)" }
+];
+/** Even split across n segments in 5% steps; the remainder lands on the last. */
+function evenSplit(n) {
+  if (n === 0) return [];
+  const base = Math.max(5, Math.round(100 / n / 5) * 5);
+  const out = new Array(n).fill(base);
+  out[n - 1] = 100 - base * (n - 1);
+  return out;
+}
+const withIds = (rows) => rows.map((r) => ({
+  id: seq++,
+  code: r.code, name: r.name, hp: r.hp, grade: r.grade, term: r.term,
+  periods: r.periods || [], year: r.year || null,
+  match: r.match, issue: r.issue || null, reviewed: Boolean(r.reviewed),
+  parsed: { code: r.code, name: r.name, hp: r.hp, grade: r.grade, term: r.term },
+  edited: false, isNew: false
+}));
+
+/* Grades the student chose not to hand over never enter a row at all. */
+const stripGrades = (rows) => rows.map((r) => ({
+  ...r, grade: null,
+  issue: r.issue === "No grade in this row of the file" ? null : r.issue,
+  parsed: r.parsed ? { ...r.parsed, grade: null } : r.parsed
+}));
+
+const termIndex = (t) => {
+  const i = TERMS.indexOf(t);
+  return i < 0 ? 99 : i;
+};
+
+class Component extends DCLogic {
+  examTrackRef = React.createRef();
+
+  /* Theme choice is shared across the pages through one storage key. */
+  ccDark() {
+    if (this.state.ccNight !== undefined) return this.state.ccNight === true;
+    try { return window.localStorage.getItem("cc:theme") === "dark"; } catch (e) { return false; }
+  }
+
+  ccSetDark(next) {
+    document.documentElement.setAttribute("data-cc-theme", next ? "dark" : "light");
+    try { window.localStorage.setItem("cc:theme", next ? "dark" : "light"); } catch (e) { /* storage off */ }
+    this.setState({ ccNight: next });
+  }
+
+  ccApplyTheme() {
+    document.documentElement.setAttribute("data-cc-theme", this.ccDark() ? "dark" : "light");
+  }
+
+  /** Published by Explore and Saved, which own the list; this page only shows it. */
+  savedCount() {
+    try {
+      const n = parseInt(window.localStorage.getItem("cc:savedBadge"), 10);
+      return isNaN(n) ? 0 : n;
+    } catch (e) { return 0; }
+  }
+
+  state = {
+    signedIn: false,
+    screen: "empty",
+    // Where sign-in should land once the student is back.
+    returnTo: "empty",
+    rows: [],
+    includeGrades: false,
+    revQueue: [],
+    revAt: 0,
+    revDrafts: {},
+    revSaved: 0,
+    revSkipped: 0,
+    parseStep: 0,
+    parseKind: "first",
+    banner: null,
+    toast: null,
+    modal: null,
+    form: null,
+    search: "",
+    drop: false,
+    reads: 0,
+    error: null,
+    reviewPhase: "idle",
+    confirming: false,
+    pending: null,
+    skipped: [],
+    skippedSeen: false,
+    inlineId: null,
+    inlineDraft: null,
+    termPanelOpen: false
+  };
+
+  timers = [];
+
+  /* Every state this page can be in, reachable without clicking through the flow.
+     Each one lands on the real screen with real rows — no separate mock path. */
+  /* The two shared axes are session (guest | member) and scenario (populated |
+     empty | loading | error | edge-case). How far this page has got with a
+     transcript or a review is its own substate, never the site-wide scenario. */
+  harnessKey() {
+    return [this.props.session, this.props.scenario, this.props.transcriptState,
+      this.props.reviewState].join("|");
+  }
+
+  pose() {
+    const h = STORE.resolveHarness(this.props);
+    const locale = this.props.locale === "sv" ? "sv" : "en";
+    // Rows with no catalog course are excluded here too, not only after an import.
+    const split = (list) => {
+      const all = withIds(list);
+      return {
+        kept: all.filter((r) => r.match !== "freeform" && r.match !== "nomatch"),
+        skipped: all.filter((r) => r.match === "freeform" || r.match === "nomatch")
+          .map((r) => ({ name: r.name || r.code || "Unnamed row", code: r.code || null }))
+      };
+    };
+    const seeded = split(rowsFromImport("first", locale));
+    const rows = () => seeded.kept;
+    const base = {
+      signedIn: h.isMember, screen: "list", rows: [], returnTo: "list", reads: 1,
+      includeGrades: false, banner: null, toast: null, modal: null, form: null,
+      search: "", drop: false, parseStep: 0, parseKind: "first", error: null,
+      revQueue: [], revAt: 0, revDrafts: {}, revSaved: 0, revSkipped: 0, reviewPhase: "idle",
+      confirming: false, pending: null,
+      skipped: seeded.skipped, skippedSeen: seeded.skipped.length === 0,
+      inlineId: null, inlineDraft: null, termPanelOpen: false
+    };
+    const failed = { ...base, screen: "failed", rows: [], reads: 0, returnTo: "empty" };
+
+    if (h.isGuest) return { ...base, signedIn: false, screen: "empty", rows: [], reads: 0, returnTo: "empty" };
+    if (h.isLoading) return { ...base, screen: "parsing", parseStep: 2, rows: [], reads: 0 };
+    if (h.isError) return failed;
+    if (h.isEmpty) return { ...base, screen: "empty", rows: [], reads: 0, returnTo: "empty" };
+    if (h.isEdgeCase) return { ...base, screen: "list", includeGrades: false,
+      rows: stripGrades(rows()) };
+
+    const t = this.props.transcriptState || "ready";
+    if (t === "idle") return { ...base, screen: "empty", rows: [], reads: 0, returnTo: "empty" };
+    if (t === "parsing") return { ...base, screen: "parsing", parseStep: 2, rows: [], reads: 0 };
+    if (t === "failed") return failed;
+    if (t === "conflicts") return { ...base, screen: "success", rows: rows() };
+
+    const r = this.props.reviewState || "idle";
+    if (r === "idle") return { ...base, screen: "list", rows: rows() };
+    const posed = rows();
+    const queue = posed.filter((x) => x.match !== "freeform").map((x) => x.id);
+    if (r === "saved") {
+      return { ...base, screen: "reviewer", reviewPhase: "saved",
+        rows: posed.map((x) => (x.match === "freeform" ? x : { ...x, reviewed: true })),
+        revQueue: queue, revAt: queue.length, revSaved: queue.length, revSkipped: 0 };
+    }
+    return { ...base, screen: "reviewer", reviewPhase: r, rows: posed,
+      revQueue: queue, revAt: 0,
+      revDrafts: r === "editing" || r === "saving" || r === "failed"
+        ? { [queue[0]]: { happy: true, workload: 4, learning: 5 } }
+        : {} };
+  }
+
+  applyScenario() {
+    if (!STORE) return;
+    this.clearTimers();
+    this.setState(this.pose());
+  }
+
+  componentDidMount() {
+    this.ccApplyTheme();
+    try {
+      this.wantReviewer = new URLSearchParams(window.location.search).get("review") === "1";
+    } catch (e) { this.wantReviewer = false; }
+    import("./cc-store.js").then((mod) => {
+      STORE = mod;
+      CATALOG = catalogFromStore(this.props.locale === "sv" ? "sv" : "en");
+      this.seenHarness = this.harnessKey();
+      this.setState(this.pose(), () => {
+        // Arriving from My Page's "review" CTAs: open the queue, not the list.
+        if (this.wantReviewer && this.state.rows.length) this.openReviewer(null);
+      });
+    });
+  }
+
+  componentDidUpdate() {
+    if (!STORE) return;
+    if (this.harnessKey() !== this.seenHarness) {
+      this.seenHarness = this.harnessKey();
+      this.applyScenario();
+    }
+  }
+
+  componentWillUnmount() {
+    this.timers.forEach(clearTimeout);
+  }
+
+  saveList() {
+    this.setState({ screen: "list", confirming: false, toast: { text: "Course list saved", undo: null } });
+  }
+
+  clearTimers() {
+    this.timers.forEach(clearTimeout);
+    this.timers = [];
+  }
+
+  startParse(kind) {
+    this.clearTimers();
+    this.setState({ screen: "parsing", parseKind: kind, parseStep: 0, modal: null, banner: null });
+    this.timers.push(window.setTimeout(() => this.finishParse(kind), 1300));
+  }
+
+  /** Rows the catalog cannot resolve have no storable home; they are reported. */
+  splitImport(rows) {
+    const kept = rows.filter((r) => r.match !== "freeform" && r.match !== "nomatch");
+    const skipped = rows.filter((r) => r.match === "freeform" || r.match === "nomatch")
+      .map((r) => ({ name: r.name || r.code || "Unnamed row", code: r.code || null }));
+    return { kept, skipped };
+  }
+
+  finishParse(kind) {
+    const keepGrades = this.state.includeGrades;
+    if (kind === "first") {
+      const all = withIds(rowsFromImport("first", this.props.locale === "sv" ? "sv" : "en"));
+      const split = this.splitImport(keepGrades ? all : stripGrades(all));
+      const missing = split.kept.filter((r) => r.issue).length;
+      this.setState({
+        rows: split.kept, skipped: split.skipped, skippedSeen: false,
+        previewSummary: split.kept.length + " courses read"
+          + (missing ? " · " + missing + (missing === 1 ? " is missing a field" : " are missing a field") : " · nothing missing"),
+        screen: "preview", confirming: true, reads: this.state.reads + 1
+      });
+      return;
+    }
+    // An update never overwrites an edit the student already made.
+    const rows = this.state.rows.slice();
+    let added = 0;
+    let filled = 0;
+    const skipped = [];
+    rowsFromImport("second", this.props.locale === "sv" ? "sv" : "en").forEach((incoming) => {
+      // Same rule as a first import: no catalog course, no row.
+      if (incoming.match === "freeform" || incoming.match === "nomatch") {
+        skipped.push({ name: incoming.name || incoming.code || "Unnamed row", code: incoming.code || null });
+        return;
+      }
+      const at = rows.findIndex((r) => r.code && r.code === incoming.code);
+      if (at < 0) {
+        const fresh = keepGrades ? withIds([incoming])[0] : stripGrades(withIds([incoming]))[0];
+        fresh.isNew = true;
+        rows.push(fresh);
+        added += 1;
+        return;
+      }
+      const row = rows[at];
+      if (keepGrades && row.grade == null && !row.edited) {
+        rows[at] = { ...row, grade: incoming.grade, issue: null, isNew: false,
+          parsed: { ...row.parsed, grade: incoming.grade } };
+        filled += 1;
+      }
+    });
+    const parts = [];
+    if (added) parts.push(added === 1 ? "1 new course" : added + " new courses");
+    if (filled) parts.push(filled === 1 ? "1 missing grade filled in" : filled + " missing grades filled in");
+    this.setState({
+      rows,
+      skipped: skipped,
+      skippedSeen: false,
+      previewSummary: parts.length ? "Transcript updated — " + parts.join(", ") : "Transcript re-read — nothing new in it",
+      screen: "preview",
+      confirming: true,
+      reads: this.state.reads + 1,
+      banner: {
+        title: parts.length ? "Transcript updated — " + parts.join(", ") : "Transcript re-read — nothing new in it",
+        body: "Courses already in your list kept their edits. New rows are marked below."
+      }
+    });
+  }
+
+  openForm(mode, id) {
+    if (mode === "add") {
+      this.setState({
+        modal: "add", search: "",
+        form: { code: "", name: "", hp: "7.5", grade: "no grade", year: "2025", match: "catalog", id: null }
+      });
+      return;
+    }
+    const row = this.state.rows.find((r) => r.id === id);
+    if (!row) return;
+    this.setState({
+      modal: "edit",
+      form: {
+        id: row.id, code: row.code || "", name: row.name, hp: row.hp,
+        grade: row.grade || "no grade", year: row.year != null ? String(row.year) : "", match: row.match
+      }
+    });
+  }
+
+  saveForm() {
+    const f = this.state.form;
+    if (!f || !f.name.trim()) return;
+    const grade = !this.state.includeGrades || f.grade === "no grade" ? null : f.grade;
+    const code = f.code.trim() ? f.code.trim().toUpperCase() : null;
+    const inCatalog = code ? CATALOG.some((c) => c.code === code) : false;
+    const match = code ? (inCatalog ? "catalog" : "nomatch") : "freeform";
+    const issue = match === "nomatch"
+      ? "No course with this code in the catalog"
+      : match === "freeform"
+        ? "Free-form course — no KTH course page"
+        : grade == null && this.state.includeGrades ? "No grade set yet" : null;
+
+    if (f.id == null) {
+      const row = {
+        id: seq++, code, name: f.name.trim(), hp: f.hp, grade, year: f.year ? parseInt(f.year, 10) : null, match, issue,
+        parsed: null, edited: false, isNew: true, reviewed: false
+      };
+      this.setState({ rows: this.state.rows.concat([row]), modal: null, form: null,
+        toast: { text: "Added " + (code || f.name.trim()), undo: this.state.rows } });
+      return;
+    }
+    const rows = this.state.rows.map((r) => {
+      if (r.id !== f.id) return r;
+      const changed = !r.parsed
+        || r.parsed.code !== code || r.parsed.name !== f.name.trim() || r.parsed.hp !== f.hp
+        || r.parsed.grade !== grade || r.parsed.year !== f.year;
+      return { ...r, code, name: f.name.trim(), hp: f.hp, grade, year: f.year ? parseInt(f.year, 10) : null, match, issue, edited: changed };
+    });
+    this.setState({ rows, modal: null, form: null });
+  }
+
+  revertForm() {
+    const f = this.state.form;
+    const row = this.state.rows.find((r) => r.id === f.id);
+    if (!row || !row.parsed) return;
+    const p = row.parsed;
+    this.setState({ form: { ...f, code: p.code || "", name: p.name, hp: p.hp,
+      grade: p.grade || "no grade", year: p.year } });
+  }
+
+  /* One queue of cards: whatever is reviewable and not yet reviewed. */
+  openReviewer(startId) {
+    const eligible = this.state.rows.filter((r) => r.match !== "freeform");
+    const pending = eligible.filter((r) => !r.reviewed).map((r) => r.id);
+    let queue = pending;
+    if (startId != null) queue = [startId].concat(pending.filter((i) => i !== startId));
+    if (!queue.length) return;
+    this.setState({ screen: "reviewer", revQueue: queue, revAt: 0, revSaved: 0, revSkipped: 0, modal: null });
+  }
+
+  patchCard(patch) {
+    const id = this.state.revQueue[this.state.revAt];
+    if (id == null) return;
+    const drafts = { ...this.state.revDrafts };
+    drafts[id] = { ...(drafts[id] || {}), ...patch };
+    this.setState({ revDrafts: drafts });
+  }
+
+  saveCard() {
+    const s = this.state;
+    const id = s.revQueue[s.revAt];
+    const d = s.revDrafts[id] || {};
+    const answered = d.happy != null && d.workload != null && d.learning != null;
+    if (!answered) return;
+    this.setState({
+      rows: s.rows.map((r) => (r.id === id ? { ...r, reviewed: true } : r)),
+      revAt: s.revAt + 1,
+      revSaved: s.revSaved + 1
+    });
+  }
+
+  skipCard() {
+    this.setState({ revAt: this.state.revAt + 1, revSkipped: this.state.revSkipped + 1 });
+  }
+
+  slide(e, max, set) {
+    const el = e.currentTarget;
+    const move = (ev) => {
+      const r = el.getBoundingClientRect();
+      const t = Math.min(1, Math.max(0, (ev.clientX - r.left) / r.width));
+      set(Math.round(t * max));
+    };
+    const up = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+    move(e);
+  }
+
+  dividerDown(i, rect, pcts, setPcts) {
+    const before = pcts.slice(0, i).reduce((a, p) => a + p, 0);
+    const pair = pcts[i] + pcts[i + 1];
+    const move = (ev) => {
+      let x = ((ev.clientX - rect.left) / rect.width) * 100 - before;
+      x = Math.round(x / 5) * 5;
+      x = Math.max(5, Math.min(pair - 5, x));
+      const next = pcts.slice();
+      next[i] = x;
+      next[i + 1] = pair - x;
+      setPcts(next);
+    };
+    const up = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+  }
+
+  bump(i, delta, pcts, setPcts) {
+    const next = pcts.slice();
+    const j = (i + 1) % next.length;
+    if (i === j) return;
+    if (next[i] + delta < 5 || next[j] - delta < 5) return;
+    next[i] += delta;
+    next[j] -= delta;
+    setPcts(next);
+  }
+
+  toggleMethod(method, picked, setBoth) {
+    const next = picked.slice();
+    const at = next.indexOf(method);
+    if (at >= 0) next.splice(at, 1); else next.push(method);
+    setBoth(next, evenSplit(next.length));
+  }
+
+  startPct(e, scale, apply) {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const run = (ev) => {
+      const raw = ((ev.clientX - rect.left) / rect.width) * 100;
+      apply(scale === 100
+        ? Math.round(Math.max(5, Math.min(95, raw)))
+        : Math.round(Math.max(1, Math.min(10, raw / 10))));
+    };
+    run(e);
+    const up = () => {
+      window.removeEventListener("pointermove", run);
+      window.removeEventListener("pointerup", up);
+    };
+    window.addEventListener("pointermove", run);
+    window.addEventListener("pointerup", up);
+  }
+
+  removeRow(id) {
+    const before = this.state.rows;
+    const row = before.find((r) => r.id === id);
+    // The list row is a view of user_taken_courses — removing it here has to
+    // delete the real record too, or Explore still shows the course as taken.
+    if (row && row.code) {
+      const rows2 = STORE.userTakenCourses;
+      const at = rows2.findIndex((r) => r.userId === "u1" && r.courseCode === row.code);
+      if (at >= 0) rows2.splice(at, 1);
+    }
+    this.setState({
+      rows: before.filter((r) => r.id !== id),
+      toast: { text: "Removed " + (row.code || row.name), undo: before }
+    });
+  }
+
+  gradeStyle(g) {
+    if (g == null) return { gradeBg: "#fdf7ea", gradeFg: "#6b4c0d", gradeBorder: "#dfa53c", gradeBorderStyle: "dashed" };
+    if (g === "P" || g === "F") return { gradeBg: "var(--pill)", gradeFg: "#3d4650", gradeBorder: "transparent", gradeBorderStyle: "solid" };
+    return { gradeBg: "var(--pill)", gradeFg: "#12417f", gradeBorder: "transparent", gradeBorderStyle: "solid" };
+  }
+
+  matchStyle(kind) {
+    if (kind === "catalog") return { matchLabel: "In KTH catalog", matchBg: "var(--pill)", matchFg: "#12417f", matchBorder: "1px solid #dde7f4" };
+    if (kind === "nomatch") return { matchLabel: "No catalog match", matchBg: "#fdf7ea", matchFg: "#6b4c0d", matchBorder: "1px solid #f0e6d2" };
+    return { matchLabel: "Free-form course", matchBg: "var(--pill)", matchFg: "#5c6570", matchBorder: "1px dashed #cfc9b8" };
+  }
+
+  chip(on) {
+    return {
+      bg: on ? "var(--pill)" : "var(--surface)",
+      fg: on ? "var(--brand)" : "var(--muted)",
+      border: on ? "var(--brand)" : "var(--rule3)",
+      weight: on ? "600" : "500"
+    };
+  }
+
+  row(r) {
+    const off = !this.state.includeGrades;
+    const gs = r.grade != null ? this.gradeStyle(r.grade)
+      : off ? { gradeBg: "transparent", gradeFg: "#a09a8c", gradeBorder: "transparent", gradeBorderStyle: "solid" }
+      : this.gradeStyle(r.grade);
+    const editing = this.state.inlineId === r.id;
+    const draft = editing ? this.state.inlineDraft : null;
+    return {
+      ...gs,
+      ...this.matchStyle(r.match),
+      codeLabel: r.code || "—",
+      codeColor: r.match === "catalog" ? "var(--brand)" : "var(--dim)",
+      name: r.name,
+      hpLabel: r.hp + " hp",
+      gradeLabel: r.grade != null ? r.grade : off ? "not read" : "—",
+      reviewed: Boolean(r.reviewed),
+      canReview: r.match !== "freeform" && !r.reviewed,
+      onReview: () => this.openReviewer(r.id),
+      term: r.term,
+      issue: r.issue,
+      isNew: Boolean(r.isNew),
+      edited: Boolean(r.edited) && !r.isNew,
+      rowBg: r.isNew ? "#f7fbf9" : "transparent",
+      // Credits and grade are user_taken_courses fields — self-reported and
+      // editable in place, without the tab used to correct code/name/term.
+      isEditing: editing,
+      notEditing: !editing,
+      draftHp: draft ? draft.hp : r.hp,
+      onHpChange: (e) => this.setState({ inlineDraft: { ...this.state.inlineDraft, hp: e.target.value } }),
+      draftGrade: draft ? draft.grade : "",
+      onGradeChange: (e) => {
+        const v = e.target.value.toUpperCase().replace(/[^A-FP]/g, "").slice(0, 1);
+        this.setState({ inlineDraft: { ...this.state.inlineDraft, grade: v } });
+      },
+      year: r.year != null ? r.year : "—",
+      draftYear: draft ? draft.year : "",
+      onYearChange: (e) => {
+        const v = e.target.value.replace(/[^0-9]/g, "").slice(0, 4);
+        this.setState({ inlineDraft: { ...this.state.inlineDraft, year: v } });
+      },
+      onEdit: () => this.setState({
+        inlineId: r.id,
+        inlineDraft: { hp: r.hp, grade: r.grade || "", year: r.year != null ? String(r.year) : "" }
+      }),
+      onSaveEdit: () => this.saveInlineEdit(r.id),
+      onCancelEdit: () => this.setState({ inlineId: null, inlineDraft: null }),
+      onRemove: () => this.removeRow(r.id)
+    };
+  }
+
+  saveInlineEdit(id) {
+    const d = this.state.inlineDraft;
+    if (!d) return;
+    const hp = parseFloat(d.hp);
+    const hpOk = !isNaN(hp) && hp >= 0 ? hp.toFixed(1) : null;
+    const grade = d.grade ? d.grade : null;
+    const year = d.year && d.year.length === 4 ? parseInt(d.year, 10) : null;
+    const row = this.state.rows.find((r) => r.id === id);
+    this.setState({
+      inlineId: null, inlineDraft: null,
+      rows: this.state.rows.map((r) => r.id === id
+        ? { ...r, hp: hpOk != null ? hpOk : r.hp, grade, year: year != null ? year : r.year,
+            issue: grade == null && this.state.includeGrades ? "No grade set yet" : null, edited: true }
+        : r)
+    });
+    // Credits, grade and year are user_taken_courses fields — the edit is the
+    // course record, not a note kept only on this page.
+    if (row && row.code) {
+      STORE.setTakenOverride("u1", row.code, {
+        earnedCredits: hpOk != null ? parseFloat(hpOk) : parseFloat(row.hp),
+        grade, attendanceYear: year != null ? year : row.year
+      });
+    }
+  }
+
+  renderVals() {
+    const s = this.state;
+    const rows = s.rows;
+    const checks = rows.filter((r) => r.issue);
+    const ok = rows.filter((r) => !r.issue);
+    const credits = rows.reduce((a, r) => a + parseFloat(r.hp || 0), 0);
+    const terms = rows.map((r) => r.term).filter(Boolean).sort((a, b) => termIndex(a) - termIndex(b));
+    let points = 0;
+    let graded = 0;
+    rows.forEach((r) => {
+      const p = POINTS[r.grade];
+      if (p == null) return;
+      const hp = parseFloat(r.hp);
+      graded += hp;
+      points += p * hp;
+    });
+    const pending = rows.filter((r) => r.match !== "freeform" && !r.reviewed);
+    const cardId = s.revQueue[s.revAt];
+    const card = cardId == null ? null : rows.find((r) => r.id === cardId) || null;
+    const draft = (card && s.revDrafts[card.id]) || {};
+    const cardAnswered = Boolean(
+      draft.happy != null && draft.workload != null && draft.learning != null
+    );
+    const f = s.form;
+    const q = s.search.trim().toLowerCase();
+    const results = q
+      ? CATALOG.filter((c) => (c.code + " " + c.name).toLowerCase().includes(q)).slice(0, 5)
+      : [];
+
+    return {
+      signedIn: s.signedIn,
+      signedOut: !s.signedIn,
+      pageMaxWidth: STORE.PAGE_MAX_WIDTH,
+      pageSidePadding: STORE.PAGE_SIDE_PADDING,
+      isMember: s.signedIn,
+      night: this.ccDark(),
+      notNight: !this.ccDark(),
+      themeTitle: this.ccDark() ? "Switch to light mode" : "Switch to dark mode",
+      onTheme: () => this.ccSetDark(!this.ccDark()),
+      paneTop: "66px",
+      isGuest: !s.signedIn,
+      onLogIn: () => this.setState({ signedIn: true }),
+      onSignUp: () => this.setState({ signedIn: true }),
+      // The saved count is written by Explore and Saved; read it, never own it.
+      hasSavedCount: this.savedCount() > 0,
+      savedCountLabel: String(this.savedCount()),
+      isAuth: s.screen === "auth",
+      isEmpty: s.screen === "empty",
+      isParsing: s.screen === "parsing",
+      isSuccess: s.screen === "success",
+      isList: s.screen === "list",
+      isReviewer: s.screen === "reviewer",
+      isFailed: s.screen === "failed",
+      errorTitle: "We could not read that transcript",
+      errorBody: "The file opened, but no course rows came out of it. That is almost always a scanned PDF — a scan is a picture, so there is no text for the parser to read.",
+      errorFile: "resultatintyg-2026-08-24.pdf · 412 KB",
+      authReturnLine: s.rows.length
+        ? "Your course list is waiting — signing in brings you straight back to it."
+        : "Already have the PDF ready? Sign in and you land back here with the drop zone open.",
+      onSignIn: () => this.setState({ signedIn: true, screen: s.returnTo }, () => {
+        // The action that asked for the account finishes itself.
+        if (s.pending === "confirm") this.setState({ pending: null }, () => this.saveList());
+      }),
+      onBackToWork: () => this.setState({ screen: s.returnTo }),
+      onSignOut: () => this.setState({
+        signedIn: false, modal: null, toast: null,
+        returnTo: s.rows.length ? "list" : "empty"
+      }),
+
+      dropBorder: s.drop ? "var(--brand)" : "var(--hov)",
+      dropBg: s.drop ? "var(--pill)" : "var(--pill)",
+      dropTitle: s.drop ? "Drop to start reading" : "Drop your Ladok transcript here",
+      onDropEnter: () => this.setState({ drop: true }),
+      onDropLeave: () => this.setState({ drop: false }),
+      onUpload: () => this.startParse(s.rows.length ? "update" : "first"),
+      onManualStart: () => this.setState({ screen: "list", returnTo: "list" }, () => this.openForm("add")),
+
+      parseFile: s.parseKind === "first" ? "resultatintyg-2026-08-24.pdf" : "resultatintyg-2027-01-18.pdf",
+      parseFileMeta: s.parseKind === "first" ? "412 KB · 3 pages" : "438 KB · 3 pages",
+      parseHeading: s.parseKind === "first" ? "Reading your transcript" : "Reading the new transcript",
+      onCancelParse: () => { this.clearTimers(); this.setState({ screen: s.rows.length ? "list" : "empty" }); },
+
+      count: rows.length,
+      // Rows with no catalog match cannot be stored — user_taken_courses has an
+      // FK to courses.code — so they are reported once and excluded.
+      hasSkipped: s.skipped && s.skipped.length > 0 && !s.skippedSeen,
+      skippedTitle: s.skipped && s.skipped.length === 1
+        ? "1 row was not a KTH catalog course"
+        : (s.skipped ? s.skipped.length : 0) + " rows were not KTH catalog courses",
+      skippedItems: (s.skipped || []).map((x) => ({ label: x.code ? x.code + " — " + x.name : x.name })),
+      onDismissSkipped: () => this.setState({ skippedSeen: true }),
+      checkHeadline: checks.length === 1 ? "1 row needs your eyes" : checks.length + " rows need your eyes",
+      okRows: rows.map((r) => this.row(r)),
+      listEmpty: rows.length === 0,
+      onGoList: () => this.setState({ screen: "list", returnTo: "list" }),
+      sourceLabel: s.reads > 1
+        ? "Last updated 18 Jan 2027"
+        : s.reads === 1 ? "Last updated 24 Aug 2026" : "Added by hand",
+
+      gradesOn: s.includeGrades,
+      gradesOff: !s.includeGrades,
+      onToggleGrades: () => this.setState({ includeGrades: !s.includeGrades }),
+      gradesTrack: s.includeGrades ? "#1751a6" : "#cfc9b8",
+      gradesJustify: s.includeGrades ? "flex-end" : "flex-start",
+      gradesBg: s.includeGrades ? "var(--pill)" : "var(--surface)",
+      gradesBorder: s.includeGrades ? "#dde7f4" : "var(--rule)",
+      gradesHint: s.includeGrades
+        ? "The grade column is filled in from the file and your average is calculated. Only you can see either one."
+        : "Grade columns are left out of the parse, so no grade of yours is stored anywhere. Credits, names and terms are still read.",
+      readBullet: s.includeGrades
+        ? "It is read once to prefill your course list — code, name, credits, grade and term."
+        : "It is read once to prefill your course list — code, name, credits and term. Grade columns are skipped.",
+
+      isPreview: s.screen === "preview",
+      previewHeadline: s.previewSummary || (checks.length
+        ? rows.length + " courses read · " + checks.length + (checks.length === 1 ? " is missing a field" : " are missing a field")
+        : rows.length + " courses read · nothing missing"),
+      confirmCta: s.signedIn ? "Looks right" : "Sign in to keep this list",
+      onConfirm: () => {
+        if (!s.signedIn) { this.setState({ screen: "auth", returnTo: "list", pending: "confirm" }); return; }
+        this.saveList();
+      },
+      hasPending: pending.length > 0,
+      pendingLine: pending.length === 1
+        ? "You have 1 unreviewed course."
+        : "You have " + pending.length + " unreviewed courses.",
+      unreviewedCourses: pending.map((r) => ({ code: r.code, name: r.name, onClick: () => this.openReviewer(r.id) })),
+      onStartReviewer: () => this.openReviewer(null),
+      onCloseReviewer: () => this.setState({ screen: "list" }),
+      reviewCta: pending.length ? "Open the quick reviewer" : "All reviewed",
+      revActive: s.screen === "reviewer" && Boolean(card),
+      revDone: s.screen === "reviewer" && !card,
+      revProgressLabel: card
+        ? "Card " + (s.revAt + 1) + " of " + s.revQueue.length
+        : s.revQueue.length + (s.revQueue.length === 1 ? " card" : " cards") + " done",
+      revSegs: s.revQueue.map((id, i) => ({
+        bg: i < s.revAt ? "var(--btn)" : i === s.revAt ? "#7ea6d8" : "var(--pill)"
+      })),
+      revPeeks: [
+        { y: "14px", scale: "0.975", opacity: "1" },
+        { y: "26px", scale: "0.95", opacity: "0.65" }
+      ].slice(0, Math.max(0, s.revQueue.length - s.revAt - 1)),
+      revCode: card ? (card.code || "—") : "",
+      revName: card ? card.name : "",
+      revMeta: card ? card.hp + " hp · " + card.term : "",
+      revStackLabel: card
+        ? (s.revQueue.length - s.revAt - 1) + " more after this"
+        : "",
+      revHappyNotSet: draft.happy == null,
+      revHappyOpts: [["Yes, I am", true], ["No, not really", false]].map(([label, v]) => {
+        const on = draft.happy === v;
+        return {
+          label,
+          bg: on ? "var(--pill)" : "var(--surface)",
+          fg: on ? "var(--brand)" : "var(--muted)",
+          border: on ? "var(--brand)" : "var(--rule3)",
+          weight: on ? "600" : "500",
+          dot: on ? "#1751a6" : "transparent",
+          dotBorder: on ? "var(--brand)" : "#c8c2b2",
+          onClick: () => this.patchCard({ happy: v })
+        };
+      }),
+      examTrackRef: this.examTrackRef,
+      revPicked: draft.picked || [],
+      revPcts: draft.pcts || [],
+      revMethodChips: METHODS.map((m) => {
+        const picked = draft.picked || [];
+        const on = picked.indexOf(m.key) >= 0;
+        return {
+          label: m.label,
+          dot: on ? m.color : "#ded8c8",
+          bg: on ? "var(--pill)" : "var(--surface)",
+          fg: on ? "var(--ink)" : "var(--muted)",
+          border: on ? "var(--brand)" : "var(--rule3)",
+          onClick: () => this.toggleMethod(m.key, picked, (next, pcts) => this.patchCard({ picked: next, pcts }))
+        };
+      }),
+      revExamEmpty: !(draft.picked || []).length,
+      revExamSegs: (() => {
+        const picked = draft.picked || [];
+        const pcts = draft.pcts || [];
+        return picked.map((k, i) => {
+          const m = METHODS.find((x) => x.key === k);
+          const p = pcts[i] || 0;
+          return { label: m.label, short: m.short, color: m.color, ink: m.ink, width: p + "%", slotLabel: p >= 24 ? m.label : p >= 13 ? m.short : "" };
+        });
+      })(),
+      revExamDividers: (() => {
+        const picked = draft.picked || [];
+        const pcts = draft.pcts || [];
+        let acc = 0;
+        const cuts = [];
+        for (let i = 0; i < picked.length - 1; i++) { acc += pcts[i] || 0; cuts.push(acc); }
+        return cuts.map((left, i) => ({
+          left: left + "%",
+          onDown: (e) => {
+            e.preventDefault();
+            const el = this.examTrackRef.current;
+            if (el) this.dividerDown(i, el.getBoundingClientRect(), pcts, (next) => this.patchCard({ pcts: next }));
+          }
+        }));
+      })(),
+      revExamSplitLabel: (draft.picked || []).length ? (draft.picked || []).length + (draft.picked.length === 1 ? " format" : " formats") : "Not set",
+      revTheoryW1: (draft.theory == null ? 50 : draft.theory) + "%",
+      revTheoryW2: (draft.theory == null ? 50 : 100 - draft.theory) + "%",
+      revTheoryFill1: draft.theory == null ? "#ded8c8" : "#12417f",
+      revTheoryFill2: draft.theory == null ? "#ded8c8" : "#a9c8ec",
+      revTheoryInk1: draft.theory == null ? "#6b6355" : "#fff",
+      revTheoryInk2: draft.theory == null ? "#6b6355" : "#12417f",
+      revTheoryLabel: draft.theory == null ? "Not set" : draft.theory + " / " + (100 - draft.theory),
+      onRevTheoryDown: (e) => this.startPct(e, 100, (v) => this.patchCard({ theory: v })),
+      revWorkloadW: (draft.workload == null ? 0 : draft.workload * 10) + "%",
+      revWorkloadSet: draft.workload != null,
+      revWorkloadLabel: draft.workload == null ? "Not set" : draft.workload + " / 10",
+      onRevWorkloadDown: (e) => this.slide(e, 10, (v) => this.patchCard({ workload: v })),
+      revLearningW: (draft.learning == null ? 0 : draft.learning * 10) + "%",
+      revLearningSet: draft.learning != null,
+      revLearningLabel: draft.learning == null ? "Not set" : draft.learning + " / 10",
+      onRevLearningDown: (e) => this.slide(e, 10, (v) => this.patchCard({ learning: v })),
+      revText: draft.text || "",
+      onRevText: (e) => this.patchCard({ text: e.target.value }),
+      revAnswered: cardAnswered,
+      revSaveLabel: s.reviewPhase === "saving"
+        ? "Saving…"
+        : s.revAt === s.revQueue.length - 1 ? "Save and finish" : "Save and next",
+      revSaveBg: s.reviewPhase === "saving" ? "#7ea6d8" : cardAnswered ? "var(--btn)" : "#b9c9de",
+      revSaveCursor: s.reviewPhase === "saving" ? "progress" : cardAnswered ? "pointer" : "not-allowed",
+      revSaveError: s.reviewPhase === "failed",
+      revSaveErrorText: "That review did not reach the server. Nothing was lost — your answers are still on the card.",
+      onRetrySave: () => this.setState({ reviewPhase: "saving" }, () => {
+        this.timers.push(window.setTimeout(() => this.setState({ reviewPhase: "idle" }, () => this.saveCard()), 700));
+      }),
+      revCardHint: cardAnswered ? "Marks this course reviewed" : "Answer one thing to save",
+      onSaveCard: () => this.saveCard(),
+      onSkipCard: () => this.skipCard(),
+      revDoneTitle: s.revSaved
+        ? s.revSaved + (s.revSaved === 1 ? " course reviewed" : " courses reviewed")
+        : "Nothing reviewed this round",
+      revDoneBody: s.revSkipped
+        ? "The " + s.revSkipped + " you skipped are still marked unreviewed in your list — pick any of them up from there."
+        : "Every course in this round is marked reviewed in your list. You can reopen a card from the Reviewed column any time.",
+      revHasSkipped: s.revSkipped > 0,
+      onRoundTwo: () => this.openReviewer(null),
+
+      hasBanner: Boolean(s.banner),
+      bannerTitle: s.banner ? s.banner.title : "",
+      bannerBody: s.banner ? s.banner.body : "",
+      onDismissBanner: () => this.setState({ banner: null }),
+
+      hasToast: Boolean(s.toast),
+      toastText: s.toast ? s.toast.text : "",
+      canUndo: Boolean(s.toast && s.toast.undo),
+      onUndo: () => {
+        const removedRow = s.rows.length < s.toast.undo.length
+          ? s.toast.undo.find((r) => !s.rows.some((x) => x.id === r.id))
+          : null;
+        if (removedRow && removedRow.code && !STORE.userTakenCourses.some((r) => r.userId === "u1" && r.courseCode === removedRow.code)) {
+          const now = new Date().toISOString();
+          STORE.userTakenCourses.push({ userId: "u1", courseCode: removedRow.code, attendancePeriods: removedRow.periods || [],
+            attendanceYear: removedRow.year || null, grade: removedRow.grade || null, earnedCredits: parseFloat(removedRow.hp) || null,
+            transcriptImportedAt: null, createdAt: now, updatedAt: now });
+        }
+        this.setState({ rows: s.toast.undo, toast: null });
+      },
+
+      onUpdateStart: () => this.setState({ modal: "update" }),
+      onAddStart: () => this.openForm("add"),
+      modalOpen: Boolean(s.modal),
+      isUpdateModal: s.modal === "update",
+      isAddModal: s.modal === "add",
+      isEditModal: s.modal === "edit",
+      isFormModal: s.modal === "add" || s.modal === "edit",
+      modalWidth: s.modal === "update" ? "460px" : "560px",
+      modalKicker: s.modal === "update" ? "Update transcript" : s.modal === "edit" ? "Edit course" : "Add missing course",
+      modalTitle: s.modal === "update"
+        ? "Read a newer transcript"
+        : s.modal === "edit" ? "Correct what the parser read" : "Add a course by hand",
+      onCloseModal: () => this.setState({ modal: null, form: null }),
+      stopClick: (e) => e.stopPropagation(),
+
+      search: s.search,
+      onSearch: (e) => this.setState({ search: e.target.value }),
+      showResults: Boolean(q),
+      noResults: Boolean(q) && results.length === 0,
+      results: results.map((c) => ({
+        code: c.code, name: c.name, hp: c.hp,
+        onPick: () => this.setState({
+          search: "",
+          form: { ...f, code: c.code, name: c.name, hp: c.hp, match: "catalog" }
+        })
+      })),
+      onFreeForm: () => this.setState({
+        form: { ...f, code: "", name: s.search.trim(), match: "freeform" }, search: ""
+      }),
+      showFreeFormNote: Boolean(f) && !f.code.trim() && Boolean(f.name.trim()),
+
+      formCode: f ? f.code : "",
+      formName: f ? f.name : "",
+      codeFieldBg: f && !f.code.trim() ? "var(--inset)" : "var(--surface)",
+      onFormCode: (e) => this.setState({ form: { ...f, code: e.target.value } }),
+      onFormName: (e) => this.setState({ form: { ...f, name: e.target.value } }),
+      hpOptions: HP_CHOICES.map((h) => ({
+        label: h, ...this.chip(Boolean(f) && f.hp === h),
+        onClick: () => this.setState({ form: { ...f, hp: h } })
+      })),
+      formYear: f ? (f.year || "") : "",
+      onFormYear: (e) => this.setState({ form: { ...f, year: e.target.value.replace(/[^0-9]/g, "").slice(0, 4) } }),
+      gradeOptions: GRADES.map((g) => ({
+        label: g, minW: g === "no grade" ? "auto" : "38px",
+        ...this.chip(Boolean(f) && f.grade === g),
+        onClick: () => this.setState({ form: { ...f, grade: g } })
+      })),
+
+      originalLabel: f && f.id != null && (this.state.rows.find((r) => r.id === f.id) || {}).parsed
+        ? "Read from the transcript"
+        : "Added by hand — nothing was parsed",
+      originalFields: (() => {
+        if (!f || f.id == null) return [];
+        const row = this.state.rows.find((r) => r.id === f.id);
+        if (!row || !row.parsed) return [];
+        const p = row.parsed;
+        const cur = { code: f.code.trim() || null, name: f.name.trim(), hp: f.hp,
+          grade: f.grade === "no grade" ? null : f.grade, year: f.year };
+        return [
+          ["Code", p.code || "—", cur.code === p.code],
+          ["Name", p.name, cur.name === p.name],
+          ["Credits", p.hp + " hp", cur.hp === p.hp],
+          ["Grade", p.grade == null ? "not in file" : p.grade, cur.grade === p.grade],
+          ["Year", p.year, cur.year === p.year]
+        ].map(([label, value, same]) => ({
+          label, value,
+          fg: same ? "var(--ink2)" : "var(--dim2)",
+          strike: same ? "none" : "line-through",
+          border: same ? "var(--rule)" : "#f0e6d2"
+        }));
+      })(),
+      canRevert: (() => {
+        if (!f || f.id == null) return false;
+        const row = this.state.rows.find((r) => r.id === f.id);
+        if (!row || !row.parsed) return false;
+        const p = row.parsed;
+        return (p.code || "") !== f.code.trim() || p.name !== f.name.trim() || p.hp !== f.hp
+          || (p.grade || "no grade") !== f.grade || p.year !== f.year;
+      })(),
+      onRevert: () => this.revertForm(),
+
+      formHint: f && !f.code.trim()
+        ? "No code — this will be saved as a free-form course"
+        : f && f.code.trim() && !CATALOG.some((c) => c.code === f.code.trim().toUpperCase())
+          ? "This code is not in the catalog yet"
+          : "",
+      saveLabel: s.modal === "edit" ? "Save changes" : "Add course",
+      saveBg: f && f.name.trim() ? "var(--btn)" : "#b9c9de",
+      saveCursor: f && f.name.trim() ? "pointer" : "not-allowed",
+      onSaveForm: () => this.saveForm()
+    };
+  }
+}
+
+</script>
+</body>
+</html>

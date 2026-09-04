@@ -1,0 +1,73 @@
+/* Course Community — theme tokens.
+   The single definition of the light and dark palettes. Pages link this file
+   from their helmet and consume the variables inline; nothing else belongs here.
+
+   pg      page background            surface  cards, fields, menus
+   inset   recessed panel             pill     chips, tracks, hover fills
+   rail    the sidebar (brand blue in both themes)
+   ink     primary text               ink2     secondary text
+   muted   supporting text            dim/dim2 labels and hints
+   chipInk text on a pill             rule/2/3 hairline, border, strong border
+   hov     hover border               brand    links and brand text
+   btn/btnFg  filled button and its foreground */
+
+:root {
+  --pg: #faf8f1;
+  --surface: #ffffff;
+  --inset: #faf8f1;
+  --pill: #f2efe6;
+  --rail: #1751a6;
+  --ink: #16202b;
+  --ink2: #3d4650;
+  --muted: #5c6570;
+  --dim: #6b6355;
+  --dim2: #8a857a;
+  --chipInk: #4a5560;
+  --rule: #eae6da;
+  --rule2: #e5e0d2;
+  --rule3: #ddd8c9;
+  --hov: #b9c9de;
+  --brand: #1751a6;
+  --btn: #1751a6;
+  --btnFg: #ffffff;
+  --info: rgba(23, 81, 166, .07);
+  --warn: #fdf7ea;
+  --warnBorder: #f0e6d2;
+  --warnInk: #7a5309;
+  --warnBtn: #1751a6;
+  --warnBtnFg: #ffffff;
+}
+
+[data-cc-theme="dark"] {
+  --pg: #0d2d5b;
+  --surface: #143a72;
+  --inset: #0a2449;
+  --pill: rgba(244, 238, 226, .16);
+  --rail: #1751a6;
+  --ink: #f6f1e6;
+  --ink2: #eae4d7;
+  --muted: #d3e0f4;
+  --dim: #c6d5ee;
+  --dim2: #b0c1de;
+  --chipInk: #f0ebdf;
+  --rule: rgba(244, 238, 226, .22);
+  --rule2: rgba(244, 238, 226, .3);
+  --rule3: rgba(244, 238, 226, .42);
+  --hov: #dbe8fa;
+  --brand: #e2ecfb;
+  --btn: #f4eee2;
+  --btnFg: #1751a6;
+  --info: rgba(226, 236, 251, .10);
+  --warn: rgba(223, 165, 60, .16);
+  --warnBorder: rgba(223, 165, 60, .3);
+  --warnInk: #f2c879;
+  --warnBtn: #dfa53c;
+  --warnBtnFg: #1a1305;
+}
+
+/* Colour changes cross-fade; nothing else about a page animates from here. */
+[data-cc-theme] * {
+  transition: background-color .34s ease, color .34s ease, border-color .34s ease;
+}
+
+input::placeholder { color: var(--dim); }

@@ -14,7 +14,8 @@
       "!dist",
       "!build",
       "!migrations",
-      "!drizzle"
+      "!drizzle",
+      "!docs/design"
     ]
   },
   "formatter": {
