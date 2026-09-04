@@ -24,7 +24,7 @@ vi.mock("@/features/auth", async (importOriginal) => ({
   useMe: () => useMe(),
 }));
 
-vi.mock("@/features/favorites", () => ({
+vi.mock("@/features/saved", () => ({
   useSetCourseSaved: () => ({ setSaved: vi.fn().mockResolvedValue(undefined) }),
 }));
 
