@@ -1,4 +1,4 @@
-import { inArray, sql } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import { db } from "../db";
 import * as schema from "../db/schema";
 
@@ -94,26 +94,6 @@ export async function searchByEmbedding(
     courseCode: r.code,
     score: r.score,
   }));
-}
-
-/**
- * The crude blended score behind the `minRating` filter. It used to average
- * four legacy review columns; #75 dropped those, so it now averages the two
- * surviving 1-10 axes. Real aggregation over the target columns is #67's.
- */
-export async function averageRatings(codes: string[]) {
-  const ratingRows = await db.execute(
-    sql`SELECT course_code,
-            ROUND((AVG(workload_score) + AVG(learning_score))/2) AS rating
-            FROM ${schema.reviews}
-            WHERE ${inArray(schema.reviews.courseCode, codes)}
-            GROUP BY course_code`,
-  );
-  const rows = ratingRows.rows as Array<{
-    course_code: string;
-    rating: number;
-  }>;
-  return new Map(rows.map((r) => [r.course_code, Number(r.rating) || 0]));
 }
 
 export async function listDepartments(): Promise<string[]> {

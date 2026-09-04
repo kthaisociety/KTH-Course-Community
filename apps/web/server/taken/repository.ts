@@ -1,4 +1,4 @@
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, count, eq, inArray, sql } from "drizzle-orm";
 import { db } from "../db";
 import * as schema from "../db/schema";
 
@@ -118,6 +118,38 @@ export async function updateTakenCourse(
     )
     .returning({ courseCode: schema.userTakenCourses.courseCode });
   return updated.length > 0;
+}
+
+export type TakenCountRow = {
+  courseCode: string;
+  takenCount: number;
+};
+
+/**
+ * How many app users have recorded taking each course, in one grouped query
+ * for a whole page of course cards rather than one per card. A course nobody
+ * has recorded is missing rather than zero-valued; the caller supplies the
+ * zero, because here row existence *is* the count.
+ */
+export async function countByCourseCodes(
+  courseCodes: string[],
+): Promise<TakenCountRow[]> {
+  if (courseCodes.length === 0) return [];
+
+  const rows = await db
+    .select({
+      courseCode: schema.userTakenCourses.courseCode,
+      takenCount: count(),
+    })
+    .from(schema.userTakenCourses)
+    .where(inArray(schema.userTakenCourses.courseCode, courseCodes))
+    .groupBy(schema.userTakenCourses.courseCode);
+
+  // `count()` arrives from the driver as a bigint string.
+  return rows.map((row) => ({
+    courseCode: row.courseCode,
+    takenCount: Number(row.takenCount),
+  }));
 }
 
 /** Returns whether a row was actually deleted. */

@@ -1,8 +1,8 @@
 import type { CourseSummary } from "@/types";
 import { embedSingle } from "../ai";
 import { getSummariesByCodes } from "../course/service";
+import { getAggregatesByCourseCodes } from "../reviews/service";
 import {
-  averageRatings,
   listDepartments,
   type SearchHit,
   searchByEmbedding,
@@ -101,6 +101,25 @@ async function searchWithEmbedding(
   }
 }
 
+/**
+ * `minRating` is the dropdown's "at least N stars", and what it measures is
+ * the **learning score**: how much reviewers got out of the course.
+ *
+ * It used to be the mean of workload and learning together, which made a
+ * punishing course score like a rewarding one. `CONTEXT.md` is explicit that
+ * workload is not a verdict — a heavy course is not a bad one — so averaging
+ * it into a rating filter told users the opposite of what they asked. Of the
+ * axes a review actually stores, learning is the only one that moves in the
+ * direction a minimum-rating filter means; `happy_took` is a yes/no share on
+ * a different question, not a 1-10 score to threshold. See #67.
+ *
+ * A course with no reviews has no rating, so it cannot clear a minimum and is
+ * filtered out — absent, rather than a zero that would rank it last.
+ *
+ * The threshold is compared against the raw stored mean. Search is choosing
+ * courses, not drawing a card, so it takes the reviews domain's aggregate
+ * rather than the rounded figures `course/service.ts` assembles for display.
+ */
 export async function searchCourses(
   query: string,
   size = 10,
@@ -129,9 +148,19 @@ export async function searchCourses(
 
   const minRating = filters?.minRating;
   if (minRating) {
-    const ratingByCode = await averageRatings(codes);
+    // The reviews domain's raw aggregate, not the course card's numbers: the
+    // card rounds its means to one decimal for display, and a 5.99 rounded up
+    // to 6.0 would clear a three-star threshold it actually misses. Filtering
+    // reads the unrounded score; rounding stays at the presentation edge.
+    const aggregates = await getAggregatesByCourseCodes(codes);
+    const learningMeanByCode = new Map(
+      aggregates.map((row) => [row.courseCode, row.learningMean]),
+    );
     const threshold = minRating * SCORE_POINTS_PER_STAR;
-    codes = codes.filter((c) => (ratingByCode.get(c) ?? 0) >= threshold);
+    codes = codes.filter((code) => {
+      const learningMean = learningMeanByCode.get(code);
+      return learningMean !== undefined && learningMean >= threshold;
+    });
   }
 
   codes = codes.slice(0, size);
