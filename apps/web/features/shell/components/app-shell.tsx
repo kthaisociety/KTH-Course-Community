@@ -1,12 +1,14 @@
 "use client";
 
 import { Menu } from "lucide-react";
+import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { type AuthReason, AuthReasonDialog } from "@/features/auth";
 import { Rail } from "@/features/shell/components/rail";
 import { ThemeToggle } from "@/features/shell/components/theme-toggle";
+import { pageTitleFor } from "@/features/shell/lib/page-title";
 
 /**
  * The frame every route renders inside: the blue rail, the topbar, and the
@@ -26,6 +28,7 @@ import { ThemeToggle } from "@/features/shell/components/theme-toggle";
  * theme flip cross-fade rather than snap, exactly as `cc-theme.css` does.
  */
 export function AppShell({ children }: { children: ReactNode }) {
+  const pathname = usePathname() ?? "";
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [authReason, setAuthReason] = useState<AuthReason | null>(null);
 
@@ -60,12 +63,11 @@ export function AppShell({ children }: { children: ReactNode }) {
           >
             <Menu size={19} strokeWidth={2} aria-hidden />
           </button>
-          {/* The Mobile Preview puts the current page's title here. Nothing can
-              supply one yet — no page renders `PageHeader`, and a client-side
-              title channel with nothing to register is invention, not design —
-              so the wordmark stands in, since the rail that carries it is away. */}
+          {/* The page you are on, named the way the Mobile Preview names it —
+              from the route, so it is right on the first paint. The brand is
+              not lost with the rail: the drawer carries it, as it does there. */}
           <span className="min-w-0 flex-1 truncate font-semibold text-[16px] leading-[1.2] @3xl:hidden">
-            Course Community
+            {pageTitleFor(pathname)}
           </span>
           <ThemeToggle />
         </header>

@@ -197,6 +197,20 @@ describe("AppShell", () => {
     ).toHaveAttribute("aria-current", "page");
   });
 
+  describe("the mobile header", () => {
+    it("names the page the visitor is on, not the app", () => {
+      pathname = "/search";
+      renderShell();
+      expect(screen.getByRole("banner")).toHaveTextContent("Explore courses");
+    });
+
+    it("falls back to the wordmark on a route the design never titled", () => {
+      pathname = "/reviews";
+      renderShell();
+      expect(screen.getByRole("banner")).toHaveTextContent("Course Community");
+    });
+  });
+
   describe("the drawer", () => {
     it("brings the rail back on a narrow frame and closes after a tap", async () => {
       const user = userEvent.setup();
