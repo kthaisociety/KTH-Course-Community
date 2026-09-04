@@ -229,7 +229,18 @@ export function MyPage() {
             }`}
           >
             {TAB_LABELS[key]}
-            {key === "reviews" ? (
+            {/*
+              The count is counted off `reviews.list`, so it may only be shown
+              on the same terms as the panel it summarises. An empty list is
+              what the query holds while it is still in flight and what it may
+              still hold from an earlier read once it has failed, and either way
+              a pill beside "Your page did not load" states a total the page has
+              just said it does not have — a confident "0" over a reader whose
+              reviews simply have not arrived, or a stale count of this
+              account's activity outlasting the read that fetched it. No number
+              is the honest answer until there is one.
+            */}
+            {key === "reviews" && !isLoading && !isError ? (
               <>
                 <span
                   aria-hidden

@@ -304,6 +304,34 @@ describe("MyPage empty states", () => {
 });
 
 describe("MyPage privacy", () => {
+  it("keeps the review count off the tab while the list is unread", () => {
+    reviews.mockReturnValue({
+      ...settled([makeReview({ userId: "u1" })]),
+      isPending: true,
+    });
+    render(<MyPage />);
+
+    expect(screen.getByRole("tab", { name: "Reviews" })).toBeVisible();
+    expect(screen.queryByText(/in total/)).not.toBeInTheDocument();
+  });
+
+  it("keeps a cached review count off the tab once the read has failed", () => {
+    // A failed query can still be holding what an earlier one returned, and
+    // the panel below is saying the page did not load. A count beside that
+    // would outlive the read it came from.
+    reviews.mockReturnValue({
+      ...settled([makeReview({ userId: "u1" }), makeReview({ id: "r2" })]),
+      isError: true,
+      error: new Error("nope"),
+    });
+    render(<MyPage />);
+
+    expect(screen.getByText("Your page did not load")).toBeVisible();
+    expect(screen.getByRole("tab", { name: "Reviews" })).toBeVisible();
+    expect(screen.queryByText("2")).not.toBeInTheDocument();
+    expect(screen.queryByText(/in total/)).not.toBeInTheDocument();
+  });
+
   it("never says a review is signed", async () => {
     reviews.mockReturnValue(settled([makeReview({ userId: "u1" })]));
     render(<MyPage />);
