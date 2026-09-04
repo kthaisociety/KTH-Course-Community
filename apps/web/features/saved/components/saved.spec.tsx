@@ -1,9 +1,14 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { CourseStats } from "@/types";
 import { Saved } from "./saved";
 
 const push = vi.fn();
+const replace = vi.fn();
+const collections = vi.fn();
+const renameCollection = vi.fn();
+const deleteCollection = vi.fn();
 const useMe = vi.fn();
 const setSaved = vi.fn();
 const takenCourses = vi.fn();
@@ -12,7 +17,10 @@ const addCourse = vi.fn();
 const removeCourse = vi.fn();
 const summariesPending = vi.fn();
 
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push, replace }),
+  usePathname: () => "/saved",
+}));
 vi.mock("@/features/auth", () => ({
   useMe: () => useMe(),
   useRequireSession: () => ({}),
@@ -26,12 +34,19 @@ vi.mock("@/features/courses/api/queries", () => ({
       isPending: summariesPending(),
     })),
   useCourseStats: () => ({ data: {}, isPending: false }),
-  useCollections: () => ({ data: [] }),
+  useCollections: () => ({
+    data: collections(),
+    isPending: false,
+    isFetching: false,
+  }),
   useTakenCourses: () => ({ data: takenCourses() }),
 }));
 vi.mock("@/features/courses/api/mutations", () => ({
   useCollectionMutations: () => ({
     create: { mutateAsync: vi.fn() },
+    rename: { mutateAsync: renameCollection },
+    deleteCollection: { mutateAsync: deleteCollection },
+    reorder: { mutateAsync: vi.fn() },
     addCourse: { mutateAsync: addCourse },
     removeCourse: { mutateAsync: removeCourse },
   }),
@@ -42,6 +57,11 @@ vi.mock("../api/mutations", () => ({
 }));
 vi.mock("sonner", () => ({ toast: { error: vi.fn() } }));
 
+/**
+ * `course.summary` as both readers of it see it: Saved takes the catalogue
+ * fields, and the embedded Collections section also reads `stats` off the same
+ * object for the cards in a collection's detail.
+ */
 const CATALOGUE: Record<
   string,
   {
@@ -49,6 +69,7 @@ const CATALOGUE: Record<
     titleEng: string;
     credits: number;
     department: string;
+    stats: CourseStats;
   }
 > = {
   DD2380: {
@@ -56,14 +77,21 @@ const CATALOGUE: Record<
     titleEng: "Artificial Intelligence",
     credits: 6,
     department: "EECS",
+    stats: { reviews: null, takenCount: 0 },
   },
   DD2421: {
     courseCode: "DD2421",
     titleEng: "Machine Learning",
     credits: 7.5,
     department: "EECS",
+    stats: { reviews: null, takenCount: 0 },
   },
 };
+
+/** One collection as `collections.list` returns it. */
+function collection(name: string, ...courseCodes: string[]) {
+  return { id: `col-${name}`, name, courseCodes };
+}
 
 function saved(...courseCodes: string[]) {
   useMe.mockReturnValue({
@@ -82,6 +110,7 @@ function cardFor(courseCode: string): HTMLElement {
 
 beforeEach(() => {
   saved();
+  collections.mockReturnValue([]);
   takenCourses.mockReturnValue([]);
   summariesPending.mockReturnValue(false);
   setSaved.mockResolvedValue(undefined);
@@ -177,6 +206,84 @@ describe("Saved", { timeout: 20_000 }, () => {
       expect(
         screen.getByText(/2 saved courses could not be loaded/),
       ).toBeInTheDocument();
+    });
+  });
+
+  /**
+   * `Course Community - Saved.dc.html` line 82 imports the Collections artboard
+   * with `compact`. That embedding is the design's only way in to collections —
+   * the artboard's rail has no entry for them — so it is part of this page
+   * rather than a link away from it.
+   */
+  describe("the collections section", () => {
+    it("is a row of chips above the saved courses", () => {
+      saved("DD2380");
+      collections.mockReturnValue([collection("Spring picks", "DD2380")]);
+      render(<Saved />);
+
+      expect(
+        screen.getByRole("heading", { name: "Collections" }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "New collection" }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Open collection Spring picks" }),
+      ).toBeInTheDocument();
+    });
+
+    // The artboard's own `showSavedSection: !collectionsOpenDetail`. The detail
+    // is itself a list of these cards, so leaving both up would show one course
+    // twice on one page.
+    it("opens a collection here, and the saved list gets out of the way", async () => {
+      saved("DD2380", "DD2421");
+      collections.mockReturnValue([collection("Spring picks", "DD2380")]);
+      render(<Saved />);
+
+      expect(screen.getAllByRole("article")).toHaveLength(2);
+
+      await userEvent.click(
+        screen.getByRole("button", { name: "Open collection Spring picks" }),
+      );
+
+      expect(
+        screen.getByRole("heading", { name: "Spring picks" }),
+      ).toBeInTheDocument();
+      // Only the one course in the collection, from the detail below the chips.
+      expect(screen.getAllByRole("article")).toHaveLength(1);
+      expect(
+        screen.queryByRole("heading", { name: "DD2421 Machine Learning" }),
+      ).toBeNull();
+    });
+
+    // The detail is shareable from the page it was opened on, not from
+    // `/collections`: this is where the design puts the way in.
+    it("keeps the open collection in this route's query", async () => {
+      saved("DD2380");
+      collections.mockReturnValue([collection("Spring picks", "DD2380")]);
+      render(<Saved />);
+
+      await userEvent.click(
+        screen.getByRole("button", { name: "Open collection Spring picks" }),
+      );
+
+      expect(replace).toHaveBeenCalledWith(
+        "/saved?collection=col-Spring%20picks",
+        {
+          scroll: false,
+        },
+      );
+    });
+
+    it("opens the collection the route names, on the first paint", () => {
+      saved("DD2380");
+      collections.mockReturnValue([collection("Spring picks", "DD2380")]);
+      render(<Saved openCollectionId="col-Spring picks" />);
+
+      expect(
+        screen.getByRole("heading", { name: "Spring picks" }),
+      ).toBeInTheDocument();
+      expect(screen.queryByText("No saved courses yet")).toBeNull();
     });
   });
 

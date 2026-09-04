@@ -33,7 +33,7 @@ vi.mock("@/features/auth", () => ({
   useMe: () => useMe(),
   AuthReasonDialog: () => null,
 }));
-vi.mock("@/features/favorites", () => ({
+vi.mock("@/features/saved", () => ({
   useSetCourseSaved: () => ({ setSaved: vi.fn().mockResolvedValue(undefined) }),
 }));
 vi.mock("@/features/courses/api/queries", () => ({

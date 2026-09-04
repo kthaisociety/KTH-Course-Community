@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
   type AuthReason,
@@ -9,6 +9,7 @@ import {
   useMe,
   useRequireSession,
 } from "@/features/auth";
+import { Collections } from "@/features/collections";
 import {
   CourseCardItem,
   EXPANDED_CARD_GEOMETRY,
@@ -53,24 +54,44 @@ const SKELETON_KEYS = ["s0", "s1", "s2"] as const;
  * "this will also remove…" confirmation, and no optimistic write that reaches
  * into `taken.list` or the review cache. `saved.spec.tsx` holds that.
  *
- * **The list is flat, and the artboard's is not.** The artboard puts a compact
- * Collections panel above the cards and then shows only the saved courses *not*
- * in a collection, under an `h2` reading "Saved courses" and the line "Courses
- * you have saved but not yet added to a comparison". #91 owns that panel and it
- * is not on the page yet, so the split alone would make a course vanish from
- * `/saved` the moment it joined a collection, under a subtitle asserting a
- * division the reader cannot see — and an `h2` repeating the `h1` directly above
- * it. This is a deferral, not a design change. **#91 must put all three back**
- * when it lands the panel: the `h2`, its subtitle, and `unorganized` filtered
- * against `collections.list`, with the artboard's "Every saved course is in a
- * comparison" panel for when that filter empties.
+ * **Collections is a section of this page, not a link away from it.** The
+ * artboard imports the Collections artboard at line 82 with `compact`, which is
+ * the design's only way in to collections — its rail has no entry for them, and
+ * #91's stopgap rail link went when this landed. Opening a collection from the
+ * chips opens its detail *here*, and the saved list gets out of its way, which
+ * is the artboard's own `showSavedSection: !collectionsOpenDetail`.
+ *
+ * **The list is flat, and the artboard's is not.** Below the chips the artboard
+ * shows only the saved courses *not* in a collection, under an `h2` reading
+ * "Saved courses" and the line "Courses you have saved but not yet added to a
+ * comparison". That split is not built: a course would leave this list the
+ * moment it joined a collection, and the only place it would then be visible is
+ * behind a chip — so a reader who filed everything would find the page empty
+ * under a heading promising their saved courses. The `h2` is dropped with it,
+ * because "Saved courses" under an `h1` reading "Saved courses" says nothing
+ * once the subtitle that distinguished them is gone. Both are a deferral, not a
+ * design change: they belong with whoever makes an organized course reachable
+ * from this page without opening the collection it is in.
  */
-export function Saved() {
+type Props = {
+  /**
+   * The collection named by `?collection=` on this route, if any. Opening one
+   * from the chips writes it here, so a refresh or a shared link lands back on
+   * the same detail — `Collections` keeps the route in step itself.
+   */
+  openCollectionId?: string | null;
+};
+
+export function Saved({ openCollectionId = null }: Props) {
   useRequireSession();
   const router = useRouter();
   const { user, isLoading: isSessionLoading } = useMe();
   const { setSaved } = useSetCourseSaved();
   const [authReason, setAuthReason] = useState<AuthReason | null>(null);
+  // Which collection's detail is open, as `Collections` reports it. The route
+  // is the authority on the first paint; after that the chips are.
+  const [openDetail, setOpenDetail] = useState<string | null>(openCollectionId);
+  useEffect(() => setOpenDetail(openCollectionId), [openCollectionId]);
 
   // `user.me` rather than `saved.list`: the two return the same codes, and the
   // card's own Save state already reads this one. A second copy would mean an
@@ -112,78 +133,95 @@ export function Saved() {
         subtitle="Keep track of courses you are interested in and organize them into collections."
       />
 
+      {/* The artboard's `18px 28px 10px`, narrowing with the list below it. */}
+      <div className="px-7 pt-[18px] pb-2.5 @max-[440px]:px-[14px] @max-[440px]:pt-3">
+        <Collections
+          compact
+          openCollectionId={openCollectionId}
+          onDetailChange={setOpenDetail}
+          onRequestAuth={setAuthReason}
+        />
+      </div>
+
       {/*
         Desktop is the Saved artboard's own `18px 28px 20px` with a 14px gap.
         The narrow end is the Mobile Preview's `12px 14px 20px` and 12px, and it
         is a container query on `PageColumn` rather than a viewport one, at the
         same 440px the card uses to drop its own button labels.
+
+        Hidden while a collection's detail is open, which is the artboard's
+        `showSavedSection: !this.state.collectionsOpenDetail` — the detail is
+        itself a list of these cards, and two of them would be one page showing
+        the same course twice.
       */}
-      <div className="flex flex-col gap-3.5 px-7 pt-[18px] pb-5 @max-[440px]:gap-3 @max-[440px]:px-[14px] @max-[440px]:pt-3">
-        {isLoading ? (
-          SKELETON_KEYS.map((key) => <CardSkeleton key={key} />)
-        ) : savedCourseCodes.length === 0 ? (
-          <div className="rounded-[11px] border border-cc-rule bg-cc-surface p-6 text-center">
-            <div className="font-semibold text-[14.5px]">
-              No saved courses yet
+      {openDetail !== null ? null : (
+        <div className="flex flex-col gap-3.5 px-7 pt-[18px] pb-5 @max-[440px]:gap-3 @max-[440px]:px-[14px] @max-[440px]:pt-3">
+          {isLoading ? (
+            SKELETON_KEYS.map((key) => <CardSkeleton key={key} />)
+          ) : savedCourseCodes.length === 0 ? (
+            <div className="rounded-[11px] border border-cc-rule bg-cc-surface p-6 text-center">
+              <div className="font-semibold text-[14.5px]">
+                No saved courses yet
+              </div>
+              <div className="mt-[5px] text-[12.5px] text-cc-muted">
+                Explore courses and save the ones you want to revisit.
+              </div>
+              <button
+                type="button"
+                onClick={() => router.push("/search")}
+                className="mx-auto mt-[13px] flex h-[34px] w-max cursor-pointer items-center rounded-[9px] bg-cc-btn px-3.5 font-semibold text-[13px] text-cc-btn-fg hover:opacity-90"
+              >
+                Explore courses
+              </button>
             </div>
-            <div className="mt-[5px] text-[12.5px] text-cc-muted">
-              Explore courses and save the ones you want to revisit.
-            </div>
-            <button
-              type="button"
-              onClick={() => router.push("/search")}
-              className="mx-auto mt-[13px] flex h-[34px] w-max cursor-pointer items-center rounded-[9px] bg-cc-btn px-3.5 font-semibold text-[13px] text-cc-btn-fg hover:opacity-90"
-            >
-              Explore courses
-            </button>
-          </div>
-        ) : (
-          <>
-            {unreadable > 0 ? (
-              // The artboard's note row, in the palette's danger colour, and an
-              // `<output>` because that is the element with the status role the
-              // artboard's own `aria-live` note asks for. It says the courses
-              // are still saved, because they are: nothing here unsaves
-              // anything.
-              <output className="block rounded-[9px] border border-cc-danger/40 bg-cc-surface px-[13px] py-[9px] text-[12.5px] text-cc-danger">
-                {unreadable === 1
-                  ? "1 saved course could not be loaded. It is still saved — reload to try again."
-                  : `${unreadable} saved courses could not be loaded. They are still saved — reload to try again.`}
-              </output>
-            ) : null}
-            <ul className="m-0 flex list-none flex-col gap-3.5 p-0 @max-[440px]:gap-3">
-              {courses.map((course) => (
-                <li key={course.courseCode}>
-                  <CourseCardItem
-                    course={course}
-                    stats={stats[course.courseCode] ?? NO_COURSE_STATS}
-                    geo={EXPANDED_CARD_GEOMETRY}
-                    action="add"
-                    // Every card on this page is one the reader already saved,
-                    // so the split Save button has nothing left to offer and
-                    // the picker stands alone; removal is the trash control.
-                    removeLabel={`Remove ${course.courseCode} from saved courses`}
-                    onRemove={() => unsave(course.courseCode)}
-                    onOpen={() =>
-                      router.push(`/course/${course.courseCode}?from=saved`)
-                    }
-                    onReview={() =>
-                      router.push(
-                        `/course/${course.courseCode}?writeReview=1&from=saved`,
-                      )
-                    }
-                    // The artboard opens every picker upwards on this page: a
-                    // saved list is a single column with nothing beside it, so
-                    // a panel dropping from the last card would fall off it.
-                    pickerAbove
-                    onRequestAuth={setAuthReason}
-                  />
-                </li>
-              ))}
-            </ul>
-          </>
-        )}
-      </div>
+          ) : (
+            <>
+              {unreadable > 0 ? (
+                // The artboard's note row, in the palette's danger colour, and an
+                // `<output>` because that is the element with the status role the
+                // artboard's own `aria-live` note asks for. It says the courses
+                // are still saved, because they are: nothing here unsaves
+                // anything.
+                <output className="block rounded-[9px] border border-cc-danger/40 bg-cc-surface px-[13px] py-[9px] text-[12.5px] text-cc-danger">
+                  {unreadable === 1
+                    ? "1 saved course could not be loaded. It is still saved — reload to try again."
+                    : `${unreadable} saved courses could not be loaded. They are still saved — reload to try again.`}
+                </output>
+              ) : null}
+              <ul className="m-0 flex list-none flex-col gap-3.5 p-0 @max-[440px]:gap-3">
+                {courses.map((course) => (
+                  <li key={course.courseCode}>
+                    <CourseCardItem
+                      course={course}
+                      stats={stats[course.courseCode] ?? NO_COURSE_STATS}
+                      geo={EXPANDED_CARD_GEOMETRY}
+                      action="add"
+                      // Every card on this page is one the reader already saved,
+                      // so the split Save button has nothing left to offer and
+                      // the picker stands alone; removal is the trash control.
+                      removeLabel={`Remove ${course.courseCode} from saved courses`}
+                      onRemove={() => unsave(course.courseCode)}
+                      onOpen={() =>
+                        router.push(`/course/${course.courseCode}?from=saved`)
+                      }
+                      onReview={() =>
+                        router.push(
+                          `/course/${course.courseCode}?writeReview=1&from=saved`,
+                        )
+                      }
+                      // The artboard opens every picker upwards on this page: a
+                      // saved list is a single column with nothing beside it, so
+                      // a panel dropping from the last card would fall off it.
+                      pickerAbove
+                      onRequestAuth={setAuthReason}
+                    />
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </div>
+      )}
 
       {/*
         `proxy.ts` only checks that a session cookie exists, so a stale one

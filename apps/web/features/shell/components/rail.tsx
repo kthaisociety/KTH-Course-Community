@@ -1,14 +1,6 @@
 "use client";
 
-import {
-  Bookmark,
-  BookOpen,
-  Layers,
-  LogOut,
-  Search,
-  UserRound,
-  X,
-} from "lucide-react";
+import { Bookmark, BookOpen, LogOut, Search, UserRound, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { AuthReason } from "@/features/auth";
@@ -58,14 +50,11 @@ type NavItem = {
  * Until then the rail is knowingly one item short of the artboard.
  */
 /**
- * A second, opposite deferral: "Collections" is *not* in the artboard's rail
- * either, because `Course Community - Saved.dc.html` reaches Collections by
- * importing that artboard as a section of the Saved page. Saved does not render
- * it yet (#90), so without this entry the route is unreachable — and an
- * unreachable page is a worse deviation than an extra link.
- *
- * **#90 should take this out** when Saved embeds `Collections` and the design's
- * own way in exists.
+ * "Collections" is deliberately *not* here, and #91's stopgap entry for it was
+ * removed by #90. The artboard's rail has no such link: `Saved.dc.html` reaches
+ * Collections by importing that artboard as a section of itself, and Saved now
+ * does the same, so the design's own way in exists. `/collections` stays as the
+ * route a `?collection=` permalink resolves to; nothing needs a second door.
  */
 const NAV: readonly NavItem[] = [
   { href: "/search", label: "Explore", icon: Search, strokeWidth: 2.4 },
@@ -75,7 +64,6 @@ const NAV: readonly NavItem[] = [
     icon: Bookmark,
     strokeWidth: 2,
   },
-  { href: "/collections", label: "Collections", icon: Layers, strokeWidth: 2 },
   { href: "/profile", label: "My Page", icon: UserRound, strokeWidth: 2 },
 ];
 
