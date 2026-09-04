@@ -74,8 +74,6 @@ _Avoid_: completed course, course history, my courses, enrolled course
 **Transcript import**:
 Reading a Ladok transcript and turning its rows into taken courses after the
 user confirms them. Imported grades and credits remain self-reported.
-_Today_: not implemented. Closed by
-`user_taken_courses.transcript_imported_at`.
 _Avoid_: transcript sync, Ladok scrape, upload (that is the file step, not this)
 
 **Collection**:

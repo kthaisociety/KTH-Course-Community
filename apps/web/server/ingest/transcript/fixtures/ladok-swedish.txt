@@ -1,0 +1,29 @@
+Resultatintyg Utskriftsdatum
+2026-08-29
+Namn Personnummer
+Anna Exempelsson 19900101-0000
+Avslutade kurser
+Kod Benämning Omfattning Betyg Datum Not
+SF1625 Envariabelanalys 7,5 hp A 2023-01-13 1
+DD1337 Programmering 6,0 hp P 2023-06-02 2
+SF1672 Linjär algebra 7,5 hp C 2024-01-12 1
+DD1389 Interaktiv programmering och datorspel i distribuerade
+miljöer
+9,0 hp B 2024-06-03 1
+ME1003 Industriell ekonomi, grundkurs 6,0 hp P 2025-10-10 2
+Summering
+Totalt varav tillgodoräknat Övrig tillgodoräknad utbildning
+36,0 hp
+Noter och information
+60 högskolepoäng (hp) motsvarar ett års heltidsstudier. Poängsystemet är likvärdigt med European Credit
+Transfer System (ECTS), då en högskolepoäng svarar mot en ECTS-poäng.
+1 Betygsskala: Utmärkt (A), Mycket bra (B), Bra (C), Tillfredsställande (D), Tillräcklig (E), Underkänd
+(FX), Underkänd (F)
+2 Betygsskala: Godkänd (P), Underkänd (F)
+Ovanstående är ett utdrag ur registret för studiedokumentation.
+Kontrollera intyget på: https://student.ladok.se/verifiera/ Personnummer: 19900101-0000
+Verifierbart tom: 2026-11-27 Kontrollkod: AAAA0AAAAA
+Postadress Kontaktinformation Sida 1 / 1
+Kungliga Tekniska högskolan
+100 44 Stockholm
+https://www.kth.se/

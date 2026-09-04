@@ -3,6 +3,7 @@ import { courseRouter } from "../course/router";
 import { feedbackRouter } from "../feedback/router";
 import { graphRouter } from "../graph/router";
 import { healthRouter } from "../health/router";
+import { transcriptRouter } from "../ingest/transcript/router";
 import { reviewsRouter } from "../reviews/router";
 import { savedRouter } from "../saved/router";
 import { searchRouter } from "../search/router";
@@ -21,6 +22,7 @@ export const appRouter = createTRPCRouter({
   graph: graphRouter,
   feedback: feedbackRouter,
   health: healthRouter,
+  transcript: transcriptRouter,
 });
 
 export type AppRouter = typeof appRouter;
