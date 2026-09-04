@@ -1,7 +1,10 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import type { CourseCardChartData, CourseCardStats } from "@/data/courseCardMockData";
+import type {
+  CourseCardChartData,
+  CourseCardStats,
+} from "@/data/courseCardMockData";
 import { CourseCardWithCharts } from "./course-card-with-charts";
 
 const CHART_DATA: CourseCardChartData = {
@@ -21,7 +24,9 @@ const STATS: CourseCardStats = {
   reviewCount: 3,
 };
 
-function renderCard(overrides: Partial<React.ComponentProps<typeof CourseCardWithCharts>> = {}) {
+function renderCard(
+  overrides: Partial<React.ComponentProps<typeof CourseCardWithCharts>> = {},
+) {
   const props = {
     title: "Artificial Intelligence",
     summary: "A course summary.",
