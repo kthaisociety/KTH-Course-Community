@@ -369,8 +369,8 @@ export function CourseCard({
                   <button
                     type="button"
                     onClick={c.onPicker}
-                    title="Add to collections"
-                    aria-label="Add to collections"
+                    title={c.addLabel}
+                    aria-label={c.addLabel}
                     aria-haspopup="menu"
                     aria-expanded={c.pickerOpen}
                     className="flex flex-none cursor-pointer items-center px-[9px] text-[10px] hover:bg-cc-info"

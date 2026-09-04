@@ -90,7 +90,7 @@ describe("CourseCardItem", () => {
       await userEvent.click(
         within(screen.getAllByRole("article")[0] as HTMLElement).getByRole(
           "button",
-          { name: "Add to collections" },
+          { name: "Add to collection" },
         ),
       );
       expect(cardWithOpenPicker()).toBe(0);

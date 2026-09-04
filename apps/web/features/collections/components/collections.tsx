@@ -389,6 +389,11 @@ export function Collections({
             onOpenCourse={(courseCode) =>
               router.push(`/course/${courseCode}?from=collections`)
             }
+            onReviewCourse={(courseCode) =>
+              router.push(
+                `/course/${courseCode}?writeReview=1&from=collections`,
+              )
+            }
             onRequestAuth={setAuthReason}
           />
         ) : null}
@@ -490,7 +495,7 @@ export function Collections({
           Collections
         </h2>
         <div className="mt-1 text-[12.5px] text-cc-muted">
-          Group courses you want to compare.
+          Group courses you want to consider together.
         </div>
         {body}
       </section>
@@ -501,7 +506,7 @@ export function Collections({
     <PageColumn>
       <PageHeader
         title="Collections"
-        subtitle="Group courses you want to compare."
+        subtitle="Group courses you want to consider together."
       />
       {body}
     </PageColumn>

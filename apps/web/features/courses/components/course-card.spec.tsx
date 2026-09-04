@@ -332,7 +332,7 @@ describe("CourseCard", () => {
       expect(onSave).toHaveBeenCalledOnce();
 
       await userEvent.click(
-        screen.getByRole("button", { name: "Add to collections" }),
+        screen.getByRole("button", { name: "Add to collection" }),
       );
       expect(onPicker).toHaveBeenCalledOnce();
       expect(screen.queryByText("Add to collection")).toBeNull();
