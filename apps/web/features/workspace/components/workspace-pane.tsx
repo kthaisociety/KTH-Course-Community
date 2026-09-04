@@ -218,13 +218,19 @@ export function WorkspacePane({
             : "rounded-[0_12px_12px_12px] border border-cc-rule3 shadow-[0_1px_2px_rgba(20,30,45,0.05)]",
         )}
       >
+        {/* Keyed by the tab, so switching courses gives the panel a fresh
+            instance. Both panels hold state that belongs to one course — a
+            published review, an expanded reviews list — and an unkeyed panel
+            would carry it across to the next course it rendered. */}
         {active.kind === "details" ? (
           <CourseDetailsPanel
+            key={active.id}
             courseCode={active.courseCode}
             onWriteReview={() => onOpen(active.courseCode, "review")}
           />
         ) : (
           <ReviewDraftPanel
+            key={active.id}
             courseCode={active.courseCode}
             draft={drafts[active.courseCode] ?? EMPTY_REVIEW_DRAFT}
             onDraftChange={(draft) => patchDraft(active.courseCode, draft)}

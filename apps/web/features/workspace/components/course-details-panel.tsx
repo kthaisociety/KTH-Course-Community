@@ -213,6 +213,15 @@ export function CourseDetailsPanel({
   const reviews = useReviewList(reviewsOpen ? courseCode : undefined);
 
   const course = details.data;
+  /**
+   * "Nobody has reviewed this" is `stats.reviews === null` on a summary that
+   * came back — a different thing from a summary that has not arrived. The
+   * two queries resolve independently, so collapsing them would tell a
+   * reader a well-reviewed course has no reviews for as long as the second
+   * request is in flight, and for good if it fails.
+   */
+  const statsAnswered = summary?.isSuccess === true;
+  const statsFailed = summary?.isError === true;
   const stats = summary?.data?.stats.reviews ?? null;
 
   if (details.isLoading || !course) {
@@ -309,11 +318,23 @@ export function CourseDetailsPanel({
           )}
         </div>
 
-        {stats === null ? (
+        {!statsAnswered && (
+          <div className="rounded-[12px] border border-cc-rule bg-cc-pg p-4">
+            {statsFailed ? (
+              <p className="text-[13px] text-cc-dim">
+                Could not load what reviewers said about this course.
+              </p>
+            ) : (
+              <Skeleton className="h-24 w-full" />
+            )}
+          </div>
+        )}
+        {statsAnswered && stats === null && (
           <div className="rounded-[12px] border border-cc-rule bg-cc-pg p-4 text-[13px] text-cc-dim">
             No reviews yet — be the first to write one.
           </div>
-        ) : (
+        )}
+        {statsAnswered && stats !== null && (
           <ReviewsSummary stats={stats} onReadReviews={revealReviews} />
         )}
 
@@ -330,7 +351,7 @@ export function CourseDetailsPanel({
           </button>
         </div>
 
-        {stats !== null && (
+        {statsAnswered && stats !== null && (
           <div>
             <div
               ref={reviewsHeadingRef}

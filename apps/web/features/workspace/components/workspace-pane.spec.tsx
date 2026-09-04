@@ -100,7 +100,18 @@ function openCourse(kind: OpenCourse["kind"], code = "DD2380"): OpenCourse {
 
 function setStats(stats: CourseStats) {
   useCourseSummaries.mockReturnValue([
-    { data: { courseCode: "DD2380", stats }, isLoading: false, error: null },
+    {
+      data: { courseCode: "DD2380", stats },
+      isSuccess: true,
+      isError: false,
+    },
+  ]);
+}
+
+/** The summary is its own request and can still be in flight, or fail. */
+function setStatsUnanswered(over: Record<string, unknown> = {}) {
+  useCourseSummaries.mockReturnValue([
+    { data: undefined, isSuccess: false, isError: false, ...over },
   ]);
 }
 
@@ -140,7 +151,7 @@ describe("WorkspacePane", () => {
   });
 
   it("gives every open course a tab and closes the one in front", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const { props } = renderPane([
       openCourse("details"),
       openCourse("review", "SF1626"),
@@ -165,7 +176,7 @@ describe("WorkspacePane", () => {
   });
 
   it("lists every open course in the switcher, whatever the tabs can fit", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const codes = ["DD2380", "SF1626", "DH2642", "DD1337", "SF1625", "DD2434"];
     renderPane(codes.map((code) => openCourse("details", code)));
 
@@ -220,8 +231,31 @@ describe("the details tab", () => {
     expect(screen.queryByText(/\/ 10$/)).not.toBeInTheDocument();
   });
 
+  it("does not call a course unreviewed while its summary is in flight", () => {
+    setStatsUnanswered();
+    renderPane([openCourse("details")]);
+
+    expect(screen.getByText("Artificial Intelligence")).toBeInTheDocument();
+    expect(
+      screen.queryByText("No reviews yet — be the first to write one."),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/Reviews · /)).not.toBeInTheDocument();
+  });
+
+  it("says so when the review summary cannot be loaded", () => {
+    setStatsUnanswered({ isError: true });
+    renderPane([openCourse("details")]);
+
+    expect(
+      screen.getByText("Could not load what reviewers said about this course."),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("No reviews yet — be the first to write one."),
+    ).not.toBeInTheDocument();
+  });
+
   it("opens the review draft in its own tab", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const { props } = renderPane([openCourse("details")]);
 
     await user.click(screen.getByRole("button", { name: "Write a review" }));
@@ -230,7 +264,7 @@ describe("the details tab", () => {
   });
 
   it("loads the written reviews only once they are asked for", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderPane([openCourse("details")]);
 
     expect(useReviewList).toHaveBeenCalledWith(undefined);
@@ -248,7 +282,7 @@ describe("the details tab", () => {
 
 describe("the review draft tab", () => {
   it("counts the sections as they are answered", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderPane([openCourse("review")]);
 
     expect(screen.getByText("0 of 3 sections done")).toBeInTheDocument();
@@ -266,7 +300,7 @@ describe("the review draft tab", () => {
   });
 
   it("splits the examination bar evenly as formats are picked", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderPane([openCourse("review")]);
 
     expect(
@@ -280,7 +314,7 @@ describe("the review draft tab", () => {
   });
 
   it("will not publish until happy took and both scores are answered", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderPane([openCourse("review")]);
 
     const publish = screen.getByRole("button", { name: "Post review" });
@@ -296,7 +330,7 @@ describe("the review draft tab", () => {
   });
 
   it("publishes the draft as the wire contract, absent answers and all", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderPane([openCourse("review")]);
 
     await user.click(screen.getByRole("button", { name: "Yes, I am" }));
@@ -320,7 +354,7 @@ describe("the review draft tab", () => {
   });
 
   it("asks a visitor to sign in instead of publishing", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     useMe.mockReturnValue({ isAuthenticated: false, isLoading: false });
     renderPane([openCourse("review")]);
 
@@ -338,7 +372,7 @@ describe("the review draft tab", () => {
 
 describe("what survives a page load", () => {
   it("keeps a draft across a remount, because signing in reloads the page", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const { unmount } = renderPane([openCourse("review")]);
 
     await user.type(
@@ -361,7 +395,7 @@ describe("what survives a page load", () => {
   });
 
   it("welcomes the writer back with the draft they left", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     useMe.mockReturnValue({ isAuthenticated: false, isLoading: false });
     const { unmount } = renderPane([openCourse("review")]);
 
@@ -387,7 +421,7 @@ describe("what survives a page load", () => {
   });
 
   it("forgets a draft once it is a published review", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const { unmount } = renderPane([openCourse("review")]);
 
     await user.click(screen.getByRole("button", { name: "Yes, I am" }));
@@ -409,7 +443,7 @@ describe("what survives a page load", () => {
   });
 
   it("drops the welcome when the visitor backs out of signing in", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     useMe.mockReturnValue({ isAuthenticated: false, isLoading: false });
     const { unmount } = renderPane([openCourse("review")]);
 
@@ -431,8 +465,28 @@ describe("what survives a page load", () => {
     expect(screen.queryByText(/Signed in as/)).not.toBeInTheDocument();
   });
 
+  it("keeps a published review in the tab it was published from", async () => {
+    const user = userEvent.setup({ delay: null });
+    const open = [openCourse("review"), openCourse("review", "SF1626")];
+    const { rerender, props } = renderPane(open);
+
+    await user.click(screen.getByRole("button", { name: "Yes, I am" }));
+    setScore("How demanding was this course?", 8);
+    setScore("How much did you learn in this course?", 6);
+    await user.click(screen.getByRole("button", { name: "Post review" }));
+    await screen.findByText(/Published. Thanks/);
+
+    rerender(
+      <WorkspacePane {...props} openCourses={open} activeId="review:SF1626" />,
+    );
+
+    expect(screen.queryByText(/Published. Thanks/)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Post review" })).toBeDisabled();
+    expect(screen.getByText("Not saved yet")).toBeInTheDocument();
+  });
+
   it("leaves the welcome for the course that asked for the sign-in", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     useMe.mockReturnValue({ isAuthenticated: false, isLoading: false });
     const { unmount } = renderPane([openCourse("review")]);
 
