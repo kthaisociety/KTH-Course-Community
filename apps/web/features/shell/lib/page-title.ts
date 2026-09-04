@@ -33,7 +33,7 @@ export const WORDMARK = "Course Community";
 const TITLES: ReadonlyArray<readonly [string, string]> = [
   // The design's own five, less `taken`, whose route #92 still has to build.
   ["/search", "Explore courses"],
-  ["/favorites", "Saved courses"],
+  ["/saved", "Saved courses"],
   ["/profile", "My Page"],
   // Routes the design does not key, titled after the page's own heading.
   ["/collections", "Collections"],

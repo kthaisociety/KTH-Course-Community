@@ -13,11 +13,11 @@
  *
  * ## Where these names differ from the artboard
  *
- * The artboard says `comparisons`, `hasComparisons` and `onNewComparison`.
- * `CONTEXT.md` bans "comparison" in identifiers and #68 settles the concept as
- * **Collection**, so every identifier here says `Collection`. Reader-facing copy
- * still follows the design, which is why the artboard's button may read "Add to
- * comparison" while the field behind it is `collections`.
+ * The artboard says `comparisons`, `hasComparisons` and `onNewComparison`, and
+ * its buttons read "Add to comparison" / "Create new comparison". `CONTEXT.md`
+ * bans "comparison" in identifiers and #68's settled decision 1 goes further:
+ * there is no AI-comparison feature to name, so the word goes from the copy as
+ * well. Identifier and label both say **Collection** (#90).
  */
 
 /**

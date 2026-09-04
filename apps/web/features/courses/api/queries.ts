@@ -2,6 +2,7 @@
 
 import { useQueries, useQuery } from "@tanstack/react-query";
 import { type RouterOutputs, useTRPC } from "@/trpc/client";
+import type { CourseStats } from "@/types";
 
 export type CourseDetails = RouterOutputs["course"]["details"];
 export type CourseSummary = RouterOutputs["course"]["summary"];
@@ -28,21 +29,49 @@ export function useCourseSummaries(courseCodes: string[], enabled = true) {
 }
 
 /**
- * The card numbers for a whole page of courses in one call.
+ * `course.stats` caps one request at `MAX_STATS_BATCH` codes
+ * (`server/course/router.ts`), and a request over the cap is rejected whole. The
+ * cap is sized for Explore, which asks for a bounded result set — but Saved asks
+ * for however many courses one reader has kept, so past the cap it would lose
+ * the numbers on *every* card rather than on the few beyond it. The codes are
+ * split here rather than the cap being left as a cliff for a screen to fall off.
+ */
+const STATS_BATCH_SIZE = 200;
+
+/**
+ * The card numbers for a whole page of courses.
  *
  * `course.stats` answers for every code it is given, so a code missing from the
  * result never happened — a screen still needs `NO_COURSE_STATS` for the window
- * before the batch settles. Explore asks for its whole result set at once, which
- * is what the procedure's 200-code cap is sized for.
+ * before the batches settle.
+ *
+ * `enabled` is for a screen whose codes are not known yet: Saved reads them off
+ * `user.me`, and asking for the stats of an empty list while that resolves would
+ * fetch, then immediately refetch.
  */
-export function useCourseStats(courseCodes: string[]) {
+export function useCourseStats(courseCodes: string[], enabled = true) {
   const trpc = useTRPC();
-  return useQuery(
-    trpc.course.stats.queryOptions(
-      { courseCodes },
-      { enabled: courseCodes.length > 0 },
+
+  const batches: string[][] = [];
+  for (let from = 0; from < courseCodes.length; from += STATS_BATCH_SIZE) {
+    batches.push(courseCodes.slice(from, from + STATS_BATCH_SIZE));
+  }
+
+  return useQueries({
+    queries: batches.map((batch) =>
+      trpc.course.stats.queryOptions({ courseCodes: batch }, { enabled }),
     ),
-  );
+    // One record keyed by course code, whatever it took to fetch. A batch still
+    // in flight contributes nothing rather than an entry of zeroes, which is
+    // what `NO_COURSE_STATS` is for at the call site.
+    combine: (results) => ({
+      data: Object.assign(
+        {},
+        ...results.map((result) => result.data ?? {}),
+      ) as Record<string, CourseStats>,
+      isPending: results.some((result) => result.isPending),
+    }),
+  });
 }
 
 /**

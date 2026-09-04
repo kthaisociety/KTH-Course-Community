@@ -327,7 +327,7 @@ describe("CourseCard", () => {
         screen.getByRole("button", { name: "Add to collections" }),
       );
       expect(onPicker).toHaveBeenCalledOnce();
-      expect(screen.queryByText("Add to comparison")).toBeNull();
+      expect(screen.queryByText("Add to collection")).toBeNull();
     });
 
     it("is the picker alone under action='add'", async () => {
@@ -343,8 +343,8 @@ describe("CourseCard", () => {
       expect(screen.queryByRole("button", { name: "Save course" })).toBeNull();
       // The accessible name is the visible label, not a tidier synonym of it:
       // voice control cannot reach a control it cannot say (WCAG 2.5.3).
-      const picker = screen.getByRole("button", { name: "Add to comparison" });
-      expect(picker).toHaveTextContent("Add to comparison");
+      const picker = screen.getByRole("button", { name: "Add to collection" });
+      expect(picker).toHaveTextContent("Add to collection");
       await userEvent.click(picker);
       expect(onPicker).toHaveBeenCalledOnce();
     });

@@ -14,7 +14,7 @@ const ROUTES_INSIDE_THE_SHELL = [
   "/search",
   "/course",
   "/course/DD2380",
-  "/favorites",
+  "/saved",
   "/collections",
   "/profile",
   "/reviews",
@@ -27,7 +27,7 @@ describe("pageTitleFor", () => {
   // The Mobile Preview's own map, line 414, against this app's routes.
   it.each([
     ["/search", "Explore courses"],
-    ["/favorites", "Saved courses"],
+    ["/saved", "Saved courses"],
     ["/profile", "My Page"],
   ])("names %s the way the design names it", (pathname, title) => {
     expect(pageTitleFor(pathname)).toBe(title);

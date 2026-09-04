@@ -55,7 +55,7 @@ apps/web/
 - These layers are **enforced by Biome**, not just convention: a router importing a `repository`, or a repository importing a `service`/`router`, fails `bun run lint`. See the `noRestrictedImports` overrides in `biome.json`.
 - Cross-domain calls go service → service (e.g. `search/service.ts` imports `../course/service`). Routers never import another domain's router; compose them in `server/api/root.ts`.
 - Feature `api/` exposes wrapped `useQuery` / `useMutation` hooks, not raw queryOptions factories.
-- `protectedProcedure` is the real auth gate (`ctx.session.user`). `proxy.ts` (Next 16; not `middleware.ts`) only checks that a session cookie exists for `/profile` and `/favorites`. Visitors may browse courses, search, and read reviews.
+- `protectedProcedure` is the real auth gate (`ctx.session.user`). `proxy.ts` (Next 16; not `middleware.ts`) only checks that a session cookie exists for `/profile` and `/saved`. Visitors may browse courses, search, and read reviews.
 - Browser calls same-origin `/api/trpc` and `/api/auth`. Multipart profile pictures POST to `/api/user/profile-picture` (not tRPC).
 - Tests colocate as `*.spec.ts` next to server code; mock repositories, not the database.
 - Domain words: `CONTEXT.md`. Decisions: `docs/adr/NNNN-slug.md`.

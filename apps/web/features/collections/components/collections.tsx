@@ -1,7 +1,7 @@
 "use client";
 
 import { Check, Lock, Plus } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { type AuthReason, AuthReasonDialog, useMe } from "@/features/auth";
@@ -17,10 +17,14 @@ import {
   useCourseSummaries,
 } from "@/features/courses";
 import { PageColumn, PageHeader } from "@/features/shell";
+import { CollectionChip } from "./collection-chip";
 import { CollectionDetail, type SavedCourse } from "./collection-detail";
 import { CollectionTile } from "./collection-tile";
 import { EmptyPanel } from "./empty-panel";
 import { NewCollectionDialog } from "./new-collection-dialog";
+
+/** Names the compact variant's section by its own heading. */
+const COMPACT_HEADING_ID = "collections-section-heading";
 
 /** How long the artboard's confirmation strip stays up, in milliseconds. */
 const NOTE_LIFETIME = 3000;
@@ -37,6 +41,28 @@ type Props = {
    * page says the same thing the server does: not found, never "not yours".
    */
   openCollectionId?: string | null;
+  /**
+   * The Saved page's embedding of this component, from
+   * `Course Community - Saved.dc.html` line 82. Collections becomes a strip of
+   * chips above Saved's own list rather than a page: no `PageColumn`, no `h1`,
+   * and an `h2` where the page has its header. The detail below it is the same
+   * component either way.
+   */
+  compact?: boolean;
+  /**
+   * Which collection is open, told to whoever embeds this.
+   *
+   * Saved hides its own list of cards while a detail is open — the artboard's
+   * `showSavedSection: !this.state.collectionsOpenDetail` — and only this
+   * component knows when that changed.
+   */
+  onDetailChange?: (collectionId: string | null) => void;
+  /**
+   * The host page's sign-in surface. Passed when this is embedded, because two
+   * `AuthReasonDialog`s in one tree are two dialogs racing for one screen; the
+   * page renders its own when this is absent.
+   */
+  onRequestAuth?: (reason: AuthReason) => void;
 };
 
 /**
@@ -76,8 +102,17 @@ type Props = {
  * and `collections.create` has no uniqueness on name, so typing it again makes a
  * second empty collection.
  */
-export function Collections({ openCollectionId = null }: Props) {
+export function Collections({
+  openCollectionId = null,
+  compact = false,
+  onDetailChange,
+  onRequestAuth,
+}: Props) {
   const router = useRouter();
+  // The route this is rendered on owns `?collection=`, so an embedded detail
+  // is shareable and survives a refresh on the page it was opened from rather
+  // than sending the reader to `/collections`.
+  const pathname = usePathname();
   const { user, isLoading: sessionLoading } = useMe();
   const signedIn = user !== null;
   const savedCourseCodes = user?.savedCourseCodes ?? [];
@@ -99,7 +134,8 @@ export function Collections({ openCollectionId = null }: Props) {
    * restarts rather than expiring on the first message's clock.
    */
   const [note, setNote] = useState<{ text: string } | null>(null);
-  const [authReason, setAuthReason] = useState<AuthReason | null>(null);
+  const [ownAuthReason, setOwnAuthReason] = useState<AuthReason | null>(null);
+  const setAuthReason = onRequestAuth ?? setOwnAuthReason;
 
   const showNote = useCallback((text: string) => setNote({ text }), []);
 
@@ -118,14 +154,15 @@ export function Collections({ openCollectionId = null }: Props) {
   const openCollection = useCallback(
     (collectionId: string | null) => {
       setOpenId(collectionId);
+      onDetailChange?.(collectionId);
       router.replace(
         collectionId
-          ? `/collections?collection=${encodeURIComponent(collectionId)}`
-          : "/collections",
+          ? `${pathname}?collection=${encodeURIComponent(collectionId)}`
+          : pathname,
         { scroll: false },
       );
     },
-    [router],
+    [router, pathname, onDetailChange],
   );
 
   // Every course this page can show is a saved course: a collection cannot hold
@@ -251,14 +288,15 @@ export function Collections({ openCollectionId = null }: Props) {
   const isLoading =
     sessionLoading || (signedIn && collectionsPending) || resolvingOpen;
 
-  return (
-    <PageColumn>
-      <PageHeader
-        title="Collections"
-        subtitle="Group courses you want to compare."
-      />
-
-      <div className="flex flex-col gap-3.5 px-7 pt-[18px]">
+  const body = (
+    <>
+      <div
+        className={
+          compact
+            ? "mt-3.5 flex flex-col gap-3.5"
+            : "flex flex-col gap-3.5 px-7 pt-[18px]"
+        }
+      >
         {/* The live region is always in the tree and out of the flow: a region
             that appears already carrying its text announces nothing, because
             there was no change for a screen reader to notice. The strip below
@@ -356,7 +394,30 @@ export function Collections({ openCollectionId = null }: Props) {
         ) : null}
 
         {!isLoading && signedIn && openId === null && collections ? (
-          collections.length === 0 ? (
+          compact ? (
+            // The artboard keeps the "New collection" chip in the row whether or
+            // not any collection exists, so the compact variant has no separate
+            // empty panel: the row already says what to do.
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setDialogOpen(true)}
+                className="box-border flex h-10 flex-none cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-[9px] border border-cc-hov border-dashed bg-cc-info px-[13px] font-semibold text-[13px] text-cc-brand hover:border-cc-brand"
+              >
+                <Plus size={14} aria-hidden />
+                New collection
+              </button>
+              {collections.map((collection) => (
+                <CollectionChip
+                  key={collection.id}
+                  collection={collection}
+                  onOpen={() => openCollection(collection.id)}
+                  onRename={(name) => onRename(collection, name)}
+                  onDelete={() => onDelete(collection)}
+                />
+              ))}
+            </div>
+          ) : collections.length === 0 ? (
             <EmptyPanel
               title="No collections yet"
               body="Create a collection to organize courses you are considering together."
@@ -405,11 +466,44 @@ export function Collections({ openCollectionId = null }: Props) {
         onCreate={onCreate}
       />
 
-      <AuthReasonDialog
-        reason={authReason}
-        onReasonChange={setAuthReason}
-        onClose={() => setAuthReason(null)}
+      {/* Only when nobody else is showing one. An embedded copy would put two
+          dialogs over one page, each with its own idea of why. */}
+      {onRequestAuth ? null : (
+        <AuthReasonDialog
+          reason={ownAuthReason}
+          onReasonChange={setOwnAuthReason}
+          onClose={() => setOwnAuthReason(null)}
+        />
+      )}
+    </>
+  );
+
+  // Embedded, the host page owns the column and the `h1`; this is a section
+  // inside it, headed the way the artboard heads it.
+  if (compact) {
+    return (
+      <section aria-labelledby={COMPACT_HEADING_ID}>
+        <h2
+          id={COMPACT_HEADING_ID}
+          className="m-0 font-semibold text-[16px] leading-[1.3]"
+        >
+          Collections
+        </h2>
+        <div className="mt-1 text-[12.5px] text-cc-muted">
+          Group courses you want to compare.
+        </div>
+        {body}
+      </section>
+    );
+  }
+
+  return (
+    <PageColumn>
+      <PageHeader
+        title="Collections"
+        subtitle="Group courses you want to compare."
       />
+      {body}
     </PageColumn>
   );
 }

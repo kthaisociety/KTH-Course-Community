@@ -41,7 +41,7 @@ export async function Course({
   fromSaved = false,
   openReviewOnLoad = false,
 }: CourseProps) {
-  const backHref = fromSaved ? "/favorites" : "/search";
+  const backHref = fromSaved ? "/saved" : "/search";
   const backLabel = fromSaved ? "Back to saved courses" : "Back to explore";
 
   const [details, reviews] = await Promise.all([
