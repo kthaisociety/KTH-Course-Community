@@ -267,6 +267,25 @@ describe("useCourseCard", () => {
       // `collections.create` has no uniqueness on name, so sending the reader
       // back to the name field would make a second empty collection. The
       // recovery is the row the picker now lists.
+      // Pointing at the collection's row is only useful if clicking it could
+      // work. A failed save blocks that row too — the service will not let an
+      // unsaved course join a collection — so the advice has to change with it.
+      it("names the save as the blocker when creating, and does not send the reader to a row that cannot work", async () => {
+        setSaved.mockRejectedValue(new Error("nope"));
+        const { result } = card();
+        act(() => result.current.c.onNewCollection?.());
+        act(() => result.current.onDraftChange("Spring"));
+        await act(async () => result.current.onDraftCommit());
+
+        expect(create).toHaveBeenCalledWith({ name: "Spring" });
+        await waitFor(() =>
+          expect(toastError).toHaveBeenCalledWith(
+            'Created "Spring", but could not save DD2380, so it is not in the collection yet. Save the course, then pick "Spring" from the list.',
+          ),
+        );
+        expect(addCourse).not.toHaveBeenCalled();
+      });
+
       it("does not call a made collection a failed one when only the add failed", async () => {
         addCourse.mockRejectedValue(new Error("nope"));
         const { result } = card();

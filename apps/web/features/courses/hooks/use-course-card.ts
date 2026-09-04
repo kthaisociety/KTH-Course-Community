@@ -29,11 +29,26 @@ import type {
 const PICKER_TICK = "m8.5 12 2.4 2.4 4.6-4.9";
 
 /**
- * Surfaces a failed write in the words of the step that failed.
+ * A picker write that failed, carrying which of its steps did.
  *
- * The picker's writes throw messages rather than codes, because there is
- * nothing for the card to do with a failure except say what did not happen.
+ * Putting a course in a collection is up to two writes, and the caller's
+ * recovery advice differs by which one failed: an add that failed can be
+ * retried from the collection's row, but a *save* that failed blocks that row
+ * too, because a course may only join a collection its owner has saved. The
+ * message is written where the failure happens; `step` is what lets a caller
+ * add context without replacing it.
  */
+class CollectionWriteError extends Error {
+  constructor(
+    readonly step: "save" | "add" | "remove",
+    message: string,
+  ) {
+    super(message);
+    this.name = "CollectionWriteError";
+  }
+}
+
+/** Surfaces a failed write in the words of the step that actually failed. */
 function reportWriteFailure(error: unknown) {
   toast.error(
     error instanceof Error ? error.message : "That did not go through.",
@@ -139,7 +154,8 @@ export function useCourseCard({
         try {
           await setSaved(courseCode, true);
         } catch {
-          throw new Error(
+          throw new CollectionWriteError(
+            "save",
             `Could not save ${courseCode}, so it was not added to "${collectionName}".`,
           );
         }
@@ -147,7 +163,8 @@ export function useCourseCard({
       try {
         await addCourse.mutateAsync({ collectionId, courseCode });
       } catch {
-        throw new Error(
+        throw new CollectionWriteError(
+          "add",
           isSaved
             ? `Could not add ${courseCode} to "${collectionName}".`
             : `Saved ${courseCode}, but could not add it to "${collectionName}".`,
@@ -171,7 +188,8 @@ export function useCourseCard({
               ? removeCourse
                   .mutateAsync({ collectionId: collection.id, courseCode })
                   .catch(() => {
-                    throw new Error(
+                    throw new CollectionWriteError(
+                      "remove",
                       `Could not remove ${courseCode} from "${collection.name}".`,
                     );
                   })
@@ -222,12 +240,14 @@ export function useCourseCard({
    * Creates a collection and puts the course in it — two writes, reported
    * apart.
    *
-   * If the add fails after the collection was made, saying "could not create"
-   * would send the reader back to the name field, and typing the same name
-   * again makes a *second* empty collection: `collections.create` has no
-   * uniqueness on name. So the failure names what really happened and points at
-   * the recovery already on screen — the collection now exists, the picker has
-   * refetched, and its row is one click away.
+   * If a later step fails, saying "could not create" would send the reader back
+   * to the name field, and typing the same name again makes a *second* empty
+   * collection: `collections.create` has no uniqueness on name. So the failure
+   * says the collection was made, and then says which step actually failed —
+   * which decides whether the recovery on screen can even work. A failed *add*
+   * retries from the collection's row. A failed *save* blocks that row too,
+   * because a course may only join a collection its owner has saved, so
+   * pointing at it would be sending the reader somewhere that cannot succeed.
    */
   async function onDraftCommit() {
     const name = draftName.trim();
@@ -244,9 +264,13 @@ export function useCourseCard({
 
     try {
       await addToCollection(collection.id, name);
-    } catch {
+    } catch (error) {
+      const failedToSave =
+        error instanceof CollectionWriteError && error.step === "save";
       toast.error(
-        `Created "${name}", but could not add ${courseCode} to it. Pick it from the list to try again.`,
+        failedToSave
+          ? `Created "${name}", but could not save ${courseCode}, so it is not in the collection yet. Save the course, then pick "${name}" from the list.`
+          : `Created "${name}", but could not add ${courseCode} to it. Pick it from the list to try again.`,
       );
     }
   }
