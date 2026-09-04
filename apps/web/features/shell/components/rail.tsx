@@ -15,6 +15,16 @@ import { cn } from "@/lib/utils";
  * the artboard paints on it with plain white at varying alpha, which is what the
  * `white/nn` utilities here do. That is the one place this file is not reading a
  * `--cc-*` token, and it is the design's own decision.
+ *
+ * Two rail colours the artboard states outright have no token behind them — the
+ * avatar chip (`#7ea6d8` on `#0d2f5e`) and the sign-up button's ink (`#12417f`).
+ * Tokens win over raw hex, so both join the white-alpha family instead; the PR
+ * says so, which is how the design gets corrected at source.
+ *
+ * The drawer renders this same component rather than a second one, so it keeps
+ * the rail's metrics. The Mobile Preview draws slightly different ones — 56px of
+ * top padding, a 28px mark — but that padding is the iOS device frame's status
+ * bar, not a web value, and one rail is what keeps the two in step.
  */
 
 type NavItem = {
@@ -25,9 +35,11 @@ type NavItem = {
 };
 
 /**
- * The artboard's rail also lists "Taken courses". That route does not exist yet
- * — #92 builds it — and a frame that ships a link to a 404 on every page is
- * worse than a frame that ships one item short, so the entry lands with the page.
+ * A contradiction between the artboard and the codebase: the rail's fourth link
+ * is "Taken courses", and no such route exists — #92 builds it. Per #68 the
+ * codebase wins, and the smallest change that keeps the design intact is to drop
+ * the one element rather than ship a link that 404s on every page. #92 adds it
+ * back here alongside its route.
  */
 const NAV: readonly NavItem[] = [
   { href: "/search", label: "Explore", icon: Search, strokeWidth: 2.4 },
@@ -44,18 +56,32 @@ function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-/** Two letters from the name, else one from the email — never an empty circle. */
-export function initialsFor(name: string, email: string) {
-  const fromName = name
-    .trim()
+/** The shape of every item in the rail's two link groups. */
+const LINK =
+  "flex items-center gap-2.5 rounded-[8px] px-2.5 py-[9px] no-underline hover:bg-white/10";
+
+/**
+ * How the account shows itself in the rail: a display name and the initials on
+ * the avatar. Both fall back through the same fields in the same order, so the
+ * circle can never disagree with the name beside it.
+ */
+function identity(
+  user: { name?: string | null; email?: string | null } | null,
+) {
+  const full = user?.name?.trim() ?? "";
+  const email = user?.email?.trim() ?? "";
+  const initials = full
     .split(/\s+/)
     .filter(Boolean)
     .map((part) => part[0])
     .join("")
     .toUpperCase()
     .slice(0, 2);
-  if (fromName) return fromName;
-  return email.trim().charAt(0).toUpperCase() || "?";
+
+  return {
+    name: full || email.split("@")[0] || "",
+    initials: initials || email.charAt(0).toUpperCase() || "?",
+  };
 }
 
 type Props = {
@@ -72,7 +98,7 @@ export function Rail({ onRequestAuth, onDismiss }: Props) {
   const logout = useLogout();
 
   const savedCount = me?.savedCourseCodes.length ?? 0;
-  const name = user?.name?.trim() || user?.email?.split("@")[0] || "";
+  const { name, initials } = identity(user);
 
   return (
     <div className="flex h-full w-full flex-col gap-1.5 bg-cc-rail px-2.5 py-3.5 text-white">
@@ -117,7 +143,8 @@ export function Rail({ onRequestAuth, onDismiss }: Props) {
               onClick={onDismiss}
               aria-current={active ? "page" : undefined}
               className={cn(
-                "flex items-center gap-2.5 rounded-[8px] px-2.5 py-[9px] text-white no-underline hover:bg-white/10",
+                LINK,
+                "text-white",
                 active ? "bg-white/16 font-semibold" : "font-normal",
               )}
             >
@@ -142,7 +169,7 @@ export function Rail({ onRequestAuth, onDismiss }: Props) {
         <Link
           href="/about"
           onClick={onDismiss}
-          className="flex items-center gap-2.5 rounded-[8px] px-2.5 py-[9px] text-white/82 no-underline hover:bg-white/10"
+          className={cn(LINK, "text-white/82")}
         >
           <BookOpen
             size={16}
@@ -159,7 +186,7 @@ export function Rail({ onRequestAuth, onDismiss }: Props) {
         {isPending ? null : user ? (
           <div className="mt-2 flex items-center gap-2.5 rounded-[8px] bg-white/10 p-2.5">
             <span className="flex size-[34px] shrink-0 items-center justify-center rounded-full bg-white/25 font-bold text-[13px] text-white">
-              {initialsFor(user.name ?? "", user.email ?? "")}
+              {initials}
             </span>
             <span className="min-w-0 flex-1 truncate font-medium text-[13px]">
               {name}

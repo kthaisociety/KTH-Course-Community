@@ -1,5 +1,5 @@
 import type React from "react";
-import { AppShell } from "@/features/shell/components/app-shell";
+import { AppShell } from "@/features/shell";
 
 export default function ServiceLayout({
   children,

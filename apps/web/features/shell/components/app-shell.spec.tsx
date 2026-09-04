@@ -115,7 +115,9 @@ describe("AppShell", () => {
     it("asserts nothing while the session is still resolving", () => {
       useSessionData.mockReturnValue({ user: null, isPending: true });
       renderShell();
-      expect(screen.queryByText(/browsing as a guest/i)).not.toBeInTheDocument();
+      expect(
+        screen.queryByText(/browsing as a guest/i),
+      ).not.toBeInTheDocument();
       expect(
         screen.queryByRole("button", { name: "Sign up" }),
       ).not.toBeInTheDocument();

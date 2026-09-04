@@ -60,6 +60,10 @@ export function AppShell({ children }: { children: ReactNode }) {
           >
             <Menu size={19} strokeWidth={2} aria-hidden />
           </button>
+          {/* The Mobile Preview puts the current page's title here. Nothing can
+              supply one yet — no page renders `PageHeader`, and a client-side
+              title channel with nothing to register is invention, not design —
+              so the wordmark stands in, since the rail that carries it is away. */}
           <span className="min-w-0 flex-1 truncate font-semibold text-[16px] leading-[1.2] @3xl:hidden">
             Course Community
           </span>

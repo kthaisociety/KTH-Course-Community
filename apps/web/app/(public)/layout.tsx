@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { AppShell } from "@/features/shell/components/app-shell";
+import { AppShell } from "@/features/shell";
 
 /**
  * The public pages render in the same frame as the rest of the app. They used to
