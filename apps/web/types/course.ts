@@ -1,3 +1,61 @@
+import type { ExaminationDistribution } from "./review";
+
+/**
+ * What the reviewers of one course said, aggregated.
+ *
+ * This shape only ever exists for a course that has at least one review:
+ * "nobody has reviewed this" is `CourseStats.reviews === null`, never a
+ * record of zeroes. A zero here always means a real measured zero.
+ */
+export interface CourseReviewStats {
+  /** Reviews aggregated. Always at least 1. */
+  reviewCount: number;
+  /** Reviewers who said they are glad they took the course. */
+  happyCount: number;
+  /** `happyCount / reviewCount` as a whole percent. */
+  happyPercent: number;
+  /**
+   * Mean workload score on the stored 1-10 scale, to one decimal. Workload is
+   * not an overall verdict: a heavy course is not a bad one.
+   */
+  workloadMean: number;
+  /** Mean learning score on the stored 1-10 scale, to one decimal. */
+  learningMean: number;
+  /**
+   * Mean of the reviewers who remembered how theoretical the course was, as a
+   * whole percent. `null` when nobody remembered — "I don't remember" is an
+   * answer, and it is excluded from the mean rather than counted as 0%.
+   */
+  approachTheoryPercent: number | null;
+  /** How many reviewers answered the theory/applied question. */
+  approachTheoryAnswerCount: number;
+  /**
+   * Mean examination distribution over the reviewers who remembered one,
+   * re-rounded to whole percentages that still add up to 100. `null` when
+   * nobody remembered.
+   */
+  examinationDistribution: ExaminationDistribution | null;
+  /** How many reviewers remembered an examination distribution. */
+  examinationAnswerCount: number;
+  /**
+   * The top contributors of `examinationDistribution`, at most three, e.g.
+   * `"Labs 60% · Exam 40%"`. `null` when nobody remembered.
+   */
+  examLabel: string | null;
+}
+
+/** The aggregate numbers a course card renders. */
+export interface CourseStats {
+  /** `null` when the course has no reviews: absent, not zero. */
+  reviews: CourseReviewStats | null;
+  /**
+   * How many app users have recorded taking the course. Taken state is row
+   * existence in `user_taken_courses`, so 0 is a true count rather than a
+   * missing measurement.
+   */
+  takenCount: number;
+}
+
 // TODO: Enrich the types with review data, and consider user data types
 // That is after we have implemented the review / user based systems.
 
@@ -52,6 +110,11 @@ export interface ExamRoundSummary {
   credits: number | null;
   gradeScaleCode: string | null; // "AF" or "PF"
 }
+
+/** A course summary carrying the aggregate numbers the card renders. */
+export type CourseSummaryWithStats = CourseSummary & {
+  stats: CourseStats;
+};
 
 /** Card-facing shape: summary plus per-user info derived client-side. */
 export type CourseWithUserInfo = CourseSummary & {
