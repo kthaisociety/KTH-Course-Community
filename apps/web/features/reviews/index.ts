@@ -15,6 +15,7 @@ export {
   type EditableReview,
   Review,
   type ReviewFormData,
+  toEditableReview,
 } from "./components/review";
 /** One published review, and the list that wires it to the API. */
 export { ReviewCard, type ReviewCardProps } from "./components/review-card";

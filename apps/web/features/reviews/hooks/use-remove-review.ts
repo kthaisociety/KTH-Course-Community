@@ -8,8 +8,8 @@ import { useDeleteReview } from "../api/mutations";
  * Deletes a review the viewer wrote. `reviews.delete` checks authorship itself,
  * so a request for someone else's review fails whatever the UI offered.
  */
-export function useRemoveReview(courseCode: string) {
-  const deleteReview = useDeleteReview(courseCode);
+export function useRemoveReview() {
+  const deleteReview = useDeleteReview();
 
   return useCallback(
     async (id: string): Promise<boolean> => {
