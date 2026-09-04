@@ -9,7 +9,7 @@
 <x-dc>
 <helmet data-dc-atomics><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet"><link rel="stylesheet" href="cc-theme.css"><style>body{background:var(--pg);color:var(--ink)}html,body{margin:0;height:100%;background:var(--pg);font-family:Geist,system-ui,sans-serif;color:var(--ink)}a{color:#1751a6}a:hover{color:#10386f}*{box-sizing:border-box}input,button,textarea{font-family:Geist,system-ui,sans-serif}@keyframes pulse{0%,100%{opacity:.35}50%{opacity:1}}@keyframes sweep{0%{transform:translateX(-100%)}100%{transform:translateX(320%)}}@keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}</style></helmet>
 
-<div style="position:relative;display:flex;height:900px;background:var(--pg);color:var(--ink);font-size:14px">
+<div style="position:relative;display:flex;height:100vh;background:var(--pg);color:var(--ink);font-size:14px">
 <div data-cc-topbar="1" data-cc-fade="1" style="position:absolute;top:0;left:0;right:0;height:66px;z-index:1;box-sizing:border-box;display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:0 28px;border-bottom:1px solid var(--rule);background:var(--pg)">
 <div onClick="{{ onTheme }}" role="button" tabIndex="0" title="{{ themeTitle }}" aria-label="{{ themeTitle }}" style="width:34px;height:34px;display:flex;align-items:center;justify-content:center;border-radius:8px;color:var(--chipInk);cursor:pointer" style-hover="background:rgba(125,145,175,.14)">
 <sc-if value="{{ notNight }}" hint-placeholder-val="{{ true }}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 14.5A8.5 8.5 0 1 1 9.5 3.5a7 7 0 0 0 11 11z"></path></svg></sc-if>
@@ -17,7 +17,7 @@
 </div>
 </div>
 
-<div data-cc-sidebar="1" data-cc-fade="1" style="position:relative;z-index:2;box-sizing:border-box;width:236px;flex:none;display:flex;flex-direction:column;gap:6px;padding:14px 10px;background:#1751a6;color:#fff">
+<div data-cc-sidebar="1" data-cc-fade="1" style="position:relative;z-index:2;box-sizing:border-box;width:236px;flex:none;display:flex;flex-direction:column;gap:6px;padding:14px 10px;background:var(--rail);color:#fff">
 <a href="Course Community - Landing.dc.html" style="display:flex;align-items:center;gap:10px;padding:6px 8px 14px;color:#fff;text-decoration:none">
 <img src="assets/ais-symbol-white.png" alt="KTH AI Society" style="height:34px;width:34px;object-fit:contain">
 <div style="width:1px;height:28px;background:rgba(255,255,255,.35)"></div>
@@ -41,7 +41,7 @@
 <sc-if value="{{ isGuest }}" hint-placeholder-val="{{ true }}">
 <div style="margin-top:8px;padding-top:12px;border-top:1px solid rgba(255,255,255,.2)">
 <div style="font-size:11.5px;line-height:1.45;color:rgba(255,255,255,.78)">Browsing as a guest. Saving courses and posting reviews need an account.</div>
-<div onClick="{{ onSignUp }}" role="button" tabIndex="0" style="margin-top:10px;display:flex;align-items:center;justify-content:center;height:34px;border-radius:8px;background:#fff;color:#12417f;font-size:13px;font-weight:600;cursor:pointer">Sign up</div>
+<div onClick="{{ onSignUp }}" role="button" tabIndex="0" style="margin-top:10px;display:flex;align-items:center;justify-content:center;height:34px;border-radius:8px;background:var(--btn);color:var(--btnFg);font-size:13px;font-weight:600;cursor:pointer" style-hover="background:var(--btn)">Sign up</div>
 <div onClick="{{ onLogIn }}" role="button" tabIndex="0" style="margin-top:6px;display:flex;align-items:center;justify-content:center;height:34px;border-radius:8px;border:1px solid rgba(255,255,255,.4);font-size:13px;font-weight:500;color:#fff;cursor:pointer">Log in</div>
 </div>
 </sc-if>
@@ -114,15 +114,15 @@
 <div style="flex:1;display:flex;align-items:flex-start;justify-content:center;padding:18px 0 40px">
 <div style="width:100%;max-width:620px;animation:rise .2s ease-out">
 <div style="display:flex;align-items:center;gap:10px">
-<span style="width:26px;height:26px;border-radius:50%;background:#fbeceb;display:flex;align-items:center;justify-content:center"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#a3452a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8v5"></path><path d="M12 16.5h.01"></path></svg></span>
-<div style="font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:#a3452a">Reading failed</div>
+<span style="width:26px;height:26px;border-radius:50%;background:var(--dangerTint);display:flex;align-items:center;justify-content:center"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--dangerInk)452a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8v5"></path><path d="M12 16.5h.01"></path></svg></span>
+<div style="font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--dangerInk)">Reading failed</div>
 </div>
 <div style="margin-top:12px;font-size:22px;font-weight:600;line-height:1.2;letter-spacing:-.015em">{{ errorTitle }}</div>
 <div style="margin-top:8px;font-size:14px;line-height:1.55;color:var(--muted);text-wrap:pretty">{{ errorBody }}</div>
-<div style="margin-top:18px;display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:12px;border:1px solid #f0d7cf;background:#fdf3ef">
-<div style="width:38px;height:38px;flex:none;border-radius:9px;background:#fbeceb;display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#a3452a" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"></path><path d="M14 3v5h5"></path></svg></div>
-<div style="flex:1;min-width:0;font-size:13px;color:#7a3b26">{{ errorFile }}</div>
-<div style="flex:none;font-size:12.5px;font-weight:500;color:#a3452a">Nothing was saved</div>
+<div style="margin-top:18px;display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:12px;border:1px solid var(--dangerTintBorder);background:var(--dangerTint)">
+<div style="width:38px;height:38px;flex:none;border-radius:9px;background:var(--dangerTint);display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#a3452a" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"></path><path d="M14 3v5h5"></path></svg></div>
+<div style="flex:1;min-width:0;font-size:13px;color:var(--dangerInk2)">{{ errorFile }}</div>
+<div style="flex:none;font-size:12.5px;font-weight:500;color:var(--dangerInk)">Nothing was saved</div>
 </div>
 <div style="margin-top:16px;border:1px solid var(--rule);border-radius:12px;background:var(--surface);padding:15px 16px">
 <div style="font-size:13px;line-height:1.55;color:var(--muted)">Download the certificate straight from Ladok rather than scanning it — if no text selects in the PDF, it is a scan.</div>
@@ -179,13 +179,13 @@
 </div>
 
 <sc-if value="{{ hasBanner }}" hint-placeholder-val="{{ false }}">
-<div style="margin-top:16px;display:flex;align-items:flex-start;gap:11px;padding:13px 15px;border-radius:11px;border:1px solid #cfe4de;background:#e9f3ef;animation:rise .22s ease-out">
-<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1c6b60" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" style="flex:none;margin-top:1px"><circle cx="12" cy="12" r="9.5"></circle><path d="m8.5 12.2 2.4 2.4 4.6-5"></path></svg>
+<div style="margin-top:16px;display:flex;align-items:flex-start;gap:11px;padding:13px 15px;border-radius:11px;border:1px solid var(--successTintBorder);background:var(--successTint);animation:rise .22s ease-out">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--successInk)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" style="flex:none;margin-top:1px"><circle cx="12" cy="12" r="9.5"></circle><path d="m8.5 12.2 2.4 2.4 4.6-5"></path></svg>
 <div style="flex:1;min-width:0">
-<div style="font-size:13.5px;font-weight:600;color:#1c6b60">{{ bannerTitle }}</div>
-<div style="margin-top:4px;font-size:12.5px;line-height:1.5;color:#2b6a60">{{ bannerBody }}</div>
+<div style="font-size:13.5px;font-weight:600;color:var(--successInk)">{{ bannerTitle }}</div>
+<div style="margin-top:4px;font-size:12.5px;line-height:1.5;color:var(--successInk)">{{ bannerBody }}</div>
 </div>
-<div onClick="{{ onDismissBanner }}" style="flex:none;width:24px;height:24px;display:flex;align-items:center;justify-content:center;border-radius:6px;color:#1c6b60;font-size:16px;line-height:1;cursor:pointer" style-hover="background:rgba(28,107,96,.1)">×</div>
+<div onClick="{{ onDismissBanner }}" style="flex:none;width:24px;height:24px;display:flex;align-items:center;justify-content:center;border-radius:6px;color:var(--successInk);font-size:16px;line-height:1;cursor:pointer" style-hover="background:rgba(28,107,96,.1)">×</div>
 </div>
 </sc-if>
 
@@ -205,7 +205,7 @@
 <div style="min-width:0;display:flex;align-items:center;gap:8px">
 <span style="font-size:13.5px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.name }}</span>
 <sc-if value="{{ r.isNew }}" hint-placeholder-val="{{ false }}">
-<span style="flex:none;padding:2px 7px;border-radius:5px;background:#e9f3ef;color:#1c6b60;font-size:11px;font-weight:600">New</span>
+<span style="flex:none;padding:2px 7px;border-radius:5px;background:var(--successTint);color:var(--successInk);font-size:11px;font-weight:600">New</span>
 </sc-if>
 <sc-if value="{{ r.edited }}" hint-placeholder-val="{{ false }}">
 <span style="flex:none;padding:2px 7px;border-radius:5px;background:var(--pill);color:var(--muted);font-size:11px;font-weight:500">Edited</span>
@@ -231,7 +231,7 @@
 </sc-if>
 <div style="display:flex;align-items:center;min-width:0">
 <sc-if value="{{ r.reviewed }}" hint-placeholder-val="{{ false }}">
-<span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:#1c6b60"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1c6b60" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><circle cx="12" cy="12" r="9.5"></circle><path d="m8.5 12.2 2.4 2.4 4.6-5"></path></svg>Done</span>
+<span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--successInk)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--successInk)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><circle cx="12" cy="12" r="9.5"></circle><path d="m8.5 12.2 2.4 2.4 4.6-5"></path></svg>Done</span>
 </sc-if>
 <sc-if value="{{ r.canReview }}" hint-placeholder-val="{{ true }}">
 <span style="font-size:11.5px;color:var(--dim2)">Not yet</span>
@@ -245,8 +245,8 @@
 </sc-if>
 <sc-if value="{{ r.notEditing }}" hint-placeholder-val="{{ true }}">
 <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px">
-<div onClick="{{ r.onEdit }}" title="Edit credits and grade" style="width:30px;height:30px;flex:none;display:flex;align-items:center;justify-content:center;border-radius:7px;border:1px solid var(--rule3);background:var(--surface);cursor:pointer" style-hover="border-color:var(--brand)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1751a6" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"></path></svg></div>
-<div onClick="{{ r.onRemove }}" title="Remove" style="width:30px;height:30px;flex:none;display:flex;align-items:center;justify-content:center;border-radius:7px;border:1px solid var(--rule3);background:var(--surface);cursor:pointer" style-hover="border-color:#c96a4a"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b6355" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"></path><path d="M9 7V5h6v2"></path><path d="M6 7l1 13h10l1-13"></path></svg></div>
+<div onClick="{{ r.onEdit }}" title="Edit credits and grade" style="width:30px;height:30px;flex:none;display:flex;align-items:center;justify-content:center;border-radius:7px;border:1px solid var(--rule3);background:var(--surface);cursor:pointer" style-hover="border-color:var(--brand)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"></path></svg></div>
+<div onClick="{{ r.onRemove }}" title="Remove" style="width:30px;height:30px;flex:none;display:flex;align-items:center;justify-content:center;border-radius:7px;border:1px solid var(--rule3);background:var(--surface);cursor:pointer" style-hover="border-color:var(--danger)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--danger)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"></path><path d="M9 7V5h6v2"></path><path d="M6 7l1 13h10l1-13"></path></svg></div>
 </div>
 </sc-if>
 </div>
@@ -267,7 +267,7 @@
 </div>
 
 <div style="padding:18px 0 26px;display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--dim2)">
-<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#8a857a" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-5"></path><path d="M12 8h.01"></path></svg>
+<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--dim2)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-5"></path><path d="M12 8h.01"></path></svg>
 Course Community is run by KTH AI Society, a student organisation. Credits, grades and any average shown here are your own entries — not an official KTH record.
 </div>
 </div>
@@ -278,7 +278,7 @@ Course Community is run by KTH AI Society, a student organisation. Credits, grad
 
 <div style="padding:18px 0 16px;border-bottom:1px solid var(--rule);display:flex;align-items:flex-start;justify-content:space-between;gap:24px">
 <div style="min-width:0">
-<div style="font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:#7a5309">Quick review</div>
+<div style="font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--warnInk)">Quick review</div>
 <div style="margin-top:7px;font-size:19px;font-weight:600;line-height:1.25">One card per course</div>
 <div style="margin-top:8px;max-width:560px;font-size:13.5px;line-height:1.5;color:var(--muted)">Four quick questions and a line of text per course. Skip the ones you have no opinion about — they stay in the list as unreviewed.</div>
 </div>
@@ -298,17 +298,17 @@ Course Community is run by KTH AI Society, a student organisation. Credits, grad
 <div style="flex:1;padding:22px 0 36px;display:flex;justify-content:center">
 <div style="position:relative;width:100%;max-width:640px">
 <sc-for list="{{ revPeeks }}" as="p" hint-placeholder-count="2">
-<div style="position:absolute;left:0;right:0;top:0;bottom:0;border-radius:16px;border:1px solid #e4dfd0;background:var(--surface);transform:translateY({{ p.y }}) scale({{ p.scale }});opacity:{{ p.opacity }}"></div>
+<div style="position:absolute;left:0;right:0;top:0;bottom:0;border-radius:16px;border:1px solid var(--rule2);background:var(--surface);transform:translateY({{ p.y }}) scale({{ p.scale }});opacity:{{ p.opacity }}"></div>
 </sc-for>
-<div style="position:relative;z-index:3;border-radius:16px;border:1px solid #e4dfd0;background:var(--surface);box-shadow:0 14px 34px rgba(20,30,45,.09)">
+<div style="position:relative;z-index:3;border-radius:16px;border:1px solid var(--rule2);background:var(--surface);box-shadow:0 14px 34px rgba(20,30,45,.09)">
 
-<div style="padding:20px 22px 17px;border-bottom:1px solid #f2efe6;display:flex;align-items:flex-start;gap:14px;background:#fdf7ea;border-radius:16px 16px 0 0">
+<div style="padding:20px 22px 17px;border-bottom:1px solid var(--warnBorder);display:flex;align-items:flex-start;gap:14px;background:var(--warn);border-radius:16px 16px 0 0">
 <div style="flex:1;min-width:0">
 <div style="font:500 12.5px Geist Mono,ui-monospace,monospace;color:var(--brand)">{{ revCode }}</div>
 <div style="margin-top:6px;font-size:20px;font-weight:600;line-height:1.25">{{ revName }}</div>
 <div style="margin-top:5px;font-size:12.5px;color:var(--dim)">{{ revMeta }}</div>
 </div>
-<div style="flex:none;padding:4px 11px;border-radius:999px;background:var(--surface);border:1px solid #f0e6d2;font-size:11.5px;font-weight:500;color:#8a6a1e;font-variant-numeric:tabular-nums">{{ revStackLabel }}</div>
+<div style="flex:none;padding:4px 11px;border-radius:999px;background:var(--surface);border:1px solid var(--warnBorder);font-size:11.5px;font-weight:500;color:var(--warnInk);font-variant-numeric:tabular-nums">{{ revStackLabel }}</div>
 </div>
 
 <div style="padding:16px 22px 18px;display:flex;flex-direction:column;gap:14px">
@@ -343,7 +343,7 @@ Course Community is run by KTH AI Society, a student organisation. Credits, grad
 <div style="font-size:14.5px;font-weight:600">What was the approach?</div>
 <div style="flex:none;padding:2px 9px;border-radius:999px;background:var(--pill);color:var(--brand);font-size:12px;font-weight:600;font-variant-numeric:tabular-nums">{{ revTheoryLabel }}</div>
 </div>
-<div onPointerDown="{{ onRevTheoryDown }}" style="position:relative;margin-top:11px;display:flex;height:38px;border-radius:8px;overflow:hidden;background:#eae6da;cursor:ew-resize;user-select:none">
+<div onPointerDown="{{ onRevTheoryDown }}" style="position:relative;margin-top:11px;display:flex;height:38px;border-radius:8px;overflow:hidden;background:var(--pill);cursor:ew-resize;user-select:none">
 <div style="display:flex;width:100%;height:100%">
 <div style="width:{{ revTheoryW1 }};background:{{ revTheoryFill1 }};display:flex;align-items:center;padding-left:11px;color:{{ revTheoryInk1 }};font-size:12px;font-weight:600;overflow:hidden;white-space:nowrap">Theoretical</div>
 <div style="width:{{ revTheoryW2 }};background:{{ revTheoryFill2 }};display:flex;align-items:center;justify-content:flex-end;padding-right:11px;color:{{ revTheoryInk2 }};font-size:12px;font-weight:600;overflow:hidden;white-space:nowrap">Applied</div>
@@ -392,17 +392,17 @@ Course Community is run by KTH AI Society, a student organisation. Credits, grad
 </div>
 
 <sc-if value="{{ revSaveError }}" hint-placeholder-val="{{ false }}">
-<div style="margin:0 22px 4px;display:flex;align-items:center;gap:10px;padding:11px 13px;border-radius:10px;border:1px solid #f0d7cf;background:#fdf3ef">
-<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#a3452a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M12 8v5"></path><path d="M12 16.5h.01"></path><circle cx="12" cy="12" r="9.5"></circle></svg>
-<div style="flex:1;min-width:0;font-size:12.5px;line-height:1.45;color:#7a3b26">{{ revSaveErrorText }}</div>
-<div onClick="{{ onRetrySave }}" style="flex:none;font-size:12.5px;font-weight:600;color:#a3452a;cursor:pointer" style-hover="text-decoration:underline">Try again</div>
+<div style="margin:0 22px 4px;display:flex;align-items:center;gap:10px;padding:11px 13px;border-radius:10px;border:1px solid var(--dangerTintBorder);background:var(--dangerTint)">
+<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--dangerInk)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M12 8v5"></path><path d="M12 16.5h.01"></path><circle cx="12" cy="12" r="9.5"></circle></svg>
+<div style="flex:1;min-width:0;font-size:12.5px;line-height:1.45;color:var(--dangerInk2)">{{ revSaveErrorText }}</div>
+<div onClick="{{ onRetrySave }}" style="flex:none;font-size:12.5px;font-weight:600;color:var(--dangerInk);cursor:pointer" style-hover="text-decoration:underline">Try again</div>
 </div>
 </sc-if>
 <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 22px;border-top:1px solid var(--rule)">
 <div onClick="{{ onSkipCard }}" style="font-size:13px;font-weight:500;color:var(--muted);cursor:pointer" style-hover="text-decoration:underline">Skip for now</div>
 <div style="display:flex;align-items:center;gap:13px">
 <div style="font-size:11.5px;color:var(--dim2)">{{ revCardHint }}</div>
-<div onClick="{{ onSaveCard }}" style="display:flex;align-items:center;gap:9px;height:40px;padding:0 18px;border-radius:9px;background:{{ revSaveBg }};color:#fff;font-size:13.5px;font-weight:600;cursor:{{ revSaveCursor }}">{{ revSaveLabel }}<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13"></path><path d="m12.5 5.5 6.5 6.5-6.5 6.5"></path></svg></div>
+<div onClick="{{ onSaveCard }}" style="display:flex;align-items:center;gap:9px;height:40px;padding:0 18px;border-radius:9px;background:{{ revSaveBg }};color:{{ revSaveFg }};font-size:13.5px;font-weight:600;cursor:{{ revSaveCursor }}">{{ revSaveLabel }}<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="{{ revSaveFg }}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13"></path><path d="m12.5 5.5 6.5 6.5-6.5 6.5"></path></svg></div>
 </div>
 </div>
 
@@ -414,7 +414,7 @@ Course Community is run by KTH AI Society, a student organisation. Credits, grad
 <sc-if value="{{ revDone }}" hint-placeholder-val="{{ false }}">
 <div style="flex:1;padding:28px 0 40px;display:flex;justify-content:center;align-items:flex-start">
 <div style="width:100%;max-width:520px;border:1px solid var(--rule);border-radius:16px;background:var(--surface);padding:30px 26px 26px;text-align:center;animation:rise .2s ease-out">
-<span style="display:inline-flex;width:44px;height:44px;border-radius:50%;background:#e3f2ef;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1c6b60" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></span>
+<span style="display:inline-flex;width:44px;height:44px;border-radius:50%;background:var(--successTint);align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1c6b60" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></span>
 <div style="margin-top:14px;font-size:21px;font-weight:600;letter-spacing:-.01em">{{ revDoneTitle }}</div>
 <div style="margin-top:8px;font-size:13.5px;line-height:1.55;color:var(--muted)">{{ revDoneBody }}</div>
 <div style="margin-top:20px;display:flex;justify-content:center;gap:10px">
@@ -513,8 +513,8 @@ Course Community is run by KTH AI Society, a student organisation. Credits, grad
 </sc-if>
 
 <sc-if value="{{ showFreeFormNote }}" hint-placeholder-val="{{ false }}">
-<div style="margin-top:14px;display:flex;gap:9px;padding:12px 13px;border-radius:10px;background:var(--pill);border:1px dashed #cfc9b8">
-<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6b6355" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none;margin-top:2px"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-5"></path><path d="M12 8h.01"></path></svg>
+<div style="margin-top:14px;display:flex;gap:9px;padding:12px 13px;border-radius:10px;background:var(--pill);border:1px dashed var(--rule3)">
+<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--dim)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none;margin-top:2px"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-5"></path><path d="M12 8h.01"></path></svg>
 <div style="font-size:12.5px;line-height:1.5;color:var(--muted)">A free-form course counts toward your credits and average, but it has no course page — so there is nothing to review it against, and it will not appear in the fast-track reviewer.</div>
 </div>
 </sc-if>
@@ -1090,14 +1090,14 @@ class Component extends DCLogic {
   }
 
   gradeStyle(g) {
-    if (g == null) return { gradeBg: "#fdf7ea", gradeFg: "#6b4c0d", gradeBorder: "#dfa53c", gradeBorderStyle: "dashed" };
-    if (g === "P" || g === "F") return { gradeBg: "var(--pill)", gradeFg: "#3d4650", gradeBorder: "transparent", gradeBorderStyle: "solid" };
-    return { gradeBg: "var(--pill)", gradeFg: "#12417f", gradeBorder: "transparent", gradeBorderStyle: "solid" };
+    if (g == null) return { gradeBg: "var(--warn)", gradeFg: "var(--warnInk)", gradeBorder: "var(--warnBtn)", gradeBorderStyle: "dashed" };
+    if (g === "P" || g === "F") return { gradeBg: "var(--pill)", gradeFg: "var(--chipInk)", gradeBorder: "transparent", gradeBorderStyle: "solid" };
+    return { gradeBg: "var(--pill)", gradeFg: "var(--brand)", gradeBorder: "transparent", gradeBorderStyle: "solid" };
   }
 
   matchStyle(kind) {
-    if (kind === "catalog") return { matchLabel: "In KTH catalog", matchBg: "var(--pill)", matchFg: "#12417f", matchBorder: "1px solid #dde7f4" };
-    if (kind === "nomatch") return { matchLabel: "No catalog match", matchBg: "#fdf7ea", matchFg: "#6b4c0d", matchBorder: "1px solid #f0e6d2" };
+    if (kind === "catalog") return { matchLabel: "In KTH catalog", matchBg: "var(--pill)", matchFg: "var(--brand)", matchBorder: "1px solid var(--rule2)" };
+    if (kind === "nomatch") return { matchLabel: "No catalog match", matchBg: "var(--warn)", matchFg: "var(--warnInk)", matchBorder: "1px solid var(--warnBorder)" };
     return { matchLabel: "Free-form course", matchBg: "var(--pill)", matchFg: "#5c6570", matchBorder: "1px dashed #cfc9b8" };
   }
 
@@ -1113,7 +1113,7 @@ class Component extends DCLogic {
   row(r) {
     const off = !this.state.includeGrades;
     const gs = r.grade != null ? this.gradeStyle(r.grade)
-      : off ? { gradeBg: "transparent", gradeFg: "#a09a8c", gradeBorder: "transparent", gradeBorderStyle: "solid" }
+      : off ? { gradeBg: "transparent", gradeFg: "var(--dim2)", gradeBorder: "transparent", gradeBorderStyle: "solid" }
       : this.gradeStyle(r.grade);
     const editing = this.state.inlineId === r.id;
     const draft = editing ? this.state.inlineDraft : null;
@@ -1390,10 +1390,10 @@ class Component extends DCLogic {
       revExamSplitLabel: (draft.picked || []).length ? (draft.picked || []).length + (draft.picked.length === 1 ? " format" : " formats") : "Not set",
       revTheoryW1: (draft.theory == null ? 50 : draft.theory) + "%",
       revTheoryW2: (draft.theory == null ? 50 : 100 - draft.theory) + "%",
-      revTheoryFill1: draft.theory == null ? "#ded8c8" : "#12417f",
-      revTheoryFill2: draft.theory == null ? "#ded8c8" : "#a9c8ec",
-      revTheoryInk1: draft.theory == null ? "#6b6355" : "#fff",
-      revTheoryInk2: draft.theory == null ? "#6b6355" : "#12417f",
+      revTheoryFill1: draft.theory == null ? "var(--pill)" : "#12417f",
+      revTheoryFill2: draft.theory == null ? "var(--pill)" : "#a9c8ec",
+      revTheoryInk1: draft.theory == null ? "var(--dim)" : "#fff",
+      revTheoryInk2: draft.theory == null ? "var(--dim)" : "#12417f",
       revTheoryLabel: draft.theory == null ? "Not set" : draft.theory + " / " + (100 - draft.theory),
       onRevTheoryDown: (e) => this.startPct(e, 100, (v) => this.patchCard({ theory: v })),
       revWorkloadW: (draft.workload == null ? 0 : draft.workload * 10) + "%",
@@ -1411,6 +1411,7 @@ class Component extends DCLogic {
         ? "Saving…"
         : s.revAt === s.revQueue.length - 1 ? "Save and finish" : "Save and next",
       revSaveBg: s.reviewPhase === "saving" ? "#7ea6d8" : cardAnswered ? "var(--btn)" : "#b9c9de",
+      revSaveFg: s.reviewPhase === "saving" ? "#fff" : cardAnswered ? "var(--btnFg)" : "#fff",
       revSaveCursor: s.reviewPhase === "saving" ? "progress" : cardAnswered ? "pointer" : "not-allowed",
       revSaveError: s.reviewPhase === "failed",
       revSaveErrorText: "That review did not reach the server. Nothing was lost — your answers are still on the card.",
@@ -1518,7 +1519,7 @@ class Component extends DCLogic {
           label, value,
           fg: same ? "var(--ink2)" : "var(--dim2)",
           strike: same ? "none" : "line-through",
-          border: same ? "var(--rule)" : "#f0e6d2"
+          border: same ? "var(--rule)" : "var(--warnBorder)"
         }));
       })(),
       canRevert: (() => {

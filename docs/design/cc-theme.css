@@ -4,7 +4,7 @@
 
    pg      page background            surface  cards, fields, menus
    inset   recessed panel             pill     chips, tracks, hover fills
-   rail    the sidebar (brand blue in both themes)
+   rail    the sidebar (darkens with the theme)
    ink     primary text               ink2     secondary text
    muted   supporting text            dim/dim2 labels and hints
    chipInk text on a pill             rule/2/3 hairline, border, strong border
@@ -41,35 +41,44 @@
   --warnSolid: #fdf7ea;
   --success: #1c7a4a;
   --successFg: #ffffff;
+  --successTint: #e9f3ef;
+  --successTintBorder: #cfe4de;
+  --successInk: #1c6b60;
   --danger: #b3261e;
   --dangerFg: #ffffff;
+  --dangerTint: #fdf3ef;
+  --dangerTintBorder: #f0d7cf;
+  --dangerInk: #a3452a;
+  --dangerInk2: #7a3b26;
   --nodeAurora: #2f9e8e;
   --nodeEmber: #c96a4a;
   --nodeFrost: #2f5fa8;
   --nodeMoss: #4a7c2f;
   --nodeSlate: #57646f;
   --nodeViolet: #6a4ea8;
+  --checkedTint: rgba(23, 81, 166, .08);
+  --checkedHoverTint: rgba(23, 81, 166, .14);
 }
 
 [data-cc-theme="dark"] {
-  --pg: #0d2d5b;
-  --surface: #143a72;
-  --inset: #0a2449;
+  --pg: #071831;
+  --surface: #0b254c;
+  --inset: #040f1f;
   --pill: rgba(244, 238, 226, .16);
-  --rail: #1751a6;
-  --ink: #f6f1e6;
-  --ink2: #eae4d7;
-  --muted: #d3e0f4;
-  --dim: #c6d5ee;
-  --dim2: #b0c1de;
-  --chipInk: #f0ebdf;
-  --rule: rgba(244, 238, 226, .22);
-  --rule2: rgba(244, 238, 226, .3);
-  --rule3: rgba(244, 238, 226, .42);
+  --rail: #0d2e5e;
+  --ink: #e6eaef;
+  --ink2: #d7dde4;
+  --muted: #c3cedf;
+  --dim: #b4c3da;
+  --dim2: #9daec8;
+  --chipInk: #dadfe7;
+  --rule: rgba(244, 238, 226, .16);
+  --rule2: rgba(244, 238, 226, .22);
+  --rule3: rgba(244, 238, 226, .32);
   --hov: #dbe8fa;
-  --brand: #e2ecfb;
-  --btn: #f4eee2;
-  --btnFg: #1751a6;
+  --brand: #d7e3f7;
+  --btn: #8bb3ef;
+  --btnFg: #0a2449;
   --info: rgba(226, 236, 251, .10);
   --warn: rgba(223, 165, 60, .16);
   --warnBorder: rgba(223, 165, 60, .3);
@@ -77,18 +86,27 @@
   --warnBtn: #dfa53c;
   --warnBtnFg: #1a1305;
   --scoreWorkload: #e8b563;
-  --infoSolid: #294c80;
-  --warnSolid: #344b69;
+  --infoSolid: #21395e;
+  --warnSolid: #2d3949;
   --success: #5fd08a;
   --successFg: #0c2417;
+  --successTint: rgba(95, 208, 138, .14);
+  --successTintBorder: rgba(95, 208, 138, .3);
+  --successInk: #5fd08a;
   --danger: #ff8a80;
   --dangerFg: #2b0a08;
+  --dangerTint: rgba(255, 138, 128, .14);
+  --dangerTintBorder: rgba(255, 138, 128, .3);
+  --dangerInk: #ff8a80;
+  --dangerInk2: #ffb3ab;
   --nodeAurora: #5fd8c4;
   --nodeEmber: #f2946f;
   --nodeFrost: #8ec2ff;
   --nodeMoss: #a5d47c;
   --nodeSlate: #b3c1d0;
   --nodeViolet: #bda2f0;
+  --checkedTint: rgba(142, 194, 255, .22);
+  --checkedHoverTint: rgba(142, 194, 255, .32);
 }
 
 /* Colour changes cross-fade; nothing else about a page animates from here. */

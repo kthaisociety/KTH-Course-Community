@@ -78,6 +78,21 @@
   --color-cc-success-fg: var(--cc-success-fg);
   --color-cc-danger: var(--cc-danger);
   --color-cc-danger-fg: var(--cc-danger-fg);
+  --color-cc-success-tint: var(--cc-success-tint);
+  --color-cc-success-tint-border: var(--cc-success-tint-border);
+  --color-cc-success-ink: var(--cc-success-ink);
+  --color-cc-danger-tint: var(--cc-danger-tint);
+  --color-cc-danger-tint-border: var(--cc-danger-tint-border);
+  --color-cc-danger-ink: var(--cc-danger-ink);
+  --color-cc-danger-ink2: var(--cc-danger-ink2);
+  --color-cc-node-aurora: var(--cc-node-aurora);
+  --color-cc-node-ember: var(--cc-node-ember);
+  --color-cc-node-frost: var(--cc-node-frost);
+  --color-cc-node-moss: var(--cc-node-moss);
+  --color-cc-node-slate: var(--cc-node-slate);
+  --color-cc-node-violet: var(--cc-node-violet);
+  --color-cc-checked-tint: var(--cc-checked-tint);
+  --color-cc-checked-hover-tint: var(--cc-checked-hover-tint);
 }
 
 :root {
@@ -174,6 +189,15 @@
   --cc-node-moss: #4a7c2f;
   --cc-node-slate: #57646f;
   --cc-node-violet: #6a4ea8;
+  --cc-success-tint: #e9f3ef;
+  --cc-success-tint-border: #cfe4de;
+  --cc-success-ink: #1c6b60;
+  --cc-danger-tint: #fdf3ef;
+  --cc-danger-tint-border: #f0d7cf;
+  --cc-danger-ink: #a3452a;
+  --cc-danger-ink2: #7a3b26;
+  --cc-checked-tint: rgba(23, 81, 166, 0.08);
+  --cc-checked-hover-tint: rgba(23, 81, 166, 0.14);
 }
 
 .dark {
@@ -213,24 +237,24 @@
   --sidebar-ring: oklch(0.556 0 0);
 
   /* Course Community — dark palette. */
-  --cc-pg: #0d2d5b;
-  --cc-surface: #143a72;
-  --cc-inset: #0a2449;
+  --cc-pg: #071831;
+  --cc-surface: #0b254c;
+  --cc-inset: #040f1f;
   --cc-pill: rgba(244, 238, 226, 0.16);
-  --cc-rail: #1751a6;
-  --cc-ink: #f6f1e6;
-  --cc-ink2: #eae4d7;
-  --cc-muted: #d3e0f4;
-  --cc-dim: #c6d5ee;
-  --cc-dim2: #b0c1de;
-  --cc-chip-ink: #f0ebdf;
-  --cc-rule: rgba(244, 238, 226, 0.22);
-  --cc-rule2: rgba(244, 238, 226, 0.3);
-  --cc-rule3: rgba(244, 238, 226, 0.42);
+  --cc-rail: #0d2e5e;
+  --cc-ink: #e6eaef;
+  --cc-ink2: #d7dde4;
+  --cc-muted: #c3cedf;
+  --cc-dim: #b4c3da;
+  --cc-dim2: #9daec8;
+  --cc-chip-ink: #dadfe7;
+  --cc-rule: rgba(244, 238, 226, 0.16);
+  --cc-rule2: rgba(244, 238, 226, 0.22);
+  --cc-rule3: rgba(244, 238, 226, 0.32);
   --cc-hov: #dbe8fa;
-  --cc-brand: #e2ecfb;
-  --cc-btn: #f4eee2;
-  --cc-btn-fg: #1751a6;
+  --cc-brand: #d7e3f7;
+  --cc-btn: #8bb3ef;
+  --cc-btn-fg: #0a2449;
   --cc-info: rgba(226, 236, 251, 0.1);
   /* The warn button is amber here where light is blue. That hue change is the
      design's, not a mistake: on the dark blue surface a blue button vanishes. */
@@ -240,8 +264,8 @@
   --cc-warn-btn: #dfa53c;
   --cc-warn-btn-fg: #1a1305;
   --cc-score-workload: #e8b563;
-  --cc-info-solid: #294c80;
-  --cc-warn-solid: #344b69;
+  --cc-info-solid: #21395e;
+  --cc-warn-solid: #2d3949;
   --cc-success: #5fd08a;
   --cc-success-fg: #0c2417;
   --cc-danger: #ff8a80;
@@ -257,6 +281,15 @@
   --cc-node-moss: #a5d47c;
   --cc-node-slate: #b3c1d0;
   --cc-node-violet: #bda2f0;
+  --cc-success-tint: rgba(95, 208, 138, 0.14);
+  --cc-success-tint-border: rgba(95, 208, 138, 0.3);
+  --cc-success-ink: #5fd08a;
+  --cc-danger-tint: rgba(255, 138, 128, 0.14);
+  --cc-danger-tint-border: rgba(255, 138, 128, 0.3);
+  --cc-danger-ink: #ff8a80;
+  --cc-danger-ink2: #ffb3ab;
+  --cc-checked-tint: rgba(142, 194, 255, 0.22);
+  --cc-checked-hover-tint: rgba(142, 194, 255, 0.32);
 }
 
 @layer base {
