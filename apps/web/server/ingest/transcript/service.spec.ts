@@ -92,7 +92,7 @@ describe("buildTranscriptProposal", () => {
 
     await buildTranscriptProposal(fixture("ladok-english.txt"));
 
-    expect(takenService.recordTakenCourses).not.toHaveBeenCalled();
+    expect(takenService.recordTranscriptCoursesIfAbsent).not.toHaveBeenCalled();
   });
 });
 
@@ -118,7 +118,7 @@ describe("confirmTranscriptImport", () => {
     vi.mocked(courseService.getSummariesByCodes).mockResolvedValue(
       catalogue("SF1625", "DD1337"),
     );
-    vi.mocked(takenService.recordTakenCourses).mockResolvedValue({
+    vi.mocked(takenService.recordTranscriptCoursesIfAbsent).mockResolvedValue({
       inserted: 2,
       updated: 0,
     });
@@ -129,8 +129,10 @@ describe("confirmTranscriptImport", () => {
       importedAt,
     );
 
-    expect(takenService.recordTakenCourses).toHaveBeenCalledTimes(1);
-    expect(takenService.recordTakenCourses).toHaveBeenCalledWith(
+    expect(takenService.recordTranscriptCoursesIfAbsent).toHaveBeenCalledTimes(
+      1,
+    );
+    expect(takenService.recordTranscriptCoursesIfAbsent).toHaveBeenCalledWith(
       "user-1",
       [
         {
@@ -146,7 +148,7 @@ describe("confirmTranscriptImport", () => {
           attendanceYear: 2023,
         },
       ],
-      { source: "transcript", importedAt },
+      importedAt,
     );
     expect(result).toEqual({ inserted: 2, updated: 0 });
   });
@@ -163,24 +165,27 @@ describe("confirmTranscriptImport", () => {
         importedAt,
       ),
     ).rejects.toBeInstanceOf(NotFoundError);
-    expect(takenService.recordTakenCourses).not.toHaveBeenCalled();
+    expect(takenService.recordTranscriptCoursesIfAbsent).not.toHaveBeenCalled();
   });
 
-  it("sends one row per course code when a transcript is imported twice", async () => {
+  it("delegates repeated transcript confirmations to the insert-only write", async () => {
     vi.mocked(courseService.getSummariesByCodes).mockResolvedValue(
       catalogue("SF1625", "DD1337"),
     );
-    vi.mocked(takenService.recordTakenCourses).mockResolvedValue({
+    vi.mocked(takenService.recordTranscriptCoursesIfAbsent).mockResolvedValue({
       inserted: 0,
-      updated: 2,
+      updated: 0,
     });
 
     await confirmTranscriptImport("user-1", confirmed, importedAt);
     await confirmTranscriptImport("user-1", confirmed, importedAt);
 
-    expect(takenService.recordTakenCourses).toHaveBeenCalledTimes(2);
-    for (const [, rows] of vi.mocked(takenService.recordTakenCourses).mock
-      .calls) {
+    expect(takenService.recordTranscriptCoursesIfAbsent).toHaveBeenCalledTimes(
+      2,
+    );
+    for (const [, rows] of vi.mocked(
+      takenService.recordTranscriptCoursesIfAbsent,
+    ).mock.calls) {
       expect(rows.map((row) => row.courseCode)).toEqual(["SF1625", "DD1337"]);
     }
   });
@@ -189,7 +194,7 @@ describe("confirmTranscriptImport", () => {
     vi.mocked(courseService.getSummariesByCodes).mockResolvedValue(
       catalogue("SF1625"),
     );
-    vi.mocked(takenService.recordTakenCourses).mockResolvedValue({
+    vi.mocked(takenService.recordTranscriptCoursesIfAbsent).mockResolvedValue({
       inserted: 1,
       updated: 0,
     });
@@ -200,7 +205,8 @@ describe("confirmTranscriptImport", () => {
       importedAt,
     );
 
-    const [, rows] = vi.mocked(takenService.recordTakenCourses).mock.calls[0];
+    const [, rows] = vi.mocked(takenService.recordTranscriptCoursesIfAbsent)
+      .mock.calls[0];
     expect(rows).toEqual([
       {
         courseCode: "SF1625",
@@ -215,7 +221,7 @@ describe("confirmTranscriptImport", () => {
     const result = await confirmTranscriptImport("user-1", [], importedAt);
 
     expect(result).toEqual({ inserted: 0, updated: 0 });
-    expect(takenService.recordTakenCourses).not.toHaveBeenCalled();
+    expect(takenService.recordTranscriptCoursesIfAbsent).not.toHaveBeenCalled();
     expect(courseService.getSummariesByCodes).not.toHaveBeenCalled();
   });
 });

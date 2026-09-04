@@ -98,14 +98,9 @@ export type ConfirmedCourse = {
  * keep the edits you made — only new rows and missing fields are filled in."*
  * Two things in the write path make that a split rather than one call.
  *
- * `transcript.confirm` upserts, and its conflict clause sets **every**
- * self-reported column from the incoming row — including `attendance_periods`,
- * which `ConfirmedTranscriptRow` has no field for and which therefore arrives
- * as null. Sending a course the reader already has would overwrite the credits,
- * grade and year they corrected by hand, and erase the periods outright.
- *
  * So a course the reader does not have yet goes through `transcript.confirm`,
- * which is what stamps `transcript_imported_at`. A course they already have is
+ * which atomically inserts only absent rows and stamps `transcript_imported_at`.
+ * A course they already have is
  * only touched when the transcript can fill a field that is still empty, and
  * then through `taken.update`, which writes the whole row — stored values
  * included, periods carried — and leaves provenance alone.

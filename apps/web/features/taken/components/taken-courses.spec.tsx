@@ -536,8 +536,8 @@ describe("reading a transcript", () => {
     await uploadPdf();
     await screen.findByText("1 course read");
     // Another tab records DD1337 by hand while the proposal sits on screen.
-    // Planning against the render's snapshot would send it as a create, and
-    // `transcript.confirm`'s upsert would overwrite what that tab entered.
+    // Planning against the render's snapshot would unnecessarily try to create
+    // it; the confirmation endpoint is also insert-only as a race-safe guard.
     takenList.mockReturnValue([takenCourse()]);
     await userEvent.click(screen.getByRole("button", { name: "Looks right" }));
 

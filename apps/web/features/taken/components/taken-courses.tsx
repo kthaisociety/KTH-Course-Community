@@ -187,19 +187,10 @@ export function TakenCourses() {
    * corrected by hand — see `planTranscriptImport`.
    *
    * **The plan is built against a freshly read list, not the render's copy.**
-   * Two things depend on that. A course added in another tab while this
-   * proposal sat on screen would otherwise be planned as a create, and
-   * `transcript.confirm`'s upsert sets every column from the incoming row — so
-   * it would overwrite that entry and clear its periods. And a confirm that
-   * failed part way through is re-planned against what actually reached the
-   * database, so pressing the button again writes only what is still missing
-   * rather than repeating what already landed.
-   *
-   * It narrows the window rather than closing it: nothing here is one
-   * transaction, and only `transcript.confirm` learning to leave existing rows
-   * alone would make it atomic. That is a change to a server contract #92 does
-   * not own — the issue states outright that "the write upserts on (userId,
-   * courseCode)" — so it is reported on the PR rather than made here.
+   * It lets the page fill fields that are already empty, and it makes retries
+   * plan from what actually reached the database. `transcript.confirm` also
+   * inserts only absent rows atomically, so a course another tab creates after
+   * this refresh remains that tab's manual entry rather than being overwritten.
    *
    * **A re-read that fails writes nothing.** The render's copy is the very
    * snapshot the re-read exists to distrust, so falling back to it would put

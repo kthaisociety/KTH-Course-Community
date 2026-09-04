@@ -1,6 +1,9 @@
 import { getSummariesByCodes } from "../../course/service";
 import { NotFoundError } from "../../errors";
-import { recordTakenCourses, type TakenCourseInput } from "../../taken/service";
+import {
+  recordTranscriptCoursesIfAbsent,
+  type TakenCourseInput,
+} from "../../taken/service";
 import { matchCandidates, type UnmatchedCandidate } from "./match";
 import { parseLadokTranscript, type TranscriptCandidate } from "./parse";
 
@@ -91,9 +94,9 @@ export type ConfirmedTranscriptRow = Omit<
  * client from confirming a code that was never proposed. Only catalogue courses
  * become taken courses.
  *
- * The write itself belongs to `server/taken`. Its upsert is what makes a second
- * import of the same transcript update rather than duplicate, and it collapses
- * a course code repeated inside one batch; neither is re-implemented here.
+ * The write itself belongs to `server/taken`. It inserts only when the user
+ * does not already have a row for the course, so a manual entry that races this
+ * confirmation is never overwritten by transcript values.
  */
 export async function confirmTranscriptImport(
   userId: string,
@@ -119,8 +122,5 @@ export async function confirmTranscriptImport(
     );
   }
 
-  return recordTakenCourses(userId, inputs, {
-    source: "transcript",
-    importedAt,
-  });
+  return recordTranscriptCoursesIfAbsent(userId, inputs, importedAt);
 }
