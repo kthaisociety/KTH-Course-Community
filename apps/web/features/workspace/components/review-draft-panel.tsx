@@ -169,8 +169,9 @@ export interface ReviewDraftPanelProps {
   courseCode: string;
   draft: ReviewDraft;
   /**
-   * When this workspace published a review for this course, or `null` if it
-   * has not — or if `reviews.list` has since answered and taken over.
+   * Whether this workspace has published a review for this course and is still
+   * waiting for `reviews.list` to catch up. `null` once it has, and the list
+   * has taken over as the authority.
    */
   publishedAt: number | null;
   onDraftChange: (draft: ReviewDraft) => void;
@@ -241,43 +242,63 @@ export function ReviewDraftPanel({
    *
    * The check is here rather than in the tab's own memory because the review
    * outlives the tab: it may have been published last week, or from the course
-   * page's own dialog. Nothing on the server refuses the second write — there
-   * is no unique key on `(user_id, course_code)` and `createReview` does not
-   * look — so a second publish would quietly add a row and move the course's
-   * averages. Flagged in the PR: that guard belongs in the reviews domain.
+   * page's own dialog. It is a courtesy, not the guard — `createReview`
+   * refuses the second write for a `(user_id, course_code)` pair and cannot be
+   * raced into taking it. This is what stops the pane offering a button whose
+   * only outcome is that refusal.
    */
   const reviewedInList =
     userId !== "" &&
     (courseReviews.data ?? []).some((review) => review.userId === userId);
-  /**
-   * A settled `reviews.list` response fetched *after* this workspace's write.
-   *
-   * Settled alone is not enough: the response sitting in the cache at the
-   * moment of publishing was fetched before it and says nothing about it. One
-   * fetched after is the authority either way — the review is in it, or
-   * somebody deleted it and its author is free to write another.
-   */
-  const listAnsweredSincePublish =
-    publishedAt !== null &&
-    courseReviews.isSuccess &&
-    !courseReviews.isFetching &&
-    (courseReviews.dataUpdatedAt ?? 0) > publishedAt;
   const alreadyReviewed =
-    justPublished ||
-    reviewedInList ||
-    (publishedAt !== null && !listAnsweredSincePublish);
+    justPublished || reviewedInList || publishedAt !== null;
   const publishable = canPublish(draft) && !alreadyReviewed;
 
   /**
    * The workspace's note that it published covers one window: between the
-   * write and `reviews.list` catching up. The first response from after the
-   * write closes that window, and the note is dropped — one that outlived it
-   * would leave a reviewer who deleted their review unable to write another,
-   * which is a course they could never review again.
+   * write and `reviews.list` catching up. Only a request started *after* the
+   * write can close that window, so this panel starts one itself rather than
+   * reading the clock on whatever response happens to arrive next.
+   *
+   * A response's arrival time cannot stand in for that. `dataUpdatedAt` records
+   * when TanStack Query accepted a response, not when it asked for it, so a
+   * list fetched before the write and settled after it looks newer than the
+   * write while knowing nothing about it — and dropping the note on that
+   * evidence would let the same review be published twice.
+   *
+   * The note has to be dropped eventually, and only on real evidence: one that
+   * outlived its window would leave a reviewer who deleted their review unable
+   * to write another, which is a course they could never review again.
    */
+  const refetchReviews = courseReviews.refetch;
+  const confirmRequested = useRef(false);
+  const confirmPublished = useRef(onPublishedConfirmed);
   useEffect(() => {
-    if (listAnsweredSincePublish) onPublishedConfirmed();
-  }, [listAnsweredSincePublish, onPublishedConfirmed]);
+    confirmPublished.current = onPublishedConfirmed;
+  });
+  useEffect(() => {
+    if (publishedAt === null) {
+      confirmRequested.current = false;
+      return;
+    }
+    if (confirmRequested.current) return;
+    confirmRequested.current = true;
+    let live = true;
+    void refetchReviews()
+      .then((result) => {
+        // A failed refetch says nothing, so the note stands and the next
+        // mount of this tab asks again.
+        if (!live) return;
+        if (result.isSuccess) confirmPublished.current();
+        else confirmRequested.current = false;
+      })
+      .catch(() => {
+        confirmRequested.current = false;
+      });
+    return () => {
+      live = false;
+    };
+  }, [publishedAt, refetchReviews]);
   const cuts = dividerPositions(draft);
   const examDisabled = draft.examinationForgotten;
   const approachDisabled = draft.approachForgotten;

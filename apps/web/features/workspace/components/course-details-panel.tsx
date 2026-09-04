@@ -379,15 +379,20 @@ export function CourseDetailsPanel({
               </button>
             </div>
 
+            {/* `stats.reviewCount` above is the summary's count, and the list
+                is its own request. An errored list rendered as `[]` would put
+                "Reviews · 4" over an empty list and read as four reviews that
+                are gone, so a list that failed says so instead. */}
             {reviewsOpen && (
               <div className="mt-[13px]">
-                {reviews.isLoading ? (
-                  <Skeleton className="h-24 w-full" />
+                {reviews.isError ? (
+                  <p className="text-[13px] text-cc-dim">
+                    Could not load the reviews for this course. Try again.
+                  </p>
+                ) : reviews.isSuccess ? (
+                  <ReviewList courseCode={courseCode} reviews={reviews.data} />
                 ) : (
-                  <ReviewList
-                    courseCode={courseCode}
-                    reviews={reviews.data ?? []}
-                  />
+                  <Skeleton className="h-24 w-full" />
                 )}
               </div>
             )}

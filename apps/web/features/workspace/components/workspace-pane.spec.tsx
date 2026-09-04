@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { CourseDetails, CourseStats } from "@/types";
@@ -115,27 +121,47 @@ function openCourse(kind: OpenCourse["kind"], code = "DD2380"): OpenCourse {
   return { id: `${kind}:${code}`, courseCode: code, kind };
 }
 
+type ReviewRow = { id: string; courseCode: string; userId?: string };
+
+/**
+ * What a `reviews.list` refetch would answer with, which is a separate thing
+ * from what the panel has in hand.
+ *
+ * The panel confirms a publication by asking the list again — a request it
+ * starts itself, so it is known to have begun after the write. These stand in
+ * for the server's answer to that request: `reviewListNow` is what the next
+ * refetch resolves with, `reviewListStaysPending` never answers, and
+ * `reviewListRefetchFails` answers with a failure.
+ */
+type RefetchAnswer = () => Promise<{ isSuccess: boolean; data: ReviewRow[] }>;
+
+let refetchAnswer: RefetchAnswer = () =>
+  Promise.resolve({ isSuccess: true, data: [] });
+
+function reviewListNow(rows: ReviewRow[]) {
+  refetchAnswer = () => Promise.resolve({ isSuccess: true, data: rows });
+}
+
+function reviewListStaysPending() {
+  refetchAnswer = () => new Promise(() => {});
+}
+
+function reviewListRefetchFails() {
+  refetchAnswer = () => Promise.resolve({ isSuccess: false, data: [] });
+}
+
 /** `reviews.list` as the panel reads it: what is there, and whether it is sure. */
-function setReviewList(
-  data: { id: string; courseCode: string; userId?: string }[],
-  over: Record<string, unknown> = {},
-) {
+function setReviewList(rows: ReviewRow[], over: Record<string, unknown> = {}) {
+  reviewListNow(rows);
   useReviewList.mockReturnValue({
-    data,
+    data: rows,
     isLoading: false,
     isFetching: false,
     isSuccess: true,
-    // Fetched long ago: a response from before anything this test publishes.
-    dataUpdatedAt: 1,
+    isError: false,
+    refetch: () => refetchAnswer(),
     ...over,
   });
-}
-
-/** A response fetched just now — after whatever the test has published. */
-function reviewListRefetched(
-  data: { id: string; courseCode: string; userId?: string }[],
-) {
-  setReviewList(data, { dataUpdatedAt: Date.now() + 1000 });
 }
 
 function setStats(stats: CourseStats) {
@@ -332,6 +358,21 @@ describe("the details tab", () => {
     expect(useReviewList).toHaveBeenLastCalledWith("DD2380");
     expect(screen.getByTestId("review-card")).toHaveTextContent("rev-1");
   });
+
+  it("does not put the summary's count over a list that failed", async () => {
+    const user = userEvent.setup({ delay: null });
+    renderPane([openCourse("details")]);
+
+    // The count comes from `course.summary` and the list from `reviews.list`.
+    // Four reviews over an empty list would read as four reviews deleted.
+    setReviewList([], { isSuccess: false, isError: true });
+    await user.click(screen.getByRole("button", { name: /Reviews · 4/ }));
+
+    expect(screen.queryByTestId("review-list")).not.toBeInTheDocument();
+    expect(
+      screen.getByText(/Could not load the reviews for this course/),
+    ).toBeInTheDocument();
+  });
 });
 
 describe("the review draft tab", () => {
@@ -496,44 +537,25 @@ describe("what survives a page load", () => {
     expect(screen.getByRole("button", { name: "Post review" })).toBeDisabled();
   });
 
-  it("lets a reviewer write again when the review was deleted before this pane saw it", async () => {
-    const user = userEvent.setup({ delay: null });
-    const first = renderPane([openCourse("review")]);
-
-    await user.click(screen.getByRole("button", { name: "Yes, I am" }));
-    setScore("How demanding was this course?", 8);
-    setScore("How much did you learn in this course?", 6);
-    await user.click(screen.getByRole("button", { name: "Post review" }));
-    await screen.findByText(/Published. Thanks/);
-    first.unmount();
-
-    // Deleted from another surface before this pane ever saw it in the list.
-    // This response was fetched after the write, so it is the authority even
-    // though the review never appeared in one.
-    reviewListRefetched([]);
-    renderPane([openCourse("review")]);
-    await user.click(screen.getByRole("button", { name: "Yes, I am" }));
-    setScore("How demanding was this course?", 4);
-    setScore("How much did you learn in this course?", 4);
-
-    expect(screen.getByRole("button", { name: "Post review" })).toBeEnabled();
-  });
-
-  it("refuses a second review even before the list has caught up", async () => {
+  it("refuses a second review while the list is still being asked again", async () => {
     const user = userEvent.setup({ delay: null });
     const { unmount } = renderPane([openCourse("review")]);
 
     await user.click(screen.getByRole("button", { name: "Yes, I am" }));
     setScore("How demanding was this course?", 8);
     setScore("How much did you learn in this course?", 6);
+    // The request that would confirm the publication never answers, so the
+    // workspace's own note that it published is all there is to go on — and
+    // it has to be enough.
+    reviewListStaysPending();
     await user.click(screen.getByRole("button", { name: "Post review" }));
     await screen.findByText(/Published. Thanks/);
     unmount();
 
-    // The only response in hand was fetched before the write, so it says
-    // nothing about it — the workspace's own memory of what it sent is what
-    // closes the door, and a filled-in draft cannot publish.
+    // The response in hand was fetched before the write and says nothing
+    // about it. A filled-in draft still cannot publish.
     setReviewList([]);
+    reviewListStaysPending();
     renderPane([openCourse("review")]);
     await user.click(screen.getByRole("button", { name: "Yes, I am" }));
     setScore("How demanding was this course?", 4);
@@ -546,6 +568,58 @@ describe("what survives a page load", () => {
     expect(addReview).toHaveBeenCalledTimes(1);
   });
 
+  it("keeps the note when the list cannot be asked again", async () => {
+    const user = userEvent.setup({ delay: null });
+    const { unmount } = renderPane([openCourse("review")]);
+
+    await user.click(screen.getByRole("button", { name: "Yes, I am" }));
+    setScore("How demanding was this course?", 8);
+    setScore("How much did you learn in this course?", 6);
+    reviewListRefetchFails();
+    await user.click(screen.getByRole("button", { name: "Post review" }));
+    await screen.findByText(/Published. Thanks/);
+    unmount();
+
+    // A request that failed is not evidence the review is gone.
+    setReviewList([]);
+    reviewListRefetchFails();
+    renderPane([openCourse("review")]);
+    await user.click(screen.getByRole("button", { name: "Yes, I am" }));
+    setScore("How demanding was this course?", 4);
+    setScore("How much did you learn in this course?", 4);
+
+    expect(
+      await screen.findByText(/You have already reviewed this course/),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Post review" })).toBeDisabled();
+  });
+
+  it("lets a reviewer write again when the review was deleted before this pane saw it", async () => {
+    const user = userEvent.setup({ delay: null });
+    const first = renderPane([openCourse("review")]);
+
+    await user.click(screen.getByRole("button", { name: "Yes, I am" }));
+    setScore("How demanding was this course?", 8);
+    setScore("How much did you learn in this course?", 6);
+    reviewListStaysPending();
+    await user.click(screen.getByRole("button", { name: "Post review" }));
+    await screen.findByText(/Published. Thanks/);
+    first.unmount();
+
+    // Deleted from another surface before this pane ever saw it in a list.
+    // The request this panel starts itself began after the write, so its
+    // answer is the authority even though the review never appeared in one.
+    setReviewList([]);
+    renderPane([openCourse("review")]);
+    await user.click(screen.getByRole("button", { name: "Yes, I am" }));
+    setScore("How demanding was this course?", 4);
+    setScore("How much did you learn in this course?", 4);
+
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Post review" })).toBeEnabled(),
+    );
+  });
+
   it("lets a reviewer write again after deleting the review they published", async () => {
     const user = userEvent.setup({ delay: null });
     const first = renderPane([openCourse("review")]);
@@ -553,12 +627,14 @@ describe("what survives a page load", () => {
     await user.click(screen.getByRole("button", { name: "Yes, I am" }));
     setScore("How demanding was this course?", 8);
     setScore("How much did you learn in this course?", 6);
+    // What the list holds once the write has landed in it.
+    reviewListNow([{ id: "rev-1", courseCode: "DD2380", userId: "u1" }]);
     await user.click(screen.getByRole("button", { name: "Post review" }));
     await screen.findByText(/Published. Thanks/);
     first.unmount();
 
-    // The list catches up, which is what the workspace's note was covering.
-    reviewListRefetched([{ id: "rev-1", courseCode: "DD2380", userId: "u1" }]);
+    // The list has caught up, which is what the workspace's note was covering.
+    setReviewList([{ id: "rev-1", courseCode: "DD2380", userId: "u1" }]);
     const second = renderPane([openCourse("review")]);
     expect(
       await screen.findByText(/You have already reviewed this course/),
@@ -567,16 +643,18 @@ describe("what survives a page load", () => {
 
     // The reviewer deletes it from the course's reviews. Nothing should stand
     // between them and writing another — least of all a stale note.
-    reviewListRefetched([]);
+    setReviewList([]);
     renderPane([openCourse("review")]);
     await user.click(screen.getByRole("button", { name: "Yes, I am" }));
     setScore("How demanding was this course?", 4);
     setScore("How much did you learn in this course?", 4);
 
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Post review" })).toBeEnabled(),
+    );
     expect(
       screen.queryByText(/You have already reviewed this course/),
     ).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Post review" })).toBeEnabled();
   });
 
   it("forgets a draft once it is a published review", async () => {
