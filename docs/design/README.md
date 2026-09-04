@@ -93,9 +93,10 @@ from 1911 to 2105 lines. A reformatted mirror is no longer a mirror: it stops
 matching the design project byte-for-byte, which is the only property this
 folder has.
 
-For the same reason, `cc-theme.css` and `cc-store.js` were taken from the design
-**source** rather than from the exported folder, and committed after the
-exclusions were in place.
+For the same reason, the two `.js` files — `support.js` and `cc-store.js` — were
+taken from the design **source** rather than from the exported folder, and
+committed after the exclusions were in place. `support.js` is the one the
+rewrite was caught on.
 
 The `-diff` marking also keeps ~700 KB of generated markup out of every diff and
 review; that is a welcome side effect, not the reason. This README is the one

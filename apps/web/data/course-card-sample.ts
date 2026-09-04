@@ -20,11 +20,18 @@
  * - `workload: "3.8"` / `learning: "4.2"` are on the artboard's 1–5 scale.
  *   Scores are **1–10 displayed raw** (issue #68); a 7.6 renders `"7.6"` and
  *   the bar width is `value / 10`, which is the same width the artboard draws.
- * - `comparisons` / `hasComparisons` are the design's word for **collections**.
- *   Code says `Collection` everywhere; the fixture keeps the artboard's name
- *   because fidelity is the point of this file.
- * - `keywords` and `summary` have no schema backing at all. The card renders
- *   their headers with empty sections until a writer exists (issue #68).
+ * - `comparisons`, `hasComparisons` and `onNewComparison` are the design's word
+ *   for **collections**. `CONTEXT.md` bans "comparison" in identifiers and #68
+ *   settles the concept as Collection, so the card and everything downstream of
+ *   it say `Collection`; these three field names are the one place that word
+ *   survives, because #97 requires this file to quote the artboard verbatim.
+ *   Every identifier this file coins itself — `CollectionPickerRow` — follows
+ *   the glossary instead.
+ * - `summary` is `courses.content` in the design's own store, so it does have a
+ *   column behind it. `keywords` does not: the store reads a `searchTerms`
+ *   field on `course_explore` that the table has no column for, and nothing in
+ *   `server/` writes one. Until that is settled the card renders the header
+ *   with an empty section (issue #68).
  * - `prereqCourses` entries carry `inCatalog` in the sample but the markup
  *   reads `taken`. Prerequisite ticks are display-only and never cascade.
  *
@@ -39,18 +46,31 @@ export interface PrerequisiteCourse {
   /** Whether the prerequisite is itself a course we hold. */
   inCatalog: boolean;
   /**
-   * The artboard markup reads these; the sample literal does not set them.
-   * `taken` draws the checkmark — display-only, never inferred.
+   * Whether the viewer has separately marked this course taken, which draws
+   * the chip's checkmark. Display-only: marking a course taken never cascades
+   * into its prerequisites (#68).
+   *
+   * The artboard markup reads this; the sample literal does not set it.
    */
   taken?: boolean;
+  /**
+   * Per-chip metrics the parent interpolates alongside `geo`, so the chips
+   * shrink with the card. Markup-only, like `taken`.
+   */
   gap?: string;
   padding?: string;
   radius?: string;
   bg?: string;
 }
 
-/** One row of the collection picker. The artboard calls it a comparison. */
-export interface CourseCardComparison {
+/**
+ * One row of the collection picker.
+ *
+ * The artboard's own field is `c.comparisons`, kept verbatim below. This type
+ * is not the artboard's, so it takes the glossary's word: `CONTEXT.md` bans
+ * "comparison" in identifiers and #68 settles the concept as **Collection**.
+ */
+export interface CollectionPickerRow {
   name: string;
   /** SVG `fill` for the checkbox glyph. */
   fill: string;
@@ -121,7 +141,7 @@ export interface CourseCardModel {
   creating: boolean;
   notCreating: boolean;
   hasComparisons: boolean;
-  comparisons: CourseCardComparison[];
+  comparisons: CollectionPickerRow[];
 
   // Referenced by the artboard markup but absent from the sample literal.
   /** Hover fill for the taken pill. */
