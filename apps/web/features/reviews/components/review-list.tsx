@@ -41,8 +41,8 @@ type ReviewListProps = {
  */
 export function ReviewList({ courseCode, reviews }: Readonly<ReviewListProps>) {
   const { userId } = useMe();
-  const { vote } = useReviewVotes(courseCode);
-  const removeReview = useRemoveReview(courseCode);
+  const { vote } = useReviewVotes();
+  const removeReview = useRemoveReview();
   const [editing, setEditing] = useState<EditableReview | null>(null);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 

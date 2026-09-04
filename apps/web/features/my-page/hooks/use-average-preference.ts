@@ -2,14 +2,19 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-const STORAGE_KEY = "cc:myPage:showAverage";
+/**
+ * Scoped to the account, not to the origin. Two people sharing a browser get
+ * their own answer: an unscoped key would hand the second one the first one's
+ * choice about their own grades.
+ */
+const storageKeyFor = (userId: string) => `cc:myPage:showAverage:${userId}`;
 
 /**
  * Whether My Page works an average out of the grades it has.
  *
  * **This is the one piece of state on the page with nowhere to live.** `users`
  * has no preference column and no procedure writes one, so the switch is kept
- * per browser rather than per account. That is not the mistake `cc-store.js`
+ * in the browser, under a key scoped to the app user's own id. That is not the mistake `cc-store.js`
  * makes with `likedReviewIds`: votes have a `review_votes` table and belong on
  * the server, whereas this is a display choice over grades the account already
  * stores, and the average itself is derived at read time either way. Nothing
@@ -24,7 +29,7 @@ const STORAGE_KEY = "cc:myPage:showAverage";
  * a browser set to block site data — and a page that cannot remember a switch
  * must still render it.
  */
-export function useAveragePreference(): {
+export function useAveragePreference(userId: string): {
   showAverage: boolean;
   setShowAverage: (next: boolean) => void;
 } {
@@ -34,22 +39,30 @@ export function useAveragePreference(): {
   const [showAverage, setState] = useState(true);
 
   useEffect(() => {
+    // Back to the default first: signing in as somebody else must not leave
+    // the previous account's answer on screen while this one is read.
+    setState(true);
+    if (!userId) return;
     try {
-      const stored = window.localStorage.getItem(STORAGE_KEY);
+      const stored = window.localStorage.getItem(storageKeyFor(userId));
       if (stored !== null) setState(stored === "true");
     } catch {
       // Storage is off. The default stands.
     }
-  }, []);
+  }, [userId]);
 
-  const setShowAverage = useCallback((next: boolean) => {
-    setState(next);
-    try {
-      window.localStorage.setItem(STORAGE_KEY, String(next));
-    } catch {
-      // Storage is off, so the choice lasts as long as this page does.
-    }
-  }, []);
+  const setShowAverage = useCallback(
+    (next: boolean) => {
+      setState(next);
+      if (!userId) return;
+      try {
+        window.localStorage.setItem(storageKeyFor(userId), String(next));
+      } catch {
+        // Storage is off, so the choice lasts as long as this page does.
+      }
+    },
+    [userId],
+  );
 
   return { showAverage, setShowAverage };
 }

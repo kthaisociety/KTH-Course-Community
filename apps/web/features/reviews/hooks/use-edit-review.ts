@@ -13,8 +13,8 @@ import { toStoredMessage } from "../lib/review-text";
  * either. Authorship is the server's call: `reviews.update` refuses anyone but
  * the author no matter which id is sent.
  */
-export function useEditReview(courseCode: string) {
-  const updateReview = useUpdateReview(courseCode);
+export function useEditReview() {
+  const updateReview = useUpdateReview();
 
   return useCallback(
     async (id: string, reviewForm: ReviewFormData): Promise<boolean> => {

@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Review } from "@/types";
@@ -311,6 +311,46 @@ describe("MyPage privacy", () => {
       dialog.getByRole("button", { name: "Keep my account" }),
     );
     expect(deleteAccount).not.toHaveBeenCalled();
+  });
+});
+
+describe("MyPage average preference", () => {
+  const graded = [takenCourse({ earnedCredits: 6, grade: "A" })];
+
+  beforeEach(() => {
+    window.localStorage.clear();
+    taken.mockReturnValue(settled(graded));
+  });
+
+  it("remembers the switch against the account, not the browser", async () => {
+    render(<MyPage />);
+    await openTab("Settings");
+
+    await userEvent.click(
+      screen.getByRole("switch", { name: "Calculate my average" }),
+    );
+    expect(window.localStorage.getItem("cc:myPage:showAverage:u1")).toBe(
+      "false",
+    );
+
+    // Somebody else on the same browser starts from the default, not from the
+    // answer the previous account gave about their own grades.
+    cleanup();
+    me.mockReturnValue({
+      user: {
+        userId: "u2",
+        name: "Other Person",
+        email: "other@kth.se",
+        image: null,
+        savedCourseCodes: [],
+      },
+      isLoading: false,
+      isAuthenticated: true,
+      userId: "u2",
+    });
+    render(<MyPage />);
+
+    expect(screen.getByText("5.0")).toBeVisible();
   });
 });
 

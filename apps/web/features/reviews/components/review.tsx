@@ -122,7 +122,7 @@ export function Review({
 }: Readonly<ReviewProps>) {
   const { userId, isLoading } = useMe();
   const addReview = useAddReview();
-  const editReview = useEditReview(courseCode);
+  const editReview = useEditReview();
   const [dialogIsOpen, setDialogIsOpen] = useState(
     openOnLoad || Boolean(editing),
   );

@@ -105,7 +105,7 @@ export function MyPage() {
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(
     null,
   );
-  const { showAverage, setShowAverage } = useAveragePreference();
+  const { showAverage, setShowAverage } = useAveragePreference(userId);
   const tabRefs = useRef<Partial<Record<MyPageView, HTMLButtonElement | null>>>(
     {},
   );

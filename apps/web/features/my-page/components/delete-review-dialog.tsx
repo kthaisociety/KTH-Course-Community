@@ -1,6 +1,5 @@
 "use client";
 
-import { useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 import {
   AlertDialog,
@@ -13,7 +12,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useRemoveReview } from "@/features/reviews";
-import { useTRPC } from "@/trpc/client";
 
 /** Which review is pending: `reviews.delete` needs the id, the cache needs the course. */
 export type PendingDelete = { id: string; courseCode: string };
@@ -26,27 +24,17 @@ type Props = {
 /**
  * Deleting one of the viewer's own reviews from My Page.
  *
- * Mounted only while a review is pending, because `useRemoveReview` is keyed by
- * course code and this page's reviews span many courses. It invalidates the
- * unfiltered `reviews.list` as well — the hook refetches the course's own list,
- * which is not the list this page is reading.
+ * Mounted only while a review is pending, so the confirmation can name the
+ * course the review is of. `useRemoveReview` refetches every `reviews.list`,
+ * this page's unfiltered one included, so there is nothing to invalidate here.
  */
 export function DeleteReviewDialog({ pending, onClose }: Props) {
-  const trpc = useTRPC();
-  const queryClient = useQueryClient();
-  const removeReview = useRemoveReview(pending.courseCode);
+  const removeReview = useRemoveReview();
 
   const confirm = useCallback(async () => {
     onClose();
-    const removed = await removeReview(pending.id);
-    if (removed) {
-      // No input: the procedure-level key is a prefix, so every `reviews.list`
-      // is refetched — this page's unfiltered one included.
-      await queryClient.invalidateQueries({
-        queryKey: trpc.reviews.list.queryKey(),
-      });
-    }
-  }, [onClose, pending.id, queryClient, removeReview, trpc.reviews.list]);
+    await removeReview(pending.id);
+  }, [onClose, pending.id, removeReview]);
 
   return (
     <AlertDialog
