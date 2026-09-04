@@ -169,10 +169,10 @@ export interface ReviewDraftPanelProps {
   courseCode: string;
   draft: ReviewDraft;
   /**
-   * The workspace sent a review for this course and has not yet seen it come
-   * back in `reviews.list`.
+   * When this workspace published a review for this course, or `null` if it
+   * has not — or if `reviews.list` has since answered and taken over.
    */
-  publishedEarlier: boolean;
+  publishedAt: number | null;
   onDraftChange: (draft: ReviewDraft) => void;
   onPublished: () => void;
   /** The sent review has arrived in the list; the workspace can forget it. */
@@ -190,7 +190,7 @@ export interface ReviewDraftPanelProps {
 export function ReviewDraftPanel({
   courseCode,
   draft: openDraft,
-  publishedEarlier,
+  publishedAt,
   onDraftChange,
   onPublished,
   onPublishedConfirmed,
@@ -217,12 +217,11 @@ export function ReviewDraftPanel({
     null,
   );
   const justPublished = publishedDraft !== null;
-  const published = justPublished || publishedEarlier;
   const draft = publishedDraft ?? openDraft;
 
   /** Edits stop at the moment of publishing; after that there is a Review. */
   function update(next: ReviewDraft) {
-    if (published) return;
+    if (justPublished) return;
     onDraftChange(next);
   }
 
@@ -250,19 +249,35 @@ export function ReviewDraftPanel({
   const reviewedInList =
     userId !== "" &&
     (courseReviews.data ?? []).some((review) => review.userId === userId);
-  const alreadyReviewed = published || reviewedInList;
+  /**
+   * A settled `reviews.list` response fetched *after* this workspace's write.
+   *
+   * Settled alone is not enough: the response sitting in the cache at the
+   * moment of publishing was fetched before it and says nothing about it. One
+   * fetched after is the authority either way — the review is in it, or
+   * somebody deleted it and its author is free to write another.
+   */
+  const listAnsweredSincePublish =
+    publishedAt !== null &&
+    courseReviews.isSuccess &&
+    !courseReviews.isFetching &&
+    (courseReviews.dataUpdatedAt ?? 0) > publishedAt;
+  const alreadyReviewed =
+    justPublished ||
+    reviewedInList ||
+    (publishedAt !== null && !listAnsweredSincePublish);
   const publishable = canPublish(draft) && !alreadyReviewed;
 
   /**
    * The workspace's note that it published covers one window: between the
-   * write and `reviews.list` catching up. Once the review is in the list, the
-   * list is the authority and the note is dropped — otherwise deleting the
-   * review would leave a workspace that refuses to let its owner write another
-   * one, which is a course they can no longer review at all.
+   * write and `reviews.list` catching up. The first response from after the
+   * write closes that window, and the note is dropped — one that outlived it
+   * would leave a reviewer who deleted their review unable to write another,
+   * which is a course they could never review again.
    */
   useEffect(() => {
-    if (publishedEarlier && reviewedInList) onPublishedConfirmed();
-  }, [publishedEarlier, reviewedInList, onPublishedConfirmed]);
+    if (listAnsweredSincePublish) onPublishedConfirmed();
+  }, [listAnsweredSincePublish, onPublishedConfirmed]);
   const cuts = dividerPositions(draft);
   const examDisabled = draft.examinationForgotten;
   const approachDisabled = draft.approachForgotten;
@@ -655,7 +670,7 @@ export function ReviewDraftPanel({
       </div>
 
       <div className="sticky bottom-0 mt-auto border-cc-rule border-t bg-cc-surface">
-        {justSignedIn && !published && (
+        {justSignedIn && !justPublished && (
           <p className="flex items-center gap-2.5 border-cc-rule border-b bg-cc-pill px-5 py-2.5 text-[12.5px] text-cc-brand leading-[1.45]">
             Signed in{user?.name ? ` as ${user.name}` : ""}. Your draft came
             back untouched — check it and publish when you are ready.
@@ -685,7 +700,7 @@ export function ReviewDraftPanel({
             disabled={
               !publishable ||
               publishing ||
-              published ||
+              alreadyReviewed ||
               sessionLoading ||
               courseReviews.isLoading
             }
@@ -699,7 +714,7 @@ export function ReviewDraftPanel({
             onClick={publish}
             className={cn(
               "flex h-9 items-center rounded-[8px] px-4 font-semibold text-[13px]",
-              publishable && !published
+              publishable
                 ? "bg-cc-warn-btn text-cc-warn-btn-fg"
                 : "cursor-not-allowed bg-cc-pill text-cc-dim",
             )}

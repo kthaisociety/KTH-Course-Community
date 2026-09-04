@@ -115,6 +115,29 @@ function openCourse(kind: OpenCourse["kind"], code = "DD2380"): OpenCourse {
   return { id: `${kind}:${code}`, courseCode: code, kind };
 }
 
+/** `reviews.list` as the panel reads it: what is there, and whether it is sure. */
+function setReviewList(
+  data: { id: string; courseCode: string; userId?: string }[],
+  over: Record<string, unknown> = {},
+) {
+  useReviewList.mockReturnValue({
+    data,
+    isLoading: false,
+    isFetching: false,
+    isSuccess: true,
+    // Fetched long ago: a response from before anything this test publishes.
+    dataUpdatedAt: 1,
+    ...over,
+  });
+}
+
+/** A response fetched just now — after whatever the test has published. */
+function reviewListRefetched(
+  data: { id: string; courseCode: string; userId?: string }[],
+) {
+  setReviewList(data, { dataUpdatedAt: Date.now() + 1000 });
+}
+
 function setStats(stats: CourseStats) {
   useCourseSummaries.mockReturnValue([
     {
@@ -155,7 +178,7 @@ beforeEach(() => {
     error: null,
   });
   setStats(REVIEWED);
-  useReviewList.mockReturnValue({ data: [], isLoading: false });
+  setReviewList([]);
   useMe.mockReturnValue({
     isAuthenticated: true,
     isLoading: false,
@@ -303,10 +326,7 @@ describe("the details tab", () => {
 
     expect(useReviewList).toHaveBeenCalledWith(undefined);
 
-    useReviewList.mockReturnValue({
-      data: [{ id: "rev-1", courseCode: "DD2380" }],
-      isLoading: false,
-    });
+    setReviewList([{ id: "rev-1", courseCode: "DD2380" }]);
     await user.click(screen.getByRole("button", { name: /Reviews · 4/ }));
 
     expect(useReviewList).toHaveBeenLastCalledWith("DD2380");
@@ -467,16 +487,36 @@ describe("what survives a page load", () => {
 
     // What `reviews.create` invalidated into the list, and equally what a
     // review published last week or from the course page would look like.
-    useReviewList.mockReturnValue({
-      data: [{ id: "rev-1", courseCode: "DD2380", userId: "u1" }],
-      isLoading: false,
-    });
+    setReviewList([{ id: "rev-1", courseCode: "DD2380", userId: "u1" }]);
     renderPane([openCourse("review")]);
 
     expect(
       screen.getByText(/You have already reviewed this course/),
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Post review" })).toBeDisabled();
+  });
+
+  it("lets a reviewer write again when the review was deleted before this pane saw it", async () => {
+    const user = userEvent.setup({ delay: null });
+    const first = renderPane([openCourse("review")]);
+
+    await user.click(screen.getByRole("button", { name: "Yes, I am" }));
+    setScore("How demanding was this course?", 8);
+    setScore("How much did you learn in this course?", 6);
+    await user.click(screen.getByRole("button", { name: "Post review" }));
+    await screen.findByText(/Published. Thanks/);
+    first.unmount();
+
+    // Deleted from another surface before this pane ever saw it in the list.
+    // This response was fetched after the write, so it is the authority even
+    // though the review never appeared in one.
+    reviewListRefetched([]);
+    renderPane([openCourse("review")]);
+    await user.click(screen.getByRole("button", { name: "Yes, I am" }));
+    setScore("How demanding was this course?", 4);
+    setScore("How much did you learn in this course?", 4);
+
+    expect(screen.getByRole("button", { name: "Post review" })).toBeEnabled();
   });
 
   it("refuses a second review even before the list has caught up", async () => {
@@ -490,8 +530,10 @@ describe("what survives a page load", () => {
     await screen.findByText(/Published. Thanks/);
     unmount();
 
-    // `reviews.list` has not refetched — the workspace's own memory of what it
-    // sent is what has to close the door, so a filled-in draft cannot publish.
+    // The only response in hand was fetched before the write, so it says
+    // nothing about it — the workspace's own memory of what it sent is what
+    // closes the door, and a filled-in draft cannot publish.
+    setReviewList([]);
     renderPane([openCourse("review")]);
     await user.click(screen.getByRole("button", { name: "Yes, I am" }));
     setScore("How demanding was this course?", 4);
@@ -516,10 +558,7 @@ describe("what survives a page load", () => {
     first.unmount();
 
     // The list catches up, which is what the workspace's note was covering.
-    useReviewList.mockReturnValue({
-      data: [{ id: "rev-1", courseCode: "DD2380", userId: "u1" }],
-      isLoading: false,
-    });
+    reviewListRefetched([{ id: "rev-1", courseCode: "DD2380", userId: "u1" }]);
     const second = renderPane([openCourse("review")]);
     expect(
       await screen.findByText(/You have already reviewed this course/),
@@ -528,7 +567,7 @@ describe("what survives a page load", () => {
 
     // The reviewer deletes it from the course's reviews. Nothing should stand
     // between them and writing another — least of all a stale note.
-    useReviewList.mockReturnValue({ data: [], isLoading: false });
+    reviewListRefetched([]);
     renderPane([openCourse("review")]);
     await user.click(screen.getByRole("button", { name: "Yes, I am" }));
     setScore("How demanding was this course?", 4);

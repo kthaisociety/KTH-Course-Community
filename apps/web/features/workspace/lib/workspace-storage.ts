@@ -130,22 +130,33 @@ export function writeDrafts(drafts: Record<string, ReviewDraft>): void {
 }
 
 /**
- * The courses reviewed from this workspace.
+ * When this workspace published a review, by course code.
  *
  * The review itself is the durable record and `reviews.list` is where the pane
  * reads it from — but that is a refetch away, and a review tab reopened before
  * it lands would offer a second draft for a review that already exists. This
  * is the workspace's own memory of what it sent, which needs no round trip and
  * survives the tab being closed and reopened.
+ *
+ * It carries *when*, not just *that*, because it has to know which list
+ * responses came after it: a response fetched before the write says nothing
+ * about the write, and one fetched after it is the authority either way — the
+ * review is there, or somebody deleted it and its author may write another.
  */
-export function readPublished(): string[] {
+export function readPublished(): Record<string, number> {
   const value = read(PUBLISHED_KEY);
-  if (!Array.isArray(value)) return [];
-  return value.filter((code): code is string => typeof code === "string");
+  if (!isRecord(value)) return {};
+
+  const published: Record<string, number> = {};
+  for (const [courseCode, at] of Object.entries(value)) {
+    if (typeof at === "number" && Number.isFinite(at))
+      published[courseCode] = at;
+  }
+  return published;
 }
 
-export function writePublished(courseCodes: string[]): void {
-  write(PUBLISHED_KEY, courseCodes);
+export function writePublished(published: Record<string, number>): void {
+  write(PUBLISHED_KEY, published);
 }
 
 /**

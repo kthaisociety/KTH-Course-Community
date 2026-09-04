@@ -73,7 +73,7 @@ export function WorkspacePane({
   className,
 }: Readonly<WorkspacePaneProps>) {
   const [drafts, setDrafts] = useState<Record<string, ReviewDraft>>({});
-  const [published, setPublished] = useState<string[]>([]);
+  const [published, setPublished] = useState<Record<string, number>>({});
   const restored = useRef(false);
 
   // Drafts, and what has already been published, outlive the tab they were
@@ -106,14 +106,16 @@ export function WorkspacePane({
   }
 
   function markPublished(courseCode: string) {
-    setPublished((current) =>
-      current.includes(courseCode) ? current : [...current, courseCode],
-    );
+    setPublished((current) => ({ ...current, [courseCode]: Date.now() }));
   }
 
-  /** The review is in `reviews.list` now, so the note has done its job. */
+  /** `reviews.list` has answered since, so the note has done its job. */
   function forgetPublished(courseCode: string) {
-    setPublished((current) => current.filter((code) => code !== courseCode));
+    setPublished((current) => {
+      if (!(courseCode in current)) return current;
+      const { [courseCode]: _sent, ...rest } = current;
+      return rest;
+    });
   }
 
   return (
@@ -256,7 +258,7 @@ export function WorkspacePane({
             key={active.id}
             courseCode={active.courseCode}
             draft={drafts[active.courseCode] ?? EMPTY_REVIEW_DRAFT}
-            publishedEarlier={published.includes(active.courseCode)}
+            publishedAt={published[active.courseCode] ?? null}
             onDraftChange={(draft) => patchDraft(active.courseCode, draft)}
             onPublished={() => markPublished(active.courseCode)}
             onPublishedConfirmed={() => forgetPublished(active.courseCode)}
