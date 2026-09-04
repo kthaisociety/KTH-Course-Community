@@ -20,6 +20,7 @@ import {
   APPROACH_MIDPOINT,
   canPublish,
   dividerPositions,
+  EMPTY_REVIEW_DRAFT,
   type ExaminationKey,
   isUntouched,
   MIN_SHARE,
@@ -33,6 +34,7 @@ import {
 } from "../lib/review-draft";
 import {
   claimAwaitingSignIn,
+  clearAwaitingSignIn,
   markAwaitingSignIn,
 } from "../lib/workspace-storage";
 import { APPLIED_FILL, Kicker } from "./pane-parts";
@@ -178,17 +180,37 @@ export interface ReviewDraftPanelProps {
  */
 export function ReviewDraftPanel({
   courseCode,
-  draft,
+  draft: openDraft,
   onDraftChange,
 }: Readonly<ReviewDraftPanelProps>) {
   const { user, isAuthenticated, isLoading: sessionLoading } = useMe();
   const addReview = useAddReview();
   const details = useCourseDetails(courseCode);
   const [authReason, setAuthReason] = useState<AuthReason | null>(null);
-  const [published, setPublished] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [justSignedIn, setJustSignedIn] = useState(false);
   const examTrackRef = useRef<HTMLDivElement>(null);
+
+  /**
+   * What was published, once something was.
+   *
+   * A published draft is no longer a draft — it is a Review, with a row — so
+   * the workspace forgets it and stops keeping it in the tab's storage.
+   * Reopening the tab a week later must not offer a second copy of a review
+   * that is already live. The panel keeps its own snapshot so the writer can
+   * still see what they sent, and stops taking edits to it.
+   */
+  const [publishedDraft, setPublishedDraft] = useState<ReviewDraft | null>(
+    null,
+  );
+  const published = publishedDraft !== null;
+  const draft = publishedDraft ?? openDraft;
+
+  /** Edits stop at the moment of publishing; after that there is a Review. */
+  function update(next: ReviewDraft) {
+    if (published) return;
+    onDraftChange(next);
+  }
 
   // Signing in navigated the page away and back. The draft came with it
   // through `sessionStorage`; this is the note that says so, and only the
@@ -206,7 +228,7 @@ export function ReviewDraftPanel({
   const approachDisabled = draft.approachForgotten;
 
   function patch(changes: Partial<ReviewDraft>) {
-    onDraftChange({ ...draft, ...changes });
+    update({ ...draft, ...changes });
   }
 
   function startDividerDrag(
@@ -222,7 +244,7 @@ export function ReviewDraftPanel({
     const start = draft;
     const move = (moveEvent: PointerEvent) => {
       const percent = ((moveEvent.clientX - rect.left) / rect.width) * 100;
-      onDraftChange(moveDivider(start, index, percent));
+      update(moveDivider(start, index, percent));
     };
     const up = () => {
       window.removeEventListener("pointermove", move);
@@ -246,7 +268,9 @@ export function ReviewDraftPanel({
       message: input.message ?? "",
     });
     setPublishing(false);
-    if (ok) setPublished(true);
+    if (!ok) return;
+    setPublishedDraft(draft);
+    onDraftChange(EMPTY_REVIEW_DRAFT);
   }
 
   const meta = course
@@ -312,7 +336,7 @@ export function ReviewDraftPanel({
                   type="button"
                   aria-pressed={picked}
                   disabled={examDisabled}
-                  onClick={() => onDraftChange(toggleMethod(draft, key))}
+                  onClick={() => update(toggleMethod(draft, key))}
                   className={cn(
                     "flex h-[30px] items-center gap-1.5 rounded-[15px] border px-[11px] text-[12.5px] disabled:opacity-40",
                     picked
@@ -376,10 +400,10 @@ export function ReviewDraftPanel({
                 onKeyDown={(event) => {
                   if (event.key === "ArrowLeft") {
                     event.preventDefault();
-                    onDraftChange(nudgeDivider(draft, index, -1));
+                    update(nudgeDivider(draft, index, -1));
                   } else if (event.key === "ArrowRight") {
                     event.preventDefault();
-                    onDraftChange(nudgeDivider(draft, index, 1));
+                    update(nudgeDivider(draft, index, 1));
                   }
                 }}
                 className="-ml-[9px] absolute top-0 bottom-0 flex w-[18px] cursor-ew-resize items-center justify-center"
@@ -638,7 +662,12 @@ export function ReviewDraftPanel({
       <AuthReasonDialog
         reason={authReason}
         onReasonChange={setAuthReason}
-        onClose={() => setAuthReason(null)}
+        onClose={() => {
+          setAuthReason(null);
+          // Backing out of the dialog is not signing in, so the note that
+          // would greet them on the way back goes with it.
+          clearAwaitingSignIn(courseCode);
+        }}
       />
     </div>
   );

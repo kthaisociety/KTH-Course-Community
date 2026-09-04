@@ -142,10 +142,16 @@ export function markAwaitingSignIn(courseCode: string): void {
 
 export function claimAwaitingSignIn(courseCode: string): boolean {
   if (read(AWAITING_SIGN_IN_KEY) !== courseCode) return false;
+  clearAwaitingSignIn(courseCode);
+  return true;
+}
+
+/** Drop the note unclaimed — the visitor backed out of the dialog. */
+export function clearAwaitingSignIn(courseCode: string): void {
+  if (read(AWAITING_SIGN_IN_KEY) !== courseCode) return;
   try {
     sessionStorage.removeItem(AWAITING_SIGN_IN_KEY);
   } catch {
     // Nothing to clear if storage is unavailable.
   }
-  return true;
 }

@@ -386,6 +386,51 @@ describe("what survives a page load", () => {
     ).toBeEnabled();
   });
 
+  it("forgets a draft once it is a published review", async () => {
+    const user = userEvent.setup();
+    const { unmount } = renderPane([openCourse("review")]);
+
+    await user.click(screen.getByRole("button", { name: "Yes, I am" }));
+    setScore("How demanding was this course?", 8);
+    setScore("How much did you learn in this course?", 6);
+    await user.type(
+      screen.getByRole("textbox", { name: "Write your review" }),
+      "Worth it.",
+    );
+    await user.click(screen.getByRole("button", { name: "Post review" }));
+    await screen.findByText(/Published. Thanks/);
+    unmount();
+
+    renderPane([openCourse("review")]);
+
+    expect(
+      screen.getByRole("textbox", { name: "Write your review" }),
+    ).toHaveValue("");
+  });
+
+  it("drops the welcome when the visitor backs out of signing in", async () => {
+    const user = userEvent.setup();
+    useMe.mockReturnValue({ isAuthenticated: false, isLoading: false });
+    const { unmount } = renderPane([openCourse("review")]);
+
+    await user.click(screen.getByRole("button", { name: "Yes, I am" }));
+    setScore("How demanding was this course?", 8);
+    setScore("How much did you learn in this course?", 6);
+    await user.click(screen.getByRole("button", { name: "Post review" }));
+    await screen.findByText("Sign in to publish your review");
+    await user.click(screen.getByRole("button", { name: "Back to my draft" }));
+    unmount();
+
+    useMe.mockReturnValue({
+      isAuthenticated: true,
+      isLoading: false,
+      user: { name: "Elsa Lindqvist" },
+    });
+    renderPane([openCourse("review")]);
+
+    expect(screen.queryByText(/Signed in as/)).not.toBeInTheDocument();
+  });
+
   it("leaves the welcome for the course that asked for the sign-in", async () => {
     const user = userEvent.setup();
     useMe.mockReturnValue({ isAuthenticated: false, isLoading: false });
