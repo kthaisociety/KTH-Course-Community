@@ -495,7 +495,7 @@ export function Collections({
           Collections
         </h2>
         <div className="mt-1 text-[12.5px] text-cc-muted">
-          Group courses you want to consider together.
+          Group courses you want to compare.
         </div>
         {body}
       </section>
@@ -506,7 +506,7 @@ export function Collections({
     <PageColumn>
       <PageHeader
         title="Collections"
-        subtitle="Group courses you want to consider together."
+        subtitle="Group courses you want to compare."
       />
       {body}
     </PageColumn>
