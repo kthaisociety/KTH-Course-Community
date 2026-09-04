@@ -156,7 +156,11 @@ beforeEach(() => {
   });
   setStats(REVIEWED);
   useReviewList.mockReturnValue({ data: [], isLoading: false });
-  useMe.mockReturnValue({ isAuthenticated: true, isLoading: false });
+  useMe.mockReturnValue({
+    isAuthenticated: true,
+    isLoading: false,
+    userId: "u1",
+  });
   addReview.mockResolvedValue(true);
 });
 
@@ -435,6 +439,31 @@ describe("what survives a page load", () => {
     expect(
       screen.getByRole("button", { name: "Publish review" }),
     ).toBeEnabled();
+  });
+
+  it("will not take a second review for a course already reviewed", async () => {
+    const user = userEvent.setup({ delay: null });
+    const { unmount } = renderPane([openCourse("review")]);
+
+    await user.click(screen.getByRole("button", { name: "Yes, I am" }));
+    setScore("How demanding was this course?", 8);
+    setScore("How much did you learn in this course?", 6);
+    await user.click(screen.getByRole("button", { name: "Post review" }));
+    await screen.findByText(/Published. Thanks/);
+    unmount();
+
+    // What `reviews.create` invalidated into the list, and equally what a
+    // review published last week or from the course page would look like.
+    useReviewList.mockReturnValue({
+      data: [{ id: "rev-1", courseCode: "DD2380", userId: "u1" }],
+      isLoading: false,
+    });
+    renderPane([openCourse("review")]);
+
+    expect(
+      screen.getByText(/You have already reviewed this course/),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Post review" })).toBeDisabled();
   });
 
   it("forgets a draft once it is a published review", async () => {

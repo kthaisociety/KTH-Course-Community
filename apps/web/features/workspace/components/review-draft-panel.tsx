@@ -7,6 +7,7 @@ import {
   EXAMINATION_COLORS,
   EXAMINATION_INK,
   useAddReview,
+  useReviewList,
 } from "@/features/reviews";
 import { formatHp } from "@/lib/kth";
 import { cn } from "@/lib/utils";
@@ -183,9 +184,10 @@ export function ReviewDraftPanel({
   draft: openDraft,
   onDraftChange,
 }: Readonly<ReviewDraftPanelProps>) {
-  const { user, isAuthenticated, isLoading: sessionLoading } = useMe();
+  const { user, userId, isAuthenticated, isLoading: sessionLoading } = useMe();
   const addReview = useAddReview();
   const details = useCourseDetails(courseCode);
+  const courseReviews = useReviewList(courseCode);
   const [authReason, setAuthReason] = useState<AuthReason | null>(null);
   const [publishing, setPublishing] = useState(false);
   const [justSignedIn, setJustSignedIn] = useState(false);
@@ -222,7 +224,21 @@ export function ReviewDraftPanel({
 
   const course = details.data;
   const done = sectionsDone(draft);
-  const publishable = canPublish(draft);
+  /**
+   * A course takes one review per person, so a draft for a course the viewer
+   * has already reviewed has nowhere to go.
+   *
+   * The check is here rather than in the tab's own memory because the review
+   * outlives the tab: it may have been published last week, or from the course
+   * page's own dialog. Nothing on the server refuses the second write — there
+   * is no unique key on `(user_id, course_code)` and `createReview` does not
+   * look — so a second publish would quietly add a row and move the course's
+   * averages. Flagged in the PR: that guard belongs in the reviews domain.
+   */
+  const alreadyReviewed =
+    userId !== "" &&
+    (courseReviews.data ?? []).some((review) => review.userId === userId);
+  const publishable = canPublish(draft) && !alreadyReviewed;
   const cuts = dividerPositions(draft);
   const examDisabled = draft.examinationForgotten;
   const approachDisabled = draft.approachForgotten;
@@ -256,7 +272,7 @@ export function ReviewDraftPanel({
 
   async function publish() {
     const input = toReviewInput(draft);
-    if (!input) return;
+    if (!input || alreadyReviewed) return;
     if (!isAuthenticated) {
       markAwaitingSignIn(courseCode);
       setAuthReason("post-review");
@@ -631,14 +647,28 @@ export function ReviewDraftPanel({
             Published. Thanks — your review is live on the course.
           </p>
         )}
+        {alreadyReviewed && !published && (
+          <p className="border-cc-rule border-b bg-cc-pill px-5 py-2.5 text-[12.5px] text-cc-brand leading-[1.45]">
+            You have already reviewed this course. Edit or delete it from the
+            course's reviews — a course takes one review per person.
+          </p>
+        )}
         <div className="flex justify-end gap-2.5 px-5 py-3">
           <button
             type="button"
-            disabled={!publishable || publishing || published || sessionLoading}
+            disabled={
+              !publishable ||
+              publishing ||
+              published ||
+              sessionLoading ||
+              courseReviews.isLoading
+            }
             title={
-              publishable
-                ? undefined
-                : "Answer happy, workload and learning to publish — the write-up is the only optional part"
+              alreadyReviewed
+                ? "You have already reviewed this course"
+                : publishable
+                  ? undefined
+                  : "Answer happy, workload and learning to publish — the write-up is the only optional part"
             }
             onClick={publish}
             className={cn(
