@@ -118,7 +118,6 @@ const NEIGHBOURHOOD = {
     },
   ],
   edges: [{ fromId: "t-1", toId: "t-2" }],
-  effectiveTier: 1,
 };
 
 /** The same graph, as a visitor gets it: centred on the origin, with no You. */

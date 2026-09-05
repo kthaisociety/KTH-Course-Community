@@ -381,17 +381,23 @@ export async function findNodeTierBases(
   userIds: string[],
 ): Promise<NodeTierBasis[]> {
   if (userIds.length === 0) return [];
-  return db
-    .select({
-      userId: schema.users.id,
-      earnedTier: schema.users.personalizationTierEarned,
-      accountCreatedAt: schema.users.createdAt,
-      lastReviewAt: max(schema.reviews.createdAt),
-    })
-    .from(schema.users)
-    .leftJoin(schema.reviews, eq(schema.reviews.userId, schema.users.id))
-    .where(inArray(schema.users.id, userIds))
-    .groupBy(schema.users.id);
+  return (
+    db
+      .select({
+        userId: schema.users.id,
+        earnedTier: schema.users.personalizationTierEarned,
+        accountCreatedAt: schema.users.createdAt,
+        lastReviewAt: max(schema.reviews.createdAt),
+      })
+      .from(schema.users)
+      .leftJoin(schema.reviews, eq(schema.reviews.userId, schema.users.id))
+      .where(inArray(schema.users.id, userIds))
+      // Grouping on the primary key alone is legal here and deliberate: Postgres
+      // treats every other `users` column as functionally dependent on it, so
+      // `personalization_tier_earned` and `created_at` need not be repeated in
+      // the clause and the aggregate stays over `reviews` only.
+      .groupBy(schema.users.id)
+  );
 }
 
 /**
