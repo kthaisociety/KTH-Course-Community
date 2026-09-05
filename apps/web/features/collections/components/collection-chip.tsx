@@ -16,7 +16,7 @@ type Props = {
  * One collection as a 40px chip — the `compact` variant's answer to
  * {@link CollectionTile}.
  *
- * `Course Community - Collections.dc.html` line 174 draws this row when the
+ * `Course Community - Collections.dc.html` line 112 draws this row when the
  * artboard is embedded rather than shown as a page, which is how
  * `Course Community - Saved.dc.html` reaches collections at all. A chip is the
  * tile with everything but the name, the count and the menu taken out: the

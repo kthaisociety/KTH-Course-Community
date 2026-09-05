@@ -12,15 +12,18 @@ import {
 import {
   type Collection,
   CourseItemSkeleton,
+  courseCardGeometry,
   useCollectionMutations,
   useCollections,
   useCourseSummaries,
 } from "@/features/courses";
 import { PageColumn, PageHeader } from "@/features/shell";
-import type { OpenCourseKind } from "@/features/workspace";
+import { type OpenCourseKind, useResultsWidth } from "@/features/workspace";
+import type { CardGeometry } from "@/types";
 import { CollectionChip } from "./collection-chip";
 import { CollectionDetail, type SavedCourse } from "./collection-detail";
 import { CollectionTile } from "./collection-tile";
+import { ConfirmDialog } from "./confirm-dialog";
 import { EmptyPanel } from "./empty-panel";
 import { NewCollectionDialog } from "./new-collection-dialog";
 
@@ -99,6 +102,18 @@ type Props = {
    * page renders its own when this is absent.
    */
   onRequestAuth?: (reason: AuthReason) => void;
+  /**
+   * The card collapse ramp for an open collection's courses, when the host has
+   * already measured the column they land in.
+   *
+   * `/saved` embeds this inside the very column `WorkspacePaneHost` narrows, so
+   * the geometry it computes for its own list is the geometry these cards need
+   * too — one card behaving two ways in one page is what #159 reports. Left
+   * out, this component measures the column it is standing in itself, which is
+   * what the `/collections` route does; see {@link Collections} for why that is
+   * a measurement there rather than the pinned expanded end.
+   */
+  geo?: CardGeometry;
 };
 
 /**
@@ -124,9 +139,9 @@ type Props = {
  * `Course Community - Saved.dc.html` imports the Collections artboard as a
  * section of the Saved page, in its `compact` variant. That embedding is Saved's
  * to build (#90); this is the same component as a page of its own, so the
- * feature is reachable and usable before Saved exists. The `compact` chip
- * variant is deliberately not built — it has no caller yet, and building an
- * untested second layout for one is worse than leaving it to whoever embeds it.
+ * feature is reachable and usable before Saved exists. The `compact` chip row
+ * is built and Saved is its caller — the sentence that used to stand here said
+ * it had none, which stopped being true when #90 landed.
  *
  * ## What the writes do about failure
  *
@@ -137,12 +152,37 @@ type Props = {
  * create" after a failed *add* would send the reader back to the name field,
  * and `collections.create` has no uniqueness on name, so typing it again makes a
  * second empty collection.
+ *
+ * ## Deleting asks first
+ *
+ * All three ways to delete a collection — the detail's button, the tile's menu
+ * and the chip's menu — hand the collection to one confirmation rather than to
+ * the mutation. The artboards confirm *after*, with a note; #155 settled that
+ * they lose here, because what is destroyed cannot be put back. Restoring a
+ * deleted collection means `create` and then one `addCourse` per course in
+ * order — `reorderCollectionCourses` throws `NotFoundError` for a code that is
+ * not already a member, so it can never add one — and `addCourseToCollection`
+ * throws `ForbiddenError` for a course unsaved in the meantime. An undo that
+ * comes back partial is not an undo, so the question is asked while the answer
+ * is still free. The note stays: it is what says the deletion happened.
+ *
+ * ## Where the cards' geometry comes from
+ *
+ * An open collection's courses are `CourseCardItem`s, and the card never
+ * measures anything — its host hands it a `geo`. Embedded in `/saved` that host
+ * is Saved, which already measures the column the workspace pane narrows. As a
+ * page there is no pane, but a browser window is narrowed the same way a pane
+ * narrows a column, and the ramp's input is the width itself rather than the
+ * reason for it. So this measures too rather than pinning the expanded end:
+ * measuring *is* pinning whenever the column is wide, and unlike pinning it is
+ * also right when the column is not (#159).
  */
 export function Collections({
   openCollectionId = null,
   compact = false,
   onDetailChange,
   onRequestAuth,
+  geo,
 }: Props) {
   const router = useRouter();
   // The route this is rendered on owns `?collection=`, so an embedded detail
@@ -162,6 +202,16 @@ export function Collections({
   const { create, rename, deleteCollection, reorder, addCourse, removeCourse } =
     useCollectionMutations();
 
+  /**
+   * The column an open collection's cards land in, when nobody has measured it
+   * for us. `useResultsWidth` starts at `Infinity`, which is the top of the ramp
+   * — so the first paint, the server's render and jsdom (which lays nothing out)
+   * all draw the fully expanded card this page used to pin, and the ramp only
+   * moves once something has actually measured a narrower column.
+   */
+  const [columnRef, columnWidth] = useResultsWidth();
+  const cardGeo = geo ?? courseCardGeometry(columnWidth);
+
   const [openId, setOpenId] = useState<string | null>(openCollectionId);
   const [dialogOpen, setDialogOpen] = useState(false);
   /**
@@ -170,6 +220,15 @@ export function Collections({
    * restarts rather than expiring on the first message's clock.
    */
   const [note, setNote] = useState<{ text: string } | null>(null);
+  /**
+   * The collection a delete has been asked about and not yet answered.
+   *
+   * The collection itself rather than its id: the dialog names it, and the
+   * record can leave `collections.list` between the question and the answer —
+   * another tab deleting it, or the refetch after this one lands. Holding the
+   * record means the words on screen never blank out mid-question.
+   */
+  const [pendingDelete, setPendingDelete] = useState<Collection | null>(null);
   const [ownAuthReason, setOwnAuthReason] = useState<AuthReason | null>(null);
   const setAuthReason = onRequestAuth ?? setOwnAuthReason;
 
@@ -278,7 +337,12 @@ export function Collections({
       );
   }
 
-  function onDelete(collection: Collection) {
+  /** Confirms the deletion; nothing is written until the reader answers. */
+  function onConfirmDelete() {
+    const collection = pendingDelete;
+    setPendingDelete(null);
+    if (!collection) return;
+
     deleteCollection
       .mutateAsync({ collectionId: collection.id })
       .then(() => {
@@ -327,6 +391,12 @@ export function Collections({
   const body = (
     <>
       <div
+        // The measured box is the one the cards are laid out in, so its content
+        // width is exactly what they have to share. Embedded, `geo` is already
+        // supplied and this measurement goes unread rather than unmade — one
+        // `ResizeObserver` on a box that exists either way is cheaper than a
+        // conditional hook could ever be.
+        ref={columnRef}
         className={
           compact
             ? "mt-3.5 flex flex-col gap-3.5"
@@ -404,6 +474,7 @@ export function Collections({
         {!isLoading && signedIn && openCollectionRecord ? (
           <CollectionDetail
             collection={openCollectionRecord}
+            geo={cardGeo}
             courseFor={(courseCode) => savedByCode.get(courseCode)}
             addableCourseCodes={addableCourseCodes(
               savedCourseCodes,
@@ -412,7 +483,7 @@ export function Collections({
             hasSavedCourses={savedCourseCodes.length > 0}
             onBack={() => openCollection(null)}
             onRename={(name) => onRename(openCollectionRecord, name)}
-            onDelete={() => onDelete(openCollectionRecord)}
+            onDelete={() => setPendingDelete(openCollectionRecord)}
             onAddCourse={(courseCode) =>
               onAddCourse(openCollectionRecord, courseCode)
             }
@@ -461,7 +532,7 @@ export function Collections({
                   collection={collection}
                   onOpen={() => openCollection(collection.id)}
                   onRename={(name) => onRename(collection, name)}
-                  onDelete={() => onDelete(collection)}
+                  onDelete={() => setPendingDelete(collection)}
                 />
               ))}
             </div>
@@ -499,7 +570,7 @@ export function Collections({
                   }
                   onOpen={() => openCollection(collection.id)}
                   onRename={(name) => onRename(collection, name)}
-                  onDelete={() => onDelete(collection)}
+                  onDelete={() => setPendingDelete(collection)}
                 />
               ))}
             </div>
@@ -512,6 +583,32 @@ export function Collections({
         savedCourses={savedCourses}
         onClose={() => setDialogOpen(false)}
         onCreate={onCreate}
+      />
+
+      {/*
+        One dialog for all three entry points, rendered by the component that
+        owns the mutation rather than by each menu — a tile and a chip both
+        unmount the moment the collection goes, and a dialog inside one of them
+        would be asking the question from inside the thing being deleted.
+
+        The body names what is lost and what is not: the collection and the
+        order its courses were put in, never the courses, which stay saved and
+        stay in whatever other collections hold them.
+      */}
+      <ConfirmDialog
+        request={
+          pendingDelete
+            ? {
+                eyebrow: "Collections",
+                title: `Delete “${pendingDelete.name}”?`,
+                body: "This deletes the collection and the order you put its courses in. The courses themselves stay saved, and stay in any other collection that holds them. A deleted collection cannot be restored.",
+                cancelLabel: "Keep collection",
+                actionLabel: "Delete collection",
+              }
+            : null
+        }
+        onCancel={() => setPendingDelete(null)}
+        onConfirm={onConfirmDelete}
       />
 
       {/* Only when nobody else is showing one. An embedded copy would put two
