@@ -18,6 +18,8 @@ import {
 } from "../hooks/use-explore";
 import { useResultsWidth } from "../hooks/use-results-width";
 
+type CourseOpen = { courseCode: string; kind: "details" | "review" };
+
 // The pane is inactive for ordinary browsing and has its own data-heavy
 // details/review views. Load it only once a desktop reader opens a course.
 const WorkspacePane = dynamic(
@@ -75,6 +77,9 @@ export function Explore() {
   // container's size. Do not guess a presentation during that window: mounting
   // a Sheet would briefly lock the desktop page's body before the pane wins.
   const mobileWorkspace = compactWorkspace === null ? false : !compactWorkspace;
+  const [pendingCourseOpen, setPendingCourseOpen] = useState<CourseOpen | null>(
+    null,
+  );
   const rowRef = useRef<HTMLDivElement>(null);
   const pane = useWorkspaceWidth(rowRef, workspace.hasOpenCourses);
   const [resultsRef, resultsWidth] = useResultsWidth();
@@ -83,21 +88,43 @@ export function Explore() {
   const { results, hasQuery, isLoading, isError } = explore;
   const showEmpty = hasQuery && !isLoading && !isError && results.length === 0;
 
+  const layoutMeasured = desktopWorkspace !== null && compactWorkspace !== null;
+
   // The desktop column and phone sheet share the same state machine. The
   // in-between layout remains a route: it has neither enough width for the
   // column nor the narrow mobile chrome the sheet was designed for.
-  function openCourse(courseCode: string, kind: "details" | "review") {
-    if (desktopWorkspace) {
-      workspace.open(courseCode, kind);
-      return;
-    }
-    if (mobileWorkspace) {
-      workspace.open(courseCode, kind);
-      return;
-    }
-    if (kind === "details") explore.onOpenCourse(courseCode);
-    else explore.onReviewCourse(courseCode);
-  }
+  const openMeasuredCourse = useCallback(
+    (courseCode: string, kind: CourseOpen["kind"]) => {
+      if (desktopWorkspace) {
+        workspace.open(courseCode, kind);
+        return;
+      }
+      if (mobileWorkspace) {
+        workspace.open(courseCode, kind);
+        return;
+      }
+      if (kind === "details") explore.onOpenCourse(courseCode);
+      else explore.onReviewCourse(courseCode);
+    },
+    [desktopWorkspace, mobileWorkspace, workspace, explore],
+  );
+
+  const openCourse = useCallback(
+    (courseCode: string, kind: CourseOpen["kind"]) => {
+      if (!layoutMeasured) {
+        setPendingCourseOpen({ courseCode, kind });
+        return;
+      }
+      openMeasuredCourse(courseCode, kind);
+    },
+    [layoutMeasured, openMeasuredCourse],
+  );
+
+  useEffect(() => {
+    if (!pendingCourseOpen || !layoutMeasured) return;
+    openMeasuredCourse(pendingCourseOpen.courseCode, pendingCourseOpen.kind);
+    setPendingCourseOpen(null);
+  }, [layoutMeasured, openMeasuredCourse, pendingCourseOpen]);
 
   return (
     <PageColumn

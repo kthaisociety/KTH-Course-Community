@@ -1,4 +1,5 @@
 import {
+  act,
   fireEvent,
   render,
   screen,
@@ -17,6 +18,17 @@ const useSearchCourses = vi.fn();
 
 let search = "";
 let containerWidth = 500;
+let delayResizeObserver = false;
+let resizeObserverCallbacks: ResizeObserverCallback[] = [];
+
+function deliverResizeObservers() {
+  for (const callback of resizeObserverCallbacks) {
+    callback(
+      [{ contentRect: { width: containerWidth } } as ResizeObserverEntry],
+      {} as ResizeObserver,
+    );
+  }
+}
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push, replace }),
@@ -103,6 +115,8 @@ function results(...courses: CourseSummary[]) {
 beforeEach(() => {
   search = "";
   containerWidth = 500;
+  delayResizeObserver = false;
+  resizeObserverCallbacks = [];
   window.sessionStorage.clear();
   push.mockClear();
   replace.mockClear();
@@ -112,10 +126,8 @@ beforeEach(() => {
       constructor(private readonly callback: ResizeObserverCallback) {}
 
       observe() {
-        this.callback(
-          [{ contentRect: { width: containerWidth } } as ResizeObserverEntry],
-          this as unknown as ResizeObserver,
-        );
+        resizeObserverCallbacks.push(this.callback);
+        if (!delayResizeObserver) deliverResizeObservers();
       }
 
       disconnect() {}
@@ -228,6 +240,27 @@ describe("Explore", () => {
       expect(
         screen.getByRole("button", { name: "Close DD2380 · Details" }),
       ).toBeVisible();
+    });
+
+    it("queues a course open until its container chooses the mobile sheet", async () => {
+      delayResizeObserver = true;
+      render(<Explore />);
+
+      await userEvent.click(
+        within(screen.getAllByRole("article")[0] as HTMLElement).getByRole(
+          "button",
+          { name: /Artificial Intelligence/ },
+        ),
+      );
+      expect(push).not.toHaveBeenCalled();
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+
+      await act(async () => deliverResizeObservers());
+
+      expect(
+        await screen.findByRole("button", { name: "Close DD2380 · Details" }),
+      ).toBeVisible();
+      expect(push).not.toHaveBeenCalled();
     });
 
     it("keeps the results as the only mobile scrolling surface", () => {
