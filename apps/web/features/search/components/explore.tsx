@@ -52,12 +52,12 @@ import {
  *   field alone. #89 requires filters, so they are built here in the artboard's
  *   own control vocabulary.
  * - The artboard narrows its **search bar** by 236px while tabs are open
- *   (`searchBarMargin`, line 1350) so the field stays centred over the results
+ *   (`searchBarMargin`, line 1351) so the field stays centred over the results
  *   rather than over the whole row. Not built: the bar is centred inside a
  *   `max-w-[560px]` box that is already narrower than the results column at
  *   every width the pane can open at, so the correction has nothing to correct.
  * - The artboard's **shared-element handoff from the landing hero** (its
- *   `pickUpSharedBar()`, line 855) *is* built, and is the one place in the app
+ *   `pickUpSharedBar()`, line 856) *is* built, and is the one place in the app
  *   authorised to improve on the artboard rather than match it.
  *   `useSearchBarArrival` below is the receiving end: when this mount is
  *   continuing a search the reader submitted on `/`, the bar animates out of the

@@ -96,7 +96,7 @@ describe("WorkspacePaneHost", () => {
   /**
    * The artboards give the results column the floor and make the pane yield —
    * `paneBounds()` in the Explore artboard hands the pane whatever is left once
-   * the results have their 396px. `Course Community - Saved.dc.html` line 842
+   * the results have their 396px. `Course Community - Saved.dc.html` line 834
    * writes the same clamp arithmetically: `rowW - 396 - 40 - 18`, where the 40
    * is the row's own padding and the 18 the column gap. A `contentRect` has the
    * padding out already, so at 900px of measured row the pane gets
