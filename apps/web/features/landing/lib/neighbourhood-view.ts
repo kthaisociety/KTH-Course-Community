@@ -370,12 +370,14 @@ export function projectGraphWindow(args: {
     // instead. A window on the real graph has no such option — every node here
     // is a person — so it is walked out of the copy rather than dropped.
     //
-    // There is no exception for the viewer. The anchor is picked clear, and
-    // their node lands on it, so `pushClear` is the identity for them in every
-    // frame where an anchor could be found at all. In the frames where it could
-    // not, they are moved into the open with everybody else, which is a better
-    // answer than being the one dot exempted from a rule that exists to keep
-    // them visible.
+    // There is no exception for the viewer, and it needs none. Their node lands
+    // on the anchor, `pushClear` is idempotent, and the anchor is itself its
+    // output — so it is the identity for them in every frame where an anchor
+    // could be found. In the frames where none could, it declines for them on
+    // exactly the grounds it declined for the anchor, the same point against the
+    // same rects, and they fade along with everybody else. That is honest: a
+    // hero with no legible place left is better admitted than answered with one
+    // dot drawn over the headline and called a reveal.
     const { x: screenX, y: screenY } = pushClear(
       projectedX,
       projectedY,
