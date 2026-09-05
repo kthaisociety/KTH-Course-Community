@@ -312,6 +312,73 @@ describe("HeroNetwork", () => {
   });
 
   /**
+   * The keep-out applies to the reveal too.
+   *
+   * `pushClear` places the viewer's node clear of the copy on any ordinary
+   * frame, so this never fires there. It fires when the copy reaches past every
+   * edge and there is nowhere inside the push budget to put anybody: the
+   * projection hands back `clearance: 0`, the dot is skipped — and the reveal
+   * has to go with it. The reveal is a *larger* mark than the node it replaces,
+   * so exempting it would put more ink over the headline than skipping the dot
+   * just took away.
+   */
+  it("hides the reveal when the copy leaves the viewer nowhere to stand", () => {
+    const { container } = render(
+      // The real hero's shape: the canvas inside `[data-hero]`, with a measured
+      // content block beside it. The block wraps its text in a child so the
+      // per-line measuring path is skipped and the box below is what is read.
+      <div data-hero>
+        <div data-hero-clear>
+          <span>Find the Course You Will Be Happy You Took</span>
+        </div>
+        <HeroNetwork
+          window={windowOf({ isViewer: true, x: 0, y: 0 })}
+          labelled={true}
+        />
+      </div>,
+    );
+    const canvas = container.querySelector("canvas");
+    const hero = container.querySelector<HTMLElement>("[data-hero]");
+    const copy = container.querySelector<HTMLElement>("[data-hero-clear]");
+    if (!canvas || !hero || !copy) throw new Error("the hero did not render");
+
+    const rect = (x: number, y: number, w: number, h: number) =>
+      ({
+        x,
+        y,
+        width: w,
+        height: h,
+        left: x,
+        top: y,
+        right: x + w,
+        bottom: y + h,
+        toJSON: () => ({}),
+      }) as DOMRect;
+    canvas.getBoundingClientRect = () => rect(0, 0, 320, 220);
+    hero.getBoundingClientRect = () => rect(0, 0, 320, 220);
+
+    // Copy reaching further past every edge than `MAX_PUSH` can carry a node.
+    copy.getBoundingClientRect = () => rect(-400, -400, 1120, 1020);
+    recorder.calls.arc = 0;
+    vi.mocked(recorder.ctx.fillText).mockClear();
+    onResize?.();
+
+    expect(recorder.calls.arc).toBe(0);
+    expect(recorder.ctx.fillText).not.toHaveBeenCalled();
+
+    // …and the converse, so the assertion above is about the keep-out rather
+    // than about the scene having quietly failed to build.
+    copy.getBoundingClientRect = () => rect(0, 0, 0, 0);
+    onResize?.();
+
+    expect(recorder.ctx.fillText).toHaveBeenCalledWith(
+      "You",
+      expect.any(Number),
+      expect.any(Number),
+    );
+  });
+
+  /**
    * Competing motion is the biggest tell in a shared-element transition, so for
    * the length of the landing → Explore handoff the only thing that moves is the
    * layout. The pulse is the only animation this canvas ever runs.

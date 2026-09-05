@@ -72,6 +72,19 @@ const DIAMOND_REACH = Math.sqrt(Math.PI / 2);
 const SIGNAL_ALPHA = 0.5;
 
 /**
+ * The clearance below which a thing is not painted at all.
+ *
+ * `pushClear` places nodes clear of the copy, so this is 1 for everything on an
+ * ordinary frame and the threshold never fires. It fires where the push gave
+ * up — a hero whose copy reaches past every edge has nowhere to put anybody —
+ * and there it is the whole of the keep-out. **Everything painted on this
+ * canvas has to pass it**, the reveal included: the reveal is a bigger mark
+ * than the node it replaces, so a labelled viewer exempted from the check would
+ * put more ink over the headline than the dot the check just removed.
+ */
+const VISIBLE = 0.02;
+
+/**
  * `fade`: concentric rings, each fainter and wider than the last — a trail that
  * has spread out and gone soft rather than one caught mid-flight.
  *
@@ -254,7 +267,7 @@ function draw(scene: Scene) {
   ctx.strokeStyle = palette.line;
   ctx.lineWidth = 1;
   for (const edge of view.edges) {
-    if (edge.clearance <= 0.02) continue;
+    if (edge.clearance <= VISIBLE) continue;
     ctx.globalAlpha = EDGE_ALPHA * edge.clearance;
     ctx.beginPath();
     ctx.moveTo(edge.from.screenX, edge.from.screenY);
@@ -266,12 +279,12 @@ function draw(scene: Scene) {
   // belongs to. Two passes rather than one interleaved loop, because a node
   // drawn after its own signal would still be drawn before the *next* node's.
   for (const node of view.nodes) {
-    if (node.clearance <= 0.02 || node.signalStyle === NO_SIGNAL) continue;
+    if (node.clearance <= VISIBLE || node.signalStyle === NO_SIGNAL) continue;
     drawSignal(scene, palette, node);
   }
 
   for (const node of view.nodes) {
-    if (node.clearance <= 0.02) continue;
+    if (node.clearance <= VISIBLE) continue;
     ctx.globalAlpha = NODE_ALPHA * node.clearance;
     ctx.fillStyle = nodeColour(palette, node.colorVar);
     ctx.strokeStyle = ctx.fillStyle;
@@ -280,7 +293,11 @@ function draw(scene: Scene) {
 
   if (scene.labelled) {
     const you = view.nodes.find((node) => node.isViewer);
-    if (you) drawYou(scene, palette, you);
+    // The same gate as every other mark. Their node is normally pushed clear
+    // and this passes; when the copy left the push nowhere to go it does not,
+    // and the reveal goes with the dot rather than being drawn over the
+    // headline on its own.
+    if (you && you.clearance > VISIBLE) drawYou(scene, palette, you);
   }
   ctx.globalAlpha = 1;
 }
