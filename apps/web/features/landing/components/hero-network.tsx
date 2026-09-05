@@ -383,21 +383,28 @@ export function HeroNetwork({ window: graphWindow, labelled }: Props) {
      * the scene is otherwise painted once and left alone, so without this the
      * graph keeps its old colours until something else happens to redraw it.
      *
-     * The root element's class list is watched rather than `next-themes`'
-     * `resolvedTheme`, and the difference is not a preference. `ThemeProvider`
-     * applies the class from an effect of its own, and it is an ancestor of
-     * this component — React runs child effects before parent effects, so an
-     * effect on `resolvedTheme` here would read `getComputedStyle` before the
-     * class it depends on had landed and repaint the palette it was trying to
-     * replace. The attribute is the honest signal because it is the thing the
-     * tokens actually hang off, and watching it also covers a theme changed in
-     * another tab or by the OS, neither of which renders this component.
+     * The root element is watched rather than `next-themes`' `resolvedTheme`,
+     * and the difference is not a preference. `ThemeProvider` applies the theme
+     * from a `useEffect` of its own — `setTheme` only writes state and
+     * `localStorage` — and it is an ancestor of this component, so React runs
+     * this child's effects first: an effect keyed on `resolvedTheme` here would
+     * call `getComputedStyle` before the class it depends on had landed and
+     * repaint with the palette it was trying to replace. The DOM is the honest
+     * signal because it is the thing the tokens actually hang off, and watching
+     * it also covers a theme changed by the OS or in another tab, neither of
+     * which re-renders this component.
+     *
+     * Every attribute is watched rather than `class` alone. Today the theme is
+     * a `.dark` class on `<html>` and `next-themes` writes `style.colorScheme`
+     * in the same breath, but the design drives it with a `data-cc-theme`
+     * attribute and `next-themes` defaults to `data-theme` — so a filter here
+     * would be a second place that has to be edited in step with
+     * `app/layout.tsx`, and forgetting would leave stale pixels rather than a
+     * failing build. Root attributes change rarely enough that redrawing a
+     * still scene for one is cheaper than getting the filter wrong.
      */
     const themeWatcher = new MutationObserver(() => draw(scene));
-    themeWatcher.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ["class"],
-    });
+    themeWatcher.observe(document.documentElement, { attributes: true });
 
     /**
      * Repaint once the web font has loaded.

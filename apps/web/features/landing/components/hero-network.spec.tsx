@@ -111,6 +111,8 @@ beforeEach(() => {
 
 afterEach(() => {
   document.documentElement.className = "";
+  document.documentElement.removeAttribute("data-cc-theme");
+  document.documentElement.removeAttribute("style");
   HTMLCanvasElement.prototype.getContext = realGetContext;
   window.matchMedia = realMatchMedia;
   Reflect.deleteProperty(document, "fonts");
@@ -122,7 +124,9 @@ const settle = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
 describe("HeroNetwork repaints when", () => {
   // The reported bug. Every colour is a `--cc-*` token resolved at draw time,
   // so already-rasterised pixels keep the old palette until something redraws.
-  it("the theme changes", async () => {
+  // This is how the theme actually flips today: `next-themes` is configured
+  // with `attribute="class"` and writes `.dark` onto the root element.
+  it("the theme class lands on the root element", async () => {
     render(<HeroNetwork window={WINDOW} labelled={false} />);
     const painted = recorder.calls.arc;
     expect(painted).toBeGreaterThan(0);
@@ -131,6 +135,25 @@ describe("HeroNetwork repaints when", () => {
     await settle();
 
     expect(recorder.calls.arc).toBeGreaterThan(painted);
+  });
+
+  // …and this is every other way the root could carry a palette: the
+  // `data-cc-theme` attribute the design uses, `next-themes`' own `data-theme`
+  // default, the `style.colorScheme` it writes alongside the class, or a token
+  // overridden inline. The watcher is deliberately unfiltered so that swapping
+  // the mechanism in `app/layout.tsx` cannot silently strand this canvas.
+  it("the root carries its theme some other way", async () => {
+    render(<HeroNetwork window={WINDOW} labelled={false} />);
+    const painted = recorder.calls.arc;
+
+    document.documentElement.setAttribute("data-cc-theme", "dark");
+    await settle();
+    expect(recorder.calls.arc).toBeGreaterThan(painted);
+
+    const afterAttribute = recorder.calls.arc;
+    document.documentElement.style.setProperty("--cc-brand", "#d7e3f7");
+    await settle();
+    expect(recorder.calls.arc).toBeGreaterThan(afterAttribute);
   });
 
   it("the graph it was given changes", () => {
@@ -239,7 +262,7 @@ describe("HeroNetwork", () => {
     expect(recorder.calls.clearRect).toBe(cleared);
   });
 
-  it("stops watching the theme once it is gone", async () => {
+  it("stops watching the root once it is gone", async () => {
     const { unmount } = render(
       <HeroNetwork window={WINDOW} labelled={false} />,
     );
