@@ -17,6 +17,8 @@ import {
   joinCommunityGraphOnSignUp,
   MAX_NEIGHBOURHOOD_NODES,
   MAX_PUBLIC_WINDOW_NODES,
+  recordEarnedPersonalizationTier,
+  recordEarnedPersonalizationTierOnContribution,
 } from "./service";
 
 vi.mock("./repository");
@@ -546,13 +548,89 @@ describe("getEffectiveTier", () => {
   it("never writes the earned tier back", async () => {
     await getEffectiveTier("reader", new Date("2044-01-01T00:00:00.000Z"));
 
-    // The only write the graph domain owns is placement; there is deliberately
-    // no repository function that could update personalization_tier_earned.
+    // Decay is derived and thrown away. The graph domain owns exactly two
+    // writes — placement, and the monotonic tier raise — and reading a decayed
+    // tier must touch neither. The name list is the guard against a third
+    // appearing quietly.
     expect(graphRepo.persistPlacement).not.toHaveBeenCalled();
+    expect(graphRepo.raiseEarnedTier).not.toHaveBeenCalled();
     expect(
       Object.keys(graphRepo).filter((name) =>
-        /^(insert|update|upsert|delete|save|persist|set)/.test(name),
+        /^(insert|update|upsert|delete|save|persist|set|raise)/.test(name),
       ),
-    ).toEqual(["persistPlacement"]);
+    ).toEqual(["persistPlacement", "raiseEarnedTier"]);
+  });
+});
+
+describe("recordEarnedPersonalizationTier", () => {
+  beforeEach(() => {
+    vi.mocked(graphRepo.findReviewedCourses).mockResolvedValue([]);
+    vi.mocked(graphRepo.findTranscriptImportedCourses).mockResolvedValue([]);
+    vi.mocked(graphRepo.raiseEarnedTier).mockResolvedValue(true);
+  });
+
+  it("raises the column to what the contributions earn", async () => {
+    vi.mocked(graphRepo.findReviewedCourses).mockResolvedValue([
+      { courseCode: "SF1625", userId: "u1" },
+    ]);
+    vi.mocked(graphRepo.findTranscriptImportedCourses).mockResolvedValue([
+      { courseCode: "SF1625" },
+    ]);
+
+    expect(await recordEarnedPersonalizationTier("u1")).toBe(3);
+    expect(graphRepo.raiseEarnedTier).toHaveBeenCalledWith("u1", 3);
+  });
+
+  it("counts only transcript-imported courses towards tier 2", async () => {
+    // A manually typed course never reaches the service: the repository read
+    // filters on `transcript_imported_at`, so an app user with none is at the
+    // tier their reviews alone earn.
+    vi.mocked(graphRepo.findReviewedCourses).mockResolvedValue([
+      { courseCode: "SF1625", userId: "u1" },
+    ]);
+
+    expect(await recordEarnedPersonalizationTier("u1")).toBe(1);
+    expect(graphRepo.raiseEarnedTier).toHaveBeenCalledWith("u1", 1);
+  });
+
+  it("writes nothing for an app user who has earned nothing", async () => {
+    expect(await recordEarnedPersonalizationTier("u1")).toBe(0);
+    expect(graphRepo.raiseEarnedTier).not.toHaveBeenCalled();
+  });
+
+  /**
+   * The monotonicity itself is `greatest` in SQL, which is the only place it
+   * can be true under concurrency. What the service must not do is talk itself
+   * out of it: a recompute that answers 2 for somebody the column already has
+   * at 3 still asks for 2, and the repository declines. Never a demotion, and
+   * never a read-then-write that could race one in.
+   */
+  it("asks for the recomputed tier and lets the repository refuse to lower it", async () => {
+    vi.mocked(graphRepo.findReviewedCourses).mockResolvedValue([
+      { courseCode: "SF1625", userId: "u1" },
+    ]);
+    vi.mocked(graphRepo.findTranscriptImportedCourses).mockResolvedValue([
+      { courseCode: "SF1625" },
+      { courseCode: "DD1337" },
+    ]);
+    vi.mocked(graphRepo.raiseEarnedTier).mockResolvedValue(false);
+
+    expect(await recordEarnedPersonalizationTier("u1")).toBe(2);
+    expect(graphRepo.raiseEarnedTier).toHaveBeenCalledWith("u1", 2);
+    expect(graphRepo.findTierBasis).not.toHaveBeenCalled();
+  });
+
+  it("swallows its own failure so a contribution is never lost to it", async () => {
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.mocked(graphRepo.findReviewedCourses).mockRejectedValue(
+      new Error("neon is having a day"),
+    );
+
+    await expect(
+      recordEarnedPersonalizationTierOnContribution("u1"),
+    ).resolves.toBeUndefined();
+    expect(logged).toHaveBeenCalled();
+
+    logged.mockRestore();
   });
 });

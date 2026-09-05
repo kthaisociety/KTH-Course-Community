@@ -1,4 +1,14 @@
-import { and, count, eq, inArray, max, ne, sql } from "drizzle-orm";
+import {
+  and,
+  count,
+  eq,
+  inArray,
+  isNotNull,
+  lt,
+  max,
+  ne,
+  sql,
+} from "drizzle-orm";
 import { db } from "../db";
 import * as schema from "../db/schema";
 import type {
@@ -195,8 +205,11 @@ export async function findTierBasis(
  * repo normally routes service -> service. The exception is deliberate and
  * approved: it is a single read-only aggregate, `reviews_user_id_idx` covers
  * it, and routing it through `server/reviews/service.ts` would couple the graph
- * domain to a review domain that is being rewritten in parallel. Nothing else
- * here may reach into `server/reviews/`.
+ * domain to a review domain that is being rewritten in parallel.
+ *
+ * `findReviewedCourses` below is the same exception for the same reason. Those
+ * two are the whole of it: nothing else here may reach into `server/reviews/`,
+ * and neither of them may grow a write.
  */
 export async function findLastReviewAt(userId: string): Promise<Date | null> {
   const [row] = await db
@@ -204,4 +217,86 @@ export async function findLastReviewAt(userId: string): Promise<Date | null> {
     .from(schema.reviews)
     .where(eq(schema.reviews.userId, userId));
   return row?.lastReviewAt ?? null;
+}
+
+/**
+ * Which courses this app user has reviewed, as review rows rather than bare
+ * codes.
+ *
+ * `userId` comes back on every row even though the query already filtered on
+ * it, so the result is the exact shape `selectUnreviewedCourses` takes. That is
+ * the point: the tier rule runs the same author comparison the browser runs,
+ * through the same function, instead of trusting this `WHERE` to have meant the
+ * same thing. Read-only, and covered by `reviews_user_id_idx`.
+ */
+export function findReviewedCourses(
+  userId: string,
+): Promise<{ courseCode: string; userId: string }[]> {
+  return db
+    .select({
+      courseCode: schema.reviews.courseCode,
+      userId: schema.reviews.userId,
+    })
+    .from(schema.reviews)
+    .where(eq(schema.reviews.userId, userId));
+}
+
+/**
+ * The courses this app user got from a transcript import.
+ *
+ * `transcript_imported_at is not null` is the whole test, and it is the one
+ * #161 names: a course typed in by hand carries no import stamp and cannot earn
+ * tier 2 or 3. The primary key on `(user_id, course_code)` leads with
+ * `user_id`, so this read is indexed.
+ *
+ * It reads `user_taken_courses`, which belongs to the taken domain, and it is
+ * here for the same reason `findLastReviewAt` is: one read-only projection
+ * feeding one derived number, where routing through `taken/service.ts` would
+ * buy nothing but a cycle — `taken` has no business knowing about tiers.
+ */
+export function findTranscriptImportedCourses(
+  userId: string,
+): Promise<{ courseCode: string }[]> {
+  return db
+    .select({ courseCode: schema.userTakenCourses.courseCode })
+    .from(schema.userTakenCourses)
+    .where(
+      and(
+        eq(schema.userTakenCourses.userId, userId),
+        isNotNull(schema.userTakenCourses.transcriptImportedAt),
+      ),
+    );
+}
+
+/**
+ * Raise `personalization_tier_earned` to `tier`, and never lower it.
+ *
+ * The monotonicity is enforced in SQL rather than in the caller. `greatest` is
+ * what makes it hold under concurrency: two contributions landing at once
+ * cannot have the slower one write a stale, smaller number over the faster
+ * one's, and a recompute that answers 2 where the column already says 3 — which
+ * #161's ladder allows, because tier 3's condition stops holding the moment a
+ * further transcript is imported — is a no-op rather than a demotion. The `<`
+ * in the `WHERE` only spares the row a write it does not need; delete it and
+ * the column is still correct.
+ *
+ * Returns whether the column actually rose.
+ */
+export async function raiseEarnedTier(
+  userId: string,
+  tier: number,
+): Promise<boolean> {
+  const raised = await db
+    .update(schema.users)
+    .set({
+      personalizationTierEarned: sql`greatest(${schema.users.personalizationTierEarned}, ${tier})`,
+    })
+    .where(
+      and(
+        eq(schema.users.id, userId),
+        lt(schema.users.personalizationTierEarned, tier),
+      ),
+    )
+    .returning({ userId: schema.users.id });
+  return raised.length > 0;
 }

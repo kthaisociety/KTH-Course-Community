@@ -1,5 +1,6 @@
 import { getSummariesByCodes } from "../../course/service";
 import { NotFoundError } from "../../errors";
+import { recordEarnedPersonalizationTierOnContribution } from "../../graph/service";
 import {
   fillTranscriptCourseFields,
   recordTranscriptCoursesIfAbsent,
@@ -135,11 +136,18 @@ export async function confirmTranscriptImport(
     inputs,
     importedAt,
   );
-  return {
-    inserted: created.inserted,
-    updated:
-      fillInputs.length > 0
-        ? await fillTranscriptCourseFields(userId, fillInputs)
-        : 0,
-  };
+  const updated =
+    fillInputs.length > 0
+      ? await fillTranscriptCourseFields(userId, fillInputs)
+      : 0;
+
+  // The other moment #161's ladder can move: an import earns tier 2, and it
+  // earns tier 3 outright for somebody who had already reviewed everything on
+  // it. It runs even when nothing was inserted, because a confirmation that
+  // only filled fields still tells us the stored rows are worth re-reading, and
+  // because the recompute is idempotent. It never lowers the column, so a
+  // second import that leaves courses unreviewed cannot take tier 3 away.
+  await recordEarnedPersonalizationTierOnContribution(userId);
+
+  return { inserted: created.inserted, updated };
 }

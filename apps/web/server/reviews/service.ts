@@ -2,6 +2,7 @@ import { nanoid } from "nanoid";
 import type { Review, ReviewInput, ReviewVoteType } from "@/types";
 import { reviewInputSchema } from "@/types";
 import { ForbiddenError, NotFoundError, ValidationError } from "../errors";
+import { recordEarnedPersonalizationTierOnContribution } from "../graph/service";
 import * as reviewsRepo from "./repository";
 
 export type { ReviewInput };
@@ -102,6 +103,14 @@ export async function createReview(
       `You have already reviewed ${courseCode}. Edit that review instead.`,
     );
   }
+
+  // Publishing a first review is one of the two moments #161's ladder can move:
+  // it earns tier 1 outright, and it is what completes a transcript for tier 3.
+  // The recompute reads the row this call just committed, raises the column and
+  // never lowers it, and swallows its own failures — a review that was
+  // published stays published even if the tier write does not land.
+  await recordEarnedPersonalizationTierOnContribution(userId);
+
   return serializeReview(inserted);
 }
 
