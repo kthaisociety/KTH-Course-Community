@@ -50,7 +50,6 @@ type Scene = {
   w: number;
   h: number;
   dpr: number;
-  rects: Rect[];
   raf: number;
   reduced: boolean;
   /** Seconds the pulse has been running, and only ever while it is running. */
@@ -157,14 +156,14 @@ function nodeColour(palette: Palette, colorVar: string) {
  * and why none of it is ever persisted.
  */
 function refreshView(scene: Scene) {
-  scene.rects = measureRects(scene.root, scene.canvas);
-  if (!scene.rects.length) scene.rects = fallbackRects(scene.w, scene.h);
+  const measured = measureRects(scene.root, scene.canvas);
+  const keepOut = measured.length ? measured : fallbackRects(scene.w, scene.h);
   scene.view = scene.window
     ? projectGraphWindow({
         window: scene.window,
         width: scene.w,
         height: scene.h,
-        keepOut: scene.rects,
+        keepOut,
       })
     : null;
 }
@@ -309,7 +308,6 @@ export function HeroNetwork({ window: graphWindow, labelled }: Props) {
       w: 0,
       h: 0,
       dpr: 1,
-      rects: [],
       raf: 0,
       reduced: prefersReducedMotion(),
       pulse: 0,
@@ -344,6 +342,9 @@ export function HeroNetwork({ window: graphWindow, labelled }: Props) {
     };
     const start = () => {
       if (scene.raf || !scene.labelled || scene.reduced) return;
+      // A hidden tab has nothing to animate for, and the label appearing while
+      // one is hidden must not arm a loop nothing will see.
+      if (document.hidden) return;
       scene.last = performance.now();
       scene.raf = requestAnimationFrame(tick);
     };

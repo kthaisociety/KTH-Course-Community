@@ -24,7 +24,7 @@ type NodeSpec = {
   isViewer?: boolean;
 };
 
-function window(
+function graphWindow(
   centre: { x: number; y: number },
   nodes: NodeSpec[],
   edges: { fromId: string; toId: string }[] = [],
@@ -83,7 +83,7 @@ describe("nodeColorVar", () => {
 });
 
 describe("projectGraphWindow", () => {
-  const input = window(
+  const input = graphWindow(
     { x: 100, y: 100 },
     [
       { id: "me", x: 100, y: 100, isViewer: true },
@@ -125,15 +125,15 @@ describe("projectGraphWindow", () => {
   });
 
   it("uses the constant scale, whatever the window contains", () => {
-    const tight = window({ x: 0, y: 0 }, [
+    const tight = graphWindow({ x: 0, y: 0 }, [
       { id: "me", x: 0, y: 0, isViewer: true },
       { id: "near", x: 1, y: 1 },
     ]);
-    const sprawling = window({ x: 0, y: 0 }, [
+    const sprawling = graphWindow({ x: 0, y: 0 }, [
       { id: "me", x: 0, y: 0, isViewer: true },
       { id: "far", x: 40000, y: -9000 },
     ]);
-    const alone = window({ x: 0, y: 0 }, [
+    const alone = graphWindow({ x: 0, y: 0 }, [
       { id: "me", x: 0, y: 0, isViewer: true },
     ]);
 
@@ -152,12 +152,12 @@ describe("projectGraphWindow", () => {
     // The same three world positions, read by two different people. Each read
     // is centred on its own viewer and hands back its own opaque ids, and one
     // of the two also sees a distant node the other does not.
-    const ida = window({ x: 0, y: 0 }, [
+    const ida = graphWindow({ x: 0, y: 0 }, [
       { id: "ida-self", x: 0, y: 0, isViewer: true },
       { id: "ida-sees-otto", x: 180, y: -60 },
       { id: "ida-sees-vera", x: -90, y: 240 },
     ]);
-    const otto = window({ x: 180, y: -60 }, [
+    const otto = graphWindow({ x: 180, y: -60 }, [
       { id: "otto-self", x: 180, y: -60, isViewer: true },
       { id: "otto-sees-ida", x: 0, y: 0 },
       { id: "otto-sees-vera", x: -90, y: 240 },
@@ -192,7 +192,7 @@ describe("projectGraphWindow", () => {
       1,
     );
 
-    const publicWindow = window({ x: 0, y: 0 }, [
+    const publicWindow = graphWindow({ x: 0, y: 0 }, [
       { id: "one", x: 0, y: 0 },
       { id: "two", x: 120, y: 0 },
     ]);
@@ -224,7 +224,7 @@ describe("projectGraphWindow", () => {
   // Two endpoints in the open do not make a line that is: an edge between
   // neighbours either side of the headline runs straight through it.
   it("fades an edge by the whole line, not by its two ends", () => {
-    const spanning = window(
+    const spanning = graphWindow(
       { x: 0, y: 0 },
       [
         { id: "left", x: -600, y: 0 },
@@ -257,7 +257,7 @@ describe("projectGraphWindow", () => {
   });
 
   it("draws an empty community as an empty canvas, inventing nobody", () => {
-    const view = project(window({ x: 0, y: 0 }, []));
+    const view = project(graphWindow({ x: 0, y: 0 }, []));
     expect(view.nodes).toEqual([]);
     expect(view.edges).toEqual([]);
     expect(view.centre).toEqual({ x: WIDTH / 2, y: HEIGHT / 2 });
