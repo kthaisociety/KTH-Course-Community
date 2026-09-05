@@ -44,7 +44,7 @@ import { HeroNetwork } from "./hero-network";
  * of the way over 130ms, the hero graph stops so the only thing moving is the
  * layout, and the navigation is fired by that exit *finishing* rather than by a
  * timer guessing when it will have. `Course Community - Landing.dc.html`'s
- * `toExplore()` (line 499) sketches the same departure with a blind
+ * `toExplore()` (line 501) sketches the same departure with a blind
  * `setTimeout(130)`; this is the one place in the app authorised to improve on
  * the artboard, and that timer is most of the reason why.
  */
