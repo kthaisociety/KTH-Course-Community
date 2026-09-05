@@ -45,8 +45,14 @@ type Props = {
   onSelect?: (courseCode: string) => void;
 };
 
+/**
+ * A row that opens the reviewer. `cursor-pointer` is not decoration here: the
+ * row used to be a `<Link>`, which the browser gives a pointer for free, and a
+ * `<button>` gets `cursor: default` unless something says otherwise. The
+ * artboard says otherwise — `cursor: c.onClick ? "pointer" : "default"`.
+ */
 const ROW_CLASS =
-  "flex w-full items-baseline gap-[9px] text-left transition-opacity hover:opacity-80";
+  "flex w-full cursor-pointer items-baseline gap-[9px] text-left transition-opacity hover:opacity-80";
 
 function headlineFor(count: number): string {
   return count === 1
@@ -116,7 +122,7 @@ export function UnreviewedCard({
         <button
           type="button"
           onClick={onStart}
-          className="flex h-10 flex-none items-center justify-center gap-2 rounded-[9px] bg-cc-btn px-[18px] font-semibold text-[13.5px] text-cc-btn-fg hover:opacity-[.88] @max-[440px]:w-full"
+          className="flex h-10 flex-none cursor-pointer items-center justify-center gap-2 rounded-[9px] bg-cc-btn px-[18px] font-semibold text-[13.5px] text-cc-btn-fg hover:opacity-[.88] @max-[440px]:w-full"
         >
           <MessageCircle size={15} aria-hidden />
           {fastTrackLabelFor(courses.length)}
