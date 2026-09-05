@@ -1,6 +1,9 @@
 import { getAuth } from "@/server/auth";
 import { TranscriptParseError } from "@/server/ingest/transcript/parse";
-import { extractTranscriptText } from "@/server/ingest/transcript/pdf-text";
+import {
+  extractTranscriptText,
+  TranscriptBusyError,
+} from "@/server/ingest/transcript/pdf-text";
 import { buildTranscriptProposal } from "@/server/ingest/transcript/service";
 import {
   capRequestBody,
@@ -68,6 +71,17 @@ export async function POST(request: Request) {
   } catch (error) {
     if (error instanceof TranscriptParseError) {
       return Response.json({ message: error.message }, { status: 422 });
+    }
+    // Parsing is capacity-bound, so a burst is a "come back", not a bad file.
+    // Saying so keeps the user from re-editing a transcript that was fine.
+    if (error instanceof TranscriptBusyError) {
+      return Response.json(
+        {
+          message:
+            "Too many transcripts are being read right now. Try again in a moment.",
+        },
+        { status: 503, headers: { "Retry-After": "10" } },
+      );
     }
     throw error;
   }
