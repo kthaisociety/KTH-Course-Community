@@ -26,6 +26,11 @@ const confirmImport = vi.fn();
 const uploadTranscript = vi.fn();
 const toastError = vi.fn();
 const toastSuccess = vi.fn();
+const routerReplace = vi.fn();
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ replace: routerReplace, push: vi.fn() }),
+}));
 
 vi.mock("@/features/auth", () => ({
   useMe: () => ({ isLoading: false, isAuthenticated: true }),
@@ -47,11 +52,30 @@ vi.mock("@/features/courses", () => ({
 vi.mock("@/features/reviews/api/queries", () => ({
   useUnreviewedTakenCourses: () => unreviewed(),
 }));
-// Stubbed so the real `UnreviewedCard` still renders: this test is about which
-// course the page hands the review dialog, not about the dialog's own form.
+// The review dialog is not on this screen any more, but the reviews barrel
+// still exports it — and with it the rich-text editor and its stylesheet,
+// which jsdom has no business loading for a test about a course list.
 vi.mock("@/features/reviews/components/review", () => ({
-  Review: ({ courseCode }: { courseCode: string }) => (
-    <div data-testid="reviewer">Reviewing {courseCode}</div>
+  Review: () => null,
+  toEditableReview: (review: unknown) => review,
+}));
+// Stubbed so the real `UnreviewedCard` still renders: these tests are about
+// which courses the page queues, not about the card stack's own form, which
+// has its own suite next to it.
+vi.mock("@/features/reviews/components/reviewer", () => ({
+  Reviewer: ({
+    queue,
+    onClose,
+  }: {
+    queue: Array<{ courseCode: string }>;
+    onClose: () => void;
+  }) => (
+    <div data-testid="reviewer">
+      Reviewing {queue.map((course) => course.courseCode).join(", ")}
+      <button type="button" onClick={onClose}>
+        Close reviewer
+      </button>
+    </div>
   ),
 }));
 vi.mock("@/features/search", () => ({
@@ -134,6 +158,10 @@ async function uploadPdf() {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // `?review=1` and an interrupted round are both read off the browser, so
+  // each test starts on a clean URL and an empty tab store.
+  window.history.replaceState({}, "", "/taken");
+  sessionStorage.clear();
   takenList.mockReturnValue([takenCourse()]);
   listFailed.mockReturnValue(false);
   refetchTaken.mockImplementation(() =>
@@ -705,8 +733,191 @@ describe("reading a transcript", () => {
   });
 });
 
-describe("the unreviewed prompt", () => {
-  it("opens the reviewer in place rather than leaving the page", async () => {
+describe("the fast-track reviewer", () => {
+  const bothUnreviewed = () =>
+    unreviewed.mockReturnValue({
+      courses: [takenCourse(), takenCourse({ courseCode: "DD2380" })],
+      isLoading: false,
+      isUnavailable: false,
+    });
+
+  it("deals every unreviewed course when the fast track is started", async () => {
+    bothUnreviewed();
+    takenList.mockReturnValue([
+      takenCourse(),
+      takenCourse({ courseCode: "DD2380" }),
+    ]);
+    render(<TakenCourses />);
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Fast track all 2" }),
+    );
+
+    expect(screen.getByTestId("reviewer")).toHaveTextContent(
+      "Reviewing DD1337, DD2380",
+    );
+    // The reviewer is a screen, not an overlay: the list it replaced is gone.
+    expect(
+      screen.queryByRole("button", { name: "Add a course by hand" }),
+    ).not.toBeInTheDocument();
+  });
+
+  /**
+   * A row is a starting point, not a queue of one. Someone who came to review
+   * one course is exactly who is most likely to review a second, so the rest
+   * are dealt behind it — which is what the artboard's `openReviewer(startId)`
+   * does.
+   */
+  it("puts the row the reader picked at the front of the whole queue", async () => {
+    bothUnreviewed();
+    takenList.mockReturnValue([
+      takenCourse(),
+      takenCourse({ courseCode: "DD2380" }),
+    ]);
+    render(<TakenCourses />);
+
+    await userEvent.click(
+      screen.getByRole("button", {
+        name: /^DD2380\s*Artificial Intelligence$/,
+      }),
+    );
+
+    expect(screen.getByTestId("reviewer")).toHaveTextContent(
+      "Reviewing DD2380, DD1337",
+    );
+  });
+
+  it("gives the list back when the reviewer is closed", async () => {
+    bothUnreviewed();
+    render(<TakenCourses />);
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Fast track all 2" }),
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: "Close reviewer" }),
+    );
+
+    expect(screen.queryByTestId("reviewer")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Add a course by hand" }),
+    ).toBeInTheDocument();
+  });
+});
+
+/**
+ * `sessionStorage` says what this tab was doing, not what is still true. Every
+ * one of these is about the gap between the two.
+ */
+describe("a round a reload interrupted", () => {
+  function storeRound(
+    queue: string[],
+    done: Record<string, "saved" | "skipped"> = {},
+  ) {
+    sessionStorage.setItem(
+      "cc.taken.reviewer",
+      JSON.stringify({ queue, done, drafts: {} }),
+    );
+  }
+
+  function both() {
+    takenList.mockReturnValue([
+      takenCourse(),
+      takenCourse({ courseCode: "DD2380" }),
+    ]);
+    unreviewed.mockReturnValue({
+      courses: [takenCourse(), takenCourse({ courseCode: "DD2380" })],
+      isLoading: false,
+      isUnavailable: false,
+    });
+  }
+
+  it("picks the round back up where it stopped", async () => {
+    both();
+    storeRound(["DD2380", "DD1337"], { DD2380: "skipped" });
+    render(<TakenCourses />);
+
+    expect(await screen.findByTestId("reviewer")).toHaveTextContent(
+      "Reviewing DD2380, DD1337",
+    );
+  });
+
+  /**
+   * The reader reviewed DD2380 somewhere else — the workspace pane, another
+   * tab — while this round was sitting in storage. Dealing its card again
+   * would ask for a second review of a course that has one.
+   */
+  it("drops a course that was reviewed since the round was stored", async () => {
+    takenList.mockReturnValue([
+      takenCourse(),
+      takenCourse({ courseCode: "DD2380" }),
+    ]);
+    unreviewed.mockReturnValue({
+      courses: [takenCourse()],
+      isLoading: false,
+      isUnavailable: false,
+    });
+    storeRound(["DD2380", "DD1337"]);
+    render(<TakenCourses />);
+
+    expect(await screen.findByTestId("reviewer")).toHaveTextContent(
+      "Reviewing DD1337",
+    );
+  });
+
+  /** A card this round already dealt with stays: it is the progress row. */
+  it("keeps the cards the round has already answered", async () => {
+    both();
+    storeRound(["DD1337", "DD2380"], { DD1337: "saved" });
+    unreviewed.mockReturnValue({
+      courses: [takenCourse({ courseCode: "DD2380" })],
+      isLoading: false,
+      isUnavailable: false,
+    });
+    render(<TakenCourses />);
+
+    expect(await screen.findByTestId("reviewer")).toHaveTextContent(
+      "Reviewing DD1337, DD2380",
+    );
+  });
+
+  it("forgets a round with no cards left to deal", async () => {
+    unreviewed.mockReturnValue({
+      courses: [],
+      isLoading: false,
+      isUnavailable: false,
+    });
+    storeRound(["DD1337"], { DD1337: "saved" });
+    render(<TakenCourses />);
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: "Add a course by hand" }),
+      ).toBeInTheDocument(),
+    );
+    expect(screen.queryByTestId("reviewer")).not.toBeInTheDocument();
+    expect(sessionStorage.getItem("cc.taken.reviewer")).toBeNull();
+  });
+
+  /**
+   * An unfinished round outranks the deep link, because it holds answers that
+   * were typed and never saved and a fresh queue would throw them away.
+   */
+  it("resumes rather than restarting when ?review=1 arrives too", async () => {
+    both();
+    window.history.replaceState({}, "", "/taken?review=1");
+    storeRound(["DD2380", "DD1337"], { DD2380: "skipped" });
+    render(<TakenCourses />);
+
+    expect(await screen.findByTestId("reviewer")).toHaveTextContent(
+      "Reviewing DD2380, DD1337",
+    );
+  });
+});
+
+describe("arriving with ?review=1", () => {
+  it("opens the reviewer and takes the parameter back out of the URL", async () => {
+    window.history.replaceState({}, "", "/taken?review=1");
     unreviewed.mockReturnValue({
       courses: [takenCourse()],
       isLoading: false,
@@ -714,15 +925,27 @@ describe("the unreviewed prompt", () => {
     });
     render(<TakenCourses />);
 
-    // The prompt's own row button, which `UnreviewedCard` renders in place of
-    // its link once a screen passes `onSelect`. Its accessible name is the
-    // course code and title; the table's controls are labelled differently.
-    await userEvent.click(
-      screen.getByRole("button", { name: /^DD1337\s*Programming$/ }),
+    await waitFor(() =>
+      expect(screen.getByTestId("reviewer")).toHaveTextContent(
+        "Reviewing DD1337",
+      ),
     );
+    // Read once, then removed: a reload must not reopen the reviewer over a
+    // list the reader deliberately went back to.
+    expect(routerReplace).toHaveBeenCalledWith("/taken");
+  });
 
-    expect(screen.getByTestId("reviewer")).toHaveTextContent(
-      "Reviewing DD1337",
-    );
+  /**
+   * The deep link waits for the unreviewed set rather than guessing at it, and
+   * gives up quietly when there is nothing to review — the reader lands on
+   * their list, which is the honest answer to "review my courses" when there
+   * is nothing left to review.
+   */
+  it("stays on the list when nothing is unreviewed", async () => {
+    window.history.replaceState({}, "", "/taken?review=1");
+    render(<TakenCourses />);
+
+    await waitFor(() => expect(routerReplace).toHaveBeenCalledWith("/taken"));
+    expect(screen.queryByTestId("reviewer")).not.toBeInTheDocument();
   });
 });

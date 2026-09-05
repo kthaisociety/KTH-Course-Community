@@ -2,7 +2,8 @@
 
 import { CircleCheck, FileWarning, Info, Plus, RefreshCw } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -13,11 +14,16 @@ import {
 import { useMe, useRequireSession } from "@/features/auth";
 import { useCourseSummaries, useTakenCourses } from "@/features/courses";
 import {
-  Review,
+  clearReviewerSession,
+  Reviewer,
+  type ReviewerCardCourse,
+  type ReviewerSession,
+  readReviewerSession,
   UnreviewedCard,
   useUnreviewedTakenCourses,
 } from "@/features/reviews";
 import { PageColumn, PageHeader } from "@/features/shell";
+import { formatHp } from "@/lib/kth";
 import type { TranscriptProposal } from "@/server/ingest/transcript/service";
 import { useTakenMutations } from "../api/mutations";
 import { uploadTranscript } from "../api/transcript";
@@ -55,6 +61,19 @@ function readDate(iso: string): string {
   });
 }
 
+/**
+ * The line under a course's name on its reviewer card — the artboard's
+ * `revMeta`. Both halves are self-reported and either may be missing, so this
+ * prints what the row actually has rather than a shape with holes in it.
+ */
+function reviewerMeta(row: TakenRow): string | null {
+  const parts = [
+    row.earnedCredits === null ? null : `${formatHp(row.earnedCredits)} hp`,
+    row.attendanceYear === null ? null : String(row.attendanceYear),
+  ].filter((part): part is string => part !== null);
+  return parts.length > 0 ? parts.join(" · ") : null;
+}
+
 function importedSummary(added: number, filled: number): string {
   const parts: string[] = [];
   if (added > 0) {
@@ -73,7 +92,7 @@ function importedSummary(added: number, filled: number): string {
 }
 
 /**
- * The reader's taken courses — `docs/design/Course Community - Taken
+ * The reader's taken courses — `docs/design_ref_new/Course Community - Taken
  * Courses.dc.html`.
  *
  * Four things about this screen are worth knowing before changing it.
@@ -98,14 +117,19 @@ function importedSummary(added: number, filled: number): string {
  * screen. This page offers no way to create the missing course, because
  * `user_taken_courses.course_code` is a foreign key to `courses.code`.
  *
- * **The reviewer is the review form, not a second one.** The artboard draws a
- * bespoke card stack asking the same six questions the review dialog already
- * asks; building it would give a review two write paths and two validators.
- * `UnreviewedCard`'s `onSelect` and `onStart` fill a queue instead, and each
- * course opens `Review` in place — see the PR for the deviation.
+ * **The fast-track reviewer is a screen of this page, not a dialog over it.**
+ * `Reviewer` is the artboard's `isReviewer` branch and it replaces the list
+ * while a round runs — progress segments, peeked cards, "Skip for now", the
+ * save-error row and the done screen. It is presentation only: it maps a card
+ * onto `ReviewFormData` and hands it to `useAddReview`, which is the same hook
+ * the workspace pane and the review dialog write through and the one place
+ * `reviewFormSchema` runs. `?review=1` opens it on arrival — that is My Page's
+ * deep link — and the parameter is taken back out so a reload does not replay
+ * it.
  */
 export function TakenCourses() {
   useRequireSession();
+  const router = useRouter();
   const { isAuthenticated, isLoading: isSessionLoading } = useMe();
   // `taken.list` is protected, so it waits for a session rather than sending a
   // request that would be refused — the same guard `useUnreviewedTakenCourses`
@@ -136,6 +160,15 @@ export function TakenCourses() {
   const unreviewedCodes = new Set(
     unreviewed.map((course) => course.courseCode),
   );
+  /**
+   * A stable dependency for the effects below: `unreviewed` is a fresh array
+   * on every render, so an effect that depended on it would run on every one.
+   * The codes are what the queue is actually made of, and they round-trip
+   * through a comma because `user_taken_courses.course_code` is a foreign key
+   * to `courses.code`, which is a KTH course code — letters and digits, never
+   * punctuation.
+   */
+  const unreviewedKey = unreviewed.map((course) => course.courseCode).join(",");
 
   const [addOpen, setAddOpen] = useState(false);
   const [updateOpen, setUpdateOpen] = useState(false);
@@ -146,11 +179,135 @@ export function TakenCourses() {
   const [confirmError, setConfirmError] = useState<string | null>(null);
   const [banner, setBanner] = useState<string | null>(null);
   const [isConfirming, setIsConfirming] = useState(false);
-  const [reviewQueue, setReviewQueue] = useState<string[]>([]);
+  /**
+   * The round on screen, or `null` when the list is. `restored` is the stored
+   * progress and unsaved answers when the round is one this tab was already in
+   * the middle of.
+   */
+  const [round, setRound] = useState<{
+    queue: string[];
+    restored: ReviewerSession | null;
+  } | null>(null);
+  /**
+   * What the URL and the tab store asked for on arrival, held until the review
+   * lists come back. Neither can be acted on before then: one needs the
+   * unreviewed set to fill a queue, and the other needs it to know whether its
+   * queue is still true.
+   */
+  const [pendingOpen, setPendingOpen] = useState<{
+    deepLinked: boolean;
+    session: ReviewerSession | null;
+  } | null>(null);
 
-  const reviewing = reviewQueue[0] ?? null;
   const lastImport = lastTranscriptImport(takenCourses);
   const isBusy = update.isPending || remove.isPending || add.isPending;
+
+  /**
+   * How the reviewer gets opened without a click: My Page's prompt deep-links
+   * `/taken?review=1`, and a round this tab was in the middle of survives a
+   * reload.
+   *
+   * The query parameter is read from `window.location` rather than through
+   * `useSearchParams`, which would need a `Suspense` boundary around this
+   * screen in `app/` to keep the route prerenderable. It is a one-shot note
+   * from another page, consumed on arrival and never rendered from, so an
+   * effect is the honest place for it — and taking it back out with
+   * `router.replace` is what stops a reload reopening the reviewer, the same
+   * move the landing page makes with its own private-link parameter.
+   */
+  useEffect(() => {
+    let asked = false;
+    try {
+      asked = new URLSearchParams(window.location.search).get("review") === "1";
+    } catch {
+      asked = false;
+    }
+    if (asked) router.replace("/taken");
+
+    const session = readReviewerSession();
+    if (asked || session) setPendingOpen({ deepLinked: asked, session });
+  }, [router]);
+
+  /**
+   * Opens what the arrival asked for, once it is possible to be honest about
+   * it. Both cases need the unreviewed set — one `reviews.list` per taken
+   * course — so both wait for it, and both give up quietly if it never comes:
+   * a screen that cannot say which courses need reviewing has no business
+   * dealing cards for them.
+   *
+   * **A stored round is pruned, not trusted.** `sessionStorage` says what this
+   * tab was doing, not what is still true; the reader may have reviewed some of
+   * those courses in the workspace pane, or in another tab, since. Any course
+   * that is no longer unreviewed and was not already dealt with this round is
+   * dropped, because dealing its card again would ask for a second review of a
+   * course that has one. Cards the round already saved or skipped stay in the
+   * queue — they are what the progress row counts — and if that leaves nothing
+   * still to deal, the round is over and gets forgotten rather than reopened on
+   * its own done screen.
+   *
+   * **An interrupted round outranks the deep link**, because it holds answers
+   * that were typed and never saved and a fresh queue would throw them away.
+   */
+  useEffect(() => {
+    if (pendingOpen === null || !reviewsKnown) return;
+    setPendingOpen(null);
+
+    const stillUnreviewed =
+      unreviewedKey === "" ? [] : unreviewedKey.split(",");
+    const session = pendingOpen.session;
+    if (session !== null) {
+      const current = new Set(stillUnreviewed);
+      const queue = session.queue.filter(
+        (code) => current.has(code) || session.done[code] !== undefined,
+      );
+      const hasCardsLeft = queue.some(
+        (code) => session.done[code] === undefined,
+      );
+      if (hasCardsLeft) {
+        setRound({ queue, restored: { ...session, queue } });
+        return;
+      }
+      clearReviewerSession();
+    }
+
+    if (pendingOpen.deepLinked && stillUnreviewed.length > 0) {
+      setRound({ queue: stillUnreviewed, restored: null });
+    }
+  }, [pendingOpen, reviewsKnown, unreviewedKey]);
+
+  /**
+   * Starts a round. `startCode` is the row the reader clicked, which goes to
+   * the front rather than becoming a queue of one: the artboard deals the rest
+   * of the unreviewed courses behind it, and someone who came to review one
+   * course is exactly who is most likely to review a second.
+   */
+  function openReviewer(startCode?: string) {
+    const codes = unreviewed.map((course) => course.courseCode);
+    const queue =
+      startCode === undefined
+        ? codes
+        : [startCode, ...codes.filter((code) => code !== startCode)];
+    if (queue.length === 0) return;
+    // A new round replaces whatever the tab was holding, drafts included.
+    clearReviewerSession();
+    setRound({ queue, restored: null });
+  }
+
+  function closeReviewer() {
+    clearReviewerSession();
+    setRound(null);
+  }
+
+  const reviewerCourses: ReviewerCardCourse[] = (round?.queue ?? []).map(
+    (courseCode) => {
+      const row = rows.find((taken) => taken.courseCode === courseCode);
+      return {
+        courseCode,
+        name: names.get(courseCode) ?? null,
+        meta: row ? reviewerMeta(row) : null,
+      };
+    },
+  );
 
   /**
    * Reads one transcript. The file is a parameter and never becomes state, so
@@ -306,6 +463,21 @@ export function TakenCourses() {
       return <ListSkeleton />;
     }
 
+    // The reviewer is a screen of this page, not something layered over it —
+    // the artboard's `screen: "reviewer"`. It keeps the page header above it
+    // and replaces everything else, so nothing underneath can be clicked while
+    // a card is open.
+    if (round !== null) {
+      return (
+        <Reviewer
+          key={round.queue.join(",")}
+          queue={reviewerCourses}
+          restored={round.restored}
+          onClose={closeReviewer}
+        />
+      );
+    }
+
     if (proposal) {
       // `isConfirming` is the whole confirm, not just the create call: the
       // re-read before it and the fills after it are as much of the import as
@@ -433,10 +605,8 @@ export function TakenCourses() {
                   ? "You have 1 unreviewed course."
                   : `You have ${unreviewed.length} unreviewed courses.`
               }
-              onStart={() =>
-                setReviewQueue(unreviewed.map((course) => course.courseCode))
-              }
-              onSelect={(courseCode) => setReviewQueue([courseCode])}
+              onStart={() => openReviewer()}
+              onSelect={(courseCode) => openReviewer(courseCode)}
             />
           ) : null}
 
@@ -529,16 +699,6 @@ export function TakenCourses() {
           </div>
         </DialogContent>
       </Dialog>
-
-      {reviewing ? (
-        <Review
-          key={reviewing}
-          courseCode={reviewing}
-          openOnLoad
-          triggerless
-          onClose={() => setReviewQueue((queue) => queue.slice(1))}
-        />
-      ) : null}
     </PageColumn>
   );
 }
