@@ -169,12 +169,15 @@ describe("Saved", { timeout: 20_000 }, () => {
     });
 
     // #68's settled decision 1: there is no AI-comparison feature, so the word
-    // is gone from the copy as well as from the identifiers.
-    it("never says comparison", () => {
+    // is gone from the copy as well as from the identifiers. The whole page is
+    // checked, embedded collections strip included — that strip is the last
+    // place the substitution was half-finished, and it renders here rather than
+    // on a route of its own.
+    it("never offers to compare anything", () => {
       saved("DD2380");
       const { container } = render(<Saved />);
 
-      expect(container.textContent).not.toMatch(/comparison/i);
+      expect(container.textContent).not.toMatch(/compar/i);
     });
 
     it("shows placeholders rather than an empty list while loading", () => {

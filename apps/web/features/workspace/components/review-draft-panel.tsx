@@ -4,8 +4,18 @@ import { useEffect, useRef, useState } from "react";
 import { type AuthReason, AuthReasonDialog, useMe } from "@/features/auth";
 import { useCourseDetails } from "@/features/courses";
 import {
+  APPROACH_MAX,
+  APPROACH_MIDPOINT,
+  APPROACH_MIN,
+  dividerPositions,
   EXAMINATION_COLORS,
   EXAMINATION_INK,
+  type ExaminationKey,
+  isAnswered,
+  MIN_SHARE,
+  moveDivider,
+  nudgeDivider,
+  toggleMethod,
   useAddReview,
   useReviewList,
 } from "@/features/reviews";
@@ -18,20 +28,12 @@ import {
   MIN_REVIEW_SCORE,
 } from "@/types";
 import {
-  APPROACH_MIDPOINT,
-  canPublish,
-  dividerPositions,
   EMPTY_REVIEW_DRAFT,
-  type ExaminationKey,
   isUntouched,
-  MIN_SHARE,
-  moveDivider,
-  nudgeDivider,
   REVIEW_DRAFT_SECTIONS,
   type ReviewDraft,
   sectionsDone,
-  toggleMethod,
-  toReviewInput,
+  toReviewFormData,
 } from "../lib/review-draft";
 import {
   claimAwaitingSignIn,
@@ -49,6 +51,14 @@ const PROMPTS = [
 
 /** Unanswered tracks are drawn in the theme's strong hairline, not a fill. */
 const UNSET_FILL = "var(--cc-rule3)";
+
+/**
+ * The theory/applied track moves in whole five-point steps, as the artboard's
+ * does. It is its own constant rather than the examination bar's `MIN_SHARE`,
+ * which is the same number and answers a different question — the smallest a
+ * *segment* may be dragged to.
+ */
+const APPROACH_STEP = 5;
 
 function Card({ children }: { children: React.ReactNode }) {
   return (
@@ -252,7 +262,7 @@ export function ReviewDraftPanel({
     (courseReviews.data ?? []).some((review) => review.userId === userId);
   const alreadyReviewed =
     justPublished || reviewedInList || publishedAt !== null;
-  const publishable = canPublish(draft) && !alreadyReviewed;
+  const publishable = isAnswered(draft) && !alreadyReviewed;
 
   /**
    * The workspace's note that it published covers one window: between the
@@ -331,18 +341,24 @@ export function ReviewDraftPanel({
   }
 
   async function publish() {
-    const input = toReviewInput(draft);
-    if (!input || alreadyReviewed) return;
+    /*
+     * The write-up leaves the textarea as plain text and `reviews.message`
+     * holds markup — it has exactly one renderer, `parse(sanitizeHtml(...))`
+     * with `stripIgnoreTag` — so anything tag-shaped in a raw plain string is
+     * deleted on the way to the screen and "use `<vector>` from STL" arrives as
+     * "use from STL". `toReviewFormData` escapes it first, which is why
+     * publishing goes through the reviews feature's mapper rather than handing
+     * `draft.message` straight to `addReview`.
+     */
+    const form = toReviewFormData(draft);
+    if (!form || alreadyReviewed) return;
     if (!isAuthenticated) {
       markAwaitingSignIn(courseCode);
       setAuthReason("post-review");
       return;
     }
     setPublishing(true);
-    const ok = await addReview(courseCode, {
-      ...input,
-      message: input.message ?? "",
-    });
+    const ok = await addReview(courseCode, form);
     setPublishing(false);
     if (!ok) return;
     setPublishedDraft(draft);
@@ -554,11 +570,16 @@ export function ReviewDraftPanel({
             >
               Applied
             </div>
+            {/* The track's ends are the approach question's own, not the
+                examination bar's minimum share — the two happen to be the same
+                number today and mean different things. `toReviewFormData`
+                clamps to exactly these, so a control bounded by anything else
+                would let the writer set a value the mapper then quietly moved. */}
             <input
               type="range"
-              min={MIN_SHARE}
-              max={100 - MIN_SHARE}
-              step={MIN_SHARE}
+              min={APPROACH_MIN}
+              max={APPROACH_MAX}
+              step={APPROACH_STEP}
               value={draft.approachTheoryPercent ?? APPROACH_MIDPOINT}
               aria-label="How theoretical rather than applied the course was"
               aria-valuetext={

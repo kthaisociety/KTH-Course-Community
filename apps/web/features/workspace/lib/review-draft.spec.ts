@@ -1,92 +1,37 @@
 import { describe, expect, it } from "vitest";
+import { sanitizeHtml } from "@/lib/sanitize-html";
 import { examinationDistributionSchema } from "@/types";
 import {
-  canPublish,
-  dividerPositions,
   EMPTY_REVIEW_DRAFT,
-  evenShares,
-  moveDivider,
-  nudgeDivider,
+  isUntouched,
   type ReviewDraft,
   sectionsDone,
-  toExaminationDistribution,
-  toggleMethod,
-  toReviewInput,
+  toReviewFormData,
 } from "./review-draft";
 
+/**
+ * Only what the pane adds to the reviews feature's draft.
+ *
+ * The model itself and every bar transform now live in
+ * `features/reviews/lib/review-draft.ts`, and `features/reviews/lib/
+ * review-draft.spec.ts` is where they are tested. Re-testing `evenShares` or
+ * `moveDivider` here would be testing the same function twice under two names,
+ * which is what the duplication this file used to sit on top of felt like from
+ * the inside.
+ */
 function draft(over: Partial<ReviewDraft> = {}): ReviewDraft {
   return { ...EMPTY_REVIEW_DRAFT, ...over };
 }
 
-describe("evenShares", () => {
-  it.each([1, 2, 3, 4, 5, 6])("adds up to 100 for %i methods", (count) => {
-    const shares = evenShares(count);
-    expect(shares).toHaveLength(count);
-    expect(shares.reduce((total, share) => total + share, 0)).toBe(100);
+/** A publishable draft, so a test can vary one thing at a time. */
+function answered(over: Partial<ReviewDraft> = {}): ReviewDraft {
+  return draft({
+    happyTook: true,
+    workloadScore: 7,
+    learningScore: 8,
+    ...over,
   });
-
-  it("has nothing to split when nothing is picked", () => {
-    expect(evenShares(0)).toEqual([]);
-  });
-});
-
-describe("toggleMethod", () => {
-  it("picks a method and splits the bar evenly", () => {
-    const picked = toggleMethod(toggleMethod(draft(), "exam"), "labs");
-
-    expect(picked.methods).toEqual(["exam", "labs"]);
-    expect(picked.shares).toEqual([50, 50]);
-  });
-
-  it("unpicking re-splits what is left", () => {
-    const three = ["exam", "labs", "projects"].reduce(
-      (current, method) =>
-        toggleMethod(current, method as "exam" | "labs" | "projects"),
-      draft(),
-    );
-    const two = toggleMethod(three, "labs");
-
-    expect(two.methods).toEqual(["exam", "projects"]);
-    expect(two.shares).toEqual([50, 50]);
-  });
-});
-
-describe("moveDivider", () => {
-  const three = draft({
-    methods: ["exam", "labs", "projects"],
-    shares: [35, 35, 30],
-  });
-
-  it("moves only the pair either side of the divider", () => {
-    const moved = moveDivider(three, 0, 20);
-
-    expect(moved.shares).toEqual([20, 50, 30]);
-    expect(moved.shares.reduce((total, share) => total + share, 0)).toBe(100);
-  });
-
-  it("snaps to five-point steps", () => {
-    expect(moveDivider(three, 0, 22).shares[0]).toBe(20);
-    expect(moveDivider(three, 0, 23).shares[0]).toBe(25);
-  });
-
-  it("never drags a segment out of existence", () => {
-    expect(moveDivider(three, 0, 0).shares).toEqual([5, 65, 30]);
-    expect(moveDivider(three, 0, 100).shares).toEqual([65, 5, 30]);
-  });
-
-  it("ignores a divider that is not there", () => {
-    expect(moveDivider(three, 2, 50)).toBe(three);
-  });
-
-  it("nudges one step at a time from the keyboard", () => {
-    expect(nudgeDivider(three, 0, -1).shares).toEqual([30, 40, 30]);
-    expect(nudgeDivider(three, 1, 1).shares).toEqual([35, 40, 25]);
-  });
-
-  it("reports each divider as a running total", () => {
-    expect(dividerPositions(three)).toEqual([35, 70]);
-  });
-});
+}
 
 describe("sectionsDone", () => {
   it("counts nothing on an untouched draft", () => {
@@ -116,12 +61,9 @@ describe("sectionsDone", () => {
   it("counts all three when the write-up is there too", () => {
     expect(
       sectionsDone(
-        draft({
+        answered({
           examinationForgotten: true,
           approachForgotten: true,
-          workloadScore: 7,
-          learningScore: 8,
-          happyTook: true,
           message: "Worth it.",
         }),
       ),
@@ -129,84 +71,109 @@ describe("sectionsDone", () => {
   });
 });
 
-describe("canPublish", () => {
-  it("needs happy took and both scores, and nothing else", () => {
-    const ready = draft({
-      happyTook: false,
-      workloadScore: 3,
-      learningScore: 9,
-    });
+describe("isUntouched", () => {
+  it("is true for a draft nobody has answered anything on", () => {
+    expect(isUntouched(draft())).toBe(true);
+  });
 
-    expect(canPublish(ready)).toBe(true);
-    expect(canPublish({ ...ready, happyTook: null })).toBe(false);
-    expect(canPublish({ ...ready, workloadScore: null })).toBe(false);
-    expect(canPublish({ ...ready, learningScore: null })).toBe(false);
+  // The header reads "Not saved yet" off this, and ticking a box is an answer
+  // the pane has to keep — the shared check cannot see either flag.
+  it("is false once a checkbox says the writer does not remember", () => {
+    expect(isUntouched(draft({ examinationForgotten: true }))).toBe(false);
+    expect(isUntouched(draft({ approachForgotten: true }))).toBe(false);
+  });
+
+  it("is false once anything else is answered", () => {
+    expect(isUntouched(draft({ workloadScore: 3 }))).toBe(false);
+    expect(isUntouched(draft({ message: "Good." }))).toBe(false);
   });
 });
 
-describe("toExaminationDistribution", () => {
-  it("fills every key and passes the wire contract", () => {
-    const distribution = toExaminationDistribution(
-      draft({ methods: ["labs", "exam"], shares: [60, 40] }),
+describe("what the pane sends", () => {
+  it("has nothing to send until happy, workload and learning are answered", () => {
+    expect(toReviewFormData(draft())).toBeNull();
+    expect(toReviewFormData(draft({ happyTook: true }))).toBeNull();
+    expect(
+      toReviewFormData(draft({ happyTook: true, workloadScore: 5 })),
+    ).toBeNull();
+  });
+
+  it("keeps the scores on the stored 1-10 scale", () => {
+    const form = toReviewFormData(answered());
+
+    expect(form?.workloadScore).toBe(7);
+    expect(form?.learningScore).toBe(8);
+  });
+
+  it("fills every examination key and passes the wire contract", () => {
+    const form = toReviewFormData(
+      answered({ methods: ["exam", "labs"], shares: [60, 40] }),
     );
 
-    expect(distribution).toEqual({
-      exam: 40,
+    expect(
+      examinationDistributionSchema.safeParse(form?.examinationDistribution)
+        .success,
+    ).toBe(true);
+    expect(form?.examinationDistribution).toMatchObject({
+      exam: 60,
+      labs: 40,
       assignments: 0,
-      labs: 60,
       projects: 0,
       seminars: 0,
       other: 0,
     });
-    expect(examinationDistributionSchema.safeParse(distribution).success).toBe(
-      true,
-    );
-  });
-
-  it("is absent, not zeroes, when the writer does not remember", () => {
-    expect(
-      toExaminationDistribution(
-        draft({ methods: ["exam"], shares: [100], examinationForgotten: true }),
-      ),
-    ).toBeNull();
-  });
-
-  it("is absent when the question was never touched", () => {
-    expect(toExaminationDistribution(draft())).toBeNull();
-  });
-});
-
-describe("toReviewInput", () => {
-  it("refuses a draft that is not publishable", () => {
-    expect(toReviewInput(draft({ happyTook: true }))).toBeNull();
-  });
-
-  it("keeps the scores on the stored 1-10 scale", () => {
-    const input = toReviewInput(
-      draft({ happyTook: true, workloadScore: 8, learningScore: 6 }),
-    );
-
-    expect(input).toMatchObject({ workloadScore: 8, learningScore: 6 });
   });
 
   it("stores an unanswered approach as absent rather than the midpoint", () => {
-    const input = toReviewInput(
-      draft({ happyTook: true, workloadScore: 5, learningScore: 5 }),
-    );
-
-    expect(input?.approachTheoryPercent).toBeNull();
+    expect(toReviewFormData(answered())?.approachTheoryPercent).toBeNull();
   });
 
-  it("stores a remembered approach as the writer left it", () => {
-    const input = toReviewInput(
-      draft({
-        happyTook: true,
-        workloadScore: 5,
-        learningScore: 5,
-        approachTheoryPercent: 70,
+  // "I don't remember" is a stored `null`, never zeroes, and it has to win over
+  // whatever the cleared control happened to leave behind — a draft restored
+  // from `sessionStorage` is read field by field, so both can be present at once.
+  it("drops answers the writer said they do not remember", () => {
+    const form = toReviewFormData(
+      answered({
+        examinationForgotten: true,
+        methods: ["exam"],
+        shares: [100],
+        approachForgotten: true,
+        approachTheoryPercent: 80,
       }),
     );
 
-    expect(input?.approachTheoryPercent).toBe(70);
+    expect(form?.examinationDistribution).toBeNull();
+    expect(form?.approachTheoryPercent).toBeNull();
+  });
+
+  /*
+   * The data-loss regression.
+   *
+   * `reviews.message` is only ever rendered through `parse(sanitizeHtml(...))`,
+   * and `sanitizeHtml` runs with `stripIgnoreTag` — so a raw plain-text
+   * write-up loses everything tag-shaped on its way to the screen, silently and
+   * after it was stored. The pane's box is a plain `<textarea>`, so escaping on
+   * the way out is the only thing standing between a reviewer and a sentence
+   * with a hole in it.
+   */
+  it("keeps characters a renderer would otherwise eat as markup", () => {
+    const form = toReviewFormData(
+      answered({ message: "use <vector> from STL & <algorithm> too" }),
+    );
+
+    expect(form?.message).toBe(
+      "<p>use &lt;vector&gt; from STL &amp; &lt;algorithm&gt; too</p>",
+    );
+    // And what the review card actually renders: `sanitizeHtml` with
+    // `stripIgnoreTag` is the step that used to delete the useful half of the
+    // sentence, so it is run here rather than described.
+    expect(sanitizeHtml(form?.message ?? "")).toContain("&lt;vector&gt;");
+    expect(sanitizeHtml(form?.message ?? "")).not.toBe(
+      "<p>use  from STL & </p>",
+    );
+  });
+
+  it("leaves a write-up nobody typed empty rather than inventing a paragraph", () => {
+    expect(toReviewFormData(answered({ message: "   " }))?.message).toBe("");
   });
 });

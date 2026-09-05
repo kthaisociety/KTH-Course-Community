@@ -7,6 +7,7 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { sanitizeHtml } from "@/lib/sanitize-html";
 import type { CourseDetails, CourseStats } from "@/types";
 import type { OpenCourse } from "../lib/open-courses";
 import { WorkspacePane } from "./workspace-pane";
@@ -33,11 +34,15 @@ vi.mock("@/features/courses", () => ({
 // `ReviewList` is the reviews feature's own list of designed Review Cards
 // (#87). The pane's job is to hand it the course and its reviews, which is
 // what this asserts; how a card draws itself is that feature's test.
-// The palette is the real one — the pane draws the same examination bar the
-// Review Card does. The barrel itself is not imported: it reaches the rich
-// text editor, whose stylesheet needs a PostCSS pass Vitest does not run.
+// The palette and the review-draft model are the real ones — the pane draws
+// the same examination bar the Review Card does, and since the pane's draft
+// stopped carrying its own copy of the model, `toReviewFormData` is what turns
+// what the writer typed into what is sent. Faking either would test a fake.
+// The barrel itself is not imported: it reaches the rich text editor, whose
+// stylesheet needs a PostCSS pass Vitest does not run.
 vi.mock("@/features/reviews", async () => ({
   ...(await import("@/features/reviews/lib/examination-palette")),
+  ...(await import("@/features/reviews/lib/review-draft")),
   useReviewList: (code: string | undefined) => useReviewList(code),
   useAddReview: () => addReview,
   ReviewList: ({
@@ -443,9 +448,37 @@ describe("the review draft tab", () => {
       workloadScore: 8,
       learningScore: 6,
       happyTook: true,
-      message: "Hard but worth it.",
+      message: "<p>Hard but worth it.</p>",
     });
     expect(await screen.findByText(/Published. Thanks/)).toBeInTheDocument();
+  });
+
+  /*
+   * The write-up leaves a plain `<textarea>` and lands in `reviews.message`,
+   * which has exactly one renderer: `parse(sanitizeHtml(...))` on the Review
+   * Card, configured with `stripIgnoreTag`. A raw plain string therefore loses
+   * everything tag-shaped *on the way to the screen*, after it was stored and
+   * with nothing to show the reviewer it happened — "use <vector> from STL"
+   * arrives as "use from STL". The pane escapes it first, through the reviews
+   * feature's own `toReviewFormData`.
+   */
+  it("keeps a write-up that mentions something tag-shaped", async () => {
+    const user = userEvent.setup({ delay: null });
+    renderPane([openCourse("review")]);
+
+    await user.click(screen.getByRole("button", { name: "Yes, I am" }));
+    setScore("How demanding was this course?", 8);
+    setScore("How much did you learn in this course?", 6);
+    await user.type(
+      screen.getByRole("textbox", { name: "Write your review" }),
+      "use <vector> from STL",
+    );
+    await user.click(screen.getByRole("button", { name: "Post review" }));
+
+    const sent = addReview.mock.calls.at(-1)?.[1].message as string;
+    expect(sent).toBe("<p>use &lt;vector&gt; from STL</p>");
+    // The renderer that used to eat it, run for real.
+    expect(sanitizeHtml(sent)).toContain("&lt;vector&gt;");
   });
 
   it("asks a visitor to sign in instead of publishing", async () => {

@@ -27,25 +27,26 @@ import { fromPlainText } from "./review-text";
  * way to spell it. Neither ever produces zeroes: `CONTEXT.md` is explicit that a
  * recollection nobody has is absent, not empty.
  *
- * ## The relationship to the workspace's copy
+ * ## The workspace pane writes through this model too
  *
- * `features/workspace/lib/review-draft.ts` carries a near-identical model, and
- * the bar geometry here — `evenShares`, `toggleMethod`, `moveDivider`,
- * `nudgeDivider`, `dividerPositions` — is the same arithmetic under the same
- * names. Both should collapse into this one, which is the reviews feature's to
- * own: the pane is one presentation of a review draft and the card stack is
- * another, and neither is where the model belongs. Concretely, the follow-up
- * deletes the workspace copy and has `review-draft-panel.tsx` import from
- * `@/features/reviews`, keeping only `examinationForgotten` /
- * `approachForgotten` — the two flags that are genuinely the pane's, because it
- * draws explicit "I don't remember" checkboxes where this card does not.
+ * `features/workspace/lib/review-draft.ts` used to carry a near-identical copy
+ * of everything below — the same shape, the same bar arithmetic under the same
+ * names. It no longer does: it now holds only the two flags that are genuinely
+ * the pane's, `examinationForgotten` and `approachForgotten`, and extends this
+ * shape with them. The pane draws explicit "I don't remember" checkboxes where
+ * this card leaves the question alone, which is the one real difference between
+ * the two surfaces.
  *
- * It is not done here because `features/workspace/**` belongs to a change in
- * flight beside this one, and a rename across a moving feature is how a rebase
- * eats a day. **What the duplication cannot do is make the two disagree about a
- * stored review**: neither shape reaches the database. Both are mapped to
- * `ReviewFormData` and handed to `useAddReview`, which runs `reviewFormSchema`
- * itself before it sends anything — one write path, one validator, two forms.
+ * That is why `toggleMethod`, `moveDivider` and `nudgeDivider` are generic over
+ * the draft rather than typed to this exact shape. Each of them replaces
+ * `methods` and `shares` and copies everything else through untouched, so a
+ * caller with a wider draft gets its own type back instead of having its extra
+ * fields erased at the type level while surviving at runtime.
+ *
+ * What the split cannot do is make the two disagree about a stored review.
+ * Neither shape reaches the database: both are mapped to `ReviewFormData` and
+ * handed to `useAddReview`, which runs `reviewFormSchema` itself before it
+ * sends anything — one write path, one validator, two forms.
  */
 
 export type ExaminationKey = (typeof EXAMINATION_DISTRIBUTION_KEYS)[number];
@@ -119,15 +120,25 @@ export function evenShares(count: number): number[] {
   return shares;
 }
 
-/** Pick or unpick an examination method, re-splitting the bar evenly. */
-export function toggleMethod(
-  draft: ReviewDraft,
+/**
+ * Pick or unpick an examination method, re-splitting the bar evenly.
+ *
+ * Generic over the draft because the workspace pane's draft is this one plus
+ * its two "I don't remember" flags, and it has to get its own type back. The
+ * cast is sound for exactly the reason the generic is safe: `methods` and
+ * `shares` are both declared on `ReviewDraft`, they are the only fields
+ * replaced, and everything else is spread through unchanged. TypeScript cannot
+ * see that a spread of `D` with two of `D`'s own fields overwritten is still a
+ * `D`, so it is asserted here rather than pushed onto three call sites.
+ */
+export function toggleMethod<D extends ReviewDraft>(
+  draft: D,
   method: ExaminationKey,
-): ReviewDraft {
+): D {
   const at = draft.methods.indexOf(method);
   const methods =
     at >= 0 ? draft.methods.toSpliced(at, 1) : [...draft.methods, method];
-  return { ...draft, methods, shares: evenShares(methods.length) };
+  return { ...draft, methods, shares: evenShares(methods.length) } as D;
 }
 
 /**
@@ -139,11 +150,11 @@ export function toggleMethod(
  * `MIN_SHARE` so a segment can never be dragged out of existence — a 0% segment
  * would be a method the reviewer picked and then said nothing about.
  */
-export function moveDivider(
-  draft: ReviewDraft,
+export function moveDivider<D extends ReviewDraft>(
+  draft: D,
   index: number,
   cumulativePercent: number,
-): ReviewDraft {
+): D {
   if (index < 0 || index >= draft.shares.length - 1) return draft;
 
   const before = draft.shares
@@ -157,15 +168,17 @@ export function moveDivider(
   const shares = [...draft.shares];
   shares[index] = left;
   shares[index + 1] = pair - left;
-  return { ...draft, shares };
+  // Same assertion as `toggleMethod`, for the same reason: only `shares`,
+  // already a field of `ReviewDraft`, is replaced.
+  return { ...draft, shares } as D;
 }
 
 /** Nudge a divider one step, which is how the keyboard drives the bar. */
-export function nudgeDivider(
-  draft: ReviewDraft,
+export function nudgeDivider<D extends ReviewDraft>(
+  draft: D,
   index: number,
   steps: number,
-): ReviewDraft {
+): D {
   if (index < 0 || index >= draft.shares.length - 1) return draft;
   const before = draft.shares
     .slice(0, index)
