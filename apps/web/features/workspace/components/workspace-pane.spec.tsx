@@ -450,7 +450,18 @@ describe("the review draft tab", () => {
       happyTook: true,
       message: "<p>Hard but worth it.</p>",
     });
-    expect(await screen.findByText(/Published. Thanks/)).toBeInTheDocument();
+    /*
+     * `Course Community - Workspace Pane.dc.html:296-297` paints this banner
+     * `var(--successTint)` with `var(--successInk)`. It used to derive the fill
+     * from `--cc-success` at 12% in an inline `style` and take the solid for
+     * the text, which no mix could reach in dark, where the design states the
+     * tint as alpha over the page (#127 §1). Classes rather than computed
+     * colours: jsdom runs no Tailwind, so what is assertable is the token the
+     * component asked for — and that the derivation is not back in a `style`.
+     */
+    const banner = await screen.findByText(/Published. Thanks/);
+    expect(banner).toHaveClass("bg-cc-success-tint", "text-cc-success-ink");
+    expect(banner.getAttribute("style")).toBeNull();
   });
 
   /*

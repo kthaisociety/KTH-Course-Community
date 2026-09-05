@@ -718,15 +718,15 @@ export function ReviewDraftPanel({
             back untouched — check it and publish when you are ready.
           </p>
         )}
+        {/* The success tint family, which is what the artboard draws:
+            `Course Community - Workspace Pane.dc.html:296-297` paints this
+            banner `var(--successTint)` with `var(--successInk)` on the text and
+            the tick. This used to derive the fill from `--cc-success` at 12%
+            and take the *solid* for the text; neither is reachable that way,
+            because dark states the tint as alpha over the page and light as a
+            flat mix that is not a percentage of anything (#127 §1). */}
         {justPublished && (
-          <p
-            className="flex items-center gap-2.5 border-cc-rule border-b px-5 py-2.5 text-[12.5px]"
-            style={{
-              background:
-                "color-mix(in srgb, var(--cc-success) 12%, var(--cc-surface))",
-              color: "var(--cc-success)",
-            }}
-          >
+          <p className="flex items-center gap-2.5 border-cc-rule border-b bg-cc-success-tint px-5 py-2.5 text-[12.5px] text-cc-success-ink">
             Published. Thanks — your review is live on the course.
           </p>
         )}
