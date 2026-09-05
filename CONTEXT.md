@@ -159,10 +159,6 @@ _Avoid_: avatar, skin, theme
 
 **Signal**:
 The moving trail rendered along a node. A visual state, never a stored event.
-_Today_: nothing renders one. The landing hero draws the real community graph,
-and a **Backbone edge** carries no signal because it is not a friendship —
-animating one along it would assert a social meaning the data does not have.
-Closed by the first surface that renders a signal on a node.
 _Avoid_: pulse, ping, animation, activity
 
 **Personalization tier**:
