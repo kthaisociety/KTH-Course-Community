@@ -8,7 +8,7 @@ import type { CardGeometry, CourseCardAction, CourseCardModel } from "@/types";
 /**
  * The course card, shared by Explore, Saved and Collections.
  *
- * Straight from `docs/design/Course Community - Course Card.dc.html`. It renders
+ * Straight from `docs/design_ref_new/Course Community - Course Card.dc.html`. It renders
  * `c` and measures nothing: geometry arrives as one `geo` object so the parent
  * owns the collapse ramp, and the only structural difference between the pages
  * is `action` — Explore's split Save button, or the picker on its own. That is
@@ -75,7 +75,7 @@ function geometryVars(geo: CardGeometry): CSSProperties {
 
 /**
  * The phone end of the ramp, from
- * `docs/design/reference/Course Community - Mobile Preview.dc.html`. It is a
+ * `docs/design_ref_new/Course Community - Mobile Preview.dc.html`. It is a
  * container query rather than a viewport one because a card is narrow whenever
  * its column is, phone or not.
  */

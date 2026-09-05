@@ -1,7 +1,7 @@
 /**
  * Course card fixtures, extracted from the design.
  *
- * Source: `docs/design/Course Community - Course Card.dc.html` — the
+ * Source: `docs/design_ref_new/Course Community - Course Card.dc.html` — the
  * `SAMPLE_GEO` / `SAMPLE_COURSE` literals in its trailing
  * `<script type="text/x-dc">` block.
  *
