@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -117,5 +120,36 @@ describe("where the migration sits in the document", () => {
     // The `biome-ignore` on `dangerouslySetInnerHTML` is only defensible while
     // the string stays a fixed literal, so pin that rather than trust the note.
     expect(THEME_KEY_MIGRATION).not.toMatch(/\$\{|<\/script/i);
+  });
+});
+
+/**
+ * The migration writes `cc:theme` as a literal, and `app/layout.tsx` asks
+ * `next-themes` for `cc:theme` as a separate literal. Two spellings of one name
+ * in two files is precisely the drift `theme-tokens.spec.tsx` exists to catch on
+ * the colour side, and here it fails *silently*: change the provider's key alone
+ * and the migration keeps happily populating a key nothing reads.
+ */
+describe("the key the migration writes", () => {
+  const layout = readFileSync(
+    path.resolve(
+      path.dirname(fileURLToPath(import.meta.url)),
+      "../../../app/layout.tsx",
+    ),
+    "utf8",
+  );
+
+  it("is the key `app/layout.tsx` configures next-themes with", () => {
+    const configured = /storageKey=\{?"([^"]+)"/.exec(layout)?.[1];
+    expect(configured).toBe("cc:theme");
+    expect(THEME_KEY_MIGRATION).toContain(`s.setItem("${configured}"`);
+    expect(THEME_KEY_MIGRATION).toContain(`s.getItem("${configured}")`);
+  });
+
+  it("reads next-themes' own default key as the source", () => {
+    // `next-themes` persists under `theme` when no `storageKey` is given, which
+    // is what every returning reader has. The provider passed no key before this
+    // PR, so that is the only legacy spelling there can be.
+    expect(THEME_KEY_MIGRATION).toContain(`s.getItem("theme")`);
   });
 });
