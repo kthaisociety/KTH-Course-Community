@@ -82,13 +82,16 @@ export function ConfirmDialog({ request, onCancel, onConfirm }: Props) {
           overlayClassName="bg-[rgba(20,30,45,0.34)] supports-backdrop-filter:backdrop-blur-none"
           /*
             `cc-theme` because the dialog is portalled to the body and would
-            otherwise leave the subtree that defines the `--cc-*` tokens. The
-            `sm:max-w-[440px]` is not redundant with `w-[440px]`: the primitive
-            carries an `sm:max-w-sm`, and a plain `max-w-*` sits in a different
-            tailwind-merge group, so without the responsive override the card
-            would be clamped to 384px on any screen wide enough to have room.
+            otherwise leave the subtree that defines the `--cc-*` tokens.
+
+            There used to be an `sm:max-w-[440px]` here too, to defeat an
+            `sm:max-w-sm` the primitive carried in its own base classes — a plain
+            `max-w-*` sits in a different tailwind-merge group and so did not
+            replace it. #178 took that clamp out of the primitive, which is where
+            the problem was, so the override is gone: `w-[440px]` now means
+            440px, and `max-w-[calc(100vw-2rem)]` is the only thing narrowing it.
           */
-          className="cc-theme w-[440px] max-w-[calc(100vw-2rem)] gap-0 rounded-[14px] bg-cc-surface p-[22px] text-cc-ink shadow-[0_18px_48px_rgba(20,30,45,0.24)] ring-0 sm:max-w-[440px]"
+          className="cc-theme w-[440px] max-w-[calc(100vw-2rem)] gap-0 rounded-[14px] bg-cc-surface p-[22px] text-cc-ink shadow-[0_18px_48px_rgba(20,30,45,0.24)] ring-0"
         >
           <div className="font-semibold text-[11px] text-cc-brand uppercase tracking-[0.06em]">
             {request.eyebrow}

@@ -28,7 +28,12 @@ export function useEditorModal(): [
     const { title, content } = modalContent;
     return (
       <Dialog open={true} onOpenChange={onClose}>
-        <DialogContent>
+        {/*
+          384px, stated rather than inherited: `DialogContent` used to clamp
+          every dialog to it and no longer does (#178). This modal is one of the
+          two that were happy with the clamp, so it keeps it explicitly.
+        */}
+        <DialogContent className="sm:max-w-sm">
           <DialogHeader>
             <DialogTitle>{title}</DialogTitle>
           </DialogHeader>

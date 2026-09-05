@@ -63,7 +63,27 @@ function DialogContent({
       <DialogPrimitive.Content
         data-slot="dialog-content"
         className={cn(
-          "fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl bg-popover p-4 text-sm text-popover-foreground ring-1 ring-foreground/10 duration-100 outline-none sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+          /*
+            `max-w-[calc(100%-2rem)]` is the phone guard, and it is the only
+            opinion this primitive has about width. There used to be an
+            `sm:max-w-sm` beside it, and it was a trap (#178).
+
+            tailwind-merge keeps `sm:max-w-*` and plain `max-w-*` in different
+            groups, so neither a caller's `w-[440px]` nor its `max-w-4xl`
+            replaced it: from the `sm` breakpoint up the dialog rendered at
+            384px, whatever it had asked for. Nothing errored and no test failed,
+            so it only showed up if someone measured — and two dialogs were wrong
+            on screen for it while two more carried an `sm:max-w-[440px]` to work
+            around a clamp that is invisible from the call site.
+
+            So a caller now states its own width and gets it. A caller that wants
+            a *cap* rather than a width overrides this class and takes the phone
+            guard with it, so it should state both at once —
+            `max-w-[min(56rem,calc(100vw-2rem))]`, the way `Review` does. The two
+            callers that were happy at 384px, `CommandDialog` and the editor's
+            `useEditorModal`, now say `sm:max-w-sm` for themselves.
+          */
+          "fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl bg-popover p-4 text-sm text-popover-foreground ring-1 ring-foreground/10 duration-100 outline-none data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
           className,
         )}
         {...props}

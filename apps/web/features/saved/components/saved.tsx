@@ -153,15 +153,22 @@ export function Saved({ openCollectionId = null, openCourse = null }: Props) {
   /**
    * The request this page has already acted on, so it acts on it exactly once.
    *
-   * The guard is not belt-and-braces. `openCourse` is not idempotent at the
-   * state level — re-opening an open tab still returns a *new* workspace — so
-   * every run of the effect below re-renders this component, and any dependency
-   * whose identity is not stable across that render sends the effect round
-   * again immediately. `router` is exactly such a dependency: Next's own object
-   * happens to be stable, nothing promises it, and a test double that returns
-   * `{ push, replace }` per call is not. That is an unbounded loop that
-   * allocates a workspace per turn, and it shows up as an out-of-memory crash
-   * rather than as a failing assertion.
+   * This used to be load-bearing, and said so. `openCourse` was not idempotent
+   * at the state level — re-opening a tab that was already open and already in
+   * front still returned a *new* workspace — so every run of the effect below
+   * re-rendered this component, and any dependency whose identity is not stable
+   * across that render sent the effect round again immediately. `router` is
+   * exactly such a dependency. That was an unbounded loop allocating a workspace
+   * per turn, and it surfaced as an out-of-memory crash rather than as a failed
+   * assertion. #154 fixed it at the value: a no-op open now returns the very
+   * same `Workspace`, `useState` bails out, and the loop has no fuel.
+   *
+   * The guard stays, demoted to belt-and-braces. What it still defends against
+   * is a *second* instruction rather than the loop — the same `?open=` surviving
+   * one more render before `router.replace` has taken it back out of the URL
+   * would reopen a tab the reader may already have closed. Next's `router` is
+   * stable in practice; nothing promises it, and a test double that returns
+   * `{ push, replace }` per call is not.
    *
    * Clearing it when the request goes away is what keeps it a one-shot rather
    * than a once-ever: the same course opened from a collection a second time is

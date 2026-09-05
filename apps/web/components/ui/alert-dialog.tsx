@@ -45,14 +45,28 @@ function AlertDialogOverlay({
 
 function AlertDialogContent({
   className,
+  overlayClassName,
   size = "default",
   ...props
 }: React.ComponentProps<typeof AlertDialogPrimitive.Content> & {
   size?: "default" | "sm";
+  /**
+   * Restyle the scrim — e.g. to drop the blur when what is behind must stay
+   * legible, which is the usual reason to reach for it.
+   *
+   * Parity with {@link DialogContent}, which has had this prop all along.
+   * Without it this primitive rendered an overlay no caller could reach, and
+   * #178 records what that cost: the two confirmations that needed the
+   * artboard's own scrim were built on `Dialog` instead, purely because only
+   * `Dialog` let them at it. Which primitive a confirmation uses should follow
+   * from whether the question is destructive enough to want `alertdialog`
+   * semantics, not from which one happens to expose a prop.
+   */
+  overlayClassName?: string;
 }) {
   return (
     <AlertDialogPortal>
-      <AlertDialogOverlay />
+      <AlertDialogOverlay className={overlayClassName} />
       <AlertDialogPrimitive.Content
         data-slot="alert-dialog-content"
         data-size={size}
