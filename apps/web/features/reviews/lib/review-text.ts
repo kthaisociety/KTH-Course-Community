@@ -44,6 +44,39 @@ export function toStoredMessage(html: string): string | null {
   return toPlainText(html) ? html : null;
 }
 
+const ESCAPES: Record<string, string> = {
+  "&": "&amp;",
+  "<": "&lt;",
+  ">": "&gt;",
+};
+
+/**
+ * A write-up typed into a plain `<textarea>` as the markup `reviews.message`
+ * holds.
+ *
+ * `message` has exactly one renderer — `parse(sanitizeHtml(...))` on the review
+ * card — and `sanitizeHtml` is configured with `stripIgnoreTag`, so anything
+ * tag-shaped in a raw plain string is deleted on the way to the screen. A
+ * reviewer who writes "use `<vector>` from STL" would watch the useful half of
+ * their sentence disappear. Escaping first means the column holds one format,
+ * whichever form typed into it, and the reviewer gets back the characters they
+ * typed.
+ *
+ * Blank lines become paragraphs and single newlines become breaks, which is the
+ * only structure a textarea can express. Text with nothing in it stays `""`;
+ * turning that into `<p></p>` would make a review with no write-up look
+ * written, and `toStoredMessage` is what decides that question.
+ */
+export function fromPlainText(text: string): string {
+  const escaped = text.replace(/[&<>]/g, (char) => ESCAPES[char]);
+  return escaped
+    .split(/\n[^\S\n]*\n/)
+    .map((paragraph) => paragraph.trim())
+    .filter((paragraph) => paragraph.length > 0)
+    .map((paragraph) => `<p>${paragraph.replace(/\n/g, "<br />")}</p>`)
+    .join("");
+}
+
 /**
  * The one line of the review the collapsed card shows. Cut mid-sentence rather
  * than mid-word, and never left with a dangling comma before the ellipsis —
