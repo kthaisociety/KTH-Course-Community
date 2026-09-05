@@ -129,15 +129,25 @@
   --cc-btn-fg: #ffffff;
   --cc-info: rgba(23, 81, 166, 0.07);
 
-  /* `--cc-warn-*` is the **review draft** header tint. It used to be documented
-     here as "the nudge to write a review", which #127 §4 flags as wrong: #88
-     showed the actual nudge is `--cc-btn` on `--cc-surface`, and nothing amber
-     appears on it. The Design System artboard's `BANNERS` names this family
-     "Review draft header", and `Course Community - Workspace Pane.dc.html`
-     paints exactly it in its `isReview` branch — `--cc-warn` behind the draft's
-     title block, `--cc-warn-ink` on its eyebrow, `--cc-warn-border` under the
-     sticky action row and `--cc-warn-solid` as that row's opaque backing.
-     `--cc-warn-btn`/`--cc-warn-btn-fg` are that row's call to action. */
+  /* `--cc-warn-*` is the **review draft** family. It used to be documented here
+     as "the nudge to write a review", which #127 §4 flags as wrong: #88 showed
+     the actual nudge is `--cc-btn` on `--cc-surface`, and nothing amber appears
+     on it.
+
+     The tint half is the draft's header. The Design System artboard names
+     `--warn` "Review draft header" in both `TINTS` and `BANNERS`, and
+     `Course Community - Workspace Pane.dc.html` paints exactly it in its
+     `isReview` branch — `--warn` behind the draft's title block, `--warnInk` on
+     its "Review draft" eyebrow, and `--warnBorder` + `--warnSolid` as the
+     border and opaque backing of the progress row that sticks beneath it.
+
+     `--cc-warn-btn`/`--cc-warn-btn-fg` are a separate pair, and the one place
+     the old wording was not wrong: the Design System demos them under "Status
+     text & buttons" as a **"Write a review"** button. They are an accent, not a
+     banner tint — the filled progress segments and the submit button in
+     `review-draft-panel.tsx`, and the Review Card's accent for a review that
+     was not happy (`Review Card.dc.html:51`). Neither appears anywhere in the
+     Workspace Pane's `isReview` branch. */
   --cc-warn: #fdf7ea;
   --cc-warn-border: #f0e6d2;
   --cc-warn-ink: #7a5309;
