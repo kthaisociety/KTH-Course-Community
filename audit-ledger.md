@@ -317,3 +317,365 @@ so a submit inside that window would take the animated path. In practice Motion
 resolves this synchronously from `matchMedia` on the client and a submit
 requires a user gesture after hydration, so I could not construct a real case.
 Recorded so it is not lost rather than filed as a defect.
+---
+
+# Route 2 — Explore (`/search`)
+
+**Artboard:** `docs/design_ref_new/Course Community - Explore.dc.html` (1662 lines).
+**Files inspected:** `apps/web/app/(service)/search/page.tsx`,
+`features/search/components/explore.tsx`,
+`features/search/hooks/use-explore.ts`,
+`features/search/hooks/use-debounced-query.ts`,
+`features/search/api/queries.ts`.
+
+## Control inventory
+
+| Control | Desktop | Mobile | Same handler? |
+|---|---|---|---|
+| Search field | `onQueryChange`, 300ms debounce | identical | yes |
+| Submit (Enter) | `onSubmit` → skips debounce | identical | yes |
+| "Clear search" | `onClearQuery` | identical | yes |
+| School `<select>` | `onDepartmentChange` → `?department=` | identical, native select | yes |
+| Minimum rating `<select>` | `onMinRatingChange` → `?rating=` | identical | yes |
+| "Clear filters" | `onClearFilters` | identical, conditional on `hasFilters` | yes |
+| `StartHere` suggestion chips ×3 | `onSuggestQuery` | identical | yes |
+| Empty-state "clear the search" | `onClearQuery` | identical | yes |
+| Error "Try again" | `onRetry` → `search.refetch()` | identical | yes |
+| Card "open" | `workspace.open(code, "details")` | identical | yes |
+| Card "Write a review" | `workspace.open(code, "review")` | identical | yes |
+| Workspace surface | `WorkspacePaneHost` (column) | `MobileWorkspaceSheetHost` (sheet) | same `useWorkspacePane` state, see E-05 |
+| `AuthReasonDialog` | one per page | identical | yes |
+
+Both workspace presentations are driven from the *same* `useWorkspacePane()`
+instance and the same `workspace.open` / `workspace.close` callbacks, and are
+mutually exclusive (`presentation === "sheet" ? … : …`). So the acceptance
+criterion "Explore mobile workspace uses the same API-backed panels and actions
+as the desktop pane" is met at the data layer: mobile mounts the *same*
+`WorkspacePane` component, with the same `CourseDetailsPanel` and
+`ReviewDraftPanel` inside it. The gap is in tab navigation only — E-05.
+
+## States exercised
+
+| State | Rendered by | Verdict |
+|---|---|---|
+| No query | `StartHere` panel, 3 suggestion chips | satisfied — see E-03 |
+| Loading, first page | `ResultsSkeleton` ×3 | satisfied |
+| Loading, refetch | previous results stay (`keepPreviousData`), label says "Loading courses…" | satisfied; `isLoading: search.isFetching` is deliberate and correct |
+| Empty | dashed `Panel`, "No courses match “…”" | satisfied |
+| Error | `ResultsError` + "Try again" | satisfied |
+| Signed out | fully browsable; only Save/Take prompt | satisfied |
+
+The live region is mounted unconditionally and says nothing before a search,
+rather than appearing with its first message — which is the correct handling for
+`aria-live`, since a region that mounts together with its content is announced
+unreliably. Recorded as satisfied.
+
+## Findings
+
+### E-01 — the pager stays unbuilt and the deferral cites #148 — **satisfied, confirmed as instructed**
+
+`features/search/components/explore.tsx:45` names the issue explicitly:
+
+> *"The artboard's **pager** (lines 263-265) is not built, and stays unbuilt by
+> decision: it is **#148**. `search.courses` accepts a `page` input and ignores
+> it, and returns `total: results.length` — the count of what it just returned."*
+
+The citation is present and correct, and no pager exists. I did not propose
+building one. **Confidence: high.**
+
+The consequence is handled honestly downstream too: `resultsLabel()` says
+*"Showing N courses for “q”"* rather than the artboard's *"12 courses match"*,
+because the server cannot answer "how many match" — the department and rating
+filters run after the fetch, so the returned set can be shorter than the
+matching set. That is the smallest edit that keeps the sentence true, and it is
+the same discipline #148 is about.
+
+### E-02 — `WorkspacePane` is mounted — **#127 §3 satisfied**
+
+#127 §3 says *"`WorkspacePane` is exported and tested but **mounted nowhere**"*.
+That is no longer true, and per the brief I verified it rather than trusting
+either state of the checkbox.
+
+- Explore mounts `WorkspacePaneHost` (wide) or `MobileWorkspaceSheetHost`
+  (narrow), `explore.tsx:207` and `:220`.
+- Saved mounts the same pair, `saved.tsx` — see route 3.
+
+Both hosts render `WorkspacePane`. `#127 §3` is closed. **Confidence: high.**
+
+### E-03 — three deliberate divergences from the artboard, all sound — **intentional deviation, documented**
+
+Recorded here so the ledger is checkable against the artboard rather than only
+against the code.
+
+1. **No pager** — E-01, decision on #68, issue #148.
+2. **A filter row the artboard does not draw.** The artboard's search block is
+   the field alone; #89 requires filters. They are built in the artboard's own
+   control vocabulary (34px pill, `--cc-surface` over `--cc-rule3`) rather than
+   inventing a treatment, and they are native `<select>`s — keyboard- and
+   screen-reader-correct on every platform with no portal. Sound.
+3. **No `searchBarMargin` correction.** The artboard narrows the bar by 236px
+   while tabs are open (line 1350) so the field stays centred over the results
+   rather than the whole row. Not built, and the stated reason checks out: the
+   bar is centred inside `max-w-[560px]`, which is narrower than the results
+   column at every width the pane can open at, so there is nothing to correct.
+   **Confidence: medium** — I reasoned this from the class names rather than
+   measuring in a browser.
+4. **`StartHere` replaces the artboard's full-catalogue listing.** The artboard
+   can list the whole catalogue because its mock store *is* the catalogue.
+   `search.courses` is an embedding search and returns nothing for an empty
+   query, so the page would open on a blank column under a search box. This is
+   the "render only data the real contracts provide" rule applied correctly.
+
+### E-04 — the URL/field reconciliation is correct, including Back — **satisfied**
+
+`use-explore.ts` keeps the typed value in component state and the *searched*
+value in `?q=`, reconciled through a `writtenQuery` ref that records the last
+value the hook itself wrote. A `?q=` that differs came from outside — Back,
+Forward, or a followed link — and the field adopts it. Without that ref the
+mirror would win every argument and silently undo a Back.
+
+`issuedParams` solves a second, subtler race: `router.replace` does not land in
+`searchParams` synchronously, so two writes inside that window (a school picked
+while the typed query is still in its 300ms debounce) would each build a URL
+from the same pre-write snapshot and the later one would drop the other's
+parameter. The second write composes on the record instead. This is a real bug
+that is already fixed; I record it as satisfied because a ledger of defects only
+cannot be told from a ledger that stopped looking. **Confidence: high.**
+
+### E-05 — mobile has no way to switch between open courses without closing one — **defect / product decision required**
+
+**Severity: S3.** **Confidence: high** on the behaviour; **medium** on whether
+it is a defect at all, which is why it is also a product decision.
+
+`features/workspace/components/mobile-workspace-sheet-host.tsx:105-113` passes:
+
+```tsx
+openCourses={[activeEntry]}
+activeId={activeEntry.id}
+onActivate={() => undefined}
+hideTabs
+```
+
+So on a narrow frame:
+
+- The pane is given a **one-entry list**, not the real open list.
+- The tab strip and its "All open panes" overflow menu are suppressed by
+  `hideTabs`.
+- `onActivate` is **inert** — an unreachable no-op, since `hideTabs` removes the
+  only two things that could call it.
+
+The consequence: with three courses open on mobile, only the top one is on
+screen and the *only* way to reach the second is to **close** the first. Closing
+is destructive — it discards that tab — whereas on desktop switching is free.
+
+**What the artboard actually says.** I read
+`Course Community - Mobile Preview.dc.html` rather than assuming.
+Line 19: *"Tapping a course opens its own sheet from the bottom… **Sheets stack
+— open several, dismiss each with the × or by dragging it all the way down.**"*
+Line 265 is `<sc-for list="{{ sheets }}">`, and each sheet is absolutely
+positioned at its own `bottom: {{ s.bottomOffset }}px` with its own `zIndex`,
+importing the Workspace Pane with `hide-tabs="{{ true }}"`.
+
+So the artboard **also has no tab switcher on mobile** — `hideTabs` and the inert
+`onActivate` match it, and the pane's `hideTabs` doc comment cites this artboard
+note accurately. That half is correct and I record it as satisfied.
+
+**But the artboard renders every sheet, visibly offset into a stack, and the
+implementation renders exactly one.** That is the divergence:
+
+- A reader on mobile with three courses open sees no indication that two more
+  exist. The artboard's offset stack is the affordance that says so.
+- The component's own doc comment claims *"A closed sheet reveals the still-open
+  entry beneath it, so several course details and review drafts remain
+  available"* — which describes the artboard's stack, not what this code draws.
+  Functionally the reveal does happen (`closeCourse` reassigns `activeId`), but
+  nothing is "beneath" anything; there is one sheet whose contents change.
+
+**Root cause:** the host collapses the workspace to `active` before rendering
+(`openCourses.find(…) ?? openCourses.at(-1)`) and renders a single
+`<Sheet>`, instead of mapping the open list to a stack of sheets.
+
+**What the fix would be:** map `openCourses` to one absolutely-positioned sheet
+each, `bottom` offset by depth and `z-index` by index, with only the topmost
+interactive — which is what the artboard draws. The drag-to-dismiss and × already
+exist per sheet. Radix's `Sheet` renders one portal per instance, so this is
+more likely a hand-rolled stack container than N `<Sheet>`s; that is the
+non-trivial part and the reason it belongs in a fix pass rather than here.
+
+**Why it is also a product decision:** the Mobile Preview artboard labels itself
+*"Mobile concept — … **Draft only, does not change the desktop pages.**"* Its
+authority is therefore weaker than the other artboards', and shipping one sheet
+instead of a stack may be a deliberate simplification nobody wrote down.
+**Escalated.**
+
+### E-06 — the mobile sheet adds a titled header the artboard does not draw — **divergence, low**
+
+**Severity: S4.** **Confidence: high.**
+
+The artboard's sheet has no header band: the drag handle sits absolutely at
+`top:8px` centred, the × at `top:8px;right:10px`, both overlaying the pane
+content. The implementation adds a 48px `bg-cc-info` header carrying the course
+label and the ×, and puts the drag handle inside it
+(`mobile-workspace-sheet-host.tsx:74-101`).
+
+This is an accessibility-positive change — the sheet gains a visible accessible
+name, and the drag target is a real `<button>` with an `aria-label` rather than
+a bare `div` with `onPointerDown`. But it is still an unrecorded divergence from
+the artboard on a route where the design governs, so it goes in the ledger.
+No fix proposed; if it is kept it should be documented as a deviation the way
+`FindYourDot`'s is.
+
+### E-07 — `openCourse` is still non-idempotent by object identity — **defect, S4, root cause of a resolved class**
+
+**Severity: S4** today; it was S1 twice. **Confidence: high.**
+
+`features/workspace/lib/open-courses.ts`:
+
+```ts
+export function openCourse(workspace, courseCode, kind) {
+  const id = openCourseId(courseCode, kind);
+  if (workspace.open.some((entry) => entry.id === id)) {
+    return { ...workspace, activeId: id };   // ← new object even when nothing changed
+  }
+  …
+}
+```
+
+Re-opening the tab that is **already active** returns a structurally identical
+but referentially new `Workspace`. `useWorkspacePane` stores it with `setState`,
+so React re-renders, `useMemo` rebuilds the returned object, and every host
+re-renders. That is the engine behind both historical OOM crashes: pair it with
+an effect whose dependency identity is not stable and it never settles.
+
+It is S4 rather than S2 today because every consumer now guards its own call
+site (E-04, L-04) — but the guards are four copies of a workaround for one
+defect in a pure function, and the fifth consumer will not have one.
+
+**What the fix would be:** one line —
+
+```ts
+if (workspace.activeId === id) return workspace;
+```
+
+before the spread, inside the already-open branch. Pure, covered by
+`open-courses.spec.ts`'s existing suite shape, and it would let the guards
+elsewhere become belt-and-braces rather than load-bearing. **Not applied —
+audit only.** This is the single highest-value item in the ledger relative to
+its size.
+
+### E-08 — `?open=`/`?kind=` contract is forgiving in both directions — **satisfied**
+
+`openCourseRequest` upper-cases the code (so the bookmarked `/course/dd2380`
+still works) and treats any non-`review` kind as `details` rather than refusing
+the link. Both are the right call for a parameter that is typed by hand as often
+as it is followed, and both are documented. The redirect at
+`app/(service)/course/[courseCode]/page.tsx` maps `?writeReview=1` onto
+`kind=review` and everything else onto `kind=details`, so the retired URL's two
+ways in survive as the pane's two kinds of tab. **Confidence: high.**
+
+---
+
+# Cross-route surface — navigation and shell
+
+**Artboards:** `Course Community - Page Header.dc.html` (the whole of it),
+`Course Community - Mobile Preview.dc.html`.
+**Files inspected:** `features/shell/components/app-shell.tsx`,
+`features/shell/components/rail.tsx`,
+`features/shell/components/page-header.tsx`,
+`features/shell/components/page-column.tsx`,
+`features/shell/components/theme-toggle.tsx`,
+`features/shell/lib/page-title.ts`, `apps/web/app/globals.css`,
+`apps/web/app/layout.tsx`, `apps/web/components/theme-provider.tsx`.
+
+### N-01 — drawer navigation and route titles at every breakpoint — **satisfied**
+
+The acceptance criterion is *"drawer navigation and route titles remain
+accessible at supported breakpoints"*. Verified:
+
+- `AppShell` renders the rail as an `<aside>` that is `hidden … @3xl/shell:block`
+  and, below that, a left `Sheet` drawer holding **the same `Rail` component**
+  behind a `Menu` button (`aria-label="Open menu"`). Not a second copy — one
+  component, two mounts, so no divergent local state. The drawer's `Rail` also
+  gets `onDismiss`, which the inline one does not need.
+- The drawer has a `SheetTitle` (`sr-only`, "Menu"), so it is named for a
+  screen reader.
+- Route titles: `PageHeader` is `hidden … @3xl/shell:block`; the topbar `<h1>`
+  is `@3xl/shell:hidden`. Exactly one `<h1>` at every width, and the topbar one
+  is derived from the pathname by `pageTitleFor`, so it is correct on first
+  paint rather than after hydration.
+- `PageHeader`'s comment records *why* it uses the named `@3xl/shell` container
+  rather than its nearest `PageColumn` container: nested page containers could
+  otherwise open a tablet interval with zero — or two — route headings. That is
+  a real bug that was reasoned about and avoided.
+
+**Confidence: high.**
+
+### N-02 — the scrollbar convention holds across `features/` and `app/` — **satisfied (this is the product owner's probe)**
+
+`app/globals.css:363-371` documents the convention:
+
+> *"The convention is that a scroll container picks one of these two utilities
+> deliberately. Neither is the same as picking nothing… **what this pass
+> corrected across ten surfaces**. If you add `overflow-auto` anywhere, add one
+> of these with it."*
+
+I enumerated every `overflow-y-auto` / `overflow-x-auto` / `overflow-auto` /
+`overflow-scroll` in `features/`, `app/` and `components/`. **All thirteen in
+`features/` and `app/` carry a utility** — eleven `scrollbar-subtle`, two
+`scrollbar-hidden` (Explore's and Saved's results columns, which is the
+documented "deliberate exception, and the only one", justified by the columns
+carrying their own scroll affordance).
+
+I record this as the deliberate probe #134 planted, and as **satisfied**.
+**Confidence: high.**
+
+### N-03 — four scroll containers outside `features/` still take no utility — **defect the probe pass missed**
+
+**Severity: S4** (S3 on one surface a reader actually reaches).
+**Confidence: high.**
+
+The convention in `globals.css` is written unqualified — *"every scroll
+container in the app"*, *"if you add `overflow-auto` anywhere"* — but four
+containers under `components/` have neither utility:
+
+| File | Line | Container | Reachable? |
+|---|---|---|---|
+| `apps/web/components/RichEditor.tsx` | 121 | toolbar, `overflow-auto` | **yes** |
+| `apps/web/components/RichEditor.tsx` | 145 | editor body, `h-72 overflow-auto` | **yes** |
+| `apps/web/components/RichEditor.tsx` | 157 | footer bar, `overflow-auto` | **yes** |
+| `apps/web/components/editor/editor-ui/content-editable.tsx` | 19 | `overflow-auto` | via `components/editor/**` |
+
+`RichEditor` is **live production UI**: `features/reviews/components/review.tsx:5`
+imports `RichTextEditor` from it, and that dialog is reachable from My Page's
+"Edit review" and from `ReviewList`'s inline edit — which is itself rendered
+inside the workspace pane's `CourseDetailsPanel`. So a reader editing a review
+inside a `cc-theme` dialog gets the browser's default chunky scrollbar on the
+editor body, which is exactly what the probe pass set out to remove.
+
+**Root cause:** the corrective pass scoped itself to `features/` and `app/`.
+The convention it documented did not.
+
+**What the fix would be:** add `scrollbar-subtle` to those three `RichEditor`
+containers and to `content-editable.tsx`. Four class additions, no behaviour
+change. The shadcn primitives under `components/ui/**` are a separate question —
+they carry their own vocabulary (`no-scrollbar`, `scrollbar-thin`,
+`scrollbar-none`) inherited from upstream, and several are unused (see X-02), so
+I would leave them alone and say so in the convention comment.
+
+### N-04 — theme handling and the `cc:theme` key migration — **satisfied**
+
+`app/layout.tsx` records three deliberate deviations from the artboards
+(`attribute="class"` over `data-cc-theme`; `defaultTheme="system"` with
+`enableSystem` over the artboard's light default; `storageKey="cc:theme"`), each
+with a reason the artboards have no way to express, and a fourth note on why
+`disableTransitionOnChange` is deliberately *not* set — it would kill the
+cross-fade `cc-theme` exists to provide.
+
+The Greptile finding from wave 1 ("moving the persisted theme key to `cc:theme`
+silently drops a reader's existing preference") is closed:
+`components/theme-provider.tsx:27` carries `THEME_KEY_MIGRATION`, a one-time
+pre-paint script that copies a valid `theme` value to `cc:theme` only when
+`cc:theme` is unset, wrapped in `try/catch` because reading `localStorage`
+throws outright where site data is blocked. It runs before `next-themes`' own
+pre-paint script, which is why it lives in the provider rather than an effect.
+**Confidence: high.**
