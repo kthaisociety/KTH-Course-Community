@@ -28,11 +28,23 @@ import { HeroNetwork } from "./hero-network";
 
 const TRY = ["deep learning", "machine learning", "DD2380"];
 
+/**
+ * The three supporting blocks under the hero, in the artboard's order.
+ *
+ * "Search" departs from `Course Community - Landing.dc.html` by one sentence.
+ * The artboard writes *"Open as many courses as you like side by side"*, which
+ * promises a multi-column comparison the workspace pane does not do: the
+ * **pane** sits side by side with the results, and the **courses inside it**
+ * are tabs, one visible at a time (`Course Community - Workspace Pane.dc.html`
+ * keeps a single active `tab` and an "All open panes" overflow menu). The
+ * design governs copy, so this is the smallest edit that keeps the sentence's
+ * shape and cadence while describing the pane the design itself draws.
+ */
 const SECTIONS = [
   {
     kicker: "Search",
     title: "Every KTH course, one field",
-    body: "Filter by school, credits or rating. Open as many courses as you like side by side.",
+    body: "Filter by school, credits or rating. Open as many courses as you like, each a tab in the pane beside your results.",
   },
   {
     kicker: "Read",

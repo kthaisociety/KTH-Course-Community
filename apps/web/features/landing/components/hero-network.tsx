@@ -374,6 +374,51 @@ export function HeroNetwork({ window: graphWindow, labelled }: Props) {
     };
     document.addEventListener("visibilitychange", onVisibility);
 
+    /**
+     * Repaint when the theme changes.
+     *
+     * Every colour on this canvas is a `--cc-*` token resolved at draw time, so
+     * the palette is an input to the frame exactly like the data and the size
+     * are. Pixels already rasterised do not re-resolve a custom property, and
+     * the scene is otherwise painted once and left alone, so without this the
+     * graph keeps its old colours until something else happens to redraw it.
+     *
+     * The root element's class list is watched rather than `next-themes`'
+     * `resolvedTheme`, and the difference is not a preference. `ThemeProvider`
+     * applies the class from an effect of its own, and it is an ancestor of
+     * this component — React runs child effects before parent effects, so an
+     * effect on `resolvedTheme` here would read `getComputedStyle` before the
+     * class it depends on had landed and repaint the palette it was trying to
+     * replace. The attribute is the honest signal because it is the thing the
+     * tokens actually hang off, and watching it also covers a theme changed in
+     * another tab or by the OS, neither of which renders this component.
+     */
+    const themeWatcher = new MutationObserver(() => draw(scene));
+    themeWatcher.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["class"],
+    });
+
+    /**
+     * Repaint once the web font has loaded.
+     *
+     * The keep-out is measured off the rendered text — `getClientRects()` per
+     * line — so it is measured against whatever font was in place at the time.
+     * A fallback face swapping to Geist reflows those lines without necessarily
+     * resizing the section, so the `ResizeObserver` need not fire and the fade
+     * would go on protecting copy that has moved.
+     *
+     * `fonts.ready` cannot be cancelled, so the flag is the only teardown there
+     * is: a hero unmounted during a slow font load would otherwise re-measure a
+     * canvas that has already left the document and paint a scene nobody owns.
+     */
+    let mounted = true;
+    document.fonts?.ready
+      .then(() => {
+        if (mounted) relayout();
+      })
+      .catch(() => {});
+
     const media =
       typeof window.matchMedia === "function"
         ? window.matchMedia("(prefers-reduced-motion: reduce)")
@@ -387,7 +432,9 @@ export function HeroNetwork({ window: graphWindow, labelled }: Props) {
     media?.addEventListener?.("change", onMedia);
 
     return () => {
+      mounted = false;
       stop();
+      themeWatcher.disconnect();
       observer?.disconnect();
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("resize", onWindowResize);
