@@ -159,7 +159,11 @@ _Avoid_: avatar, skin, theme
 
 **Signal**:
 The moving trail rendered along a node. A visual state, never a stored event.
-_Avoid_: pulse, ping, animation, activity
+A signal is ongoing: a node either carries one or it does not. A **one-shot
+reveal** — the ring **Find your dot** draws once on the viewer's own node — is a
+different thing, and *pulse* is its name. So `scene.pulse` is not a signal by
+another word, and the two are not interchangeable.
+_Avoid_: ping, animation, activity
 
 **Personalization tier**:
 How far an app user has unlocked node personalisation, held as the highest value
