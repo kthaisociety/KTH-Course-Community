@@ -21,39 +21,42 @@
  * The three appearance axes, in the order the artboard lists them. The index in
  * this array plus one is the tier that unlocks the axis.
  *
- * `unlockHint` is the artboard's own copy for how a tier is reached. Nothing in
- * `server/` writes `personalization_tier_earned` yet, so every account is at
- * tier 0 and all three read as locked — the hints describe the intended rules,
- * not a mechanism that runs today. The revised `cc-store.js` says the same
- * thing from the other side: "Tier 0 accounts keep the default look; only
- * personalized nodes carry a row."
+ * **The design disagreed with itself about tiers 2 and 3, and the product owner
+ * settled it on 2026-09-05: the rendered list wins.** The My Page artboard
+ * draws `mk(2, "Dot style", …, "style")` and `mk(3, "Signal on click", …,
+ * "signalStyle")`, while `cc-store.js`'s `TIER_AXES` constant says
+ * `{ 1: "color", 2: "signalStyle", 3: "style" }` — the opposite pairing. Both
+ * halves survived the 2026-09-05 export unchanged, so the revision did not
+ * settle it and a reader could not tell which half to believe.
  *
- * **The design disagrees with itself about tiers 2 and 3, still.** The My Page
- * artboard's rendered list builds `mk(2, "Dot style", …, "style")` and
- * `mk(3, "Signal on click", …, "signalStyle")`, while `cc-store.js`'s
- * `TIER_AXES` constant is `{ 1: "color", 2: "signalStyle", 3: "style" }` — the
- * opposite pairing for 2 and 3. Both halves survive unchanged into the revised
- * `docs/design_ref/2026-09-05/` export, so the revision did not settle it. The order
- * below follows the rendered list, because that is what a reader of the
- * artboard sees and the schema is silent: `personalization_tier_earned` is one
- * number and no column says which axis a tier buys. Whoever writes that column
- * settles it.
+ * The rendered list is what a reader of the artboard actually sees, and it puts
+ * the most visible reward behind the hardest contribution: tier 3 is reviewing
+ * an entire imported transcript, and a moving signal reads louder than a static
+ * shape. `cc-store.js` is the erroneous half and wants correcting at source.
+ *
+ * `unlockHint` is the rule from ADR 0005, which is what `server/graph/tier.ts`
+ * now actually enforces. It used to carry the artboard's own copy, which named
+ * a different ladder entirely — five reviews, then a fully reviewed transcript,
+ * then *referring friends*, a feature that does not exist. That was harmless
+ * while nothing wrote the column and every account sat at tier 0. It stopped
+ * being harmless the moment the writer shipped, because a hint that names an
+ * unearnable act is a promise the app cannot keep.
  */
 export const PERSONALIZATION_AXES = [
   {
     key: "color",
     title: "Dot color",
-    unlockHint: "Unlocks once you have written 5 reviews.",
+    unlockHint: "Unlocks when you publish your first review.",
   },
   {
     key: "style",
     title: "Dot style",
-    unlockHint: "Unlocks once your uploaded transcript is fully reviewed.",
+    unlockHint: "Unlocks when you import a transcript.",
   },
   {
     key: "signalStyle",
     title: "Signal on click",
-    unlockHint: "Unlocks once you have referred friends to Course Community.",
+    unlockHint: "Unlocks when every course in your transcript has your review.",
   },
 ] as const;
 

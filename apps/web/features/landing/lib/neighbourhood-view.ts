@@ -39,8 +39,11 @@ import { clearAt, lineClearance, type Rect } from "./hero-keepout";
  * contract, mapping each name onto a `--cc-*` custom property so the palette
  * can be re-skinned in CSS without a data migration.
  *
- * Nobody is assigned one of these today. They are what personalisation will
- * hand out once something writes `users.personalization_tier_earned`.
+ * Nobody is assigned one of these today, and earning a tier does not change
+ * that. `server/graph/tier.ts` now writes `users.personalization_tier_earned`,
+ * so tier 1 genuinely unlocks the colour axis — but no procedure writes
+ * `users_node_profiles.color`, so every node still renders the `"default"`
+ * brand blue. These are what a member will pick from once that writer exists.
  */
 export const NODE_COLOR_VARS = {
   aurora: "--cc-node-aurora",

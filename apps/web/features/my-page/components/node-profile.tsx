@@ -29,23 +29,26 @@ type Props = {
  * `isDot` branch); `CONTEXT.md` licenses "dot" for the **Find your dot** flow's
  * copy alone, so the label stays and the identifiers say what the glossary says.
  *
- * **Nothing here is choosable, and nobody has been given anything.** The
- * artboard renders each unlocked tier as a row of pickable options and writes
- * the choice back. There is no procedure that writes `users_node_profiles`:
- * `graph` exposes `join`, `neighbourhood`, `publicWindow` and `effectiveTier`,
- * and placement stores the column default. Nothing raises
- * `users.personalization_tier_earned` either, so every account is at tier 0 and
- * all three rows read as locked. The palette is therefore shown as what the
- * colours *are*, not as buttons that would silently do nothing. Two of the
- * three axes could not offer a choice regardless — `node_style` and
- * `node_signal_style` are Postgres enums with exactly one value each.
+ * **Tiers are earned now, but nothing here is choosable yet.** The artboard
+ * renders each unlocked tier as a row of pickable options and writes the choice
+ * back. Half of that exists: `server/graph/tier.ts` raises
+ * `users.personalization_tier_earned` from ADR 0005's ladder, so a row can
+ * genuinely read as unlocked. The other half does not — there is still no
+ * procedure that writes `users_node_profiles`, since `graph` exposes only
+ * `join`, `neighbourhood`, `publicWindow` and `effectiveTier`, and placement
+ * stores the column default. The palette is therefore shown as what the colours
+ * *are*, not as buttons that would silently do nothing. Two of the three axes
+ * could not offer a choice regardless — `node_style` and `node_signal_style`
+ * are Postgres enums with exactly one value each, so unlocking them today
+ * unlocks a set of one.
  *
  * The colours are drawn from `--cc-node-*`, mapped from the stored **names**
  * through the same table the landing page's canvas uses. The server stores a
  * name and never a hex; `cc-store.js` inverts that — its `NODE_COLORS` is five
- * hex strings — and is wrong about the shape. It is right about the state,
- * though: "Tier 0 accounts keep the default look; only personalized nodes carry
- * a row", which is every account today.
+ * hex strings — and is wrong about the shape. Its remark that "Tier 0 accounts keep the default
+ * look; only personalized nodes carry a row" was true of every account until
+ * the tier writer shipped, and is now true only of accounts that have not
+ * contributed.
  */
 export function NodeProfile({ effectiveTier, isUnavailable }: Props) {
   const rows = personalizationTierRows(effectiveTier ?? 0);
