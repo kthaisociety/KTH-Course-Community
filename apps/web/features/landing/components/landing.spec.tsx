@@ -1,10 +1,19 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { TRPCClientError } from "@trpc/client";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { SEARCH_MORPH_KEY } from "@/features/shell/lib/search-morph";
 import { Landing } from "./landing";
 
 const push = vi.fn();
+const prefetch = vi.fn();
 const replace = vi.fn();
 const logout = vi.fn();
 const setTheme = vi.fn();
@@ -16,13 +25,23 @@ const sendMagicLink = vi.fn();
 let search = "";
 
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push, replace }),
+  useRouter: () => ({ push, prefetch, replace }),
   usePathname: () => "/",
   useSearchParams: () => new URLSearchParams(search),
 }));
 
 vi.mock("next-themes", () => ({
   useTheme: () => ({ resolvedTheme: "light", setTheme }),
+}));
+
+// The one hook the departure is gated on. Motion reads the media query once, at
+// module scope, so the preference is faked at the hook rather than at
+// `matchMedia` — otherwise it would be fixed by whichever suite loaded first.
+const reduceMotion = vi.fn(() => false);
+
+vi.mock("motion/react", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("motion/react")>()),
+  useReducedMotion: () => reduceMotion(),
 }));
 
 vi.mock("@/lib/auth-client", () => ({
@@ -118,7 +137,75 @@ beforeEach(() => {
   // jsdom has no 2d context. The hero is decoration, so the page must render
   // without one rather than throw.
   HTMLCanvasElement.prototype.getContext = vi.fn(() => null) as never;
+  reduceMotion.mockReturnValue(false);
+  window.sessionStorage.clear();
 });
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
+/**
+ * jsdom lays nothing out, so the search bar measures as a zero-sized box and the
+ * page falls back to a plain navigation — which is correct behaviour and exactly
+ * what the departure must not be tested through. This gives the bar the box it
+ * would have in a browser.
+ */
+const LANDING_BAR = { left: 140, top: 400, width: 560, height: 42 };
+
+function layOutTheBar() {
+  vi.spyOn(
+    HTMLFormElement.prototype,
+    "getBoundingClientRect",
+  ).mockImplementation(
+    () =>
+      ({
+        ...LANDING_BAR,
+        x: LANDING_BAR.left,
+        y: LANDING_BAR.top,
+        right: LANDING_BAR.left + LANDING_BAR.width,
+        bottom: LANDING_BAR.top + LANDING_BAR.height,
+        toJSON: () => LANDING_BAR,
+      }) as DOMRect,
+  );
+}
+
+function searchField() {
+  return screen.getByLabelText(/search a course, code or subject/i);
+}
+
+function stashed() {
+  const raw = window.sessionStorage.getItem(SEARCH_MORPH_KEY);
+  return raw === null ? null : JSON.parse(raw);
+}
+
+/**
+ * Submit without `userEvent`, so nothing in the test's own machinery is sharing
+ * a timer queue with the departure's deadline.
+ */
+function submit(value = "graph theory") {
+  const field = searchField();
+  fireEvent.change(field, { target: { value } });
+  const form = field.closest("form");
+  if (!form) throw new Error("the search field is not inside a form");
+  fireEvent.submit(form);
+}
+
+/** Put the tab in the background and tell the page about it. */
+function backgroundTab() {
+  Object.defineProperty(document, "hidden", {
+    configurable: true,
+    get: () => true,
+  });
+  fireEvent(document, new Event("visibilitychange"));
+}
+
+function foregroundTab() {
+  Object.defineProperty(document, "hidden", {
+    configurable: true,
+    get: () => false,
+  });
+}
 
 function openFindYourDot(user: ReturnType<typeof userEvent.setup>) {
   return user.click(screen.getByRole("button", { name: /find your dot/i }));
@@ -197,28 +284,214 @@ describe("Landing", () => {
     it("hands a typed search over to Explore", async () => {
       const user = userEvent.setup();
       render(<Landing />);
-      await user.type(
-        screen.getByLabelText(/search a course, code or subject/i),
-        "graph theory{Enter}",
+      await user.type(searchField(), "graph theory{Enter}");
+      await waitFor(() =>
+        expect(push).toHaveBeenCalledWith("/search?q=graph%20theory"),
       );
-      expect(push).toHaveBeenCalledWith("/search?q=graph%20theory");
     });
 
     it("hands a suggestion over the same way", async () => {
       const user = userEvent.setup();
       render(<Landing />);
       await user.click(screen.getByRole("button", { name: "DD2380" }));
-      expect(push).toHaveBeenCalledWith("/search?q=DD2380");
+      await waitFor(() =>
+        expect(push).toHaveBeenCalledWith("/search?q=DD2380"),
+      );
     });
 
     it("goes nowhere on an empty search", async () => {
       const user = userEvent.setup();
       render(<Landing />);
-      await user.type(
-        screen.getByLabelText(/search a course, code or subject/i),
-        "   {Enter}",
-      );
+      await user.type(searchField(), "   {Enter}");
       expect(push).not.toHaveBeenCalled();
+      expect(stashed()).toBeNull();
+    });
+
+    /**
+     * The departure half of the landing → Explore transition. What the bar does
+     * *after* the navigation belongs to the shell
+     * (`features/shell/components/search-morph.spec.tsx`); what this page owes
+     * it is a rect, measured at the moment of submit, and a navigation that
+     * waits for the page to have cleared out of the bar's way.
+     */
+    describe("leaving for Explore", () => {
+      it("hands Explore the box the bar was standing in", async () => {
+        layOutTheBar();
+        const user = userEvent.setup();
+        render(<Landing />);
+
+        await user.type(searchField(), "graph theory{Enter}");
+
+        expect(stashed()).toMatchObject({ x: 140, y: 400, w: 560, h: 42 });
+        expect(stashed().t).toBeTypeOf("number");
+      });
+
+      it("waits for the exit to finish before it navigates", async () => {
+        layOutTheBar();
+        const user = userEvent.setup();
+        render(<Landing />);
+
+        await user.type(searchField(), "graph theory{Enter}");
+
+        // The artboard fires a blind `setTimeout(130)` here. The push is hung
+        // off the exit animation actually completing instead, so it has not
+        // happened yet — but it does happen, without anything else prompting it.
+        expect(push).not.toHaveBeenCalled();
+        await waitFor(() =>
+          expect(push).toHaveBeenCalledWith("/search?q=graph%20theory"),
+        );
+        expect(push).toHaveBeenCalledTimes(1);
+      });
+
+      it("ignores a second submit while it is already leaving", async () => {
+        layOutTheBar();
+        const user = userEvent.setup();
+        render(<Landing />);
+
+        await user.type(searchField(), "graph theory{Enter}");
+        const first = stashed();
+        await user.click(screen.getByRole("button", { name: "DD2380" }));
+
+        expect(stashed()).toEqual(first);
+        await waitFor(() =>
+          expect(push).toHaveBeenCalledWith("/search?q=graph%20theory"),
+        );
+        expect(push).toHaveBeenCalledTimes(1);
+      });
+
+      it("prefetches Explore once, when the field is focused", async () => {
+        const user = userEvent.setup();
+        render(<Landing />);
+
+        await user.click(searchField());
+        await user.click(document.body);
+        await user.click(searchField());
+
+        expect(prefetch).toHaveBeenCalledExactlyOnceWith("/search");
+      });
+
+      // A chip is a one-click submit that never touches the field, so focusing
+      // the field is not the only way into a search worth warming.
+      it("prefetches Explore for a chip that is only being reached for", async () => {
+        const user = userEvent.setup();
+        render(<Landing />);
+
+        await user.hover(screen.getByRole("button", { name: "DD2380" }));
+
+        expect(prefetch).toHaveBeenCalledExactlyOnceWith("/search");
+        expect(push).not.toHaveBeenCalled();
+      });
+
+      it("navigates plainly, and hands nothing over, under reduced motion", async () => {
+        reduceMotion.mockReturnValue(true);
+        layOutTheBar();
+        const user = userEvent.setup();
+        render(<Landing />);
+
+        await user.type(searchField(), "graph theory{Enter}");
+
+        expect(push).toHaveBeenCalledWith("/search?q=graph%20theory");
+        expect(stashed()).toBeNull();
+      });
+
+      it("clears a rect left over from an earlier submit when it navigates plainly", async () => {
+        window.sessionStorage.setItem(
+          SEARCH_MORPH_KEY,
+          JSON.stringify({ x: 1, y: 2, w: 560, h: 42, t: Date.now() }),
+        );
+        reduceMotion.mockReturnValue(true);
+        layOutTheBar();
+        const user = userEvent.setup();
+        render(<Landing />);
+
+        await user.type(searchField(), "graph theory{Enter}");
+
+        expect(stashed()).toBeNull();
+      });
+
+      /**
+       * The exit animation completing is what normally fires the navigation, and
+       * a blind timer *driving* the departure is the artboard's mistake. These
+       * two are the floor under it: a reader who submits a valid search must
+       * never be left standing on the page they were leaving because a frame
+       * loop stopped running.
+       */
+      it("goes as soon as the tab is hidden, and drops the rect with it", () => {
+        layOutTheBar();
+        render(<Landing />);
+
+        submit();
+        expect(stashed()).not.toBeNull();
+        expect(push).not.toHaveBeenCalled();
+
+        try {
+          backgroundTab();
+
+          expect(push).toHaveBeenCalledExactlyOnceWith(
+            "/search?q=graph%20theory",
+          );
+          // Nobody watched the bar leave, so there is no gesture for Explore to
+          // continue and it must not invent one.
+          expect(stashed()).toBeNull();
+        } finally {
+          foregroundTab();
+        }
+      });
+
+      it("navigates on its own deadline if the exit never reports finishing", () => {
+        // Only the timer queue is faked: the exit runs on `requestAnimationFrame`
+        // and must stay unable to finish inside this test, or it would be the
+        // thing under test that never runs.
+        vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+        try {
+          layOutTheBar();
+          render(<Landing />);
+
+          submit();
+          expect(push).not.toHaveBeenCalled();
+
+          act(() => {
+            vi.advanceTimersByTime(600);
+          });
+
+          expect(push).toHaveBeenCalledExactlyOnceWith(
+            "/search?q=graph%20theory",
+          );
+        } finally {
+          vi.useRealTimers();
+        }
+      });
+
+      it("navigates once, whichever of the three routes out gets there first", async () => {
+        layOutTheBar();
+        render(<Landing />);
+
+        submit();
+        await waitFor(() =>
+          expect(push).toHaveBeenCalledWith("/search?q=graph%20theory"),
+        );
+
+        try {
+          backgroundTab();
+        } finally {
+          foregroundTab();
+        }
+
+        expect(push).toHaveBeenCalledTimes(1);
+      });
+
+      it("navigates plainly when the bar has no box to hand over", async () => {
+        // No `layOutTheBar()`: jsdom measures every element as zero, which is
+        // the same shape as a bar that is not on screen. There is no rect worth
+        // continuing, so the page does what it always did.
+        const user = userEvent.setup();
+        render(<Landing />);
+
+        await user.type(searchField(), "graph theory{Enter}");
+
+        expect(push).toHaveBeenCalledWith("/search?q=graph%20theory");
+        expect(stashed()).toBeNull();
+      });
     });
 
     it("opens the sign-in dialog from the header", async () => {

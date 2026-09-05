@@ -1,16 +1,21 @@
 "use client";
 
 import { LogOut, Search } from "lucide-react";
+import { motion, useReducedMotion, type Variants } from "motion/react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   type AuthReason,
   AuthReasonDialog,
   useLogout,
   useSessionData,
 } from "@/features/auth";
-import { ThemeToggle } from "@/features/shell";
+import {
+  clearSearchBarHandoff,
+  stashSearchBarHandoff,
+  ThemeToggle,
+} from "@/features/shell";
 import { isUnplaced, useNeighbourhood, usePublicWindow } from "../api/queries";
 import { FindYourDot, type FindYourDotStatus } from "./find-your-dot";
 import { HeroNetwork } from "./hero-network";
@@ -24,9 +29,69 @@ import { HeroNetwork } from "./hero-network";
  *
  * Responsive is a container query on the page itself, matching the artboards:
  * the layout answers to its rendered box, not to the viewport.
+ *
+ * ## Leaving for Explore
+ *
+ * Submitting the search does not navigate straight away. The bar the reader
+ * typed into is, visually, the same element as Explore's — same height, radius,
+ * border, surface, padding and `max-w-[560px]` — so instead of swapping one page
+ * for another it hands its box over and lets Explore continue it: the bar rises
+ * into its place on Explore while the rail slides in from the left, both on one
+ * spring. `@/features/shell`'s `search-morph` is the seam, and everything about
+ * how the two ends are coupled is written up there.
+ *
+ * This page's half is the departure. Everything that is not the bar clears out
+ * of the way over 130ms, the hero graph stops so the only thing moving is the
+ * layout, and the navigation is fired by that exit *finishing* rather than by a
+ * timer guessing when it will have. `Course Community - Landing.dc.html`'s
+ * `toExplore()` (line 501) sketches the same departure with a blind
+ * `setTimeout(130)`; this is the one place in the app authorised to improve on
+ * the artboard, and that timer is most of the reason why.
  */
 
 const TRY = ["deep learning", "machine learning", "DD2380"];
+
+/** The artboard's own exit easing, `cubic-bezier(.4,0,1,1)` over roughly 130ms. */
+const EXIT_EASE: [number, number, number, number] = [0.4, 0, 1, 1];
+
+/**
+ * Everything that leaves when the search is submitted.
+ *
+ * The set is "the page, except the bar". The bar is the one thing that survives
+ * the navigation, so it is simply the one element with no `variants` — the
+ * orchestrating root propagates the label to every motion child that has them
+ * and the plain `<form>` is untouched.
+ *
+ * That is deliberately *not* the `data-hero-clear` set. Those marks exist for
+ * the hero graph's keep-out, and the form carries one because the graph must not
+ * draw dots behind the search bar — reusing them as the exit selector would fade
+ * out the one element the whole transition is built to keep.
+ *
+ * The drift is up, not out: the bar is about to rise, and the artboard shifts
+ * the whole landing layer up by 40px on the way to Explore. Ten pixels reads as
+ * the page being drawn after it rather than as a separate movement.
+ */
+/**
+ * How long after the exit begins the navigation happens whatever the animation
+ * says.
+ *
+ * The exit itself is 130ms and completing it is still what normally fires the
+ * navigation — a blind timer *driving* the transition is the artboard's mistake,
+ * and this is not that. It is the floor under it: an animation that never
+ * reports finishing must not strand a reader who submitted a valid search on the
+ * page they were leaving. Four and a half times the exit is far enough out that
+ * it never wins a race with a merely janky frame.
+ */
+const EXIT_FALLBACK_MS = 600;
+
+const HERO_EXIT: Variants = {
+  "at-rest": { opacity: 1, y: 0 },
+  leaving: {
+    opacity: 0,
+    y: -10,
+    transition: { duration: 0.13, ease: EXIT_EASE },
+  },
+};
 
 /**
  * The three supporting blocks under the hero, in the artboard's order.
@@ -63,12 +128,26 @@ export function Landing() {
   const searchParams = useSearchParams();
   const { user, isPending: sessionPending } = useSessionData();
   const logout = useLogout();
+  const reduceMotion = useReducedMotion();
 
   const arrivedFromLink = searchParams.get("dot");
   const [query, setQuery] = useState("");
   const [authReason, setAuthReason] = useState<AuthReason | null>(null);
   const [dotOpen, setDotOpen] = useState(arrivedFromLink !== null);
   const [expired, setExpired] = useState(arrivedFromLink === "expired");
+
+  /** The bar whose box Explore continues. */
+  const barRef = useRef<HTMLFormElement>(null);
+  /** Where this page is going, once the surroundings have finished clearing. */
+  const [leavingFor, setLeavingFor] = useState<string | null>(null);
+  const navigatedRef = useRef(false);
+  const prefetchedRef = useRef(false);
+  /** Tears down whatever is still watching for the departure to finish. */
+  const departureRef = useRef<(() => void) | null>(null);
+
+  // The deadline and the visibility listener the departure arms belong to the
+  // page, not to the timer: if it leaves before either fires, they go with it.
+  useEffect(() => () => departureRef.current?.(), []);
 
   // The private link lands here with its outcome in the URL. Read once, then
   // take it back out so a reload does not replay the reveal.
@@ -101,15 +180,113 @@ export function Landing() {
     error: neighbourhood.error,
   });
 
+  /**
+   * Warm `/search` while the reader is still typing.
+   *
+   * The exit runs for 130ms and then navigates; without the route already in
+   * the client cache, the reader watches the hero clear and then waits on a
+   * fetch, and the bar arrives on Explore late enough that it reads as a new
+   * page rather than the same one continuing.
+   *
+   * Both ways into a search warm it: focusing the field, and reaching for a
+   * "Try" chip — a chip is a one-click submit that never touches the field, so
+   * focus alone would leave that path cold. Fired from event handlers and fenced
+   * by a ref: a prefetch is a request, not a piece of state, and putting
+   * `router` in an effect's dependency array is how two of this repo's earlier
+   * render loops started.
+   */
+  function warmExplore() {
+    if (prefetchedRef.current) return;
+    prefetchedRef.current = true;
+    router.prefetch("/search");
+  }
+
   function submitSearch(value: string) {
     const q = value.trim();
     if (!q) return;
-    router.push(`/search?q=${encodeURIComponent(q)}`);
+    // A second Enter on a page that is already leaving would stash a second
+    // rect and push twice.
+    if (leavingFor) return;
+    const href = `/search?q=${encodeURIComponent(q)}`;
+
+    // Reduced motion is the plain navigation this page has always done, and the
+    // artboard drops the transition here too. So is a bar with no measurable
+    // box: there is nothing to hand over, and a rect Explore would reject is
+    // worse than no rect at all. Either way any rect an earlier submit left
+    // behind goes with it, so Explore can never inherit one.
+    const from = barRef.current?.getBoundingClientRect();
+    if (reduceMotion || !from?.width || !from.height) {
+      clearSearchBarHandoff();
+      router.push(href);
+      return;
+    }
+
+    stashSearchBarHandoff(from);
+    setLeavingFor(href);
+
+    // Two things finish the departure besides the exit animation, and both exist
+    // because a hidden tab throttles `requestAnimationFrame` to nothing — so
+    // `onAnimationComplete` may simply never arrive. Neither is what normally
+    // drives the navigation, and both go through the same one-time guard.
+    const deadline = window.setTimeout(() => depart(href), EXIT_FALLBACK_MS);
+    const onVisibility = () => {
+      if (!document.hidden) return;
+      // Nobody is watching the departure, so there is no gesture for Explore to
+      // continue: it arrives plainly rather than springing out of a rect the
+      // reader never saw the bar leave.
+      clearSearchBarHandoff();
+      depart(href);
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    departureRef.current = () => {
+      window.clearTimeout(deadline);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }
+
+  /**
+   * Leave, once, whichever of the three routes here gets there first.
+   *
+   * The guard is what makes the fallbacks safe to arm at all: the exit
+   * completing, the deadline expiring and the tab going away all call this, and
+   * only the first one does anything.
+   */
+  function depart(href: string) {
+    if (navigatedRef.current) return;
+    navigatedRef.current = true;
+    departureRef.current?.();
+    departureRef.current = null;
+    router.push(href);
+  }
+
+  /**
+   * The exit is over; go.
+   *
+   * Hung off one of the clearing elements rather than off the orchestrating
+   * root: every exit shares `HERO_EXIT`'s single transition, so any one of them
+   * finishing means they all have, and a per-element callback does not depend on
+   * how variant propagation reports completion upwards. It also fires once when
+   * the page settles into `at-rest` on mount, which is what the `leavingFor`
+   * guard is for.
+   */
+  function onExitComplete() {
+    if (!leavingFor) return;
+    depart(leavingFor);
   }
 
   return (
-    <div className="@container cc-theme min-h-dvh bg-cc-pg text-cc-ink text-sm lg:h-dvh lg:overflow-y-auto">
-      <header className="relative z-10 flex h-[66px] items-center justify-between gap-5 border-cc-rule border-b bg-cc-pg px-4 @lg:px-7">
+    // The orchestrator: it animates nothing itself, it only broadcasts which
+    // variant every clearing child should be in. `initial={false}` keeps the
+    // page from playing its own arrival on mount.
+    <motion.div
+      initial={false}
+      animate={leavingFor ? "leaving" : "at-rest"}
+      className="@container cc-theme min-h-dvh bg-cc-pg text-cc-ink text-sm lg:h-dvh lg:overflow-y-auto"
+    >
+      <motion.header
+        variants={HERO_EXIT}
+        className="relative z-10 flex h-[66px] items-center justify-between gap-5 border-cc-rule border-b bg-cc-pg px-4 @lg:px-7"
+      >
         <Link
           href="/"
           className="flex items-center gap-2.5 text-cc-ink no-underline"
@@ -179,13 +356,20 @@ export function Landing() {
             </div>
           )}
         </div>
-      </header>
+      </motion.header>
 
       <section
         data-hero
         className="relative min-h-[480px] @lg:min-h-[600px] overflow-hidden"
       >
-        <div aria-hidden className="pointer-events-none absolute inset-0 z-0">
+        {/* The graph clears with everything else. It is the backdrop the bar is
+            leaving, and a still canvas sitting behind a page that has faded out
+            would be the last thing on screen when the route swaps. */}
+        <motion.div
+          variants={HERO_EXIT}
+          aria-hidden
+          className="pointer-events-none absolute inset-0 z-0"
+        >
           {/*
             Find your dot only labels a node that is already on the canvas. The
             graph does not change when the flow succeeds — the reveal is the
@@ -194,25 +378,33 @@ export function Landing() {
           <HeroNetwork
             window={heroWindow}
             labelled={dotOpen && status === "placed"}
+            paused={leavingFor !== null}
           />
-        </div>
+        </motion.div>
 
         <div className="relative z-[1] flex min-h-[480px] @lg:min-h-[600px] flex-col items-center justify-center px-4 py-14 @lg:px-7">
           <div className="flex w-full max-w-[720px] flex-col items-center text-center">
-            <p
+            <motion.p
+              variants={HERO_EXIT}
               data-hero-clear
               className="m-0 font-semibold text-[11px] text-cc-dim uppercase tracking-[0.09em]"
             >
               Run by students at KTH
-            </p>
-            <h1
+            </motion.p>
+            <motion.h1
+              variants={HERO_EXIT}
+              onAnimationComplete={onExitComplete}
               data-hero-clear
               className="mt-3.5 text-balance font-semibold text-[30px] @lg:text-[44px] leading-[1.08] tracking-[-0.025em]"
             >
               Find the Course You Will Be Happy You Took
-            </h1>
+            </motion.h1>
 
+            {/* The one element that stays. It carries `data-hero-clear` for the
+                graph's keep-out and no `variants` for the exit, which is the
+                whole difference between the two sets. */}
             <form
+              ref={barRef}
               data-hero-clear
               onSubmit={(event) => {
                 event.preventDefault();
@@ -229,13 +421,15 @@ export function Landing() {
               <input
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
+                onFocus={warmExplore}
                 placeholder="Search a course, code or subject"
                 aria-label="Search a course, code or subject"
                 className="min-w-0 flex-1 border-none bg-transparent text-[14px] text-cc-ink outline-none"
               />
             </form>
 
-            <div
+            <motion.div
+              variants={HERO_EXIT}
               data-hero-clear
               className="mt-4 flex flex-wrap items-center justify-center gap-[7px]"
             >
@@ -244,15 +438,18 @@ export function Landing() {
                 <button
                   key={term}
                   type="button"
+                  onPointerEnter={warmExplore}
+                  onFocus={warmExplore}
                   onClick={() => submitSearch(term)}
                   className="flex h-7 items-center rounded-[14px] border border-cc-rule2 bg-cc-surface px-[11px] text-[12.5px] text-cc-chip-ink hover:border-cc-hov"
                 >
                   {term}
                 </button>
               ))}
-            </div>
+            </motion.div>
 
-            <p
+            <motion.p
+              variants={HERO_EXIT}
               data-hero-clear
               className="mt-5 flex items-center gap-1.5 text-[12.5px] text-cc-dim"
             >
@@ -267,12 +464,15 @@ export function Landing() {
               >
                 Find your dot.
               </button>
-            </p>
+            </motion.p>
           </div>
         </div>
       </section>
 
-      <section className="border-cc-rule border-t bg-cc-surface px-4 py-[34px] @lg:px-7">
+      <motion.section
+        variants={HERO_EXIT}
+        className="border-cc-rule border-t bg-cc-surface px-4 py-[34px] @lg:px-7"
+      >
         <div className="mx-auto flex max-w-[960px] flex-col gap-[22px] @lg:grid @lg:grid-cols-3">
           {SECTIONS.map((section) => (
             <div key={section.kicker}>
@@ -288,10 +488,13 @@ export function Landing() {
             </div>
           ))}
         </div>
-      </section>
+      </motion.section>
 
       {!sessionPending && !signedIn ? (
-        <section className="px-5 pt-5 pb-9 @lg:hidden">
+        <motion.section
+          variants={HERO_EXIT}
+          className="px-5 pt-5 pb-9 @lg:hidden"
+        >
           <div className="rounded-[11px] border border-cc-rule2 bg-cc-surface p-5">
             <p className="m-0 font-semibold text-[11px] text-cc-brand uppercase tracking-[0.06em]">
               Join
@@ -317,7 +520,7 @@ export function Landing() {
               Log in
             </button>
           </div>
-        </section>
+        </motion.section>
       ) : null}
 
       <FindYourDot
@@ -341,7 +544,7 @@ export function Landing() {
         onReasonChange={setAuthReason}
         onClose={() => setAuthReason(null)}
       />
-    </div>
+    </motion.div>
   );
 }
 

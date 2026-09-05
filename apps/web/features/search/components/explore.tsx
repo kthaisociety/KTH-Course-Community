@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 import { useRef } from "react";
 import { AuthReasonDialog } from "@/features/auth";
 import { CourseCardItem, courseCardGeometry } from "@/features/courses";
-import { PageColumn, PageHeader } from "@/features/shell";
+import { PageColumn, PageHeader, useSearchBarArrival } from "@/features/shell";
 import {
   MobileWorkspaceSheetHost,
   useResultsWidth,
@@ -57,17 +57,16 @@ import {
  *   `max-w-[560px]` box that is already narrower than the results column at
  *   every width the pane can open at, so the correction has nothing to correct.
  * - The artboard's **shared-element handoff from the landing hero** (its
- *   `pickUpSharedBar()`, line 855) is not built here, deliberately. It works by
- *   the landing page stashing its search bar's rect in `sessionStorage` and
- *   Explore translating its own bar out of it, fading the surroundings in and
- *   sliding the rail in on the same curve so the two read as one gesture. Both
- *   halves would have to be written: `features/landing/` stores nothing today,
- *   and the rail and topbar belong to `AppShell`, so Explore would be animating
- *   chrome it does not own. That is a lot of coupling across three merged
- *   features for 280ms that the artboard itself already drops under
- *   `prefers-reduced-motion` — and the receiving bar is the same element either
- *   way, so it can be added later without reshaping anything here. It is
- *   scheduled as its own task, owning all three sides of the seam at once.
+ *   `pickUpSharedBar()`, line 855) *is* built, and is the one place in the app
+ *   authorised to improve on the artboard rather than match it.
+ *   `useSearchBarArrival` below is the receiving end: when this mount is
+ *   continuing a search the reader submitted on `/`, the bar animates out of the
+ *   box it occupied there while the shell's rail slides in from the left on the
+ *   same spring, and the regions marked `data-cc-fade` — everything here that
+ *   was not on the landing — come up behind it. Arriving any other way (a shared
+ *   link, a bookmark, the rail) is not continuing a gesture, and gets no
+ *   animation at all. `@/features/shell`'s `search-morph` owns the seam, because
+ *   the rail is the shell's and only the shell can hand it over.
  */
 export function Explore() {
   const workspace = useWorkspacePane();
@@ -79,6 +78,10 @@ export function Explore() {
   const rowRef = useRef<HTMLDivElement>(null);
   const [resultsRef, resultsWidth] = useResultsWidth();
   const geo = courseCardGeometry(resultsWidth);
+  // The bar the landing hands over, and the subtree the arrival looks in for the
+  // surroundings that fade up behind it.
+  const barRef = useRef<HTMLFormElement>(null);
+  useSearchBarArrival(barRef, containerRef);
 
   const { results, hasQuery, isLoading, isError } = explore;
   const showEmpty = hasQuery && !isLoading && !isError && results.length === 0;
@@ -89,13 +92,21 @@ export function Explore() {
       contentClassName="h-full min-h-0 pb-0"
       containerRef={containerRef}
     >
-      <PageHeader
-        title="Explore courses"
-        subtitle="Search the KTH catalogue and see what students said about a course before you pick it."
-      />
+      {/* Wrapped only to be marked: `PageHeader` is one block used by every
+          page and takes no styling of its own. */}
+      <div data-cc-fade>
+        <PageHeader
+          title="Explore courses"
+          subtitle="Search the KTH catalogue and see what students said about a course before you pick it."
+        />
+      </div>
 
       <search className="flex shrink-0 flex-col items-center gap-2.5 px-6 pt-[18px] pb-3.5">
-        <form onSubmit={explore.onSubmit} className="w-full max-w-[560px]">
+        <form
+          ref={barRef}
+          onSubmit={explore.onSubmit}
+          className="w-full max-w-[560px]"
+        >
           <div className="flex h-[42px] items-center gap-2.5 rounded-[10px] border border-cc-rule3 bg-cc-surface px-3.5">
             <SearchIcon
               size={16}
@@ -119,7 +130,11 @@ export function Explore() {
         <Filters explore={explore} />
       </search>
 
-      <div ref={rowRef} className="flex min-h-0 flex-1 gap-[18px] px-5 pb-5">
+      <div
+        ref={rowRef}
+        data-cc-fade
+        className="flex min-h-0 flex-1 gap-[18px] px-5 pb-5"
+      >
         <div
           ref={resultsRef}
           data-testid="explore-results"
@@ -392,7 +407,12 @@ const SELECT_CLASS =
  */
 function Filters({ explore }: { explore: ReturnType<typeof useExplore> }) {
   return (
-    <div className="flex flex-wrap items-center justify-center gap-2">
+    // `data-cc-fade`: the filter row was not on the landing page, so it comes up
+    // behind the arriving search bar rather than being there before it lands.
+    <div
+      data-cc-fade
+      className="flex flex-wrap items-center justify-center gap-2"
+    >
       <select
         aria-label="School"
         value={explore.department}

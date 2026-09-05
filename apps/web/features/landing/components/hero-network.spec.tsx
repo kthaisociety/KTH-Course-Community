@@ -228,6 +228,46 @@ describe("HeroNetwork", () => {
     );
   });
 
+  /**
+   * Competing motion is the biggest tell in a shared-element transition, so for
+   * the length of the landing → Explore handoff the only thing that moves is the
+   * layout. The pulse is the only animation this canvas ever runs.
+   */
+  it("stops the pulse while the page is handing itself over to Explore", () => {
+    const frame = vi
+      .spyOn(window, "requestAnimationFrame")
+      .mockReturnValue(1 as unknown as number);
+    const cancel = vi
+      .spyOn(window, "cancelAnimationFrame")
+      .mockImplementation(() => {});
+    try {
+      const { rerender } = render(
+        <HeroNetwork window={WINDOW} labelled={true} />,
+      );
+      expect(frame).toHaveBeenCalled();
+
+      rerender(<HeroNetwork window={WINDOW} labelled={true} paused={true} />);
+
+      expect(cancel).toHaveBeenCalledWith(1);
+    } finally {
+      frame.mockRestore();
+      cancel.mockRestore();
+    }
+  });
+
+  it("never starts a pulse for a label that arrives while it is paused", () => {
+    const frame = vi
+      .spyOn(window, "requestAnimationFrame")
+      .mockReturnValue(1 as unknown as number);
+    try {
+      render(<HeroNetwork window={WINDOW} labelled={true} paused={true} />);
+
+      expect(frame).not.toHaveBeenCalled();
+    } finally {
+      frame.mockRestore();
+    }
+  });
+
   // An empty community is an empty hero. Nothing here may invent a node.
   it("draws nothing at all for an empty community", () => {
     render(
