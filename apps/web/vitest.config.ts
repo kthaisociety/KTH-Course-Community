@@ -14,7 +14,10 @@ export default defineConfig({
         test: {
           name: "server",
           environment: "node",
-          include: ["server/**/*.spec.ts"],
+          // `app/api/` holds route handlers, which are server code that happens
+          // to live under `app/` because that is where Next looks for them.
+          // They belong in this project, not in a DOM one.
+          include: ["server/**/*.spec.ts", "app/api/**/*.spec.ts"],
         },
       },
       {
