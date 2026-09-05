@@ -10,6 +10,7 @@ const logout = vi.fn();
 const setTheme = vi.fn();
 const useSessionData = vi.fn();
 const useNeighbourhood = vi.fn();
+const usePublicWindow = vi.fn();
 const sendMagicLink = vi.fn();
 
 let search = "";
@@ -42,9 +43,14 @@ vi.mock("@/features/auth", async (importOriginal) => ({
 vi.mock("../api/queries", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../api/queries")>()),
   useNeighbourhood: (enabled: boolean) => useNeighbourhood(enabled),
+  usePublicWindow: (enabled: boolean) => usePublicWindow(enabled),
 }));
 
-/** The community graph has nobody in it, which is what a member gets today. */
+/**
+ * The account behind the session is gone. `graph.neighbourhood` places an app
+ * user who has no node rather than refusing them, so this is the only way a
+ * member still reaches the "unplaced" panel.
+ */
 function notFound() {
   return TRPCClientError.from({
     error: {
@@ -66,27 +72,28 @@ function graphState(over: Record<string, unknown> = {}) {
   };
 }
 
+/**
+ * A bounded window as the server hands it over: opaque per-response ids, no user
+ * id anywhere, and one node flagged as the viewer's.
+ */
 const NEIGHBOURHOOD = {
-  viewer: { userId: "u1", x: 0, y: 0, effectiveTier: 1 },
+  centre: { x: 0, y: 0 },
   nodes: [
-    {
-      userId: "u1",
-      x: 0,
-      y: 0,
-      color: "violet",
-      style: "default",
-      signalStyle: "default",
-    },
-    {
-      userId: "u2",
-      x: 240,
-      y: -120,
-      color: "moss",
-      style: "default",
-      signalStyle: "default",
-    },
+    { id: "t-1", x: 0, y: 0, color: "default", isViewer: true },
+    { id: "t-2", x: 240, y: -120, color: "default", isViewer: false },
   ],
-  edges: [{ nodeUserId: "u1", anchorUserId: "u2" }],
+  edges: [{ fromId: "t-1", toId: "t-2" }],
+  effectiveTier: 1,
+};
+
+/** The same graph, as a visitor gets it: centred on the origin, with no You. */
+const PUBLIC_WINDOW = {
+  centre: { x: 0, y: 0 },
+  nodes: [
+    { id: "p-1", x: 0, y: 0, color: "default", isViewer: false },
+    { id: "p-2", x: 240, y: -120, color: "default", isViewer: false },
+  ],
+  edges: [{ fromId: "p-1", toId: "p-2" }],
 };
 
 function visitor() {
@@ -104,6 +111,9 @@ beforeEach(() => {
   search = "";
   visitor();
   useNeighbourhood.mockReturnValue(graphState());
+  usePublicWindow.mockReturnValue(
+    graphState({ data: PUBLIC_WINDOW, isSuccess: true }),
+  );
   sendMagicLink.mockResolvedValue({ error: null });
   // jsdom has no 2d context. The hero is decoration, so the page must render
   // without one rather than throw.
@@ -175,9 +185,13 @@ describe("Landing", () => {
       expect(screen.queryByText(/compare/i)).not.toBeInTheDocument();
     });
 
-    it("never asks the community graph anything — it is a protected read", () => {
+    // The hero is the real community for everybody. A visitor cannot ask the
+    // protected read, so they get the public window instead — and they get it
+    // on load, without asking for anything.
+    it("draws the real community without a session", () => {
       render(<Landing />);
       expect(useNeighbourhood).toHaveBeenCalledWith(false);
+      expect(usePublicWindow).toHaveBeenCalledWith(true);
     });
 
     it("hands a typed search over to Explore", async () => {
@@ -382,14 +396,20 @@ describe("Landing", () => {
       expect(logout).toHaveBeenCalled();
     });
 
+    // Their own neighbourhood *is* the hero, so it is read on load rather than
+    // when the panel opens — and the public window is not asked for as well.
+    it("reads their own neighbourhood on load, without being asked", () => {
+      render(<Landing />);
+      expect(useNeighbourhood).toHaveBeenCalledWith(true);
+      expect(usePublicWindow).toHaveBeenCalledWith(false);
+    });
+
     it("shows them their own dot once they ask", async () => {
       const user = userEvent.setup();
       render(<Landing />);
-      expect(useNeighbourhood).toHaveBeenCalledWith(false);
 
       await openFindYourDot(user);
       expect(await screen.findByText(/this one is yours/i)).toBeInTheDocument();
-      expect(useNeighbourhood).toHaveBeenLastCalledWith(true);
     });
   });
 
@@ -454,6 +474,17 @@ describe("Landing", () => {
       await user.click(screen.getByRole("button", { name: /try again/i }));
       expect(refetch).toHaveBeenCalled();
     });
+
+    // A member who cannot be located still sees the community they are part
+    // of. What the failure costs them is the "You", not the graph.
+    it("falls back to the public window so the hero still has a graph", () => {
+      member();
+      useNeighbourhood.mockReturnValue(
+        graphState({ error: new Error("boom"), isError: true }),
+      );
+      render(<Landing />);
+      expect(usePublicWindow).toHaveBeenCalledWith(true);
+    });
   });
 
   describe("coming back through a private link", () => {
@@ -474,14 +505,16 @@ describe("Landing", () => {
       expect(replace).toHaveBeenCalledWith("/");
     });
 
-    it("says a dead link is dead, and does not read the graph on its behalf", async () => {
+    // The graph is still read, because the hero draws it for everybody. What a
+    // dead link costs is the reveal, not the community behind it.
+    it("says a dead link is dead, and still draws the community", async () => {
       search = "dot=expired";
       member();
       render(<Landing />);
       expect(
         await screen.findByText(/this link no longer works/i),
       ).toBeInTheDocument();
-      expect(useNeighbourhood).toHaveBeenCalledWith(false);
+      expect(useNeighbourhood).toHaveBeenCalledWith(true);
     });
 
     it("offers a fresh link, and asks a visitor for their address again", async () => {

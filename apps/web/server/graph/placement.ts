@@ -11,6 +11,13 @@
  * The node colour palette. The server stores a **name**; the client maps names
  * onto its `--cc-*` tokens, so the palette can be re-skinned without a data
  * migration. This is the one place the list lives.
+ *
+ * **Nobody is assigned one of these today.** Placement used to hash every app
+ * user onto a name here, which gave everyone a colour nobody chose. A node
+ * profile is personalisation, and personalisation has no writer: nothing in
+ * `server/` raises `users.personalization_tier_earned`, so every account sits
+ * at tier 0 and the colour axis is locked for all of them. The palette stays
+ * because it is what personalisation will hand out once that writer exists.
  */
 export const NODE_COLORS = [
   "aurora",
@@ -22,6 +29,16 @@ export const NODE_COLORS = [
 ] as const;
 
 export type NodeColor = (typeof NODE_COLORS)[number];
+
+/**
+ * What an unconfigured node stores, matching the column default on
+ * `users_node_profiles.color`. The client draws it in `--cc-brand`, which is
+ * the single dot colour the Landing artboard's own palette uses.
+ */
+export const DEFAULT_NODE_COLOR = "default" as const;
+
+/** Every value the colour column may hold: the default, or a chosen palette name. */
+export type StoredNodeColor = NodeColor | typeof DEFAULT_NODE_COLOR;
 
 /**
  * `node_style` and `node_signal_style` are Postgres enums that today declare
@@ -55,16 +72,11 @@ const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
  */
 const ANGLE_JITTER = 0.08;
 
-/** Deterministic node colour for an app user. */
-export function pickNodeColor(userId: string): NodeColor {
-  return NODE_COLORS[hashUserId(userId) % NODE_COLORS.length];
-}
-
 /** Deterministic anchor count for an app user, within `[MIN_ANCHORS, MAX_ANCHORS]`. */
 export function chooseAnchorCount(userId: string): number {
   const span = MAX_ANCHORS - MIN_ANCHORS + 1;
-  // A different slice of the hash than pickNodeColor uses, so colour and anchor
-  // count are not correlated.
+  // Salted, so anchor count and world position are drawn from different slices
+  // of the hash and cannot correlate.
   return MIN_ANCHORS + (hashUserId(`anchors:${userId}`) % span);
 }
 

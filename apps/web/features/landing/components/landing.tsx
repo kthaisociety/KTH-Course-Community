@@ -11,7 +11,7 @@ import {
   useSessionData,
 } from "@/features/auth";
 import { ThemeToggle } from "@/features/shell";
-import { isUnplaced, useNeighbourhood } from "../api/queries";
+import { isUnplaced, useNeighbourhood, usePublicWindow } from "../api/queries";
 import { FindYourDot, type FindYourDotStatus } from "./find-your-dot";
 import { HeroNetwork } from "./hero-network";
 
@@ -65,7 +65,20 @@ export function Landing() {
   }, [arrivedFromLink, router]);
 
   const signedIn = user !== null;
-  const neighbourhood = useNeighbourhood(dotOpen && signedIn && !expired);
+
+  /**
+   * The hero draws the real community to everybody, on load.
+   *
+   * A member gets their own bounded neighbourhood; anybody else gets the public
+   * window around the community origin. The public read is also the fallback
+   * when a member's own read fails, so a graph that can be drawn is drawn —
+   * what a member loses in that case is the "You", not the community.
+   */
+  const neighbourhood = useNeighbourhood(!sessionPending && signedIn);
+  const publicWindow = usePublicWindow(
+    !sessionPending && (!signedIn || neighbourhood.isError),
+  );
+  const heroWindow = neighbourhood.data ?? publicWindow.data ?? null;
 
   const status = dotStatus({
     expired,
@@ -161,7 +174,15 @@ export function Landing() {
         className="relative min-h-[480px] @lg:min-h-[600px] overflow-hidden"
       >
         <div aria-hidden className="pointer-events-none absolute inset-0 z-0">
-          <HeroNetwork neighbourhood={neighbourhood.data ?? null} />
+          {/*
+            Find your dot only labels a node that is already on the canvas. The
+            graph does not change when the flow succeeds — the reveal is the
+            label, and closing the panel takes the label back off again.
+          */}
+          <HeroNetwork
+            window={heroWindow}
+            labelled={dotOpen && status === "placed"}
+          />
         </div>
 
         <div className="relative z-[1] flex min-h-[480px] @lg:min-h-[600px] flex-col items-center justify-center px-4 py-14 @lg:px-7">

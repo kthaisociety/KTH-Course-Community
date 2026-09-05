@@ -2,9 +2,9 @@ import { NotFoundError } from "../errors";
 import {
   chooseAnchorCount,
   computeWorldPosition,
+  DEFAULT_NODE_COLOR,
   DEFAULT_NODE_SIGNAL_STYLE,
   DEFAULT_NODE_STYLE,
-  pickNodeColor,
   type WorldPosition,
 } from "./placement";
 import type { BackboneEdge, GraphNode, NeighbourNode } from "./repository";
@@ -20,11 +20,67 @@ import { deriveEffectiveTier } from "./tier";
  */
 export const MAX_NEIGHBOURHOOD_NODES = 150;
 
-/** A bounded slice of the community graph around one app user. */
-export type Neighbourhood = {
-  viewer: GraphNode & { effectiveTier: number };
-  nodes: NeighbourNode[];
-  edges: BackboneEdge[];
+/**
+ * How many nodes the public window may return.
+ *
+ * Deliberately its own number rather than a reuse of the one above. The
+ * neighbourhood is a read a member makes about themselves; this one is served
+ * to anybody who loads `/`, so it must be possible to tighten it — for cost, or
+ * because the community has grown enough that a stranger seeing 150 nodes at
+ * once starts to say something — without changing what a member sees.
+ */
+export const MAX_PUBLIC_WINDOW_NODES = 150;
+
+/**
+ * Where the community's world coordinate system begins, and what the public
+ * window is centred on. `computeWorldPosition` puts the very first node exactly
+ * here and grows the radius from it, so the origin is the densest part of the
+ * graph and the honest place to point a camera that has no viewer to follow.
+ */
+export const COMMUNITY_ORIGIN: WorldPosition = { x: 0, y: 0 };
+
+/**
+ * One node inside a bounded window, carrying nothing that outlives the response.
+ *
+ * `id` is **opaque and generated per request**. It exists only so this
+ * response's edges can name this response's nodes; it is not a user id, it is
+ * not stable between two reads, and there is nothing to look it up in. The
+ * public window is unauthenticated, so a real user id in this payload would
+ * hand a stranger the community's membership list — and the member read has no
+ * business naming somebody's neighbours to them either.
+ */
+export type WindowNode = {
+  id: string;
+  x: number;
+  y: number;
+  /**
+   * The stored appearance name. Node appearance is drawn on a public landing
+   * page by design, so it is not a disclosure; it is also `"default"` for
+   * everybody until personalisation has a writer.
+   */
+  color: string;
+  /** The one node belonging to the caller. Never true in a public window. */
+  isViewer: boolean;
+};
+
+/**
+ * A backbone edge between two nodes of the same window.
+ *
+ * Its stored direction records placement history — newer node to older anchor —
+ * and it **is not a friendship**. The names here say so: `fromId`/`toId`, not
+ * anything that reads as one person choosing another.
+ */
+export type WindowEdge = { fromId: string; toId: string };
+
+/** A bounded slice of the community graph, ready to project. */
+export type GraphWindow = {
+  /**
+   * The world position the client's projection subtracts: the viewer's own node
+   * for a member, the community origin for a visitor. World units, untouched.
+   */
+  centre: WorldPosition;
+  nodes: WindowNode[];
+  edges: WindowEdge[];
 };
 
 /**
@@ -47,7 +103,9 @@ export async function joinCommunityGraph(userId: string): Promise<GraphNode> {
     node,
     profile: {
       userId,
-      color: pickNodeColor(userId),
+      // Nobody has chosen a colour, so nobody is given one. Placement stores the
+      // column default and the client draws that in the brand blue.
+      color: DEFAULT_NODE_COLOR,
       style: DEFAULT_NODE_STYLE,
       signalStyle: DEFAULT_NODE_SIGNAL_STYLE,
     },
@@ -94,48 +152,52 @@ export async function joinCommunityGraphOnSignUp(
 }
 
 /**
- * The bounded neighbourhood around an app user's own node: the nearby nodes,
- * the backbone edges spanning exactly that set, and the app user's effective
- * personalization tier.
+ * The bounded neighbourhood around an app user's own node: the nearby nodes and
+ * the backbone edges spanning exactly that set.
  *
- * `nodes` deliberately contains the viewer's own node — it is the one they came
- * to find, and it needs the same appearance every other node has. `viewer`
- * repeats its position because the client's projection is expressed relative to
- * it, so it should not have to search the set for itself.
+ * `nodes` deliberately contains the viewer's own node, flagged `isViewer` — it
+ * is the one they came to find, and it needs the same appearance every other
+ * node has. `centre` repeats its world position because the client's projection
+ * is expressed relative to it, so nothing has to search the set for itself.
  *
  * World units come back untouched. Projecting them into screen pixels, and any
  * responsive keep-out adjustment, happens on the client and never returns here.
  *
  * An app user without a node is placed rather than refused, so this read can
  * write on its first call for them.
+ *
+ * It returns a window and nothing else. It used to carry the effective
+ * personalization tier as well, from a time when it was read only if somebody
+ * opened **Find your dot**; the landing draws the graph on load now, so that
+ * would be two extra queries on every visit for a number this page does not
+ * use. `graph.effectiveTier` is where My Page asks for it.
  */
-export async function getNeighbourhood(
-  userId: string,
-  now: Date = new Date(),
-): Promise<Neighbourhood> {
+export async function getNeighbourhood(userId: string): Promise<GraphWindow> {
   // Sign-up placement is the primary pathway, but it cannot cover everyone:
   // it is deliberately fallible, and accounts created before the community
   // graph existed never saw it. Joining here repairs both, and because joining
   // is idempotent an app user who already has a node just gets it back.
   const node = await joinCommunityGraph(userId);
+  const centre: WorldPosition = { x: node.x, y: node.y };
 
-  const nodes = await graphRepo.findNearestNodes(
-    { x: node.x, y: node.y },
-    MAX_NEIGHBOURHOOD_NODES,
-  );
-  const withinSet = new Set(nodes.map((neighbour) => neighbour.userId));
-  const edges = await graphRepo.findBackboneEdgesWithin([...withinSet]);
+  return readWindow(centre, MAX_NEIGHBOURHOOD_NODES, userId);
+}
 
-  return {
-    viewer: { ...node, effectiveTier: await getEffectiveTier(userId, now) },
-    nodes,
-    // The query already scopes to this set. Narrowing here too keeps the
-    // guarantee true of the service whatever that query later becomes.
-    edges: edges.filter(
-      (edge) =>
-        withinSet.has(edge.nodeUserId) && withinSet.has(edge.anchorUserId),
-    ),
-  };
+/**
+ * A bounded window on the real community graph for someone with no node of
+ * their own — a visitor, or a member whose own read did not answer.
+ *
+ * Centred on the community origin rather than on anybody, so it is the same
+ * graph for everyone who asks and nothing about the caller shapes it. There is
+ * no "You" in it: `isViewer` is false throughout.
+ *
+ * The community is small, so this window is sparse, and it is empty until
+ * somebody joins. That is the honest answer and the landing draws it as such —
+ * padding the set with invented nodes would make the hero a picture of a
+ * community rather than the community.
+ */
+export async function getPublicWindow(): Promise<GraphWindow> {
+  return readWindow(COMMUNITY_ORIGIN, MAX_PUBLIC_WINDOW_NODES);
 }
 
 /**
@@ -159,6 +221,65 @@ export async function getEffectiveTier(
     lastReviewAt ?? basis.accountCreatedAt,
     now,
   );
+}
+
+/**
+ * The bounded read both windows are: the nearest `limit` nodes to `centre`, the
+ * backbone edges spanning exactly that set, and nothing else.
+ *
+ * This is `personal-community-viewport.md`'s "Bounded rendering" in one place —
+ * read a position, select a bounded set with a product-defined maximum, load
+ * only the edges that set needs — so neither caller can quietly widen it.
+ */
+async function readWindow(
+  centre: WorldPosition,
+  limit: number,
+  viewerUserId?: string,
+): Promise<GraphWindow> {
+  const nodes = await graphRepo.findNearestNodes(centre, limit);
+  const edges = await graphRepo.findBackboneEdgesWithin(
+    nodes.map((node) => node.userId),
+  );
+  return anonymise({ centre, nodes, edges, viewerUserId });
+}
+
+/**
+ * Swap every user id for an opaque token that lives as long as this response.
+ *
+ * The tokens are random rather than positional: an index would be stable across
+ * reads of a graph that barely changes, which is most of the way back to an
+ * identifier. Edges are re-expressed in the same tokens and any edge with an
+ * end outside the set is dropped — the repository query already scopes to it,
+ * and narrowing here too keeps the guarantee true of the service whatever that
+ * query later becomes.
+ */
+function anonymise(args: {
+  centre: WorldPosition;
+  nodes: NeighbourNode[];
+  edges: BackboneEdge[];
+  viewerUserId?: string;
+}): GraphWindow {
+  const tokens = new Map<string, string>();
+  const nodes = args.nodes.map((node) => {
+    const id = crypto.randomUUID();
+    tokens.set(node.userId, id);
+    return {
+      id,
+      x: node.x,
+      y: node.y,
+      color: node.color,
+      isViewer: node.userId === args.viewerUserId,
+    };
+  });
+
+  const edges: WindowEdge[] = [];
+  for (const edge of args.edges) {
+    const fromId = tokens.get(edge.nodeUserId);
+    const toId = tokens.get(edge.anchorUserId);
+    if (fromId && toId) edges.push({ fromId, toId });
+  }
+
+  return { centre: args.centre, nodes, edges };
 }
 
 /**
