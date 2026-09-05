@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 import { pageTitleFor, WORDMARK } from "./page-title";
 
 /**
- * Every route that renders inside `AppShell` — the whole of `app/(service)` and
- * `app/(public)`. `/`, `/auth` and `/editor-00` sit outside both groups and get
- * no shell, so no title.
+ * Every route that *renders* inside `AppShell` — the whole of `app/(service)`
+ * and `app/(public)` bar the redirects. `/` and `/auth` sit outside both groups
+ * and get no shell, so no title.
  *
  * Add a route to either group and add it here: the shell titles its own header
  * from this map, and a route missing from it shows the wordmark instead of its
@@ -12,16 +12,12 @@ import { pageTitleFor, WORDMARK } from "./page-title";
  */
 const ROUTES_INSIDE_THE_SHELL = [
   "/search",
-  "/course",
-  "/course/DD2380",
   "/saved",
   "/taken",
   "/collections",
   "/profile",
-  "/reviews",
   "/about",
   "/contact",
-  "/newsletter",
 ];
 
 describe("pageTitleFor", () => {
@@ -38,10 +34,20 @@ describe("pageTitleFor", () => {
   it("names the pages the design does not key after their own heading", () => {
     expect(pageTitleFor("/about")).toBe("About");
     expect(pageTitleFor("/contact")).toBe("Contact");
-    expect(pageTitleFor("/newsletter")).toBe("Newsletter");
-    expect(pageTitleFor("/reviews")).toBe("Reviews");
     expect(pageTitleFor("/collections")).toBe("Collections");
   });
+
+  /**
+   * #68 §5 deleted these. `/course/<code>` and `/course` redirect and never
+   * paint inside the shell; `/reviews`, `/newsletter` and `/editor-00` are gone
+   * altogether. Titling any of them would outlive the page it named.
+   */
+  it.each(["/course", "/course/DD2380", "/reviews", "/newsletter"])(
+    "has no title for the retired route %s",
+    (pathname) => {
+      expect(pageTitleFor(pathname)).toBe(WORDMARK);
+    },
+  );
 
   it.each(ROUTES_INSIDE_THE_SHELL)(
     "leaves no route in the shell falling back to the wordmark: %s",
@@ -51,8 +57,8 @@ describe("pageTitleFor", () => {
   );
 
   it("keeps a nested route under its section's title", () => {
-    expect(pageTitleFor("/course/DD2380")).toBe("Courses");
     expect(pageTitleFor("/profile/settings")).toBe("My Page");
+    expect(pageTitleFor("/collections/anything")).toBe("Collections");
   });
 
   it("prefers the longest matching prefix", () => {
@@ -68,6 +74,6 @@ describe("pageTitleFor", () => {
   // A route whose name merely starts with a keyed one is a different route.
   it("does not match a route that only shares a prefix's characters", () => {
     expect(pageTitleFor("/aboutus")).toBe(WORDMARK);
-    expect(pageTitleFor("/courses")).toBe(WORDMARK);
+    expect(pageTitleFor("/savedcourses")).toBe(WORDMARK);
   });
 });

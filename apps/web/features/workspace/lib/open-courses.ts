@@ -7,8 +7,10 @@
  * tiers and the "what becomes active when you close the active tab" rule are
  * both easy to get subtly wrong and cheap to test in isolation.
  *
- * Nothing here is persisted. An open course is view state: closing the last
- * tab loses nothing but an unpublished draft.
+ * Nothing here decides persistence: these are pure transitions over a value.
+ * `use-workspace-pane.ts` is what keeps that value in `sessionStorage`, so that
+ * signing in — an OAuth redirect away and back — returns to the courses that
+ * were open.
  */
 
 /**
@@ -34,6 +36,36 @@ export interface Workspace {
 }
 
 export const EMPTY_WORKSPACE: Workspace = { open: [], activeId: null };
+
+/** A course a host has been asked to open by its own route. */
+export interface OpenCourseRequest {
+  courseCode: string;
+  kind: OpenCourseKind;
+}
+
+/**
+ * `?open=<code>&kind=details|review`, as a host reads it off its route.
+ *
+ * This pair is the only way in from outside the page. `/course/<code>` is a
+ * redirect onto it — #68 §5 retired the course page, so a link anyone has
+ * bookmarked or pasted has to land on the course as a tab — and Collections
+ * navigates to Saved with it for the same reason.
+ *
+ * Both parts are forgiving on purpose, because the pair is typed by hand as
+ * often as it is followed. A code is upper-cased, since that is how the
+ * catalogue keys courses and `/course/dd2380` was a working URL. A `kind` that
+ * is not `review` is `details`: opening the course is the safe reading of a
+ * parameter nobody can see, and refusing the whole link over it would strand a
+ * reader on an empty page.
+ */
+export function openCourseRequest(
+  open: string | null | undefined,
+  kind: string | null | undefined,
+): OpenCourseRequest | null {
+  const courseCode = open?.trim().toUpperCase() ?? "";
+  if (!courseCode) return null;
+  return { courseCode, kind: kind === "review" ? "review" : "details" };
+}
 
 /** The id a `(courseCode, kind)` pair always gets, so opening twice is idempotent. */
 function openCourseId(courseCode: string, kind: OpenCourseKind): string {

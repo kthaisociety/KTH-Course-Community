@@ -1,43 +1,39 @@
 "use client";
 
 import { RotateCcw, Search as SearchIcon, TriangleAlert } from "lucide-react";
-import dynamic from "next/dynamic";
 import type { ReactNode } from "react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useRef } from "react";
 import { AuthReasonDialog } from "@/features/auth";
 import { CourseCardItem, courseCardGeometry } from "@/features/courses";
 import { PageColumn, PageHeader } from "@/features/shell";
 import {
   MobileWorkspaceSheetHost,
+  useResultsWidth,
   useWorkspacePane,
+  useWorkspacePresentation,
+  WorkspacePaneHost,
 } from "@/features/workspace";
 import {
   MAX_RATING_STARS,
   RATING_STAR_OPTIONS,
   useExplore,
 } from "../hooks/use-explore";
-import { useResultsWidth } from "../hooks/use-results-width";
-
-type CourseOpen = { courseCode: string; kind: "details" | "review" };
-
-// The pane is inactive for ordinary browsing and has its own data-heavy
-// details/review views. Load it only once a desktop reader opens a course.
-const WorkspacePane = dynamic(
-  () => import("@/features/workspace").then((module) => module.WorkspacePane),
-  { ssr: false },
-);
 
 /**
  * Explore: the search-and-browse workspace, and the app's front door to the
  * catalogue.
  *
- * From `docs/design/Course Community - Explore.dc.html`. Two things about it are
- * this page's alone:
+ * From `docs/design_ref_new/Course Community - Explore.dc.html`. Three things
+ * about it are this page's alone:
  *
  * - **It owns the course card's collapse ramp.** `courseCardGeometry` turns the
- *   measured results-column width into the card's `geo`; Saved and Collections
- *   pin an end of that ramp and Explore is the page that actually travels it.
+ *   measured results-column width into the card's `geo`; the artboard computes
+ *   the same ramp off the width the workspace pane leaves behind (line 1061).
  *   The card measures nothing, which is why the geometry is a prop.
+ * - **It is where a course opens.** #68 §5 retired the course page, so
+ *   `/course/<code>` now redirects here carrying `?open=<code>&kind=…` and the
+ *   pane is the only surface that shows a course. Nothing on this page routes
+ *   away to read one.
  * - **It is fully open to visitors.** Searching, browsing and reading reviews
  *   never need an account. Only saving and taking do, and those prompts live on
  *   the card — so nothing here gates the page, and the one `AuthReasonDialog`
@@ -45,86 +41,47 @@ const WorkspacePane = dynamic(
  *
  * ## Where it departs from the artboard, and why
  *
- * - The artboard's **workspace pane** — the resizable column that holds open
- *   course-details and review-draft tabs — is #94's. Until it lands, opening a
- *   card goes to the course's own page. Nothing here has to change when the pane
- *   arrives: the ramp reads the column's rendered width, so a pane opening beside
- *   it collapses the cards without Explore knowing the pane exists.
- * - The artboard's **pager** is not built. `search.courses` accepts a `page`
- *   input and ignores it, and returns `total: results.length` — the count of what
- *   it just returned. A pager over that would invent pages that do not exist.
- * - The artboard's **filter row does not exist** at all; #89 requires one. It is
- *   built here in the artboard's own control vocabulary.
- * - The artboard's **shared-element handoff from the landing hero** is not
- *   built, deliberately. It works by the landing page stashing its search bar's
- *   rect in `sessionStorage` and Explore translating its own bar out of it,
- *   fading the surroundings in behind and sliding the rail in on the same curve
- *   so the two read as one gesture. Both halves would have to be written:
- *   `features/landing/` stores nothing today, and the rail and topbar belong to
- *   `AppShell`, so Explore would be animating chrome it does not own. That is a
- *   lot of coupling across three merged features for 280ms that the artboard
- *   itself already drops under `prefers-reduced-motion` — and the receiving bar
- *   is the same element either way, so it can be added later without reshaping
- *   anything here.
+ * - The artboard's **pager** (lines 263-265) is not built, and stays unbuilt by
+ *   decision: it is **#148**. `search.courses` accepts a `page` input and
+ *   ignores it, and returns `total: results.length` — the count of what it just
+ *   returned. A pager over that would invent pages that do not exist, which is
+ *   the same error class as scoring an unreviewed course 0%. The real fix is a
+ *   `COUNT` query and an honoured offset in the search domain, which is server
+ *   work; nothing here should grow a pager over the contract as it stands.
+ * - The artboard's **filter row does not exist** at all; its search block is the
+ *   field alone. #89 requires filters, so they are built here in the artboard's
+ *   own control vocabulary.
+ * - The artboard narrows its **search bar** by 236px while tabs are open
+ *   (`searchBarMargin`, line 1350) so the field stays centred over the results
+ *   rather than over the whole row. Not built: the bar is centred inside a
+ *   `max-w-[560px]` box that is already narrower than the results column at
+ *   every width the pane can open at, so the correction has nothing to correct.
+ * - The artboard's **shared-element handoff from the landing hero** (its
+ *   `pickUpSharedBar()`, line 855) is not built here, deliberately. It works by
+ *   the landing page stashing its search bar's rect in `sessionStorage` and
+ *   Explore translating its own bar out of it, fading the surroundings in and
+ *   sliding the rail in on the same curve so the two read as one gesture. Both
+ *   halves would have to be written: `features/landing/` stores nothing today,
+ *   and the rail and topbar belong to `AppShell`, so Explore would be animating
+ *   chrome it does not own. That is a lot of coupling across three merged
+ *   features for 280ms that the artboard itself already drops under
+ *   `prefers-reduced-motion` — and the receiving bar is the same element either
+ *   way, so it can be added later without reshaping anything here. It is
+ *   scheduled as its own task, owning all three sides of the seam at once.
  */
 export function Explore() {
-  const explore = useExplore();
   const workspace = useWorkspacePane();
+  const explore = useExplore({
+    onOpenCourse: (request) => workspace.open(request.courseCode, request.kind),
+  });
   const containerRef = useRef<HTMLDivElement>(null);
-  const desktopWorkspace = useContainerBreakpoint(containerRef, 768);
-  const compactWorkspace = useContainerBreakpoint(containerRef, 640);
-  // A restored workspace may exist before ResizeObserver reports this
-  // container's size. Do not guess a presentation during that window: mounting
-  // a Sheet would briefly lock the desktop page's body before the pane wins.
-  const mobileWorkspace = compactWorkspace === null ? false : !compactWorkspace;
-  const [pendingCourseOpen, setPendingCourseOpen] = useState<CourseOpen | null>(
-    null,
-  );
+  const presentation = useWorkspacePresentation(containerRef);
   const rowRef = useRef<HTMLDivElement>(null);
-  const pane = useWorkspaceWidth(rowRef, workspace.hasOpenCourses);
   const [resultsRef, resultsWidth] = useResultsWidth();
   const geo = courseCardGeometry(resultsWidth);
 
   const { results, hasQuery, isLoading, isError } = explore;
   const showEmpty = hasQuery && !isLoading && !isError && results.length === 0;
-
-  const layoutMeasured = desktopWorkspace !== null && compactWorkspace !== null;
-
-  // The desktop column and phone sheet share the same state machine. The
-  // in-between layout remains a route: it has neither enough width for the
-  // column nor the narrow mobile chrome the sheet was designed for.
-  const openMeasuredCourse = useCallback(
-    (courseCode: string, kind: CourseOpen["kind"]) => {
-      if (desktopWorkspace) {
-        workspace.open(courseCode, kind);
-        return;
-      }
-      if (mobileWorkspace) {
-        workspace.open(courseCode, kind);
-        return;
-      }
-      if (kind === "details") explore.onOpenCourse(courseCode);
-      else explore.onReviewCourse(courseCode);
-    },
-    [desktopWorkspace, mobileWorkspace, workspace, explore],
-  );
-
-  const openCourse = useCallback(
-    (courseCode: string, kind: CourseOpen["kind"]) => {
-      if (!layoutMeasured) {
-        setPendingCourseOpen({ courseCode, kind });
-        return;
-      }
-      openMeasuredCourse(courseCode, kind);
-    },
-    [layoutMeasured, openMeasuredCourse],
-  );
-
-  useEffect(() => {
-    if (!pendingCourseOpen || !layoutMeasured) return;
-    openMeasuredCourse(pendingCourseOpen.courseCode, pendingCourseOpen.kind);
-    setPendingCourseOpen(null);
-  }, [layoutMeasured, openMeasuredCourse, pendingCourseOpen]);
 
   return (
     <PageColumn
@@ -224,34 +181,31 @@ export function Explore() {
                 geo={geo}
                 // The last card's picker would open past the foot of the column.
                 pickerAbove={results.length > 1 && index === results.length - 1}
-                onOpen={() => openCourse(course.courseCode, "details")}
-                onReview={() => openCourse(course.courseCode, "review")}
+                onOpen={() => workspace.open(course.courseCode, "details")}
+                onReview={() => workspace.open(course.courseCode, "review")}
                 onRequestAuth={explore.setAuthReason}
               />
             ))}
           </div>
         </div>
 
-        {workspace.hasOpenCourses ? (
-          <div
-            data-testid="workspace-pane-host"
-            className="relative hidden min-h-0 min-w-[356px] @3xl:flex"
-            style={{ width: pane.width }}
-          >
-            <WorkspaceResizeHandle pane={pane} />
-            <WorkspacePane
-              className="min-w-0 flex-1"
-              openCourses={workspace.openCourses}
-              activeId={workspace.activeId}
-              onActivate={workspace.activate}
-              onClose={workspace.close}
-              onOpen={workspace.open}
-            />
-          </div>
-        ) : null}
+        {/* Two presentations of one open list, and never both at once: the
+            column until the container has been measured as narrow, the sheet
+            after. See `useWorkspacePresentation` for why `null` is not
+            "narrow". */}
+        {presentation === "sheet" ? null : (
+          <WorkspacePaneHost
+            rowRef={rowRef}
+            openCourses={workspace.openCourses}
+            activeId={workspace.activeId}
+            onActivate={workspace.activate}
+            onClose={workspace.close}
+            onOpen={workspace.open}
+          />
+        )}
       </div>
 
-      {mobileWorkspace ? (
+      {presentation === "sheet" ? (
         <MobileWorkspaceSheetHost
           openCourses={workspace.openCourses}
           activeId={workspace.activeId}
@@ -266,116 +220,6 @@ export function Explore() {
         onClose={() => explore.setAuthReason(null)}
       />
     </PageColumn>
-  );
-}
-
-/** Matches Explore's `@3xl` layout transition against the actual container,
- * not the wider browser viewport. */
-function useContainerBreakpoint(
-  containerRef: React.RefObject<HTMLDivElement | null>,
-  minimumWidth: number,
-) {
-  const [matches, setMatches] = useState<boolean | null>(null);
-
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container || typeof ResizeObserver !== "function") return;
-    const observer = new ResizeObserver(([entry]) => {
-      const width = entry?.contentRect.width ?? container.clientWidth;
-      setMatches(width >= minimumWidth);
-    });
-    observer.observe(container);
-    return () => observer.disconnect();
-  }, [containerRef, minimumWidth]);
-
-  return matches;
-}
-
-const RESULTS_FLOOR = 470;
-const PANE_MIN = 356;
-const PANE_DEFAULT = 504;
-const WORKSPACE_GAP = 18;
-
-function useWorkspaceWidth(
-  rowRef: React.RefObject<HTMLDivElement | null>,
-  active: boolean,
-) {
-  const [width, setWidth] = useState(PANE_DEFAULT);
-  const [rowWidth, setRowWidth] = useState(0);
-
-  useEffect(() => {
-    const row = rowRef.current;
-    if (!row || typeof ResizeObserver !== "function") return;
-    const observer = new ResizeObserver(([entry]) => {
-      setRowWidth(entry?.contentRect.width ?? row.clientWidth);
-    });
-    observer.observe(row);
-    return () => observer.disconnect();
-  }, [rowRef]);
-
-  const max = Math.max(PANE_MIN, rowWidth - RESULTS_FLOOR - WORKSPACE_GAP);
-  const clamp = useCallback(
-    (next: number) => Math.max(PANE_MIN, Math.min(next, max)),
-    [max],
-  );
-
-  useEffect(() => {
-    if (active) setWidth((current) => clamp(current));
-  }, [active, clamp]);
-
-  return {
-    width: clamp(width),
-    resize: (next: number) => setWidth(clamp(next)),
-    reset: () => setWidth(clamp(PANE_DEFAULT)),
-  };
-}
-
-function WorkspaceResizeHandle({
-  pane,
-}: {
-  pane: ReturnType<typeof useWorkspaceWidth>;
-}) {
-  const drag = useRef<{
-    onMove: (event: PointerEvent) => void;
-  } | null>(null);
-
-  const finish = useCallback(() => {
-    const activeDrag = drag.current;
-    if (!activeDrag) return;
-    window.removeEventListener("pointermove", activeDrag.onMove);
-    window.removeEventListener("pointerup", finish);
-    window.removeEventListener("pointercancel", finish);
-    drag.current = null;
-  }, []);
-
-  useEffect(() => finish, [finish]);
-
-  return (
-    <button
-      type="button"
-      aria-label="Resize workspace"
-      title="Drag to resize · double-click to reset"
-      onDoubleClick={pane.reset}
-      onPointerDown={(event) => {
-        event.preventDefault();
-        finish();
-        const startX = event.clientX;
-        const startWidth = pane.width;
-        const onMove = (moveEvent: PointerEvent) => {
-          pane.resize(startWidth - (moveEvent.clientX - startX));
-        };
-        drag.current = { onMove };
-        window.addEventListener("pointermove", onMove);
-        window.addEventListener("pointerup", finish, { once: true });
-        window.addEventListener("pointercancel", finish, { once: true });
-      }}
-      className="-left-[14px] absolute top-0 hidden h-full w-[11px] cursor-col-resize items-center justify-center @3xl:flex"
-    >
-      <span
-        aria-hidden
-        className="h-[34px] w-[2px] rounded-[2px] bg-cc-rule3"
-      />
-    </button>
   );
 }
 

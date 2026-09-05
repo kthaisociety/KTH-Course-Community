@@ -57,6 +57,13 @@ vi.mock("../api/mutations", () => ({
 }));
 vi.mock("sonner", () => ({ toast: { error: vi.fn() } }));
 
+// Saved owns the host contract; the pane's own content is covered in its
+// suite. Stubbing it also keeps the review editor's CSS out of this screen
+// test, which is what Explore's suite does for the same reason.
+vi.mock("@/features/workspace/components/workspace-pane", () => ({
+  WorkspacePane: () => <section aria-label="Open courses" />,
+}));
+
 /**
  * `course.summary` as both readers of it see it: Saved takes the catalogue
  * fields, and the embedded Collections section also reads `stats` off the same
@@ -284,6 +291,74 @@ describe("Saved", { timeout: 20_000 }, () => {
         screen.getByRole("heading", { name: "Spring picks" }),
       ).toBeInTheDocument();
       expect(screen.queryByText("No saved courses yet")).toBeNull();
+    });
+  });
+
+  /**
+   * #68 §5 deleted the course page, and #127 §3 mounts the pane here: a course
+   * opened from this screen — from a card, or named by the route because a
+   * collection detail sent it back — opens as a tab beside the list rather than
+   * navigating away from it.
+   */
+  describe("the workspace pane", () => {
+    it("opens a course from a card without leaving the page", async () => {
+      saved("DD2380");
+      render(<Saved />);
+
+      expect(screen.queryByTestId("workspace-pane-host")).toBeNull();
+
+      await userEvent.click(
+        within(cardFor("DD2380")).getByRole("button", {
+          name: /Artificial Intelligence/,
+        }),
+      );
+
+      expect(screen.getByTestId("workspace-pane-host")).toBeInTheDocument();
+      expect(screen.getByLabelText("Open courses")).toBeInTheDocument();
+      expect(push).not.toHaveBeenCalled();
+    });
+
+    it("opens a review draft from the card's own control", async () => {
+      saved("DD2380");
+      render(<Saved />);
+
+      await userEvent.click(
+        within(cardFor("DD2380")).getByRole("button", {
+          name: "Write a review",
+        }),
+      );
+
+      expect(screen.getByTestId("workspace-pane-host")).toBeInTheDocument();
+      expect(push).not.toHaveBeenCalled();
+    });
+
+    it("opens the course the route names, and spends the instruction", () => {
+      saved("DD2380");
+      render(<Saved openCourse={{ courseCode: "DD2380", kind: "review" }} />);
+
+      expect(screen.getByTestId("workspace-pane-host")).toBeInTheDocument();
+      expect(replace).toHaveBeenCalledWith("/saved", { scroll: false });
+    });
+
+    // A course opened from inside a collection comes back through this route,
+    // so clearing `?open=` must not close the detail it was opened from.
+    it("keeps the open collection when it clears the instruction", () => {
+      saved("DD2380");
+      collections.mockReturnValue([collection("Spring picks", "DD2380")]);
+      render(
+        <Saved
+          openCollectionId="col-Spring picks"
+          openCourse={{ courseCode: "DD2380", kind: "details" }}
+        />,
+      );
+
+      expect(replace).toHaveBeenCalledWith(
+        "/saved?collection=col-Spring%20picks",
+        { scroll: false },
+      );
+      expect(
+        screen.getByRole("heading", { name: "Spring picks" }),
+      ).toBeInTheDocument();
     });
   });
 
