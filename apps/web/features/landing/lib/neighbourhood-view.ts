@@ -11,24 +11,43 @@
  * The projection is that document's, taken literally:
  *
  * ```
- * screenX = (node.x - centre.x) * scale + viewportCentreX
- * screenY = (node.y - centre.y) * scale + viewportCentreY
+ * screenX = (node.x - centre.x) * scale + anchorX
+ * screenY = (node.y - centre.y) * scale + anchorY
  * ```
  *
- * Two earlier liberties with it are gone, and they were one bug: two members
- * standing in the same region of the graph saw different pictures of it.
+ * The bug this file was written against — two members standing in the same
+ * region of the graph seeing different pictures of it — was the **scale**. It
+ * used to be fitted to the viewer's own neighbourhood extent, so the same two
+ * dots rendered at different zooms for two different people. It is a constant
+ * now, `VIEW_SCALE`, and it is not a function of anything.
  *
- * - The centre used to be grid-searched for a spot clear of the hero copy, so
- *   the camera followed the *headline layout* rather than the viewer. It is
- *   the middle of the frame now, full stop.
- * - The scale used to be fitted to the viewer's own neighbourhood extent, so
- *   the same two dots rendered at different zooms for two different people. It
- *   is a constant now — `VIEW_SCALE` — and it is not a function of anything.
+ * The anchor was removed at the same time and that was collateral damage. It
+ * is back, because it is provably not the same kind of thing:
  *
- * What survives of keep-out is a **fade**. A node under the copy is drawn
- * fainter or not at all; it is never moved, and neither is the camera. A world
- * position belongs to a person, and the hero has no licence to rearrange the
- * community so that a headline reads better.
+ * ```
+ * screen(p) − screen(q) = (p − q) · s
+ * ```
+ *
+ * Both the window centre and the anchor cancel, so every pair of nodes keeps
+ * the same separation and the same bearing on every screen no matter where the
+ * anchor lands. It is a pure function of the frame and the copy — no viewer
+ * argument, no search over the graph — which is exactly the "responsive
+ * keep-out adjustment" the viewport document lists as derived and never written
+ * back. `pickViewportCentre` below is that function.
+ *
+ * What it buys, beyond the copy staying readable, is that the viewer's own node
+ * lands *on* the anchor by identity: `input.centre` **is** their persisted
+ * world position, so their offset from it is zero. No search for their dot, no
+ * special case, nothing stored. It holds across sessions for as long as the
+ * frame and the copy layout hold — a resize or a reworded headline moves the
+ * anchor, and that is a responsive adjustment rather than a broken promise.
+ *
+ * Keep-out is no longer only a fade. `pushClear` walks a node out from under
+ * the copy first, and the fade is what is left for the case it refuses; see
+ * `hero-keepout.ts` for why the artboard's own engine makes that the faithful
+ * port rather than a liberty. Issue #68 settled the opposite — "the centre is
+ * the viewport centre", "keep-out may only fade nodes" — and both of those are
+ * superseded here on the product owner's instruction.
  */
 
 import {
@@ -39,7 +58,13 @@ import {
   type NodeStyle,
   UNCONFIGURED,
 } from "@/server/graph/appearance";
-import { clearAt, lineClearance, type Rect } from "./hero-keepout";
+import {
+  clearAt,
+  distToContent,
+  lineClearance,
+  pushClear,
+  type Rect,
+} from "./hero-keepout";
 
 /**
  * The node colour palette, as the server stores it: **names, never hex**.
@@ -204,11 +229,112 @@ export type GraphWindowView = {
  * across a phone, which is the sparser field its Mobile Preview draws. The
  * breakpoint the artboards have falls out of the frame size on its own; it does
  * not need a second constant to produce it.
+ *
+ * **The frame does not stay full as the community grows, and that is the
+ * chosen behaviour.** The two things a reader tends to want here — a constant
+ * visible gap between neighbours, and a hero that is as densely covered at
+ * N=3 as at N=1000 — are mutually exclusive, because a sunflower of `n` nodes
+ * covers area proportional to `n` however it is scaled. `computeWorldPosition`
+ * already delivers the first: nearest-neighbour distance measures flat at about
+ * 201 world units from N=10 to N=1000, which is a constant ~145px on screen at
+ * this scale. What changes with N is coverage, not spacing. The product owner
+ * has chosen spacing, so there is deliberately **no density policy** here: no
+ * scale that reads the node count, and nothing in `server/graph/placement.ts`
+ * that spreads the community out to fill a viewport. A sparse hero early on is
+ * the community being small, drawn honestly.
  */
 export const VIEW_SCALE = 0.72;
 
-/** Drawn radius of an ordinary node, in px. A dot is faded by its edge. */
+/** Drawn radius of an ordinary node, in px. A dot is cleared by its edge. */
 export const NODE_RADIUS = 4;
+
+/** How coarse the anchor search is, per axis. */
+const ANCHOR_STEPS = 12;
+
+/**
+ * How much room around the anchor counts as enough, in px.
+ *
+ * Clearance is a **threshold, not a quantity**: a dot 400px from the headline is
+ * no more legible than one 30px from it, so past a point more room buys nothing
+ * and the anchor should stop chasing it. 25px is chosen against what actually
+ * gets drawn on the anchor — **Find your dot** enlarges the node to a radius of
+ * 7.5 inside a 12.5px ring — and against `SAFETY`, which has already put 25px of
+ * padding between every rect and the text inside it. So an anchor 25px clear of
+ * a padded rect puts the whole reveal about 50px from anything a reader is
+ * looking at.
+ *
+ * The version of this function that was deleted in `2ca7f52` scored raw
+ * distance instead, and the two ends of that are both wrong. Measured against
+ * the rendered hero: on a 1920x600 frame it maximised out into a corner, and on
+ * a 360x480 one — where the whole frame is close to the copy and no candidate
+ * scores much — the centrality pull won outright and the anchor landed *inside
+ * the headline*, `clearAt` 0.00. Saturating fixes both.
+ */
+const ANCHOR_COMFORT = 25;
+
+/**
+ * How hard the anchor is pulled back towards the middle of the frame.
+ *
+ * Clearance alone would shove the graph into whichever corner happens to be
+ * emptiest, which reads as a mistake rather than as a composition. Both terms
+ * are normalised to 0..1, so this is a preference between two comfortable
+ * candidates and never a veto on the comfortable one.
+ */
+const ANCHOR_PULL = 0.35;
+
+/**
+ * Where the middle of the graph sits on the canvas.
+ *
+ * A pure function of the frame and the measured copy — **it takes no viewer**,
+ * and that is the whole of why it is allowed to exist. It moves the camera, not
+ * a node, so every relative position in the window is untouched by it.
+ *
+ * Sampled rather than solved: a coarse grid, each candidate scored on whether
+ * it has comfortable room and then on how near the middle it is. The winner is
+ * handed to `pushClear`, which is what turns "the best of eleven-by-eleven
+ * guesses" into "actually clear", and which hands it back untouched when the
+ * copy leaves nowhere within `MAX_PUSH` to stand — a hero whose copy covers its
+ * whole frame therefore falls back to the middle of it, which is where this used
+ * to be unconditionally.
+ *
+ * **What is and is not promised across sessions.** For a given frame size and a
+ * given copy layout this is deterministic, so a returning member finds their own
+ * dot in the same place on the glass — on the rendered hero that is the top
+ * centre, an eleventh of the way down, at both 1920x600 and 360x480. Resize the
+ * window or reword the headline and the anchor moves, which is a responsive
+ * adjustment and not a broken promise. Two candidates can also tie on score, and
+ * the earlier one in the scan wins; a copy edit that flips such a tie moves the
+ * dot. Neither is written anywhere, so neither can drift out of step with the
+ * stored world position — that is the property that actually matters.
+ */
+export function pickViewportCentre(
+  width: number,
+  height: number,
+  keepOut: Rect[],
+): { x: number; y: number } {
+  const middle = { x: width / 2, y: height / 2 };
+  if (keepOut.length === 0) return middle;
+
+  const span = Math.hypot(width, height) || 1;
+  let best = middle;
+  let bestScore = Number.NEGATIVE_INFINITY;
+
+  for (let ix = 1; ix < ANCHOR_STEPS; ix++) {
+    for (let iy = 1; iy < ANCHOR_STEPS; iy++) {
+      const x = (width * ix) / ANCHOR_STEPS;
+      const y = (height * iy) / ANCHOR_STEPS;
+      const room =
+        Math.min(distToContent(x, y, keepOut), ANCHOR_COMFORT) / ANCHOR_COMFORT;
+      const pull = Math.hypot(x - middle.x, y - middle.y) / span;
+      const score = room - pull * ANCHOR_PULL;
+      if (score > bestScore) {
+        bestScore = score;
+        best = { x, y };
+      }
+    }
+  }
+  return pushClear(best.x, best.y, keepOut, NODE_RADIUS);
+}
 
 /**
  * Project a bounded window onto a canvas of `width` by `height`.
@@ -223,12 +349,29 @@ export function projectGraphWindow(args: {
   keepOut: Rect[];
 }): GraphWindowView {
   const { window: input, width, height, keepOut } = args;
-  const centre = { x: width / 2, y: height / 2 };
+  const centre = pickViewportCentre(width, height, keepOut);
 
   const byId = new Map<string, ScreenNode>();
   const nodes = input.nodes.map((node) => {
-    const screenX = (node.x - input.centre.x) * VIEW_SCALE + centre.x;
-    const screenY = (node.y - input.centre.y) * VIEW_SCALE + centre.y;
+    // The projection proper. Everything after this line is keep-out.
+    const projectedX = (node.x - input.centre.x) * VIEW_SCALE + centre.x;
+    const projectedY = (node.y - input.centre.y) * VIEW_SCALE + centre.y;
+    // The artboard would have rejected this placement and drawn somebody else
+    // instead. A window on the real graph has no such option — every node here
+    // is a person — so it is walked out of the copy rather than dropped.
+    //
+    // There is no exception for the viewer. The anchor is picked clear, and
+    // their node lands on it, so `pushClear` is the identity for them in every
+    // frame where an anchor could be found at all. In the frames where it could
+    // not, they are moved into the open with everybody else, which is a better
+    // answer than being the one dot exempted from a rule that exists to keep
+    // them visible.
+    const { x: screenX, y: screenY } = pushClear(
+      projectedX,
+      projectedY,
+      keepOut,
+      NODE_RADIUS,
+    );
     const placed: ScreenNode = {
       id: node.id,
       screenX,
@@ -237,13 +380,11 @@ export function projectGraphWindow(args: {
       style: nodeStyleName(node.style),
       signalStyle: nodeSignalStyleName(node.signalStyle),
       isViewer: node.isViewer,
-      // The viewer's own node sits on the viewport centre, which is where the
-      // hero copy is; fading it would hide the one node **Find your dot**
-      // exists to reveal. Declining to fade a node is not moving it, and it is
-      // the smallest exception that leaves the flow with something to show.
-      clearance: node.isViewer
-        ? 1
-        : clearAt(screenX, screenY, keepOut, NODE_RADIUS),
+      // 1 for everything the push could place, which is the artboard's own
+      // situation: there, `clearAt` is 1 for every dot that survived rejection.
+      // It is below 1 only where the push gave up, and there it is doing the
+      // job it always did.
+      clearance: clearAt(screenX, screenY, keepOut, NODE_RADIUS),
     };
     byId.set(node.id, placed);
     return placed;
