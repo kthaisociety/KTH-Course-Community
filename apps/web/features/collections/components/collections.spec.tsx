@@ -280,6 +280,24 @@ describe("reordering within a collection", () => {
   });
 });
 
+describe("course actions in a collection", () => {
+  it("opens the existing review route from a collection card", async () => {
+    setup({
+      savedCourseCodes: ["AA1000"],
+      collections: [{ id: "c1", name: "Spring", courseCodes: ["AA1000"] }],
+    });
+    render(<Collections openCollectionId="c1" />);
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Write a review" }),
+    );
+
+    expect(push).toHaveBeenCalledWith(
+      "/course/AA1000?writeReview=1&from=collections",
+    );
+  });
+});
+
 describe("the add-course menu", () => {
   it("closes on Escape and gives focus back to the trigger", async () => {
     setup({

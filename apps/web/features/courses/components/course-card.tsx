@@ -158,6 +158,10 @@ export function CourseCard({
 }: Props) {
   const tween = { transition: geo.tween };
   const keywords = keywordChips(c.keywords);
+  // The display model normally supplies this, but CourseCard also renders
+  // direct fixtures and future callers. A picker trigger that says only "▾"
+  // is neither discoverable nor useful to assistive technology.
+  const addLabel = c.addLabel?.trim() || "Add to collection";
 
   // Each popover's region is its trigger plus its panel: a press inside either
   // is not a press elsewhere.
@@ -369,8 +373,8 @@ export function CourseCard({
                   <button
                     type="button"
                     onClick={c.onPicker}
-                    title="Add to collections"
-                    aria-label="Add to collections"
+                    title={addLabel}
+                    aria-label={addLabel}
                     aria-haspopup="menu"
                     aria-expanded={c.pickerOpen}
                     className="flex flex-none cursor-pointer items-center px-[9px] text-[10px] hover:bg-cc-info"
@@ -385,7 +389,7 @@ export function CourseCard({
                   onClick={c.onPicker}
                   aria-haspopup="menu"
                   aria-expanded={c.pickerOpen}
-                  aria-label={c.addLabel}
+                  aria-label={addLabel}
                   className="box-border flex h-[34px] cursor-pointer items-center gap-[7px] overflow-hidden rounded-[8px] border border-cc-rule3 bg-cc-surface px-[10px] text-[13px] text-cc-ink hover:border-cc-hov hover:bg-cc-info"
                 >
                   <AddToCollectionIcon />
@@ -396,7 +400,7 @@ export function CourseCard({
                       name either. */}
                   {geo.showLabel ? (
                     <span className="min-w-0 overflow-hidden whitespace-nowrap @max-[440px]:hidden">
-                      {c.addLabel}
+                      {addLabel}
                     </span>
                   ) : null}
                 </button>

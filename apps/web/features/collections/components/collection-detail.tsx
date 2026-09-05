@@ -37,6 +37,8 @@ type Props = {
   onRemoveCourse: (courseCode: string) => void;
   onMoveCourse: (courseCode: string, direction: "up" | "down") => void;
   onOpenCourse: (courseCode: string) => void;
+  /** Starts a review from a course card in this collection. */
+  onReviewCourse: (courseCode: string) => void;
   onRequestAuth: (reason: AuthReason) => void;
 };
 
@@ -76,6 +78,7 @@ export function CollectionDetail({
   onRemoveCourse,
   onMoveCourse,
   onOpenCourse,
+  onReviewCourse,
   onRequestAuth,
 }: Props) {
   const renaming = useRenameDraft(collection.name, onRename);
@@ -234,6 +237,7 @@ export function CollectionDetail({
                       removeLabel={`Remove ${courseCode} from ${collection.name}`}
                       onRemove={() => onRemoveCourse(courseCode)}
                       onOpen={() => onOpenCourse(courseCode)}
+                      onReview={() => onReviewCourse(courseCode)}
                       onRequestAuth={onRequestAuth}
                     />
                   ) : (

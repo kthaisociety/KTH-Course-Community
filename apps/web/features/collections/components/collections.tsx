@@ -389,6 +389,11 @@ export function Collections({
             onOpenCourse={(courseCode) =>
               router.push(`/course/${courseCode}?from=collections`)
             }
+            onReviewCourse={(courseCode) =>
+              router.push(
+                `/course/${courseCode}?writeReview=1&from=collections`,
+              )
+            }
             onRequestAuth={setAuthReason}
           />
         ) : null}
