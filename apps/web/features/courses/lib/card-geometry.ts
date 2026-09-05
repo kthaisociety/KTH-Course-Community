@@ -3,8 +3,16 @@
  *
  * The card never measures anything. Its parent hands it one `geo` object, which
  * is what lets Explore interpolate the whole card from its results column as a
- * workspace pane is dragged open, while Saved and Collections simply pin an end
- * of the ramp. That split is the reason the card is one component and not two.
+ * workspace pane is dragged open, while a list that measures nothing can pin an
+ * end of the ramp instead. That split is the reason the card is one component
+ * and not two.
+ *
+ * This used to name Saved and Collections as the two that pin, and Saved has
+ * not pinned since #90's decision was reversed — `saved.tsx` ramps from its own
+ * results width, and says so at length. Naming screens here is how the two
+ * comments came to state opposite things about the same page, so the list is
+ * gone: `courseCardGeometry`'s callers are who ramps, and the two pinned
+ * constants below are who does not.
  *
  * Every number here is the artboard's:
  * `docs/design_ref/2026-09-05/Course Community - Explore.dc.html` computes exactly this ramp,

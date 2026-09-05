@@ -244,7 +244,6 @@ export function toCourseCardModel(view: CourseCardView): CourseCardModel {
 
     pickerOpen: view.pickerOpen ?? false,
     creating,
-    notCreating: !creating,
     hasCollections: collections.length > 0,
     collections,
 

@@ -128,7 +128,6 @@ export interface CourseCardModel {
 
   pickerOpen: boolean;
   creating: boolean;
-  notCreating: boolean;
   hasCollections: boolean;
   collections: CollectionPickerRow[];
 
@@ -142,6 +141,12 @@ export interface CourseCardModel {
   removeLabel?: string;
   onOpen?: () => void;
   onTaken?: () => void;
+  /**
+   * Optional here because this type is the artboard's prop shape and the
+   * fixture built from its literals carries no handlers. The card draws the
+   * button regardless, so `useCourseCard` requires one from every screen — see
+   * `UseCourseCardOptions`.
+   */
   onReview?: () => void;
   onSave?: () => void;
   onPicker?: () => void;

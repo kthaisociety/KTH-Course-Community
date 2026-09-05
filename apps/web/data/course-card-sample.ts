@@ -35,6 +35,13 @@
  *   every card in a grid. #73 generates the real blurb.
  * - `prereqCourses` entries carry `inCatalog` in the sample but the markup reads
  *   `taken`. Prerequisite ticks are display-only and never cascade (#68).
+ * - The artboard's `notCreating: true` is dropped rather than mirrored. It is
+ *   an artifact of the artboard's template language, not a piece of the card's
+ *   model: `<sc-if>` has no `else`, so the artboard needs a second, inverted
+ *   boolean to draw the branch where the reader is *not* naming a new
+ *   collection. JSX writes that as a ternary on `creating`, so nothing ever
+ *   read the inverse — it was computed by the mapper, carried in the type and
+ *   never looked at (#134).
  * - The artboard's `comparisons` / `hasComparisons` / `onNewComparison` are its
  *   word for **collections**. `CONTEXT.md` bans "comparison" in identifiers and
  *   #68 settles the concept as Collection, so they are renamed here and
@@ -113,7 +120,6 @@ export const SAMPLE_COURSE: CourseCardModel = {
   saveFill: "none",
   pickerOpen: false,
   creating: false,
-  notCreating: true,
   hasCollections: false,
   collections: [],
 };
