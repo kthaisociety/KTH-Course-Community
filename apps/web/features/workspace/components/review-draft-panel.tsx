@@ -740,8 +740,9 @@ export function ReviewDraftPanel({
             is wrong even on the day nothing else is.
 
             The empty case is a sentence rather than silence. `publish()` only
-            reaches the sign-in prompt with an answered draft (`:353`), so a
-            draft that is untouched on the way back is not a writer who typed
+            reaches the sign-in prompt with an answered draft — it returns before
+            it unless `toReviewFormData` gave it a form — so a draft that is
+            untouched on the way back is not a writer who typed
             nothing — it is work that existed and is gone, and the only useful
             thing to say is which. Silence would leave them staring at a blank
             form deciding whether they had imagined filling it in; the tint is
