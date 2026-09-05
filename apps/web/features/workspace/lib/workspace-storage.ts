@@ -257,8 +257,11 @@ function decodeStoredDrafts(): Record<string, StoredDraft> {
  * removed only once the new one has actually been written, so a browser that
  * refuses the write keeps the old value and can try again on the next read.
  *
- * It runs at most once per browser: the first read moves everything and drops
- * the key, and thereafter there is nothing to find.
+ * It runs at most once per tab, which is where the old key lives: the first
+ * read moves that tab's drafts across and drops its key, and thereafter there
+ * is nothing to find. A second tab still carrying its own legacy value gets the
+ * same treatment when it reloads into this build, and the rule above is what
+ * keeps its staler copy from displacing what the first tab already moved.
  */
 function adoptLegacyDrafts(
   stored: Record<string, StoredDraft>,
