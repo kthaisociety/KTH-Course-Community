@@ -447,7 +447,7 @@ cannot be told from a ledger that stopped looking. **Confidence: high.**
 **Severity: S3.** **Confidence: high** on the behaviour; **medium** on whether
 it is a defect at all, which is why it is also a product decision.
 
-`features/workspace/components/mobile-workspace-sheet-host.tsx:105-113` passes:
+`features/workspace/components/mobile-workspace-sheet-host.tsx:108-113` passes:
 
 ```tsx
 openCourses={[activeEntry]}
