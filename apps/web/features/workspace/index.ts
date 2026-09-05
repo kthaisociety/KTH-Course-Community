@@ -13,6 +13,10 @@
  * screen right now.
  */
 
+export {
+  MobileWorkspaceSheetHost,
+  type MobileWorkspaceSheetHostProps,
+} from "./components/mobile-workspace-sheet-host";
 export type { WorkspacePaneProps } from "./components/workspace-pane";
 export { WorkspacePane } from "./components/workspace-pane";
 export { useWorkspacePane } from "./hooks/use-workspace-pane";

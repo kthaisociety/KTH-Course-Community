@@ -7,13 +7,18 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { AuthReasonDialog } from "@/features/auth";
 import { CourseCardItem, courseCardGeometry } from "@/features/courses";
 import { PageColumn, PageHeader } from "@/features/shell";
-import { useWorkspacePane } from "@/features/workspace";
+import {
+  MobileWorkspaceSheetHost,
+  useWorkspacePane,
+} from "@/features/workspace";
 import {
   MAX_RATING_STARS,
   RATING_STAR_OPTIONS,
   useExplore,
 } from "../hooks/use-explore";
 import { useResultsWidth } from "../hooks/use-results-width";
+
+type CourseOpen = { courseCode: string; kind: "details" | "review" };
 
 // The pane is inactive for ordinary browsing and has its own data-heavy
 // details/review views. Load it only once a desktop reader opens a course.
@@ -67,6 +72,14 @@ export function Explore() {
   const workspace = useWorkspacePane();
   const containerRef = useRef<HTMLDivElement>(null);
   const desktopWorkspace = useContainerBreakpoint(containerRef, 768);
+  const compactWorkspace = useContainerBreakpoint(containerRef, 640);
+  // A restored workspace may exist before ResizeObserver reports this
+  // container's size. Do not guess a presentation during that window: mounting
+  // a Sheet would briefly lock the desktop page's body before the pane wins.
+  const mobileWorkspace = compactWorkspace === null ? false : !compactWorkspace;
+  const [pendingCourseOpen, setPendingCourseOpen] = useState<CourseOpen | null>(
+    null,
+  );
   const rowRef = useRef<HTMLDivElement>(null);
   const pane = useWorkspaceWidth(rowRef, workspace.hasOpenCourses);
   const [resultsRef, resultsWidth] = useResultsWidth();
@@ -75,17 +88,43 @@ export function Explore() {
   const { results, hasQuery, isLoading, isError } = explore;
   const showEmpty = hasQuery && !isLoading && !isError && results.length === 0;
 
-  // The desktop pane intentionally does not replace the mobile course route:
-  // #133 owns the mobile sheet host. Keeping that established route means a
-  // phone's Drawer and course controls remain keyboard-reachable today.
-  function openCourse(courseCode: string, kind: "details" | "review") {
-    if (desktopWorkspace) {
-      workspace.open(courseCode, kind);
-      return;
-    }
-    if (kind === "details") explore.onOpenCourse(courseCode);
-    else explore.onReviewCourse(courseCode);
-  }
+  const layoutMeasured = desktopWorkspace !== null && compactWorkspace !== null;
+
+  // The desktop column and phone sheet share the same state machine. The
+  // in-between layout remains a route: it has neither enough width for the
+  // column nor the narrow mobile chrome the sheet was designed for.
+  const openMeasuredCourse = useCallback(
+    (courseCode: string, kind: CourseOpen["kind"]) => {
+      if (desktopWorkspace) {
+        workspace.open(courseCode, kind);
+        return;
+      }
+      if (mobileWorkspace) {
+        workspace.open(courseCode, kind);
+        return;
+      }
+      if (kind === "details") explore.onOpenCourse(courseCode);
+      else explore.onReviewCourse(courseCode);
+    },
+    [desktopWorkspace, mobileWorkspace, workspace, explore],
+  );
+
+  const openCourse = useCallback(
+    (courseCode: string, kind: CourseOpen["kind"]) => {
+      if (!layoutMeasured) {
+        setPendingCourseOpen({ courseCode, kind });
+        return;
+      }
+      openMeasuredCourse(courseCode, kind);
+    },
+    [layoutMeasured, openMeasuredCourse],
+  );
+
+  useEffect(() => {
+    if (!pendingCourseOpen || !layoutMeasured) return;
+    openMeasuredCourse(pendingCourseOpen.courseCode, pendingCourseOpen.kind);
+    setPendingCourseOpen(null);
+  }, [layoutMeasured, openMeasuredCourse, pendingCourseOpen]);
 
   return (
     <PageColumn
@@ -212,6 +251,15 @@ export function Explore() {
         ) : null}
       </div>
 
+      {mobileWorkspace ? (
+        <MobileWorkspaceSheetHost
+          openCourses={workspace.openCourses}
+          activeId={workspace.activeId}
+          onClose={workspace.close}
+          onOpen={workspace.open}
+        />
+      ) : null}
+
       <AuthReasonDialog
         reason={explore.authReason}
         onReasonChange={explore.setAuthReason}
@@ -227,7 +275,7 @@ function useContainerBreakpoint(
   containerRef: React.RefObject<HTMLDivElement | null>,
   minimumWidth: number,
 ) {
-  const [matches, setMatches] = useState(false);
+  const [matches, setMatches] = useState<boolean | null>(null);
 
   useEffect(() => {
     const container = containerRef.current;

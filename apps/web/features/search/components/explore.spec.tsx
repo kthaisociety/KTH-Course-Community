@@ -1,4 +1,5 @@
 import {
+  act,
   fireEvent,
   render,
   screen,
@@ -17,6 +18,17 @@ const useSearchCourses = vi.fn();
 
 let search = "";
 let containerWidth = 500;
+let delayResizeObserver = false;
+let resizeObserverCallbacks: ResizeObserverCallback[] = [];
+
+function deliverResizeObservers() {
+  for (const callback of resizeObserverCallbacks) {
+    callback(
+      [{ contentRect: { width: containerWidth } } as ResizeObserverEntry],
+      {} as ResizeObserver,
+    );
+  }
+}
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push, replace }),
@@ -103,6 +115,8 @@ function results(...courses: CourseSummary[]) {
 beforeEach(() => {
   search = "";
   containerWidth = 500;
+  delayResizeObserver = false;
+  resizeObserverCallbacks = [];
   window.sessionStorage.clear();
   push.mockClear();
   replace.mockClear();
@@ -112,10 +126,8 @@ beforeEach(() => {
       constructor(private readonly callback: ResizeObserverCallback) {}
 
       observe() {
-        this.callback(
-          [{ contentRect: { width: containerWidth } } as ResizeObserverEntry],
-          this as unknown as ResizeObserver,
-        );
+        resizeObserverCallbacks.push(this.callback);
+        if (!delayResizeObserver) deliverResizeObservers();
       }
 
       disconnect() {}
@@ -170,7 +182,7 @@ describe("Explore", () => {
       }
     });
 
-    it("opens a course on its own page", async () => {
+    it("opens a course in the mobile workspace sheet", async () => {
       render(<Explore />);
       await userEvent.click(
         within(screen.getAllByRole("article")[0] as HTMLElement).getByRole(
@@ -178,7 +190,77 @@ describe("Explore", () => {
           { name: /Artificial Intelligence/ },
         ),
       );
-      expect(push).toHaveBeenCalledWith("/course/DD2380");
+      expect(screen.getAllByText("DD2380 · Details")).toHaveLength(2);
+      expect(
+        screen.getByRole("button", { name: "Close DD2380 · Details" }),
+      ).toBeVisible();
+      expect(push).not.toHaveBeenCalled();
+
+      await userEvent.click(
+        screen.getByRole("button", { name: "Close DD2380 · Details" }),
+      );
+      expect(screen.queryByText("DD2380 · Details")).not.toBeInTheDocument();
+    });
+
+    it("dismisses the mobile workspace sheet when its handle is dragged down", async () => {
+      render(<Explore />);
+      await userEvent.click(
+        within(screen.getAllByRole("article")[0] as HTMLElement).getByRole(
+          "button",
+          { name: /Artificial Intelligence/ },
+        ),
+      );
+
+      const handle = screen.getByRole("button", {
+        name: "Drag workspace sheet down to dismiss",
+      });
+      fireEvent.pointerDown(handle, { pointerId: 1, clientY: 10 });
+      fireEvent.pointerMove(handle, { pointerId: 1, clientY: 160 });
+      fireEvent.pointerUp(handle, { pointerId: 1, clientY: 160 });
+
+      expect(screen.queryByText("DD2380 · Details")).not.toBeInTheDocument();
+    });
+
+    it("keeps the workspace sheet open when a drag is cancelled", async () => {
+      render(<Explore />);
+      await userEvent.click(
+        within(screen.getAllByRole("article")[0] as HTMLElement).getByRole(
+          "button",
+          { name: /Artificial Intelligence/ },
+        ),
+      );
+
+      const handle = screen.getByRole("button", {
+        name: "Drag workspace sheet down to dismiss",
+      });
+      fireEvent.pointerDown(handle, { pointerId: 1, clientY: 10 });
+      fireEvent.pointerMove(handle, { pointerId: 1, clientY: 160 });
+      fireEvent.pointerCancel(handle, { pointerId: 1 });
+
+      expect(
+        screen.getByRole("button", { name: "Close DD2380 · Details" }),
+      ).toBeVisible();
+    });
+
+    it("queues a course open until its container chooses the mobile sheet", async () => {
+      delayResizeObserver = true;
+      render(<Explore />);
+
+      await userEvent.click(
+        within(screen.getAllByRole("article")[0] as HTMLElement).getByRole(
+          "button",
+          { name: /Artificial Intelligence/ },
+        ),
+      );
+      expect(push).not.toHaveBeenCalled();
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+
+      await act(async () => deliverResizeObservers());
+
+      expect(
+        await screen.findByRole("button", { name: "Close DD2380 · Details" }),
+      ).toBeVisible();
+      expect(push).not.toHaveBeenCalled();
     });
 
     it("keeps the results as the only mobile scrolling surface", () => {
