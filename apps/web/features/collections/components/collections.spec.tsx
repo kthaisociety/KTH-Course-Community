@@ -280,12 +280,32 @@ describe("reordering within a collection", () => {
   });
 });
 
+/**
+ * #68 §5 deleted the course page: a course opens as a tab in the workspace
+ * pane, and this component hosts no pane. Saved does — it is also the only way
+ * in to collections the design draws — so both controls hand the course to that
+ * route, and carry the open collection with them so the detail the reader is
+ * standing in survives the navigation.
+ */
 describe("course actions in a collection", () => {
-  it("opens the existing review route from a collection card", async () => {
+  beforeEach(() => {
     setup({
       savedCourseCodes: ["AA1000"],
       collections: [{ id: "c1", name: "Spring", courseCodes: ["AA1000"] }],
     });
+  });
+
+  it("opens a course into Saved's workspace pane", async () => {
+    render(<Collections openCollectionId="c1" />);
+
+    await userEvent.click(screen.getByRole("button", { name: "AA1000 Alpha" }));
+
+    expect(push).toHaveBeenCalledWith(
+      "/saved?collection=c1&open=AA1000&kind=details",
+    );
+  });
+
+  it("opens a review draft into the same pane", async () => {
     render(<Collections openCollectionId="c1" />);
 
     await userEvent.click(
@@ -293,8 +313,21 @@ describe("course actions in a collection", () => {
     );
 
     expect(push).toHaveBeenCalledWith(
-      "/course/AA1000?writeReview=1&from=collections",
+      "/saved?collection=c1&open=AA1000&kind=review",
     );
+  });
+
+  // The course page is gone; nothing here may keep a link to it alive.
+  it("never routes to a course page", async () => {
+    render(<Collections openCollectionId="c1" />);
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Write a review" }),
+    );
+
+    for (const [href] of push.mock.calls) {
+      expect(href).not.toMatch(/^\/course\//);
+    }
   });
 });
 

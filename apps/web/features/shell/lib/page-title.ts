@@ -2,8 +2,8 @@
  * What the mobile header calls the page you are on.
  *
  * The Mobile Preview derives this from the route, not from anything the page
- * hands upward — `Course Community - Mobile Preview.dc.html` line 414 is one
- * map keyed by page:
+ * hands upward — `docs/design_ref_new/Course Community - Mobile Preview.dc.html`
+ * line 414 is one map keyed by page:
  *
  *   pageTitle: { landing: "Course Community", explore: "Explore courses",
  *                saved: "Saved courses", "my-page": "My Page",
@@ -27,8 +27,12 @@
 export const WORDMARK = "Course Community";
 
 /**
- * Longest prefix wins, so `/course/DD2380` and `/profile/settings` inherit
- * their section's title.
+ * Longest prefix wins, so `/profile/settings` inherits its section's title.
+ *
+ * `/course` and `/course/<code>` are absent deliberately: #68 §5 retired the
+ * course page and both are now `redirect()` calls, which throw before anything
+ * renders. A title for a route that never paints inside the shell would be a
+ * claim this app no longer has a page to back.
  */
 const TITLES: ReadonlyArray<readonly [string, string]> = [
   // The design's own five.
@@ -39,10 +43,7 @@ const TITLES: ReadonlyArray<readonly [string, string]> = [
   // Routes the design does not key, titled after the page's own heading.
   ["/collections", "Collections"],
   // #96 owns About and Contact if it wants different words.
-  ["/newsletter", "Newsletter"],
   ["/contact", "Contact"],
-  ["/reviews", "Reviews"],
-  ["/course", "Courses"],
   ["/about", "About"],
 ];
 

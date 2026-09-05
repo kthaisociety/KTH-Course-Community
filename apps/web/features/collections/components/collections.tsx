@@ -17,6 +17,7 @@ import {
   useCourseSummaries,
 } from "@/features/courses";
 import { PageColumn, PageHeader } from "@/features/shell";
+import type { OpenCourseKind } from "@/features/workspace";
 import { CollectionChip } from "./collection-chip";
 import { CollectionDetail, type SavedCourse } from "./collection-detail";
 import { CollectionTile } from "./collection-tile";
@@ -30,6 +31,22 @@ const COMPACT_HEADING_ID = "collections-section-heading";
 const NOTE_LIFETIME = 3000;
 
 const SKELETON_KEYS = ["c0", "c1", "c2"] as const;
+
+/**
+ * Where a course opened from a collection goes: Saved, with the collection kept
+ * open behind the pane it lands in.
+ *
+ * Carrying `?collection=` through matters when this is the embedded section of
+ * `/saved` — the navigation is then onto the route the reader is already on, and
+ * dropping the parameter would close the detail out from under them.
+ */
+function savedPaneHref(
+  collectionId: string,
+  courseCode: string,
+  kind: OpenCourseKind = "details",
+): string {
+  return `/saved?collection=${encodeURIComponent(collectionId)}&open=${encodeURIComponent(courseCode)}&kind=${kind}`;
+}
 
 type Props = {
   /**
@@ -386,12 +403,19 @@ export function Collections({
             onMoveCourse={(courseCode, direction) =>
               onMoveCourse(openCollectionRecord, courseCode, direction)
             }
+            /*
+              A course opens in the workspace pane, and this component does not
+              host one: the design reaches collections only through Saved, and
+              Saved is where the pane is mounted. So both controls hand the
+              course to that route, which spends `?open=` on arrival and puts
+              the collection straight back in the URL.
+            */
             onOpenCourse={(courseCode) =>
-              router.push(`/course/${courseCode}?from=collections`)
+              router.push(savedPaneHref(openCollectionRecord.id, courseCode))
             }
             onReviewCourse={(courseCode) =>
               router.push(
-                `/course/${courseCode}?writeReview=1&from=collections`,
+                savedPaneHref(openCollectionRecord.id, courseCode, "review"),
               )
             }
             onRequestAuth={setAuthReason}
