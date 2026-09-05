@@ -1,8 +1,6 @@
 "use client";
 
 import { MessageCircle } from "lucide-react";
-import Link from "next/link";
-import type { ReactNode } from "react";
 
 /**
  * One row of the prompt: a course the viewer took and has not reviewed.
@@ -34,17 +32,18 @@ type Props = {
    */
   onStart: () => void;
   /**
-   * Handles a row instead of the default link into the review flow. This is the
-   * artboard's own per-course `c.onClick`, which Taken courses uses to open its
-   * reviewer in place rather than navigating away; My Page passes one too.
+   * Opens the reviewer on this one course. The artboard's own per-course
+   * `c.onClick`, and the only thing a row can do: it draws a plain line of text
+   * when no screen supplies one, exactly as the artboard does
+   * (`cursor: c.onClick ? "pointer" : "default"`).
+   *
+   * There is no link fallback. The old one pointed at
+   * `/course/<code>?writeReview=1`, and that route is going away — every course
+   * opens in the workspace pane now, and every review is written either there
+   * or in the fast-track reviewer this card starts.
    */
   onSelect?: (courseCode: string) => void;
 };
-
-/** Where a course's review gets written. Same entry point Saved and Explore use. */
-function reviewFlowHref(courseCode: string): string {
-  return `/course/${courseCode}?writeReview=1`;
-}
 
 const ROW_CLASS =
   "flex w-full items-baseline gap-[9px] text-left transition-opacity hover:opacity-80";
@@ -78,7 +77,7 @@ function CourseRowContent({ course }: { course: UnreviewedCourse }) {
 
 /**
  * The prompt shown for courses the viewer marked taken but never reviewed —
- * `docs/design/Course Community - Unreviewed Card.dc.html`.
+ * `docs/design_ref_new/Course Community - Unreviewed Card.dc.html`.
  *
  * It is an invitation, not a warning, which is why it wears the ordinary card
  * surface and the brand button rather than the `--cc-warn-*` nudge palette; the
@@ -139,9 +138,9 @@ export function UnreviewedCard({
 }
 
 /**
- * A row navigates into the review flow by default, so the card is useful with
- * nothing but a list. `onSelect` swaps the link for a button when the screen
- * would rather open a reviewer in place than leave the page.
+ * A row is a button when the screen can open the reviewer on that one course,
+ * and a plain line when it cannot. Nothing here navigates: the card is a
+ * prompt, and where reviewing happens is the screen's to decide.
  */
 function CourseRow({
   course,
@@ -149,22 +148,22 @@ function CourseRow({
 }: {
   course: UnreviewedCourse;
   onSelect?: (courseCode: string) => void;
-}): ReactNode {
-  if (onSelect) {
+}) {
+  if (!onSelect) {
     return (
-      <button
-        type="button"
-        className={ROW_CLASS}
-        onClick={() => onSelect(course.code)}
-      >
+      <span className="flex items-baseline gap-[9px]">
         <CourseRowContent course={course} />
-      </button>
+      </span>
     );
   }
 
   return (
-    <Link href={reviewFlowHref(course.code)} className={ROW_CLASS}>
+    <button
+      type="button"
+      className={ROW_CLASS}
+      onClick={() => onSelect(course.code)}
+    >
       <CourseRowContent course={course} />
-    </Link>
+    </button>
   );
 }

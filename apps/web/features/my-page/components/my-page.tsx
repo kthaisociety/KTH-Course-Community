@@ -61,8 +61,8 @@ type OpenEditor = { review: EditableReview; courseCode: string };
 /**
  * My Page — the signed-in reader's own page, at `/profile`.
  *
- * From `docs/design/Course Community - My Page.dc.html`, with its four tabs
- * (Overview, Reviews, My dot, Settings) and the Mobile Preview's stacked
+ * From `docs/design_ref_new/Course Community - My Page.dc.html`, with its four
+ * tabs (Overview, Reviews, My dot, Settings) and the Mobile Preview's stacked
  * version of the same. Everything it shows is the viewer's own: `user.me` for
  * who they are, `taken.list` for their courses, `reviews.list` for what they
  * wrote and upvoted, `graph.effectiveTier` for how far their node is unlocked.
@@ -322,18 +322,21 @@ export function MyPage() {
                     worked out just now. Reload to try again.
                   </output>
                 ) : (
+                  /*
+                    Both the button and a row deep-link the fast-track
+                    reviewer, which is where the artboard's own My Page sends
+                    them (`window.location.href = "…Taken Courses…?review=1"`).
+                    This page has no reviewer of its own and should not grow
+                    one: `/taken` owns the queue, and it is the screen that
+                    knows which courses are still unreviewed by the time the
+                    reader gets there.
+                  */
                   <UnreviewedCard
                     courses={unreviewed.courses.map((course) => ({
                       code: course.courseCode,
                     }))}
-                    onStart={() => {
-                      const first = unreviewed.courses[0];
-                      if (first) {
-                        router.push(
-                          `/course/${first.courseCode}?writeReview=1&from=my-page`,
-                        );
-                      }
-                    }}
+                    onStart={() => router.push("/taken?review=1")}
+                    onSelect={() => router.push("/taken?review=1")}
                   />
                 )}
               </div>

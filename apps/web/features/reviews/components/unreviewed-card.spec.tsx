@@ -35,7 +35,7 @@ function renderScreen(
 }
 
 describe("UnreviewedCard", () => {
-  it("prompts for taken courses with no review and routes each into the review flow", () => {
+  it("prompts for taken courses with no review", () => {
     renderScreen([]);
 
     expect(
@@ -44,13 +44,22 @@ describe("UnreviewedCard", () => {
     expect(
       screen.getByText("Your review is what the next student reads."),
     ).toBeInTheDocument();
+    expect(screen.getByText("DD2424")).toBeInTheDocument();
+    expect(screen.getByText("SF1918")).toBeInTheDocument();
+  });
 
-    expect(
-      screen.getByRole("link", { name: /Deep Learning in Data Science/ }),
-    ).toHaveAttribute("href", "/course/DD2424?writeReview=1");
-    expect(
-      screen.getByRole("link", { name: /Probability and Statistics/ }),
-    ).toHaveAttribute("href", "/course/SF1918?writeReview=1");
+  /**
+   * The card used to link a row at `/course/<code>?writeReview=1`. That route
+   * is gone — every course opens in the workspace pane now — so a row with
+   * nowhere to go is text, not a dead link. It is the artboard's own rule:
+   * `cursor: c.onClick ? "pointer" : "default"`.
+   */
+  it("never navigates a row of its own accord", () => {
+    renderScreen([]);
+
+    expect(screen.queryAllByRole("link")).toHaveLength(0);
+    // The only button is the fast track's own.
+    expect(screen.getAllByRole("button")).toHaveLength(1);
   });
 
   it("leaves out a taken course the viewer has already reviewed", () => {
