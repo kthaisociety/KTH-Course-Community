@@ -55,6 +55,43 @@ describe("useWorkspacePane", () => {
     expect(result.current.hasOpenCourses).toBe(false);
   });
 
+  /**
+   * The proof that the fix in `open-courses.ts` reaches React.
+   *
+   * `openCourse` returning the same object is only worth anything if `useState`
+   * bails out on it, so this asserts what the two OOM crashes actually needed:
+   * re-opening the course that is already in front **settles**. It does not
+   * allocate a workspace per turn, and the value every host reads keeps its
+   * identity, so no dependency downstream is rebuilt and nothing calls back in.
+   *
+   * The count is asserted with a ceiling rather than an equality because React
+   * may still render the owner of the state once before it bails out of the
+   * tree — that is documented and bounded. What the loop needed was a count
+   * that climbed with every turn, and that is what stops here. Every other
+   * assertion is an identity one: a structural comparison would pass on exactly
+   * the value that used to loop.
+   */
+  it("settles when the course already in front is opened again", () => {
+    let renders = 0;
+    const { result } = renderHook(() => {
+      renders += 1;
+      return useWorkspacePane();
+    });
+
+    act(() => result.current.open("DD2380", "details"));
+    const workspace = result.current;
+    const settled = renders;
+
+    for (let turn = 0; turn < 5; turn += 1) {
+      act(() => result.current.open("DD2380", "details"));
+      act(() => result.current.activate("details:DD2380"));
+    }
+
+    expect(renders).toBeLessThanOrEqual(settled + 1);
+    expect(result.current).toBe(workspace);
+    expect(result.current.openCourses).toBe(workspace.openCourses);
+  });
+
   it("ignores whatever else is in the tab's storage", () => {
     sessionStorage.setItem(
       "cc.workspace.open",

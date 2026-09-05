@@ -201,12 +201,20 @@ export function useExplore({ onOpenCourse }: ExploreOptions = {}) {
   /**
    * The request this hook has already spent, so it spends it exactly once.
    *
-   * `setParams` is rebuilt whenever the URL changes and whenever `router`
-   * changes identity, and the handler above re-renders the host — `openCourse`
-   * returns a new workspace even for a tab that is already open. Without this
-   * guard those two facts close a loop that allocates on every turn and ends in
-   * an out-of-memory crash rather than a failed assertion. Next's `router` is
-   * stable in practice; nothing promises it, and a test double is not.
+   * This used to be load-bearing. `setParams` is rebuilt whenever the URL
+   * changes and whenever `router` changes identity, and the handler above
+   * re-renders the host — and `openCourse` returned a new workspace even for a
+   * tab that was already open and already in front, so those facts closed a
+   * loop that allocated on every turn and ended in an out-of-memory crash
+   * rather than a failed assertion. #154 fixed that at the value: a no-op open
+   * now returns the very same `Workspace`, `useState` bails out, and the fuel
+   * is gone.
+   *
+   * The guard stays, demoted to belt-and-braces. It defends against a *second*
+   * instruction rather than against the loop — the same `?open=` surviving one
+   * more render before `router.replace` has taken it back out of the URL would
+   * reopen a tab the reader may already have closed. Next's `router` is stable
+   * in practice; nothing promises it, and a test double is not.
    *
    * It clears when the parameter goes, so the same course arriving again later
    * is a new instruction rather than one this hook thinks it has done.

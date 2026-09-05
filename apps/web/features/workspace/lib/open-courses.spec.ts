@@ -48,6 +48,53 @@ describe("openCourse", () => {
     ]);
     expect(workspace.activeId).toBe("review:DD2380");
   });
+
+  /*
+   * The render-loop tripwire, and the reason it is an identity assertion rather
+   * than an equality one.
+   *
+   * Three unbounded render loops have shipped on this branch and every one had
+   * the same shape: an effect calls into the workspace, the workspace hands back
+   * a fresh object for what was a no-op, `useState` therefore cannot bail out,
+   * the host re-renders, something the effect depends on is rebuilt, and the
+   * effect runs again. `toEqual` would pass on the value that causes that.
+   * `toBe` is the only assertion that holds the fix.
+   */
+  it("returns the same workspace when the course is already open and in front", () => {
+    const workspace = withOpen("DD2380", "SF1626");
+
+    expect(openCourse(workspace, "SF1626", "details")).toBe(workspace);
+  });
+
+  it("still allocates when re-opening brings a background tab forward", () => {
+    const workspace = withOpen("DD2380", "SF1626");
+    const next = openCourse(workspace, "DD2380", "details");
+
+    expect(next).not.toBe(workspace);
+    expect(next.activeId).toBe("details:DD2380");
+  });
+});
+
+describe("activateCourse", () => {
+  it("returns the same workspace when the tab is already in front", () => {
+    const workspace = withOpen("DD2380", "SF1626");
+
+    expect(activateCourse(workspace, "details:SF1626")).toBe(workspace);
+  });
+
+  it("brings a background tab forward", () => {
+    const workspace = withOpen("DD2380", "SF1626");
+
+    expect(activateCourse(workspace, "details:DD2380").activeId).toBe(
+      "details:DD2380",
+    );
+  });
+
+  it("returns the same workspace for an id that is not open", () => {
+    const workspace = withOpen("DD2380");
+
+    expect(activateCourse(workspace, "details:NOPE")).toBe(workspace);
+  });
 });
 
 describe("closeCourse", () => {
