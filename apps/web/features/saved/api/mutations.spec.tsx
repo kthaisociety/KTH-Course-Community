@@ -116,6 +116,47 @@ describe("unsaving a course", () => {
   });
 });
 
+/*
+ * The cascade happens when the unsave runs, and nothing later undoes it: the
+ * course can come back saved while every collection it used to be in has lost
+ * it. Only the last write in a sequence cleans up, so asking *that* call whether
+ * it was a save would skip the refetch on exactly the flow that needs it — a
+ * reader who unsaves and immediately re-saves ends on a save, and their chips
+ * would go on counting a course the database has already dropped.
+ */
+describe("an unsave that a later save overtakes", () => {
+  it("still refetches the collections the unsave emptied", async () => {
+    const { result, invalidated } = setup();
+
+    await Promise.all([
+      result.current.setSaved("DD2380", false),
+      result.current.setSaved("DD2380", true),
+    ]);
+
+    await waitFor(() => {
+      expect(unsaveMutation).toHaveBeenCalledWith({ courseCode: "DD2380" });
+      expect(saveMutation).toHaveBeenCalledWith({ courseCode: "DD2380" });
+    });
+    expect(invalidated.filter((key) => key === COLLECTIONS_KEY)).toHaveLength(
+      1,
+    );
+  });
+
+  // The mark is cleared when the sequence it belongs to finishes, so a plain
+  // save afterwards is a plain save again.
+  it("does not keep refetching for every later save of that course", async () => {
+    const { result, invalidated } = setup();
+
+    await result.current.setSaved("DD2380", false);
+    await result.current.setSaved("DD2380", true);
+    await result.current.setSaved("DD2380", true);
+
+    expect(invalidated.filter((key) => key === COLLECTIONS_KEY)).toHaveLength(
+      1,
+    );
+  });
+});
+
 describe("saving a course", () => {
   /*
    * Saving adds a row to `user_saved_courses`. That makes the course *eligible*
