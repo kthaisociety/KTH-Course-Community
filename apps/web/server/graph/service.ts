@@ -1,13 +1,26 @@
-import { NotFoundError } from "../errors";
+import { ForbiddenError, NotFoundError } from "../errors";
 import {
-  chooseAnchorCount,
-  computeWorldPosition,
+  type AppearanceNames,
   DEFAULT_NODE_COLOR,
   DEFAULT_NODE_SIGNAL_STYLE,
   DEFAULT_NODE_STYLE,
+  type NodeAppearance,
+  type NodeAppearanceChoice,
+  PERSONALIZATION_AXES,
+  renderedAppearance,
+  UNCONFIGURED_APPEARANCE,
+} from "./appearance";
+import {
+  chooseAnchorCount,
+  computeWorldPosition,
   type WorldPosition,
 } from "./placement";
-import type { BackboneEdge, GraphNode, NeighbourNode } from "./repository";
+import type {
+  BackboneEdge,
+  GraphNode,
+  NeighbourNode,
+  NodeTierBasis,
+} from "./repository";
 import * as graphRepo from "./repository";
 import { deriveEarnedTier, deriveEffectiveTier } from "./tier";
 
@@ -54,12 +67,20 @@ export type WindowNode = {
   x: number;
   y: number;
   /**
-   * The stored appearance name. Node appearance is drawn on a public landing
-   * page by design, so it is not a disclosure; it is also `"default"` for
-   * everybody until a member has some way to choose a colour. The earned tier
-   * has a writer now, but nothing writes `users_node_profiles.color`.
+   * The appearance names this node **renders** with, which is its stored
+   * profile with every dormant axis masked back to `"default"`. Node appearance
+   * is drawn on a public landing page by design, so it is not a disclosure, and
+   * these three names are the whole of what leaves: no tier number, no user id,
+   * nothing about who decayed.
+   *
+   * Masking rather than reading the column straight is what My Page's own copy
+   * promises — "Go quiet for a while and it settles back to default" — and it
+   * is a read-time derivation only. The stored pick is untouched and returns
+   * the moment a qualifying review restores the tier.
    */
   color: string;
+  style: string;
+  signalStyle: string;
   /** The one node belonging to the caller. Never true in a public window. */
   isViewer: boolean;
 };
@@ -201,27 +222,118 @@ export async function getPublicWindow(): Promise<GraphWindow> {
   return readWindow(COMMUNITY_ORIGIN, MAX_PUBLIC_WINDOW_NODES);
 }
 
+/** Both tier numbers for one app user, and the appearance they have stored. */
+export type NodePersonalization = {
+  /** The highest tier ever reached. Never lowered, by anything. */
+  earnedTier: number;
+  /** What inactivity has left of it. Derived here and stored nowhere. */
+  effectiveTier: number;
+  /** The stored pick on each axis, unmasked — a dormant axis still shows it. */
+  appearance: NodeAppearance;
+};
+
 /**
- * The personalization tier an app user effectively has right now.
+ * Both personalization tier numbers for an app user.
+ *
+ * **Two numbers, not one, and that is the point.** This read used to answer with
+ * the effective tier alone, which left My Page unable to tell a *dormant* axis —
+ * earned, decayed, pick still stored — from a *locked* one that was never
+ * earned. The artboard has three badges and the UI could only draw two, so it
+ * collapsed dormant into "Locked" and told members they had lost something the
+ * database still holds. The earned number closes that and does nothing else.
  *
  * Read-only by construction: the earned tier is the highest ever reached and
  * decay is derived from it, never written back.
  */
-export async function getEffectiveTier(
+export async function getPersonalizationTiers(
   userId: string,
   now: Date = new Date(),
-): Promise<number> {
+): Promise<{ earnedTier: number; effectiveTier: number }> {
   const basis = await graphRepo.findTierBasis(userId);
   if (!basis) throw new NotFoundError(`No such app user: ${userId}`);
 
   const lastReviewAt = await graphRepo.findLastReviewAt(userId);
   // An app user who has never reviewed decays from when they joined, so a
   // brand-new account is not instantly decayed.
-  return deriveEffectiveTier(
-    basis.earnedTier,
-    lastReviewAt ?? basis.accountCreatedAt,
-    now,
+  return {
+    earnedTier: basis.earnedTier,
+    effectiveTier: deriveEffectiveTier(
+      basis.earnedTier,
+      lastReviewAt ?? basis.accountCreatedAt,
+      now,
+    ),
+  };
+}
+
+/**
+ * Everything My Page's "My dot" tab needs: how far this app user has unlocked
+ * their node profile, and what they have picked.
+ *
+ * The appearance comes back **as stored**, deliberately. A dormant axis renders
+ * as unconfigured on the landing canvas, but the tab has to show the member the
+ * pick that is waiting for them — hiding it would make "reviewing again restores
+ * them" unverifiable from the one screen that says it.
+ *
+ * An app user with no profile row reads as unconfigured on all three axes, which
+ * is exactly what the column defaults would have stored for them.
+ */
+export async function getNodePersonalization(
+  userId: string,
+  now: Date = new Date(),
+): Promise<NodePersonalization> {
+  const [tiers, stored] = await Promise.all([
+    getPersonalizationTiers(userId, now),
+    graphRepo.findNodeProfile(userId),
+  ]);
+  return { ...tiers, appearance: stored ?? UNCONFIGURED_APPEARANCE };
+}
+
+/**
+ * Set one or more appearance axes for an app user.
+ *
+ * **The gate is here, and it is the effective tier.** A caller may only write an
+ * axis their *current* tier unlocks: colour needs 1, style 2, signal style 3 —
+ * `PERSONALIZATION_AXES`, the same table the picker renders from, so the two
+ * cannot drift apart. A dormant axis is refused like a locked one, because the
+ * member cannot edit it right now; what separates the two is that the dormant
+ * one still holds its value, and nothing in this function goes near a column it
+ * was not asked to write.
+ *
+ * This has to be server-side. The picker knows the tier and disables what is
+ * not unlocked, but that is presentation: the mutation is a public tRPC
+ * procedure and any signed-in caller can post to it with whatever body they
+ * like. A client-side-only gate is not a gate — it is a suggestion, and the
+ * database would happily store a tier-3 signal for an account at tier 0.
+ *
+ * Reports the whole personalization state afterwards, so the caller replaces its
+ * cache with a fact rather than patching it with an assumption.
+ */
+export async function setNodeAppearance(
+  userId: string,
+  choice: NodeAppearanceChoice,
+  now: Date = new Date(),
+): Promise<NodePersonalization> {
+  const tiers = await getPersonalizationTiers(userId, now);
+
+  for (const axis of PERSONALIZATION_AXES) {
+    if (choice[axis.key] === undefined) continue;
+    if (tiers.effectiveTier >= axis.tier) continue;
+    throw new ForbiddenError(
+      `Personalization tier ${axis.tier} is needed to set ${axis.key}`,
+    );
+  }
+
+  // Nothing to write is not an error — it is a caller that asked for no change.
+  // Answering with the current state costs one read and keeps the procedure
+  // total, rather than making "did you name an axis" a second failure mode.
+  const named = PERSONALIZATION_AXES.some(
+    (axis) => choice[axis.key] !== undefined,
   );
+  const appearance = named
+    ? await graphRepo.upsertNodeProfile(userId, choice)
+    : ((await graphRepo.findNodeProfile(userId)) ?? UNCONFIGURED_APPEARANCE);
+
+  return { ...tiers, appearance };
 }
 
 /**
@@ -371,12 +483,18 @@ async function readWindow(
   centre: WorldPosition,
   limit: number,
   viewerUserId?: string,
+  now: Date = new Date(),
 ): Promise<GraphWindow> {
   const nodes = await graphRepo.findNearestNodes(centre, limit);
-  const edges = await graphRepo.findBackboneEdgesWithin(
-    nodes.map((node) => node.userId),
-  );
-  return anonymise({ centre, nodes, edges, viewerUserId });
+  const userIds = nodes.map((node) => node.userId);
+  // Two independent reads over the same bounded set. The tier bases are what
+  // masks a dormant axis back to unconfigured, and they are fetched for the
+  // whole window in one query rather than per node — see `findNodeTierBases`.
+  const [edges, tierBases] = await Promise.all([
+    graphRepo.findBackboneEdgesWithin(userIds),
+    graphRepo.findNodeTierBases(userIds),
+  ]);
+  return anonymise({ centre, nodes, edges, viewerUserId, tierBases, now });
 }
 
 /**
@@ -394,16 +512,32 @@ function anonymise(args: {
   nodes: NeighbourNode[];
   edges: BackboneEdge[];
   viewerUserId?: string;
+  tierBases: NodeTierBasis[];
+  now: Date;
 }): GraphWindow {
+  const basisByUserId = new Map(
+    args.tierBases.map((basis) => [basis.userId, basis]),
+  );
   const tokens = new Map<string, string>();
   const nodes = args.nodes.map((node) => {
     const id = crypto.randomUUID();
     tokens.set(node.userId, id);
+    // A node whose basis did not come back — an account removed between the two
+    // reads — renders unconfigured rather than being dropped or drawn with a
+    // pick nothing vouches for. Tier 0 is the same answer the column default
+    // gives, so this is the conservative branch and not a special case.
+    const appearance = appearanceFor(
+      basisByUserId.get(node.userId),
+      node,
+      args.now,
+    );
     return {
       id,
       x: node.x,
       y: node.y,
-      color: node.color,
+      color: appearance.color,
+      style: appearance.style,
+      signalStyle: appearance.signalStyle,
       isViewer: node.userId === args.viewerUserId,
     };
   });
@@ -438,4 +572,26 @@ async function findAnchors(
   return candidates
     .filter((candidate) => candidate.userId !== userId)
     .slice(0, anchorCount);
+}
+
+/**
+ * What one node in a window draws with: its stored appearance, with every axis
+ * its owner's effective tier no longer reaches masked back to unconfigured.
+ *
+ * This is the read-time half of "dormant reverts, it does not lose". Nothing is
+ * written, nothing is cleared, and the same stored row produces the full
+ * appearance again the moment a qualifying review lifts the effective tier.
+ */
+function appearanceFor(
+  basis: NodeTierBasis | undefined,
+  stored: NeighbourNode,
+  now: Date,
+): AppearanceNames {
+  if (!basis) return UNCONFIGURED_APPEARANCE;
+  const effectiveTier = deriveEffectiveTier(
+    basis.earnedTier,
+    basis.lastReviewAt ?? basis.accountCreatedAt,
+    now,
+  );
+  return renderedAppearance(stored, basis.earnedTier, effectiveTier);
 }

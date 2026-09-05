@@ -11,7 +11,8 @@ const clearGrades = vi.fn();
 const me = vi.fn();
 const taken = vi.fn();
 const reviews = vi.fn();
-const tier = vi.fn();
+const personalization = vi.fn();
+const setAppearance = vi.fn();
 const unreviewed = vi.fn();
 
 vi.mock("next/navigation", () => ({
@@ -45,13 +46,18 @@ vi.mock("sonner", () => ({
 vi.mock("../api/queries", () => ({
   useTakenCourses: () => taken(),
   useAllReviews: () => reviews(),
-  useEffectiveTier: () => tier(),
+  useNodePersonalization: () => personalization(),
   isTierUnavailable: () => false,
 }));
 
 vi.mock("../api/mutations", () => ({
   useDeleteAccount: () => ({ mutateAsync: deleteAccount, isPending: false }),
   useClearStoredGrades: () => ({ clearGrades, isPending: false }),
+  useSetNodeAppearance: () => ({
+    mutate: setAppearance,
+    isPending: false,
+    isError: false,
+  }),
 }));
 
 /**
@@ -162,13 +168,41 @@ beforeEach(() => {
   });
   taken.mockReturnValue(settled([]));
   reviews.mockReturnValue(settled([]));
-  tier.mockReturnValue({ data: 0, isError: false, error: null });
+  setAppearance.mockClear();
+  personalization.mockReturnValue(
+    personalizationState({ earnedTier: 0, effectiveTier: 0 }),
+  );
   unreviewed.mockReturnValue({
     courses: [],
     isLoading: false,
     isUnavailable: false,
   });
 });
+
+/**
+ * `graph.personalization` as My Page reads it: two tier numbers and the stored
+ * appearance. Both numbers matter — the effective one says what may be edited,
+ * the earned one is what tells a dormant axis from a locked one.
+ */
+function personalizationState(over: {
+  earnedTier: number;
+  effectiveTier: number;
+  appearance?: { color: string; style: string; signalStyle: string };
+}) {
+  return {
+    data: {
+      earnedTier: over.earnedTier,
+      effectiveTier: over.effectiveTier,
+      appearance: over.appearance ?? {
+        color: "default",
+        style: "default",
+        signalStyle: "default",
+      },
+    },
+    isError: false,
+    error: null,
+  };
+}
 
 const openTab = (name: string | RegExp) =>
   userEvent.click(screen.getByRole("tab", { name }));
@@ -479,11 +513,13 @@ describe("MyPage my dot", () => {
 
     expect(screen.getAllByText("Locked")).toHaveLength(3);
     expect(screen.queryByText("Unlocked")).not.toBeInTheDocument();
-    expect(screen.queryByText(/dormant/i)).not.toBeInTheDocument();
+    expect(screen.queryByText("Dormant")).not.toBeInTheDocument();
   });
 
   it("names the six node colours once a colour tier is reached", async () => {
-    tier.mockReturnValue({ data: 1, isError: false, error: null });
+    personalization.mockReturnValue(
+      personalizationState({ earnedTier: 1, effectiveTier: 1 }),
+    );
     render(<MyPage />);
     await openTab("My dot");
 
@@ -495,7 +531,133 @@ describe("MyPage my dot", () => {
       "slate",
       "violet",
     ]) {
-      expect(screen.getByText(name)).toBeVisible();
+      expect(screen.getByRole("button", { name })).toBeVisible();
     }
+  });
+
+  /**
+   * The palette used to be shown rather than offered, because nothing wrote
+   * `users_node_profiles`. It is a write now, and the click is the whole
+   * feature: this is the test that fails if the buttons go inert again.
+   */
+  it("writes the colour a member clicks, and only that axis", async () => {
+    personalization.mockReturnValue(
+      personalizationState({ earnedTier: 1, effectiveTier: 1 }),
+    );
+    render(<MyPage />);
+    await openTab("My dot");
+
+    await userEvent.click(screen.getByRole("button", { name: "ember" }));
+
+    expect(setAppearance).toHaveBeenCalledWith({ color: "ember" });
+  });
+
+  // The highlight is what the server last confirmed, never what was clicked:
+  // nothing here paints optimistically, because the tier gate can refuse.
+  it("marks the stored pick as the pressed option", async () => {
+    personalization.mockReturnValue(
+      personalizationState({
+        earnedTier: 1,
+        effectiveTier: 1,
+        appearance: { color: "moss", style: "default", signalStyle: "default" },
+      }),
+    );
+    render(<MyPage />);
+    await openTab("My dot");
+
+    expect(screen.getByRole("button", { name: "moss" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(screen.getByRole("button", { name: "ember" })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+  });
+
+  it("offers the three shapes and the three signals at the top of the ladder", async () => {
+    personalization.mockReturnValue(
+      personalizationState({ earnedTier: 3, effectiveTier: 3 }),
+    );
+    render(<MyPage />);
+    await openTab("My dot");
+
+    for (const name of [
+      "solid",
+      "ring",
+      "diamond",
+      "fade",
+      "comet",
+      "dashed",
+    ]) {
+      expect(screen.getByRole("button", { name })).toBeVisible();
+    }
+    expect(screen.getAllByText("Unlocked")).toHaveLength(3);
+  });
+
+  /**
+   * The third badge, and the reason the read returns two numbers. Somebody who
+   * reached tier 3 and went quiet has earned every axis and can edit none of
+   * them; "Locked" there would tell them they had lost something the column
+   * still holds.
+   */
+  it("calls an earned axis that has decayed dormant, not locked", async () => {
+    personalization.mockReturnValue(
+      personalizationState({
+        earnedTier: 3,
+        effectiveTier: 1,
+        appearance: {
+          color: "violet",
+          style: "diamond",
+          signalStyle: "comet",
+        },
+      }),
+    );
+    render(<MyPage />);
+    await openTab("My dot");
+
+    expect(screen.getAllByText("Dormant")).toHaveLength(2);
+    expect(screen.getAllByText("Unlocked")).toHaveLength(1);
+    expect(screen.queryByText("Locked")).not.toBeInTheDocument();
+  });
+
+  // A dormant axis names what it is holding, because "reviewing again restores
+  // them" is otherwise unverifiable from the one screen that claims it.
+  it("names the pick a dormant axis is still holding", async () => {
+    personalization.mockReturnValue(
+      personalizationState({
+        earnedTier: 3,
+        effectiveTier: 1,
+        appearance: {
+          color: "violet",
+          style: "diamond",
+          signalStyle: "comet",
+        },
+      }),
+    );
+    render(<MyPage />);
+    await openTab("My dot");
+
+    expect(screen.getByText("diamond")).toBeVisible();
+    expect(screen.getByText("comet")).toBeVisible();
+    // Named, not offered: a dormant axis cannot be clicked.
+    expect(
+      screen.queryByRole("button", { name: "diamond" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("offers nothing at all on an axis that was never earned", async () => {
+    personalization.mockReturnValue(
+      personalizationState({ earnedTier: 1, effectiveTier: 1 }),
+    );
+    render(<MyPage />);
+    await openTab("My dot");
+
+    expect(
+      screen.queryByRole("button", { name: "diamond" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "comet" }),
+    ).not.toBeInTheDocument();
   });
 });

@@ -167,6 +167,12 @@ A signal is ongoing: a node either carries one or it does not. A **one-shot
 reveal** — the ring **Find your dot** draws once on the viewer's own node — is a
 different thing, and *pulse* is its name. So `scene.pulse` is not a signal by
 another word, and the two are not interchangeable.
+_Today_: it does not move. `users_node_profiles.signal_style` stores the axis and
+`hero-network.tsx` draws each style standing still, because that canvas paints
+when an input changes rather than every frame and the pulse is the only frame
+loop it has. The ongoing/one-shot distinction still holds — a signal is painted
+whenever its node is, a pulse only while the label is up. Closed by whatever
+gives the hero a bounded loop a signal can ride on.
 _Avoid_: ping, animation, activity
 
 **Personalization tier**:

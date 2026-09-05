@@ -8,50 +8,26 @@
  */
 
 /**
- * The node colour palette. The server stores a **name**; the client maps names
- * onto its `--cc-*` tokens, so the palette can be re-skinned without a data
- * migration. This is the one place the list lives.
+ * The appearance vocabulary lives in `./appearance.ts` — the palette, the two
+ * shape axes, the unconfigured state, and which tier unlocks each of them. It
+ * is re-exported here because placement writes the unconfigured state on join
+ * and every existing importer of these names came through this module.
  *
- * **Nobody is assigned one of these today.** Placement used to hash every app
- * user onto a name here, which gave everyone a colour nobody chose, and a node
- * profile is personalisation: a colour is chosen, never dealt out.
- *
- * `users.personalization_tier_earned` does have a writer now —
- * `recordEarnedPersonalizationTier` raises it from #161's ladder — so accounts
- * are no longer all at tier 0 and the axis a tier unlocks can genuinely open.
- * What is still missing is the other half: nothing writes
- * `users_node_profiles.color`, because no surface yet lets a member pick one.
- * The palette stays for the moment that surface exists.
+ * **Nobody is assigned a colour.** Placement used to hash every app user onto a
+ * palette name, which gave everyone a colour nobody chose, and a node profile is
+ * personalisation: a colour is chosen, never dealt out. `graph.setAppearance` is
+ * the only writer of a chosen value, and it is driven by a member clicking one.
  */
-export const NODE_COLORS = [
-  "aurora",
-  "ember",
-  "frost",
-  "moss",
-  "slate",
-  "violet",
-] as const;
-
-export type NodeColor = (typeof NODE_COLORS)[number];
-
-/**
- * What an unconfigured node stores, matching the column default on
- * `users_node_profiles.color`. The client draws it in `--cc-brand`, which is
- * the single dot colour the Landing artboard's own palette uses.
- */
-export const DEFAULT_NODE_COLOR = "default" as const;
-
-/** Every value the colour column may hold: the default, or a chosen palette name. */
-export type StoredNodeColor = NodeColor | typeof DEFAULT_NODE_COLOR;
-
-/**
- * `node_style` and `node_signal_style` are Postgres enums that today declare
- * exactly one value. Adding values needs an `ALTER TYPE` migration, and node
- * appearance is being redesigned wholesale, so placement writes the only value
- * there is.
- */
-export const DEFAULT_NODE_STYLE = "default" as const;
-export const DEFAULT_NODE_SIGNAL_STYLE = "default" as const;
+export {
+  DEFAULT_NODE_COLOR,
+  DEFAULT_NODE_SIGNAL_STYLE,
+  DEFAULT_NODE_STYLE,
+  NODE_COLORS,
+  type NodeColor,
+  type StoredNodeColor,
+  type StoredNodeSignalStyle,
+  type StoredNodeStyle,
+} from "./appearance";
 
 /** A joining node takes roughly three to five anchors. */
 export const MIN_ANCHORS = 3;

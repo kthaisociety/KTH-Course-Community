@@ -98,8 +98,24 @@ function graphState(over: Record<string, unknown> = {}) {
 const NEIGHBOURHOOD = {
   centre: { x: 0, y: 0 },
   nodes: [
-    { id: "t-1", x: 0, y: 0, color: "default", isViewer: true },
-    { id: "t-2", x: 240, y: -120, color: "default", isViewer: false },
+    {
+      id: "t-1",
+      x: 0,
+      y: 0,
+      color: "default",
+      style: "default",
+      signalStyle: "default",
+      isViewer: true,
+    },
+    {
+      id: "t-2",
+      x: 240,
+      y: -120,
+      color: "default",
+      style: "default",
+      signalStyle: "default",
+      isViewer: false,
+    },
   ],
   edges: [{ fromId: "t-1", toId: "t-2" }],
   effectiveTier: 1,
@@ -109,8 +125,24 @@ const NEIGHBOURHOOD = {
 const PUBLIC_WINDOW = {
   centre: { x: 0, y: 0 },
   nodes: [
-    { id: "p-1", x: 0, y: 0, color: "default", isViewer: false },
-    { id: "p-2", x: 240, y: -120, color: "default", isViewer: false },
+    {
+      id: "p-1",
+      x: 0,
+      y: 0,
+      color: "default",
+      style: "default",
+      signalStyle: "default",
+      isViewer: false,
+    },
+    {
+      id: "p-2",
+      x: 240,
+      y: -120,
+      color: "default",
+      style: "default",
+      signalStyle: "default",
+      isViewer: false,
+    },
   ],
   edges: [{ fromId: "p-1", toId: "p-2" }],
 };

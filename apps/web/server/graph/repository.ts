@@ -12,11 +12,13 @@ import {
 import { db } from "../db";
 import * as schema from "../db/schema";
 import type {
-  DEFAULT_NODE_SIGNAL_STYLE,
-  DEFAULT_NODE_STYLE,
+  NodeAppearance,
+  NodeAppearanceChoice,
   StoredNodeColor,
-  WorldPosition,
-} from "./placement";
+  StoredNodeSignalStyle,
+  StoredNodeStyle,
+} from "./appearance";
+import type { WorldPosition } from "./placement";
 
 /** A node's identity and its persistent world position. */
 export type GraphNode = {
@@ -25,11 +27,34 @@ export type GraphNode = {
   y: number;
 };
 
-/** A node plus the appearance the client needs to draw it. */
+/**
+ * A node plus the appearance **as stored**, which is not always the appearance
+ * it draws with: a member whose tier has decayed keeps their pick in the column
+ * and renders unconfigured until it comes back. Masking that is the service's
+ * job — see `renderedAppearance` — because it needs the tier basis this row does
+ * not carry.
+ *
+ * The three fields are plain `string` rather than the stored unions because they
+ * come back from a `coalesce` over a left join: a node with no profile row at
+ * all is legal and reads as `"default"` on every axis.
+ */
 export type NeighbourNode = GraphNode & {
   color: string;
   style: string;
   signalStyle: string;
+};
+
+/**
+ * What deciding one app user's *effective* tier needs, for a whole window of
+ * them at once.
+ *
+ * `lastReviewAt` is null for somebody who has never reviewed; the service falls
+ * back to `accountCreatedAt` there, exactly as the single-user read does, so a
+ * brand-new account is not instantly decayed.
+ */
+export type NodeTierBasis = TierBasis & {
+  userId: string;
+  lastReviewAt: Date | null;
 };
 
 /**
@@ -48,8 +73,8 @@ export type PlacementWrite = {
   profile: {
     userId: string;
     color: StoredNodeColor;
-    style: typeof DEFAULT_NODE_STYLE;
-    signalStyle: typeof DEFAULT_NODE_SIGNAL_STYLE;
+    style: StoredNodeStyle;
+    signalStyle: StoredNodeSignalStyle;
   };
   edges: BackboneEdge[];
 };
@@ -207,9 +232,9 @@ export async function findTierBasis(
  * it, and routing it through `server/reviews/service.ts` would couple the graph
  * domain to a review domain that is being rewritten in parallel.
  *
- * `findReviewedCourses` below is the same exception for the same reason. Those
- * two are the whole of it: nothing else here may reach into `server/reviews/`,
- * and neither of them may grow a write.
+ * `findReviewedCourses` and `findNodeTierBases` below are the same exception
+ * for the same reason. Those three are the whole of it: nothing else here may
+ * reach into `server/reviews/`, and none of them may grow a write.
  */
 export async function findLastReviewAt(userId: string): Promise<Date | null> {
   const [row] = await db
@@ -333,4 +358,106 @@ export async function raiseEarnedTier(
     )
     .returning({ userId: schema.users.id });
   return raised.length > 0;
+}
+
+/**
+ * The tier basis for a whole window of app users, in one read.
+ *
+ * The landing hero masks a dormant axis back to unconfigured, which needs an
+ * effective tier per node rather than only for the viewer — so this is
+ * `findTierBasis` and `findLastReviewAt` for up to `MAX_PUBLIC_WINDOW_NODES`
+ * people at once. One grouped join rather than a query per node: a 150-node
+ * window would otherwise be 300 round trips on every load of `/`.
+ *
+ * The left join is what makes an app user who has never reviewed come back at
+ * all, with a null `lastReviewAt` for the service to fall back from. Both sides
+ * are indexed — `users` by primary key, `reviews` by `reviews_user_id_idx`.
+ *
+ * It returns **no appearance and no name**: this answers "how far has each of
+ * these people decayed", nothing else, and the public window must never learn a
+ * user id it did not already have.
+ */
+export async function findNodeTierBases(
+  userIds: string[],
+): Promise<NodeTierBasis[]> {
+  if (userIds.length === 0) return [];
+  return db
+    .select({
+      userId: schema.users.id,
+      earnedTier: schema.users.personalizationTierEarned,
+      accountCreatedAt: schema.users.createdAt,
+      lastReviewAt: max(schema.reviews.createdAt),
+    })
+    .from(schema.users)
+    .leftJoin(schema.reviews, eq(schema.reviews.userId, schema.users.id))
+    .where(inArray(schema.users.id, userIds))
+    .groupBy(schema.users.id);
+}
+
+/**
+ * One app user's stored node profile, or `undefined` if they have no row.
+ *
+ * No row is a normal state, not an error: `users_node_profiles` is written on
+ * placement, and accounts that predate the community graph never saw it. The
+ * service reads the absence as `UNCONFIGURED_APPEARANCE`, which is exactly what
+ * the column defaults would have stored.
+ *
+ * This returns what is **stored**, never what renders. Decay is applied above.
+ */
+export async function findNodeProfile(
+  userId: string,
+): Promise<NodeAppearance | undefined> {
+  const [row] = await db
+    .select({
+      color: schema.usersNodeProfiles.color,
+      style: schema.usersNodeProfiles.style,
+      signalStyle: schema.usersNodeProfiles.signalStyle,
+    })
+    .from(schema.usersNodeProfiles)
+    .where(eq(schema.usersNodeProfiles.userId, userId))
+    .limit(1);
+  // `color` is a free-text column, so a name this build has never heard of is
+  // possible and the cast is the honest place to admit it. The client draws an
+  // unrecognised name as unconfigured rather than dropping the node.
+  return row as NodeAppearance | undefined;
+}
+
+/**
+ * Write one app user's chosen appearance, creating their profile row if they
+ * have none.
+ *
+ * **A patch, not a row.** Only the axes named in `choice` are written; an axis
+ * left out keeps whatever it held, which is what makes a dormant pick survive a
+ * write to a different axis. There is no path here that clears a column because
+ * a tier decayed — decay is masked at read time and this repository has no
+ * opinion about tiers at all. Un-picking is a member choosing `"default"`, and
+ * arrives as an ordinary value.
+ *
+ * `on conflict do update` rather than a read-then-write, so two clicks landing
+ * together cannot lose one another's axis: each statement touches only the
+ * columns it names.
+ *
+ * The whole stored appearance comes back, so the caller never has to guess what
+ * the untouched axes were or issue a second read to find out.
+ */
+export async function upsertNodeProfile(
+  userId: string,
+  choice: NodeAppearanceChoice,
+): Promise<NodeAppearance> {
+  const [row] = await db
+    .insert(schema.usersNodeProfiles)
+    .values({ userId, ...choice })
+    .onConflictDoUpdate({
+      target: schema.usersNodeProfiles.userId,
+      set: { ...choice, updatedAt: new Date() },
+    })
+    .returning({
+      color: schema.usersNodeProfiles.color,
+      style: schema.usersNodeProfiles.style,
+      signalStyle: schema.usersNodeProfiles.signalStyle,
+    });
+  if (!row) {
+    throw new Error(`Could not write the node profile for app user ${userId}`);
+  }
+  return row as NodeAppearance;
 }

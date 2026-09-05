@@ -11,6 +11,42 @@ export function useDeleteAccount() {
 }
 
 /**
+ * Choose how the viewer's own node looks.
+ *
+ * Sends only the axis that was clicked. An axis left out of the patch is left
+ * exactly as it is in the column, which is what keeps a dormant pick on one axis
+ * intact while another is edited.
+ *
+ * `graph.setAppearance` answers with the whole personalization state — both tier
+ * numbers and every stored axis — so the cache is *replaced* with what the
+ * server has rather than patched with what the click assumed. The two differ
+ * whenever the server refuses, and the refusal is the point: the tier gate lives
+ * there, and a picker that optimistically painted the choice would be showing a
+ * member a colour their node does not have.
+ */
+export function useSetNodeAppearance() {
+  const trpc = useTRPC();
+  const queryClient = useQueryClient();
+  return useMutation(
+    trpc.graph.setAppearance.mutationOptions({
+      onSuccess: (personalization) => {
+        queryClient.setQueryData(
+          trpc.graph.personalization.queryKey(),
+          personalization,
+        );
+        // The landing hero draws this node, so its window is now stale. It is
+        // invalidated rather than written into: the window is anonymised per
+        // response and there is no way to find this member's node in a cached
+        // one — by design, and this is what that design costs.
+        void queryClient.invalidateQueries({
+          queryKey: trpc.graph.neighbourhood.queryKey(),
+        });
+      },
+    }),
+  );
+}
+
+/**
  * Turns grade storage off by actually removing the grades.
  *
  * There is no "store my grades" column on `users` — the setting is nothing but
