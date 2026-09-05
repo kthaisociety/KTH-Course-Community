@@ -273,20 +273,40 @@ function sameDraft(a: ReviewDraft, b: ReviewDraft): boolean {
 }
 
 /**
- * Replace what is stored with what the pane holds.
+ * Store what the pane holds, without trampling what it does not.
  *
- * The whole record is rewritten rather than merged, which is what makes
- * publishing clear up after itself: `publish()` hands the pane an empty draft
- * for the course it just sent, that draft is not written, and the entry is
- * gone. It is also what stops a draft the writer emptied on purpose coming back
- * on the next page load — an untouched draft is not a smaller draft, it is the
- * absence of one, and storage says so.
+ * A pane says two different things by not naming a course, and the whole of
+ * this function is telling them apart.
+ *
+ * A course the pane holds **as an untouched draft** has been cleared, and the
+ * entry goes. That is how publishing tidies up after itself — `publish()` hands
+ * the pane an empty draft for the course it just sent — and equally how a
+ * writer who selects all and deletes gets what they asked for rather than their
+ * old text back on the next page load. An untouched draft is not a smaller
+ * draft; it is the absence of one.
+ *
+ * A course the pane **has never heard of** is somebody else's, and is carried
+ * through untouched. This did not arise while drafts were per-tab: a pane's
+ * record was the whole of its tab's storage, so rewriting it wholesale was
+ * exactly right. `localStorage` is shared, so it no longer is — a second tab
+ * writing its own record would silently delete the first tab's draft for
+ * another course. The pane hydrates every stored draft into its state, so
+ * anything genuinely its own is named here either way; anything unnamed
+ * appeared after it hydrated and belongs to whoever wrote it.
+ *
+ * Two tabs editing the *same* course still race, and last write wins. That is
+ * the same race two tabs have always had over one draft, and the same one the
+ * open list has; nothing here can arbitrate it, and nothing needs to — the
+ * losing tab still has its own copy on screen.
  */
 export function writeDrafts(drafts: Record<string, ReviewDraft>): void {
   const stored = readStoredDrafts();
   const now = Date.now();
 
   const next: Record<string, StoredDraft> = {};
+  for (const [courseCode, entry] of Object.entries(stored)) {
+    if (!(courseCode in drafts)) next[courseCode] = entry;
+  }
   for (const [courseCode, draft] of Object.entries(drafts)) {
     if (isUntouched(draft)) continue;
     const previous = stored[courseCode];

@@ -118,6 +118,21 @@ describe("drafts", () => {
     expect(readDrafts().SF1626).toBeDefined();
   });
 
+  /*
+   * `localStorage` is shared between tabs, which is the point — and the hazard.
+   * A pane rewriting its whole record used to be exactly right, because the
+   * record *was* the tab's storage. Now a second tab writing its own record
+   * must not take the first tab's work with it.
+   */
+  it("leaves a draft it has never heard of where another tab put it", () => {
+    writeDrafts({ SF1626: draftWith({ message: "Written next door" }) });
+
+    writeDrafts({ DD2380: draftWith() });
+
+    expect(readDrafts().SF1626?.message).toBe("Written next door");
+    expect(readDrafts().DD2380?.message).toBe("Half a thought");
+  });
+
   it("survives a browser that refuses storage entirely", () => {
     const getItem = vi
       .spyOn(Storage.prototype, "getItem")
