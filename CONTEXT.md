@@ -114,6 +114,16 @@ How theoretical rather than applied the reviewer found the course, on the same
 "I don't remember" rule.
 _Avoid_: theory rating, theoretical vs applied
 
+**Fast-track reviewer**:
+The screen on Taken courses that deals one card per unreviewed taken course, in
+a **round**. It is a second way of asking for a **Review**, never a second kind
+of one: a card writes through the same hook and the same validator as every
+other form. A round lives in the tab and nowhere else — skipping a card writes
+nothing at all, so the course is still an unreviewed taken course afterwards for
+the same reason it was before.
+_Avoid_: review wizard, review queue (that is the round's order, not the screen),
+bulk review, quick rating
+
 ### The community graph
 
 **Community graph**:

@@ -20,9 +20,9 @@ type Props = {
 };
 
 /**
- * Where a Ladok transcript goes in — `docs/design/Course Community - Taken
- * Courses.dc.html`, the `isEmpty` screen and the `isUpdateModal` body, which
- * draw the same zone at two sizes.
+ * Where a Ladok transcript goes in — `docs/design_ref_new/Course Community -
+ * Taken Courses.dc.html`, the `isEmpty` screen and the `isUpdateModal` body,
+ * which draw the same zone at two sizes.
  *
  * It hands the file up and forgets it. The file never reaches component state,
  * `localStorage` or a log: it is a student's academic record, it is read once

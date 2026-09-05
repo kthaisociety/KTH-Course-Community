@@ -34,8 +34,8 @@ const SWITCH_CLASS =
   "h-6 w-[42px] data-checked:bg-cc-btn data-unchecked:bg-cc-rule3 [&_[data-slot=switch-thumb]]:size-[18px]";
 
 /**
- * The Settings tab — `docs/design/Course Community - My Page.dc.html`, the
- * `isSettings` branch.
+ * The Settings tab — `docs/design_ref_new/Course Community - My Page.dc.html`,
+ * the `isSettings` branch.
  *
  * Three of its four panels needed the schema consulted before they could be
  * drawn honestly:

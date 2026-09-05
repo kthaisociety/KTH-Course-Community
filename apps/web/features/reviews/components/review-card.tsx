@@ -16,8 +16,9 @@ import { toExcerpt } from "../lib/review-text";
 /**
  * What a reviewer who answered "I don't remember" gets drawn in place of a
  * chart. Copy from the review detail in
- * `docs/design/Course Community - My Page.dc.html`, with its "student" changed
- * to the reviewer, who is the one person the sentence is actually about.
+ * `docs/design_ref_new/Course Community - My Page.dc.html`, with its "student"
+ * changed to the reviewer, who is the one person the sentence is actually
+ * about.
  */
 const UNANSWERED_NOTE =
   "The reviewer chose “I don't remember” — nothing is estimated in its place.";
