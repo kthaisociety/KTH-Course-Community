@@ -3,7 +3,7 @@
 import { CircleCheck, FileWarning, Info, Plus, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -198,6 +198,8 @@ export function TakenCourses() {
     deepLinked: boolean;
     session: ReviewerSession | null;
   } | null>(null);
+  /** Whether the arrival below has already been read. See why it must be. */
+  const hasReadArrival = useRef(false);
 
   const lastImport = lastTranscriptImport(takenCourses);
   const isBusy = update.isPending || remove.isPending || add.isPending;
@@ -214,8 +216,18 @@ export function TakenCourses() {
    * effect is the honest place for it — and taking it back out with
    * `router.replace` is what stops a reload reopening the reviewer, the same
    * move the landing page makes with its own private-link parameter.
+   *
+   * **Once, and guarded by a ref rather than by its dependencies.** Arrival is
+   * a moment, not a value: reading the URL a second time after `router.replace`
+   * has emptied it would only ever say "no". The guard also keeps the effect
+   * honest about the one dependency it has — `useRouter()` is stable in Next,
+   * but nothing here needs it to be, and an effect that sets a fresh object on
+   * every run would spin if it ever were not.
    */
   useEffect(() => {
+    if (hasReadArrival.current) return;
+    hasReadArrival.current = true;
+
     let asked = false;
     try {
       asked = new URLSearchParams(window.location.search).get("review") === "1";

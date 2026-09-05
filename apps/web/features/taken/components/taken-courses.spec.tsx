@@ -27,9 +27,15 @@ const uploadTranscript = vi.fn();
 const toastError = vi.fn();
 const toastSuccess = vi.fn();
 const routerReplace = vi.fn();
+const routerPush = vi.fn();
 
+// One object, as Next's own `useRouter` returns: a fresh one every call would
+// make every effect that depends on the router run on every render, which is
+// not a thing this screen should have to be robust against in order to be
+// tested honestly.
+const router = { replace: routerReplace, push: routerPush };
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ replace: routerReplace, push: vi.fn() }),
+  useRouter: () => router,
 }));
 
 vi.mock("@/features/auth", () => ({
