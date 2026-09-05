@@ -226,7 +226,6 @@ describe("getStatsByCodes", () => {
 
 const course = {
   code: "SF1625",
-  name: "Envariabelanalys",
   titleSwe: "Envariabelanalys",
   titleEng: "Calculus in One Variable",
   state: "ESTABLISHED",
@@ -241,9 +240,6 @@ const course = {
   eligibility: null,
   createdAt: new Date("2026-01-01T00:00:00.000Z"),
   updatedAt: new Date("2026-01-01T00:00:00.000Z"),
-  embedding: null,
-  embeddingHash: null,
-  searchVector: null,
 } as unknown as SelectCourse;
 
 describe("getSummary", () => {

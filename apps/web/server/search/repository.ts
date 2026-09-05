@@ -22,44 +22,48 @@ export async function searchByKeyword(
 
   const conditions = [
     sql`(
-        code ILIKE ${codePrefix}
-        OR code ILIKE ${codeContains}
-        OR name_swedish ILIKE ${textPattern}
-        OR name_english ILIKE ${textPattern}
+        ${schema.courses.code} ILIKE ${codePrefix}
+        OR ${schema.courses.code} ILIKE ${codeContains}
+        OR ${schema.courses.titleSwe} ILIKE ${textPattern}
+        OR ${schema.courses.titleEng} ILIKE ${textPattern}
         OR (
           ${normalizedQuery} <> ''
-          AND search_vector @@ plainto_tsquery('simple', ${normalizedQuery})
+          AND ${schema.courseExplore.searchVector} @@ plainto_tsquery('simple', ${normalizedQuery})
         )
       )`,
   ];
   if (departmentFilter) {
-    conditions.push(sql`department ILIKE ${`%${departmentFilter}%`}`);
+    conditions.push(
+      sql`${schema.courses.department} ILIKE ${`%${departmentFilter}%`}`,
+    );
   }
 
   const whereSql = sql.join(conditions, sql` AND `);
   const result = await db.execute(sql`
-      SELECT code
+      SELECT ${schema.courses.code} AS code
       FROM ${schema.courses}
+      LEFT JOIN ${schema.courseExplore}
+        ON ${schema.courseExplore.courseCode} = ${schema.courses.code}
       WHERE ${whereSql}
       ORDER BY
         CASE
-          WHEN code ILIKE ${codePrefix} THEN 0
-          WHEN code ILIKE ${codeContains} THEN 1
+          WHEN ${schema.courses.code} ILIKE ${codePrefix} THEN 0
+          WHEN ${schema.courses.code} ILIKE ${codeContains} THEN 1
           WHEN (
             ${normalizedQuery} <> ''
-            AND search_vector @@ plainto_tsquery('simple', ${normalizedQuery})
+            AND ${schema.courseExplore.searchVector} @@ plainto_tsquery('simple', ${normalizedQuery})
           ) THEN 2
           ELSE 3
         END,
         CASE
           WHEN (
             ${normalizedQuery} <> ''
-            AND search_vector @@ plainto_tsquery('simple', ${normalizedQuery})
+            AND ${schema.courseExplore.searchVector} @@ plainto_tsquery('simple', ${normalizedQuery})
           )
-            THEN ts_rank(search_vector, plainto_tsquery('simple', ${normalizedQuery}))
+            THEN ts_rank(${schema.courseExplore.searchVector}, plainto_tsquery('simple', ${normalizedQuery}))
           ELSE 0
         END DESC,
-        code ASC
+        ${schema.courses.code} ASC
       LIMIT ${fetchSize}
     `);
 
@@ -75,18 +79,25 @@ export async function searchByEmbedding(
   departmentFilter: string | null,
 ): Promise<SearchHit[]> {
   const vectorLiteral = JSON.stringify(embedding);
-  const conditions = [sql`embedding IS NOT NULL`];
+  const conditions = [sql`${schema.courseExplore.embedding} IS NOT NULL`];
   if (departmentFilter) {
-    conditions.push(sql`department ILIKE ${`%${departmentFilter}%`}`);
+    conditions.push(
+      sql`${schema.courses.department} ILIKE ${`%${departmentFilter}%`}`,
+    );
   }
   const whereSql = sql.join(conditions, sql` AND `);
 
   const result = await db.execute(sql`
         WITH q AS (SELECT ${vectorLiteral}::vector AS v)
-        SELECT code, 1 - (embedding <=> q.v) AS score
-        FROM ${schema.courses}, q
+        SELECT
+          ${schema.courses.code} AS code,
+          1 - (${schema.courseExplore.embedding} <=> q.v) AS score
+        FROM ${schema.courses}
+        INNER JOIN ${schema.courseExplore}
+          ON ${schema.courseExplore.courseCode} = ${schema.courses.code}
+        CROSS JOIN q
         WHERE ${whereSql}
-        ORDER BY embedding <=> q.v
+        ORDER BY ${schema.courseExplore.embedding} <=> q.v
         LIMIT ${limit}
       `);
 
