@@ -183,12 +183,20 @@ export function useExplore({ onOpenCourse }: ExploreOptions = {}) {
 
   /**
    * The handler by reference, so the effect below fires on the *parameter*
-   * arriving and not on the host re-rendering with a fresh closure. Re-running
-   * it would reopen a tab the reader may already have closed, in the window
-   * before `router.replace` has taken the parameter back out of the URL.
+   * arriving and not on the host re-rendering with a fresh closure — Explore
+   * passes an inline arrow, so that closure is new on every render. Re-running
+   * the effect would reopen a tab the reader may already have closed, in the
+   * window before `router.replace` has taken the parameter back out of the URL.
+   *
+   * The write is an effect and not an assignment during render: a render React
+   * discards must leave nothing behind, and this one is declared above the
+   * effect that reads it, so on any commit the handler is current before it is
+   * called.
    */
   const openHandler = useRef(onOpenCourse);
-  openHandler.current = onOpenCourse;
+  useEffect(() => {
+    openHandler.current = onOpenCourse;
+  }, [onOpenCourse]);
 
   useEffect(() => {
     if (!requestedCode || !requestedKind) return;

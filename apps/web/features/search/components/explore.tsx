@@ -28,7 +28,7 @@ import {
  *
  * - **It owns the course card's collapse ramp.** `courseCardGeometry` turns the
  *   measured results-column width into the card's `geo`; the artboard computes
- *   the same ramp off the width the workspace pane leaves behind (line 845).
+ *   the same ramp off the width the workspace pane leaves behind (line 1061).
  *   The card measures nothing, which is why the geometry is a prop.
  * - **It is where a course opens.** #68 §5 retired the course page, so
  *   `/course/<code>` now redirects here carrying `?open=<code>&kind=…` and the
@@ -41,10 +41,13 @@ import {
  *
  * ## Where it departs from the artboard, and why
  *
- * - The artboard's **pager** (line 249) is not built. `search.courses` accepts
- *   a `page` input and ignores it, and returns `total: results.length` — the
- *   count of what it just returned. A pager over that would invent pages that
- *   do not exist.
+ * - The artboard's **pager** (lines 263-265) is not built, and stays unbuilt by
+ *   decision: it is **#148**. `search.courses` accepts a `page` input and
+ *   ignores it, and returns `total: results.length` — the count of what it just
+ *   returned. A pager over that would invent pages that do not exist, which is
+ *   the same error class as scoring an unreviewed course 0%. The real fix is a
+ *   `COUNT` query and an honoured offset in the search domain, which is server
+ *   work; nothing here should grow a pager over the contract as it stands.
  * - The artboard's **filter row does not exist** at all; its search block is the
  *   field alone. #89 requires filters, so they are built here in the artboard's
  *   own control vocabulary.
@@ -54,16 +57,17 @@ import {
  *   `max-w-[560px]` box that is already narrower than the results column at
  *   every width the pane can open at, so the correction has nothing to correct.
  * - The artboard's **shared-element handoff from the landing hero** (its
- *   `HANDOFF_KEY`, line 858) is not built, deliberately. It works by the landing
- *   page stashing its search bar's rect in `sessionStorage` and Explore
- *   translating its own bar out of it, fading the surroundings in behind and
+ *   `pickUpSharedBar()`, line 855) is not built here, deliberately. It works by
+ *   the landing page stashing its search bar's rect in `sessionStorage` and
+ *   Explore translating its own bar out of it, fading the surroundings in and
  *   sliding the rail in on the same curve so the two read as one gesture. Both
  *   halves would have to be written: `features/landing/` stores nothing today,
  *   and the rail and topbar belong to `AppShell`, so Explore would be animating
  *   chrome it does not own. That is a lot of coupling across three merged
  *   features for 280ms that the artboard itself already drops under
  *   `prefers-reduced-motion` — and the receiving bar is the same element either
- *   way, so it can be added later without reshaping anything here.
+ *   way, so it can be added later without reshaping anything here. It is
+ *   scheduled as its own task, owning all three sides of the seam at once.
  */
 export function Explore() {
   const workspace = useWorkspacePane();
