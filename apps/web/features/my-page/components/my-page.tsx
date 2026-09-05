@@ -13,6 +13,11 @@ import {
   useUnreviewedTakenCourses,
 } from "@/features/reviews";
 import { PageColumn, PageHeader } from "@/features/shell";
+// The module, not `@/features/taken`: the barrel holds that feature's write
+// path, and this page links to the screen rather than writing anything. The
+// route contract is one pure function and this is the half of it that builds
+// a link — `/taken` owns the half that reads one.
+import { reviewHref } from "@/features/taken/lib/review-deep-link";
 import {
   isTierUnavailable,
   useAllReviews,
@@ -330,13 +335,24 @@ export function MyPage() {
                     one: `/taken` owns the queue, and it is the screen that
                     knows which courses are still unreviewed by the time the
                     reader gets there.
+
+                    They do not deep-link to the same place, though. A row names
+                    a course and the URL carries it — `?review=<CODE>` — because
+                    the row's whole contract is "open the reviewer on this one",
+                    and a parameter that could only say "open the reviewer"
+                    discarded the course the reader named (#157). The button,
+                    which names no course, still writes the original
+                    `?review=1`.
                   */
                   <UnreviewedCard
                     courses={unreviewed.courses.map((course) => ({
                       code: course.courseCode,
+                      name: course.name,
                     }))}
-                    onStart={() => router.push("/taken?review=1")}
-                    onSelect={() => router.push("/taken?review=1")}
+                    onStart={() => router.push(reviewHref())}
+                    onSelect={(courseCode) =>
+                      router.push(reviewHref(courseCode))
+                    }
                   />
                 )}
               </div>

@@ -66,13 +66,16 @@ vi.mock("@/features/reviews", () => ({
     onStart,
     onSelect,
   }: {
-    courses: { code: string }[];
+    // The real card falls back to the code when it has no name, so the stub
+    // renders both — a row that renders its code twice is the second half of
+    // #157 and has to be visible to a test.
+    courses: { code: string; name?: string | null }[];
     onStart: () => void;
     onSelect?: (code: string) => void;
   }) =>
     courses.length === 0 ? null : (
       <div data-testid="unreviewed">
-        {courses.map((c) => c.code).join(",")}
+        {courses.map((c) => `${c.code} ${c.name || c.code}`).join(", ")}
         <button type="button" onClick={onStart}>
           Start reviewing
         </button>
@@ -322,10 +325,14 @@ describe("MyPage empty states", () => {
    * My Page has no reviewer of its own and should not grow one: `/taken` owns
    * the queue, and it is the screen that still knows which courses are
    * unreviewed by the time the reader arrives. Both the prompt's button and one
-   * of its rows therefore go to the same place — the artboard's own
+   * of its rows therefore go there — the artboard's own
    * `window.location.href = "…Taken Courses…?review=1"`.
+   *
+   * They do not go to the *same* place. The button names no course and writes
+   * the original flag; a row names one and the URL carries it, which is the
+   * whole point of #157 — the row used to discard the course it named.
    */
-  it("sends both the prompt's button and a row to the fast-track reviewer", async () => {
+  it("sends the prompt's button to a whole round and a row to its own course", async () => {
     unreviewed.mockReturnValue({
       courses: [takenCourse({ courseCode: "DD2380" })],
       isLoading: false,
@@ -340,7 +347,30 @@ describe("MyPage empty states", () => {
 
     push.mockClear();
     await userEvent.click(screen.getByRole("button", { name: "Pick a row" }));
-    expect(push).toHaveBeenCalledWith("/taken?review=1");
+    expect(push).toHaveBeenCalledWith("/taken?review=DD2380");
+  });
+
+  /**
+   * `user_taken_courses` stores only a code, so a row with no name renders the
+   * code twice (#157's second defect). The title now comes back on the course
+   * from `useUnreviewedTakenCourses`, and My Page has only to pass it on.
+   */
+  it("hands the card the catalogue title the hook looked up", async () => {
+    unreviewed.mockReturnValue({
+      courses: [
+        {
+          ...takenCourse({ courseCode: "DD2380" }),
+          name: "Artificial Intelligence",
+        },
+      ],
+      isLoading: false,
+      isUnavailable: false,
+    });
+    render(<MyPage />);
+
+    expect(screen.getByTestId("unreviewed")).toHaveTextContent(
+      "DD2380 Artificial Intelligence",
+    );
   });
 });
 
