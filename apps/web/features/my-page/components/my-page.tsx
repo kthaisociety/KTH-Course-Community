@@ -206,7 +206,7 @@ export function MyPage() {
       <div
         role="tablist"
         aria-label="My Page sections"
-        className="mt-5 flex gap-1 overflow-x-auto border-cc-rule border-b px-7 @max-[440px]:px-[14px]"
+        className="scrollbar-subtle mt-5 flex gap-1 overflow-x-auto border-cc-rule border-b px-7 @max-[440px]:px-[14px]"
       >
         {VIEWS.map((key) => (
           <button

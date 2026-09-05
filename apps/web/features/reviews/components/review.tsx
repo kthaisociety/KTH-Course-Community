@@ -205,7 +205,7 @@ export function Review({
             </Button>
           </DialogTrigger>
         )}
-        <DialogContent className="max-h-[100vh] max-w-4xl min-w-3xl overflow-y-auto">
+        <DialogContent className="scrollbar-subtle max-h-[100vh] max-w-4xl min-w-3xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {editing ? "Edit your review" : "Share Your Experience"}

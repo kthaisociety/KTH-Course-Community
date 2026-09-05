@@ -155,7 +155,7 @@ export function CollectionDetail({
                   ref={addMenu.panelRef}
                   role="menu"
                   aria-label="Add a saved course"
-                  className="absolute top-9 right-0 z-20 box-border max-h-[260px] w-[250px] overflow-auto rounded-[10px] border border-cc-rule2 bg-cc-surface p-[5px] shadow-[0_8px_24px_rgba(20,30,45,.14)]"
+                  className="scrollbar-subtle absolute top-9 right-0 z-20 box-border max-h-[260px] w-[250px] overflow-auto rounded-[10px] border border-cc-rule2 bg-cc-surface p-[5px] shadow-[0_8px_24px_rgba(20,30,45,.14)]"
                 >
                   {addableCourseCodes.map((courseCode) => (
                     <button

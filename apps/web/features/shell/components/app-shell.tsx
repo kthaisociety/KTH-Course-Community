@@ -91,7 +91,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           className={
             pathname === "/search"
               ? "min-h-0 flex-1 overflow-hidden"
-              : "min-h-0 flex-1 overflow-y-auto overflow-x-hidden"
+              : "scrollbar-subtle min-h-0 flex-1 overflow-y-auto overflow-x-hidden"
           }
         >
           <SearchMorphProvider railRef={railRef}>

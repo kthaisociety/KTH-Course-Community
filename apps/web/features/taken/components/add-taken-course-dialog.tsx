@@ -185,7 +185,7 @@ export function AddTakenCourseDialog({
                 the catalogue.
               </p>
             ) : (
-              <ul className="m-0 flex max-h-[220px] list-none flex-col overflow-y-auto p-0">
+              <ul className="scrollbar-subtle m-0 flex max-h-[220px] list-none flex-col overflow-y-auto p-0">
                 {results.map((course) => {
                   const isTaken = alreadyTaken.has(course.courseCode);
                   return (
