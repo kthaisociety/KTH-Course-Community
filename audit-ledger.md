@@ -2125,11 +2125,49 @@ missing button and no explanation, which is how a deliberate choice gets
 header's `savedLabel` is what carries the reassurance. Documentation only — I am
 **not** proposing the button be added. Added to #162.
 
-## What this addendum does and does not close
+## W-03 — the examination bar and approach slider arithmetic matches the artboard exactly — **satisfied**
 
-It closes the *copy and control* half of the Workspace Pane diff: 47 strings
-checked, 45 present, 2 explained. It does **not** close the layout half —
-spacing, the examination bar's drag arithmetic, the theory/applied divider, the
-score bar widths and the 34 token-touching lines of that artboard's revision
-were not compared property by property. That remains the thinnest part of this
-audit, and it is now thinner by one dimension rather than closed.
+**Confidence: high.** This was the specific thing the previous section said was
+still uncompared, so I compared it.
+
+`Course Community - Workspace Pane.dc.html` versus
+`apps/web/features/reviews/lib/review-draft.ts`:
+
+| What | Artboard | Code | Match |
+|---|---|---|---|
+| Even split base | `:324` `Math.max(5, Math.round(100 / n / 5) * 5)` | `evenShares`, `Math.max(MIN_SHARE, Math.round(100 / count / SHARE_STEP) * SHARE_STEP)` with both constants `5` | exact |
+| Remainder | on the last segment (`evenSplit`) | `shares[count - 1] = 100 - base * (count - 1)` | exact |
+| Divider clamp | `:435` `x = Math.max(5, Math.min(pair - 5, x))` | `moveDivider`, `Math.max(MIN_SHARE, Math.min(pair - MIN_SHARE, stepped))` | exact |
+| Approach clamp | `:465` `Math.round(Math.max(5, Math.min(95, raw)))` | `Math.max(APPROACH_MIN, Math.min(APPROACH_MAX, Math.round(value)))`, `APPROACH_MIN = 5`, `APPROACH_MAX = 100 - 5` | exact |
+| Score scale | `:466` `Math.max(1, Math.min(10, raw / 10))` | 1-10 displayed raw, per #68 | consistent |
+
+The reasoning is carried across as well as the numbers: the code's comment on
+`evenShares` explains that six methods do not divide 100 evenly and that the
+remainder goes on the last segment *because* the alternative is a distribution
+`examinationDistributionSchema` would refuse — which is the schema-side reason
+the artboard's own choice happens to be the only workable one.
+
+`moveDivider`'s comment states the invariant the clamp exists for: only the
+dragged pair moves, so dragging one boundary never silently reflows the rest,
+and neither side can reach zero because "a 0% segment would be a method the
+reviewer picked and then said nothing about."
+
+## What is now left uncompared on this artboard
+
+Narrowing the earlier claim, since two of its three parts are now closed:
+
+- **Copy and controls** — closed by W-01/W-02. 47 strings, 45 present, 2
+  explained.
+- **Drag arithmetic** — closed by W-03. Five constants and clamps, all exact.
+- **Static spacing and token application** — *still uncompared.* The artboard's
+  `margin-top:7px` (×6), `margin-top:11px` (×3), `height:6px` (×4),
+  `height:8px` (×3), `height:38px` (×2) and the radii on the score and
+  examination bars were not checked value-by-value against the JSX, and neither
+  were the 34 token-touching lines of that artboard's revision.
+
+That last item is the honest remainder of this audit's thinnest area. It is
+static presentation on one surface, with no behavioural consequence — which is
+why I stopped there rather than continuing past the point of diminishing
+returns, and why I am naming exactly what was not done rather than implying the
+diff is complete.
+
