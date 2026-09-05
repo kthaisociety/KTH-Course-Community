@@ -33,6 +33,17 @@ const APPLIED_FILL = "color-mix(in srgb, var(--cc-btn) 40%, var(--cc-surface))";
 const UNSET_FILL = "var(--cc-rule3)";
 /** Below this share a segment is too narrow to hold its own category name. */
 const LABEL_WIDTH_THRESHOLD = 24;
+/**
+ * Below *this* it cannot hold anything at all.
+ *
+ * Between the two the artboard prints an abbreviation — "Assign.", "Project" —
+ * from a `short` field on its own `METHODS`. The repo's labels have no such
+ * field, and inventing one would put a second name for every examination
+ * category in the codebase for the sake of nine pixels. The share itself is a
+ * better use of the room: it is the one thing the segment is actually saying,
+ * and it is what `examinationSegments` already prints on the published card.
+ */
+const PERCENT_WIDTH_THRESHOLD = 13;
 
 function Section({ children }: { children: React.ReactNode }) {
   return (
@@ -287,7 +298,9 @@ export function ReviewerCard({
                 >
                   {draft.shares[index] >= LABEL_WIDTH_THRESHOLD
                     ? EXAMINATION_DISTRIBUTION_LABELS[key]
-                    : ""}
+                    : draft.shares[index] >= PERCENT_WIDTH_THRESHOLD
+                      ? `${draft.shares[index]}%`
+                      : ""}
                 </div>
               ))
             )}
