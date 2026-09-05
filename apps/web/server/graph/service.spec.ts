@@ -7,6 +7,7 @@ import {
   getEffectiveTier,
   getNeighbourhood,
   joinCommunityGraph,
+  joinCommunityGraphOnSignUp,
   MAX_NEIGHBOURHOOD_NODES,
 } from "./service";
 
@@ -220,6 +221,32 @@ describe("joinCommunityGraph", () => {
   });
 });
 
+describe("joinCommunityGraphOnSignUp", () => {
+  it("gives the new account a node", async () => {
+    const { nodes } = inMemoryCommunity();
+    for (const established of community(6)) {
+      await joinCommunityGraph(established.userId);
+    }
+
+    await joinCommunityGraphOnSignUp("newcomer");
+
+    expect(nodes.map((node) => node.userId)).toContain("newcomer");
+  });
+
+  it("swallows a placement failure, so it can never fail sign-up", async () => {
+    const failure = new Error("graph unreachable");
+    vi.mocked(graphRepo.findNode).mockRejectedValue(failure);
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    await expect(
+      joinCommunityGraphOnSignUp("newcomer"),
+    ).resolves.toBeUndefined();
+
+    expect(logged).toHaveBeenCalledWith(expect.any(String), failure);
+    logged.mockRestore();
+  });
+});
+
 describe("getNeighbourhood", () => {
   const viewer = neighbour("viewer", 100, 100);
 
@@ -306,12 +333,19 @@ describe("getNeighbourhood", () => {
     expect(neighbourhood.nodes).toEqual([viewer]);
   });
 
-  it("rejects an app user who has no node yet", async () => {
-    vi.mocked(graphRepo.findNode).mockResolvedValue(undefined);
+  it("places an app user who has no node yet, rather than turning them away", async () => {
+    const { nodes } = inMemoryCommunity();
+    for (const established of community(6)) {
+      await joinCommunityGraph(established.userId);
+    }
 
-    await expect(getNeighbourhood("stranger")).rejects.toBeInstanceOf(
-      NotFoundError,
+    const neighbourhood = await getNeighbourhood("latecomer");
+
+    expect(neighbourhood.viewer.userId).toBe("latecomer");
+    expect(neighbourhood.nodes.map((node) => node.userId)).toContain(
+      "latecomer",
     );
+    expect(nodes.map((node) => node.userId)).toContain("latecomer");
   });
 });
 

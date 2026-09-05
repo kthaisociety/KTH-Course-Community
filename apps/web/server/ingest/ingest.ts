@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { inArray, sql } from "drizzle-orm";
 import type { z } from "zod";
-import { embedBatch } from "../ai";
+import { EMBEDDING_MODEL, embedBatch } from "../ai";
 import { db } from "../db";
 import {
   courseExaminations as courseExaminationsTable,
@@ -12,6 +12,10 @@ import {
   type InsertCourseRound,
 } from "../db/schema";
 import { getCourseInformation, getCourses } from "./kopps";
+import {
+  findCourseExploreSourceHashes,
+  upsertCourseExploreSearchState,
+} from "./repository";
 import type { CoursesSchema } from "./schemas";
 
 const status = {
@@ -146,7 +150,6 @@ async function convertCourses(courses: z.infer<typeof CoursesSchema>): Promise<{
 
       const insertCourse: InsertCourse = {
         code: detail.course.courseCode,
-        name: detail.course.titleOther,
         titleSwe: detail.course.title,
         titleEng: detail.course.titleOther,
         state: course.state,
@@ -214,7 +217,6 @@ async function upsertCourses(courses: InsertCourse[]) {
       .onConflictDoUpdate({
         target: coursesTable.code,
         set: {
-          name: sql`excluded.name`,
           titleSwe: sql`excluded.name_swedish`,
           titleEng: sql`excluded.name_english`,
           state: sql`excluded.state`,
@@ -277,38 +279,30 @@ async function generateAndStoreEmbeddings(courses: InsertCourse[]) {
     );
 
     const batchWithHash = batch.map((course) => {
-      const text = [
-        course.code,
-        course.titleEng,
-        course.titleSwe,
-        course.goals,
-        course.content,
-      ]
+      const { code, titleEng, titleSwe, goals, content } = course;
+      // Preserve the legacy embedding-hash input byte for byte so moving its
+      // storage does not cause an unnecessary re-embed.
+      const embeddingText = [code, titleEng, titleSwe, goals, content]
         .filter(Boolean)
         .join(" ");
-      const hash = createHash("sha256").update(text).digest("hex");
-      return { course, text, hash };
+      const sourceHash = createHash("sha256")
+        .update(embeddingText)
+        .digest("hex");
+      // This order matches the generated courses.search_vector expression
+      // being retired by migration 0013, preserving full-text rank positions.
+      const searchText = [titleEng, titleSwe, code, goals, content]
+        .map((value) => value ?? "")
+        .join(" ");
+      return { course, embeddingText, sourceHash, searchText };
     });
 
-    const existingRows = await db
-      .select({
-        code: coursesTable.code,
-        embeddingHash: coursesTable.embeddingHash,
-      })
-      .from(coursesTable)
-      .where(
-        inArray(
-          coursesTable.code,
-          batch.map((c) => c.code),
-        ),
-      );
-
-    const existingHashByCode = new Map(
-      existingRows.map((row) => [row.code, row.embeddingHash]),
+    const existingSourceHashByCode = await findCourseExploreSourceHashes(
+      batch.map((course) => course.code),
     );
 
     const toEmbed = batchWithHash.filter(
-      ({ course, hash }) => existingHashByCode.get(course.code) !== hash,
+      ({ course, sourceHash }) =>
+        existingSourceHashByCode.get(course.code) !== sourceHash,
     );
 
     if (toEmbed.length === 0) {
@@ -318,17 +312,19 @@ async function generateAndStoreEmbeddings(courses: InsertCourse[]) {
       continue;
     }
 
-    const { embeddings } = await embedBatch(toEmbed.map((x) => x.text));
+    const { embeddings } = await embedBatch(
+      toEmbed.map((item) => item.embeddingText),
+    );
 
     await Promise.all(
       toEmbed.map((item, idx) =>
-        db
-          .update(coursesTable)
-          .set({
-            embedding: sql`${JSON.stringify(embeddings[idx])}::vector`,
-            embeddingHash: item.hash,
-          })
-          .where(sql`code = ${item.course.code}`),
+        upsertCourseExploreSearchState({
+          courseCode: item.course.code,
+          embedding: embeddings[idx],
+          sourceHash: item.sourceHash,
+          searchText: item.searchText,
+          embeddingModel: EMBEDDING_MODEL,
+        }),
       ),
     );
   }
