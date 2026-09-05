@@ -2035,3 +2035,101 @@ would write them.
    `components/ui/**`. This is the only item on the list that turns a convention
    documented in a comment into something enforced, and it would have caught
    N-03 — the four containers the corrective pass missed.
+---
+
+# Addendum — Workspace Pane, the artboard I flagged as thinnest
+
+Written after the rest of the ledger. "Where this audit is thin" named
+`Course Community - Workspace Pane.dc.html` as the largest artboard with the
+second-largest revision (62 changed lines, 34 involving tokens) and the one I
+had read for wiring rather than diffed. Rather than leave that as a caveat, I
+went back and diffed its reader-facing surface.
+
+**Method:** extracted every reader-facing string from the artboard (47 of them)
+and grepped `features/` for each. Forty-five are present. Two are not, and they
+turn out to be different in kind.
+
+## W-01 — "No open panes" is unreachable, and correctly so — **satisfied**
+
+**Confidence: high.**
+
+`Course Community - Workspace Pane.dc.html:54-56`:
+
+```html
+<sc-if value="{{ noTabs }}">
+<div style="…">No open panes</div>
+</sc-if>
+```
+
+I first read this as a missing empty state. It is not. Its position matters: it
+sits **inside** the `overflowOpen` branch (line 45), which is the "All open
+panes" dropdown — so it is the empty state of the *switcher list*, not of the
+pane.
+
+In the implementation that state cannot arise, by construction and at three
+levels:
+
+- `WorkspacePaneHost` returns `null` when `openCourses.length === 0`
+  (`workspace-pane-host.tsx:73`).
+- `WorkspacePane` returns `null` when there is no active entry
+  (`workspace-pane.tsx:105`).
+- The dropdown is inside `{!hideTabs && …}`, and its items map `openCourses`,
+  which is therefore non-empty whenever the trigger exists.
+
+So the switcher can never be open over an empty list. The artboard needs the
+branch because its pane is a persistent column that renders whether or not
+anything is open; this pane is mounted by its host only when there is something
+to show. **Not a divergence — an artboard state with no counterpart, correctly
+absent.** Recording it because "string missing from code" would have been the
+wrong conclusion and I want the reasoning on the record.
+
+## W-02 — the review draft's "Save draft" button is missing — **divergence, undocumented**
+
+**Severity: S4.** **Confidence: high.**
+
+This one is real. `Course Community - Workspace Pane.dc.html:301-303` gives the
+review-draft footer **two** controls:
+
+```html
+<div style="display:flex;justify-content:flex-end;gap:9px;padding:12px 20px">
+<div style="…border:1px solid var(--rule3);…">Save draft</div>
+<div onClick="{{ onPostReview }}" …>{{ postLabel }}</div>
+</div>
+```
+
+`features/workspace/components/review-draft-panel.tsx` renders only the post
+button (`:740-770`). The secondary "Save draft" is absent.
+
+**And the artboard has both halves, not one or the other.** Line 170 is
+`{{ savedLabel }}` in the draft header, defined at line 645 as
+`untouched ? "Not saved yet" : "Saved just now"`. The implementation reproduces
+that header line **exactly** — same two strings, same `11.5px`, same `--cc-dim`
+(`review-draft-panel.tsx:381-383`). So it kept the artboard's status indicator
+and dropped the artboard's button.
+
+**Why dropping it is defensible.** The draft is persisted on every change:
+`onDraftChange` → `patchDraft` → the `writeDrafts(drafts)` effect in
+`workspace-pane.tsx:97-99`. There is no unsaved state for a button to resolve.
+A "Save draft" control would either be a no-op, or would imply the draft had
+been at risk — which is precisely what the header line already says it is not.
+
+**Why it is still a finding.** Every other deviation in this codebase carries a
+comment saying what was dropped and why — `FindYourDot`'s private link,
+Explore's pager, `CollectionDetail`'s one-line rows, the landing's copy fix.
+This one does not. A reader diffing the footer against the artboard finds a
+missing button and no explanation, which is how a deliberate choice gets
+"restored" by the next pass.
+
+**What the fix would be:** a comment on the footer recording that the artboard's
+"Save draft" is deliberately absent because the draft autosaves, and that the
+header's `savedLabel` is what carries the reassurance. Documentation only — I am
+**not** proposing the button be added. Added to #162.
+
+## What this addendum does and does not close
+
+It closes the *copy and control* half of the Workspace Pane diff: 47 strings
+checked, 45 present, 2 explained. It does **not** close the layout half —
+spacing, the examination bar's drag arithmetic, the theory/applied divider, the
+score bar widths and the 34 token-touching lines of that artboard's revision
+were not compared property by property. That remains the thinnest part of this
+audit, and it is now thinner by one dimension rather than closed.
