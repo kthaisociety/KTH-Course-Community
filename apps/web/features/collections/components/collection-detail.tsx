@@ -11,9 +11,8 @@ import {
   type CourseCardCourse,
   CourseCardItem,
   CourseItemSkeleton,
-  EXPANDED_CARD_GEOMETRY,
 } from "@/features/courses";
-import type { CourseStats } from "@/types";
+import type { CardGeometry, CourseStats } from "@/types";
 import { EmptyPanel } from "./empty-panel";
 
 /** A course the viewer has saved, with everything a card needs to draw it. */
@@ -24,6 +23,25 @@ export type SavedCourse = {
 
 type Props = {
   collection: Collection;
+  /**
+   * The card's collapse ramp, measured by whoever owns the column these rows
+   * are laid out in.
+   *
+   * This used to be `EXPANDED_CARD_GEOMETRY`, pinned here on the grounds that
+   * the page column had nothing competing for its width. That was true of
+   * `/collections` and false of `/saved`, which embeds this component inside the
+   * very column the workspace pane narrows — so one card collapsed or did not
+   * depending only on which of the page's two lists it was in, and the surplus
+   * was clipped rather than scrolled because that column is `overflow-x-hidden`
+   * (#159). The decision belongs to the host, and both hosts now measure.
+   *
+   * It is the *column's* width, not the card's: each row spends 36px on the
+   * reorder buttons before the card starts, so the ramp here runs about 36px
+   * ahead of the card's true width. That shifts where the collapse begins by a
+   * fifth of the ramp; it never leaves the ramp, and closing it would mean a
+   * second measurement per row for a card that is already interpolating.
+   */
+  geo: CardGeometry;
   /** `undefined` while the course's summary is still in flight. */
   courseFor: (courseCode: string) => SavedCourse | undefined;
   /** Saved courses this collection does not already hold. Saved-only, always. */
@@ -58,8 +76,8 @@ const MOVE_BUTTON =
  * schema has, and the card renders the same course from data that does exist —
  * so the codebase wins, as #68 has it, and the design's remove affordance
  * survives as the card's own `removeLabel` button, which #86 built for this page.
- * The geometry is pinned to the expanded end: the page column has nothing
- * competing for its width, so there is no ramp to interpolate along.
+ * The geometry arrives as a prop; see {@link Props.geo} for why this component
+ * is the wrong place to decide it.
  *
  * Reordering is a pair of move buttons per course. The artboard designs no
  * reorder control at all, and `collections.reorder` is the only ordering the
@@ -68,6 +86,7 @@ const MOVE_BUTTON =
  */
 export function CollectionDetail({
   collection,
+  geo,
   courseFor,
   addableCourseCodes,
   hasSavedCourses,
@@ -232,7 +251,7 @@ export function CollectionDetail({
                     <CourseCardItem
                       course={saved.course}
                       stats={saved.stats}
-                      geo={EXPANDED_CARD_GEOMETRY}
+                      geo={geo}
                       action="add"
                       removeLabel={`Remove ${courseCode} from ${collection.name}`}
                       onRemove={() => onRemoveCourse(courseCode)}

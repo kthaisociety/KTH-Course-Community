@@ -9,7 +9,7 @@ import {
   useMe,
   useRequireSession,
 } from "@/features/auth";
-import { Collections } from "@/features/collections";
+import { Collections, ConfirmDialog } from "@/features/collections";
 import {
   CourseCardItem,
   courseCardGeometry,
@@ -35,6 +35,9 @@ import { useSetCourseSaved } from "../api/mutations";
  */
 const SKELETON_KEYS = ["s0", "s1", "s2"] as const;
 
+/** Names the saved list's own section, under the page's `h1` of the same words. */
+const SAVED_HEADING_ID = "saved-courses-heading";
+
 /**
  * The viewer's saved courses.
  *
@@ -42,8 +45,8 @@ const SKELETON_KEYS = ["s0", "s1", "s2"] as const;
  * about it are worth knowing before changing anything here.
  *
  * **It hosts the workspace pane, so its cards ramp.** The artboard imports the
- * pane at line 166 with the same contract Explore uses, and computes the card's
- * `geo` from what the pane leaves of the row (line 844) exactly as Explore
+ * pane at line 161 with the same contract Explore uses, and computes the card's
+ * `geo` from what the pane leaves of the row (line 836) exactly as Explore
  * does. So the geometry is measured here rather than pinned: with no tab open
  * the column is wide and the ramp lands on its expanded end, which is the fixed
  * object this page used to hand out, and with a tab open the cards collapse
@@ -51,11 +54,17 @@ const SKELETON_KEYS = ["s0", "s1", "s2"] as const;
  * card's `geo` to the fully collapsed end" was decided when this page had no
  * pane to yield to; it has one now, and the artboard interpolates.
  *
- * **Unsaving removes the save and nothing else.** The trash control calls
- * `saved.unsave`, whose repository deletes one row; taken history and reviews
- * have no foreign key to it. Nothing on this screen may imply otherwise — no
- * "this will also remove…" confirmation, and no optimistic write that reaches
- * into `taken.list` or the review cache. `saved.spec.tsx` holds that.
+ * **Unsaving removes the save and its collection memberships, and nothing
+ * else.** The trash control calls `saved.unsave`, whose repository deletes one
+ * `user_saved_courses` row; taken history and reviews have no foreign key to
+ * it, so nothing on this screen may imply they go with it — no optimistic write
+ * that reaches into `taken.list` or the review cache, and no copy that says so.
+ * `saved.spec.tsx` holds that. `collection_courses` *does* hang off that row,
+ * with `on delete cascade`, so an unsave does take the course out of every
+ * collection it was in and out of each of their orders. That is what the
+ * confirmation below names, and now that this list shows organized courses too
+ * it is a thing a reader can do without ever opening the collection they are
+ * emptying (#155).
  *
  * **Collections is a section of this page, not a link away from it.** The
  * artboard imports the Collections artboard at line 82 with `compact`, which is
@@ -66,29 +75,30 @@ const SKELETON_KEYS = ["s0", "s1", "s2"] as const;
  * why a course opened from inside a collection comes back to this route as
  * `?open=`: the pane it opens into is this page's.
  *
- * **The list is flat, and the artboard's is not.** Below the chips the artboard
- * still shows only the saved courses *not* in a collection (line 128), under an
- * `h2` reading "Saved courses" and the line "Courses you have saved but not yet
- * added to a collection", with an "Every saved course is in a collection" panel
- * when none are left. That split is not built: a course would leave this list
- * the moment it joined a collection, and the only place it would then be
- * visible is behind a chip — so a reader who filed everything would find the
- * page empty under a heading promising their saved courses. The `h2` is dropped
- * with it, because "Saved courses" under an `h1` reading "Saved courses" says
- * nothing once the subtitle that distinguished them is gone. Both are a
- * deferral, not a design change: they belong with whoever makes an organized
- * course reachable from this page without opening the collection it is in
- * (#127 §4).
+ * **The list is every saved course, organized or not.** A collection is a view
+ * over saved courses, never a place they move to (`CONTEXT.md`): joining one
+ * takes nothing out of this list, and a course may be in several at once. The
+ * chips above **narrow** the list — opening one swaps this list for that
+ * collection's — rather than relocating anything out of it. The artboard says
+ * the same thing at lines 129-135: `savedCards` over every saved code and
+ * `hasSaved` where the previous export had `unorganized` and `hasUnorganized`,
+ * and no "Every saved course is in a collection" panel, because there is no
+ * state in which this list can be empty while saves exist. #156 settled it;
+ * #90's deferral and the split it deferred are both gone.
+ *
+ * The `h2` comes back with the subtitle that earns it. It repeats the `h1`, and
+ * that is the artboard's own doing — but the section under it is now one of two
+ * on the page, and the line beneath is what tells them apart.
  *
  * ## Where else it departs from the artboard
  *
  * The artboard keeps the collections strip *above* the row the pane sits in,
  * and shortens it by a flat 236px while tabs are open (`savedTopMargin`, line
- * 969). Here the strip is inside the column the pane already narrows, which
+ * 961). Here the strip is inside the column the pane already narrows, which
  * does the same job exactly rather than approximately — and, decisively, keeps
  * an open collection's detail scrollable. A fixed-height block above a row that
  * owns the page's only scroll would clip a long collection instead.
- * `resultsMax` (line 970) is computed by the artboard and never read by its
+ * `resultsMax` (line 962) is computed by the artboard and never read by its
  * markup, so there is nothing to follow.
  */
 type Props = {
@@ -115,6 +125,15 @@ export function Saved({ openCollectionId = null, openCourse = null }: Props) {
   const { user, isLoading: isSessionLoading } = useMe();
   const { setSaved } = useSetCourseSaved();
   const [authReason, setAuthReason] = useState<AuthReason | null>(null);
+  /**
+   * The course an unsave has been asked about and not yet answered.
+   *
+   * The code alone is enough — the card is what names the course on screen, and
+   * the dialog says the code back. It is cleared by answering either way, so a
+   * card that leaves the list while the question is up cannot leave a write
+   * armed behind it.
+   */
+  const [pendingUnsave, setPendingUnsave] = useState<string | null>(null);
   // Which collection's detail is open, as `Collections` reports it. The route
   // is the authority on the first paint; after that the chips are.
   const [openDetail, setOpenDetail] = useState<string | null>(openCollectionId);
@@ -200,7 +219,12 @@ export function Saved({ openCollectionId = null, openCourse = null }: Props) {
    */
   const unreadable = savedCourseCodes.length - courses.length;
 
-  function unsave(courseCode: string) {
+  /** Unsaves the course the reader confirmed, and closes the question. */
+  function onConfirmUnsave() {
+    const courseCode = pendingUnsave;
+    setPendingUnsave(null);
+    if (!courseCode) return;
+
     setSaved(courseCode, false).catch(() =>
       toast.error(`Could not remove ${courseCode} from your saved courses.`),
     );
@@ -241,6 +265,13 @@ export function Saved({ openCollectionId = null, openCourse = null }: Props) {
               openCollectionId={openCollectionId}
               onDetailChange={setOpenDetail}
               onRequestAuth={setAuthReason}
+              /*
+                An open collection's cards sit in this very column, so they get
+                the ramp this page already measured for its own list. Without it
+                they pinned the expanded end and were clipped by the column the
+                pane had just narrowed (#159).
+              */
+              geo={geo}
             />
           </div>
 
@@ -257,7 +288,28 @@ export function Saved({ openCollectionId = null, openCourse = null }: Props) {
             showing the same course twice.
           */}
           {openDetail !== null ? null : (
-            <div className="flex flex-col gap-3.5 pt-[18px] pb-5 @max-[440px]:gap-3 @max-[440px]:pt-3">
+            <section
+              aria-labelledby={SAVED_HEADING_ID}
+              className="flex flex-col gap-3.5 pt-[18px] pb-5 @max-[440px]:gap-3 @max-[440px]:pt-3"
+            >
+              {/*
+                The artboard's own heading and line, at lines 129-131. The line is
+                the whole of what #156 settled, said to the reader: a collection
+                groups saved courses, it does not take them out of this list.
+              */}
+              <div>
+                <h2
+                  id={SAVED_HEADING_ID}
+                  className="m-0 font-semibold text-[16px] leading-[1.3]"
+                >
+                  Saved courses
+                </h2>
+                <div className="mt-1 text-[12.5px] text-cc-muted">
+                  All the courses you have saved, including any already grouped
+                  into a collection.
+                </div>
+              </div>
+
               {isLoading ? (
                 SKELETON_KEYS.map((key) => <CardSkeleton key={key} />)
               ) : savedCourseCodes.length === 0 ? (
@@ -302,16 +354,24 @@ export function Saved({ openCollectionId = null, openCourse = null }: Props) {
                           // so the split Save button has nothing left to offer and
                           // the picker stands alone; removal is the trash control.
                           removeLabel={`Remove ${course.courseCode} from saved courses`}
-                          onRemove={() => unsave(course.courseCode)}
+                          onRemove={() => setPendingUnsave(course.courseCode)}
                           onOpen={() =>
                             workspace.open(course.courseCode, "details")
                           }
                           onReview={() =>
                             workspace.open(course.courseCode, "review")
                           }
-                          // The artboard opens every picker upwards on this page: a
-                          // saved list is a single column, so a panel dropping from
-                          // the last card would fall off it.
+                          /*
+                            Every picker on this page opens upwards. The
+                            2026-09-05 artboard dropped its `picker-above` from
+                            this import, but the reason it was passed is a
+                            property of the page rather than of the drawing: the
+                            saved list is a single scrolling column, and a panel
+                            dropping out of the last card falls out of a box that
+                            is `overflow-x-hidden`. Following the removal would
+                            reintroduce that; it is recorded here rather than
+                            silently kept.
+                          */
                           pickerAbove
                           onRequestAuth={setAuthReason}
                         />
@@ -320,7 +380,7 @@ export function Saved({ openCollectionId = null, openCourse = null }: Props) {
                   </ul>
                 </>
               )}
-            </div>
+            </section>
           )}
         </div>
 
@@ -348,6 +408,29 @@ export function Saved({ openCollectionId = null, openCourse = null }: Props) {
           onOpen={workspace.open}
         />
       ) : null}
+
+      {/*
+        Asked before the write, not confirmed after it (#155). The body names
+        the one thing an unsave really does take with it — the course's place in
+        every collection holding it, cascaded off `user_saved_courses` — and
+        says nothing about reviews or taken history, which have no foreign key
+        to that row and are not touched.
+      */}
+      <ConfirmDialog
+        request={
+          pendingUnsave
+            ? {
+                eyebrow: "Saved courses",
+                title: `Remove ${pendingUnsave} from your saved courses?`,
+                body: `${pendingUnsave} leaves this list and any collection it is in, together with its place in their order. Your reviews and the courses you have marked as taken are untouched. You can save it again from Explore.`,
+                cancelLabel: "Keep it saved",
+                actionLabel: "Remove course",
+              }
+            : null
+        }
+        onCancel={() => setPendingUnsave(null)}
+        onConfirm={onConfirmUnsave}
+      />
 
       {/*
         `proxy.ts` only checks that a session cookie exists, so a stale one

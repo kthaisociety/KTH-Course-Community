@@ -12,3 +12,19 @@
  */
 
 export { Collections } from "./components/collections";
+/**
+ * The artboard's confirmation, exported because Saved asks the same question
+ * about the same object.
+ *
+ * Unsaving a course is destructive in exactly the way deleting a collection is:
+ * `user_saved_courses` is the composite foreign key every `collection_courses`
+ * row hangs off, so an unsave cascades the course out of every collection it
+ * was in and takes its place in each of their orders with it. One dialog asks
+ * both questions (#155). It lives here because collections is where the first
+ * of them is asked; when a third screen needs it, it belongs in
+ * `components/ui/` instead.
+ */
+export {
+  ConfirmDialog,
+  type ConfirmRequest,
+} from "./components/confirm-dialog";

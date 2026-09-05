@@ -180,6 +180,83 @@ describe("Saved", { timeout: 20_000 }, () => {
       expect(container.textContent).not.toMatch(/compar/i);
     });
 
+    /**
+     * #156, and `CONTEXT.md`'s **Collection**: a collection is a view over saved
+     * courses, never a place they move to. The 2026-09-05 artboard says the same
+     * — `savedCards` over every saved code, and no "Every saved course is in a
+     * collection" panel, because there is no state where this list can be empty
+     * while saves exist.
+     */
+    it("lists a course that is already in a collection", () => {
+      saved("DD2380", "DD2421");
+      collections.mockReturnValue([collection("Spring picks", "DD2380")]);
+      render(<Saved />);
+
+      expect(screen.getAllByRole("article")).toHaveLength(2);
+      expect(
+        screen.getByRole("heading", { name: "DD2380 Artificial Intelligence" }),
+      ).toBeInTheDocument();
+    });
+
+    it("lists every saved course even when all of them are filed", () => {
+      saved("DD2380", "DD2421");
+      collections.mockReturnValue([
+        collection("Spring picks", "DD2380"),
+        collection("Maybe", "DD2421", "DD2380"),
+      ]);
+      render(<Saved />);
+
+      expect(screen.getAllByRole("article")).toHaveLength(2);
+      expect(
+        screen.queryByText("Every saved course is in a collection"),
+      ).toBeNull();
+    });
+
+    // The artboard's own heading and line (lines 129-131). The line is what
+    // distinguishes this section from the `h1` of the same words above it.
+    it("heads the list the way the artboard heads it", () => {
+      saved("DD2380");
+      render(<Saved />);
+
+      const heading = screen.getByRole("heading", {
+        level: 2,
+        name: "Saved courses",
+      });
+      expect(heading).toBeVisible();
+      expect(
+        screen.getByText(
+          /All the courses you have saved, including any already grouped into a collection\./,
+        ),
+      ).toBeVisible();
+      // The superseded copy promised the opposite.
+      expect(
+        screen.queryByText(/but not yet added to a collection/),
+      ).toBeNull();
+    });
+
+    /**
+     * The 2026-09-05 artboard added `if (this.savedState.pickerFor) this.sv({
+     * pickerFor: null })` to its document handler: a pointer down outside the
+     * picker closes it, where before only the taken and overflow menus were
+     * dismissed that way. The app already behaves this way — the picker's state
+     * is per card, so `useDismissOnOutside` in `CourseCard` defines "elsewhere"
+     * from the card's own DOM — and this holds it, because the artboard now
+     * names it as a requirement rather than leaving it to the implementation.
+     */
+    it("closes an open collection picker when the reader points elsewhere", async () => {
+      saved("DD2380");
+      render(<Saved />);
+
+      const trigger = screen.getByRole("button", { name: "Add to collection" });
+      await userEvent.click(trigger);
+      expect(trigger).toHaveAttribute("aria-expanded", "true");
+
+      await userEvent.click(
+        screen.getByRole("heading", { level: 2, name: "Saved courses" }),
+      );
+      expect(trigger).toHaveAttribute("aria-expanded", "false");
+    });
+
     it("shows placeholders rather than an empty list while loading", () => {
       saved("DD2380");
       summariesPending.mockReturnValue(true);
@@ -388,6 +465,13 @@ describe("Saved", { timeout: 20_000 }, () => {
     });
   });
 
+  /**
+   * #155: deleting is confirmed *before* the write, not announced after it.
+   * The artboards ask afterwards; the product decision overrides them, because
+   * an unsave cascades the course out of every collection it was in and their
+   * stored orders cannot be replayed back (`reorderCollectionCourses` refuses a
+   * code that is not already a member).
+   */
   describe("unsaving", () => {
     function removeButtonFor(courseCode: string) {
       return within(cardFor(courseCode)).getByRole("button", {
@@ -395,13 +479,74 @@ describe("Saved", { timeout: 20_000 }, () => {
       });
     }
 
-    it("removes the save", async () => {
+    it("asks before it writes anything", async () => {
       saved("DD2380", "DD2421");
       render(<Saved />);
 
       await userEvent.click(removeButtonFor("DD2380"));
 
+      expect(
+        screen.getByText("Remove DD2380 from your saved courses?"),
+      ).toBeVisible();
+      expect(setSaved).not.toHaveBeenCalled();
+    });
+
+    it("removes the save once the reader confirms", async () => {
+      saved("DD2380", "DD2421");
+      render(<Saved />);
+
+      await userEvent.click(removeButtonFor("DD2380"));
+      await userEvent.click(
+        screen.getByRole("button", { name: "Remove course" }),
+      );
+
       expect(setSaved).toHaveBeenCalledExactlyOnceWith("DD2380", false);
+    });
+
+    it("writes nothing when the reader keeps the course", async () => {
+      saved("DD2380", "DD2421");
+      render(<Saved />);
+
+      await userEvent.click(removeButtonFor("DD2380"));
+      await userEvent.click(
+        screen.getByRole("button", { name: "Keep it saved" }),
+      );
+
+      expect(setSaved).not.toHaveBeenCalled();
+      expect(
+        screen.queryByText("Remove DD2380 from your saved courses?"),
+      ).toBeNull();
+      expect(cardFor("DD2380")).toBeInTheDocument();
+    });
+
+    // Dismissing is answering "keep it": the destructive half of the question
+    // is never the one a stray Escape reaches.
+    it("writes nothing when the question is dismissed", async () => {
+      saved("DD2380");
+      render(<Saved />);
+
+      await userEvent.click(removeButtonFor("DD2380"));
+      await userEvent.keyboard("{Escape}");
+
+      expect(setSaved).not.toHaveBeenCalled();
+    });
+
+    /**
+     * The confirmation names the one thing that really does go with the save —
+     * the course's place in the collections holding it, cascaded off
+     * `user_saved_courses` — and promises the two relationships that do not.
+     */
+    it("names the collections it cascades, and clears reviews and taken", async () => {
+      saved("DD2380");
+      render(<Saved />);
+
+      await userEvent.click(removeButtonFor("DD2380"));
+
+      const question = screen.getByText(/leaves this list and any collection/);
+      expect(question).toBeVisible();
+      expect(question.textContent).toMatch(
+        /reviews and the courses you have marked as taken are untouched/i,
+      );
     });
 
     /**
@@ -421,6 +566,9 @@ describe("Saved", { timeout: 20_000 }, () => {
       expect(takenPill).toBeInTheDocument();
 
       await userEvent.click(removeButtonFor("DD2380"));
+      await userEvent.click(
+        screen.getByRole("button", { name: "Remove course" }),
+      );
 
       // The only write is the unsave; nothing reaches taken or the collections
       // the course may have been in.
@@ -433,12 +581,18 @@ describe("Saved", { timeout: 20_000 }, () => {
       ).toBeInTheDocument();
     });
 
-    it("never warns that unsaving takes anything else with it", () => {
+    it("never warns that unsaving takes anything else with it", async () => {
       saved("DD2380");
       takenCourses.mockReturnValue([{ courseCode: "DD2380" }]);
       const { container } = render(<Saved />);
 
       expect(container.textContent).not.toMatch(/will also|also remove/i);
+
+      // Including inside the confirmation, which is the one place on this page
+      // that could plausibly overclaim what an unsave reaches.
+      await userEvent.click(removeButtonFor("DD2380"));
+      expect(document.body.textContent).not.toMatch(/will also|also remove/i);
+      expect(document.body.textContent).not.toMatch(/delete your review/i);
     });
   });
 });

@@ -1,6 +1,10 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  COLLAPSED_CARD_GEOMETRY,
+  EXPANDED_CARD_GEOMETRY,
+} from "@/features/courses/lib/card-geometry";
 import { Collections } from "./collections";
 
 /**
@@ -55,6 +59,17 @@ vi.mock("@/features/courses/api/mutations", () => ({
   useMarkCourseTaken: () => ({ mutateAsync: vi.fn() }),
 }));
 vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
+
+/*
+ * This page measures its own column through `useResultsWidth`, which lives in
+ * the workspace barrel — and the barrel also carries the pane, which carries the
+ * review editor and its stylesheet. Stubbing the pane is what keeps that CSS out
+ * of a suite that never renders one, exactly as Saved's and Explore's suites do
+ * for the pane they *do* mount.
+ */
+vi.mock("@/features/workspace/components/workspace-pane", () => ({
+  WorkspacePane: () => null,
+}));
 
 const TITLES: Record<string, string> = {
   AA1000: "Alpha",
@@ -418,7 +433,7 @@ describe("the grid", () => {
     });
   });
 
-  it("deletes a collection from its menu", async () => {
+  it("deletes a collection from its menu, once the reader confirms", async () => {
     setup({
       collections: [{ id: "c1", name: "Spring", courseCodes: [] }],
     });
@@ -429,7 +444,117 @@ describe("the grid", () => {
     );
     await userEvent.click(screen.getByRole("menuitem", { name: "Delete" }));
 
+    expect(deleteCollection).not.toHaveBeenCalled();
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Delete collection" }),
+    );
     expect(deleteCollection).toHaveBeenCalledWith({ collectionId: "c1" });
+  });
+});
+
+/**
+ * #155. Deletion was immediate and irreversible from all three entry points,
+ * and the artboards confirm *after* — a note, with no undo on it. The product
+ * decision overrides them, because the deletion genuinely cannot be undone:
+ * restoring a collection means `create` plus one `addCourse` per course, since
+ * `reorderCollectionCourses` throws `NotFoundError` for a code that is not
+ * already a member, and `addCourseToCollection` throws `ForbiddenError` for a
+ * course unsaved in between. A restore that can come back partial is not an
+ * undo, so the question is asked while the answer still costs nothing.
+ */
+describe("deleting a collection", () => {
+  const SPRING = { id: "c1", name: "Spring", courseCodes: ["AA1000"] };
+
+  async function askFromTileMenu() {
+    await userEvent.click(
+      screen.getByRole("button", { name: "More actions for Spring" }),
+    );
+    await userEvent.click(screen.getByRole("menuitem", { name: "Delete" }));
+  }
+
+  it("names the collection, and what survives it", async () => {
+    setup({ savedCourseCodes: ["AA1000"], collections: [SPRING] });
+    render(<Collections />);
+
+    await askFromTileMenu();
+
+    expect(screen.getByText("Delete “Spring”?")).toBeVisible();
+    expect(screen.getByText(/The courses themselves stay saved/)).toBeVisible();
+    expect(screen.getByText(/cannot be restored/)).toBeVisible();
+  });
+
+  it("writes nothing when the reader keeps the collection", async () => {
+    setup({ savedCourseCodes: ["AA1000"], collections: [SPRING] });
+    render(<Collections />);
+
+    await askFromTileMenu();
+    await userEvent.click(
+      screen.getByRole("button", { name: "Keep collection" }),
+    );
+
+    expect(deleteCollection).not.toHaveBeenCalled();
+    expect(screen.queryByText("Delete “Spring”?")).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Open collection Spring" }),
+    ).toBeVisible();
+  });
+
+  // Dismissing is answering "keep it".
+  it("writes nothing when the question is dismissed", async () => {
+    setup({ savedCourseCodes: ["AA1000"], collections: [SPRING] });
+    render(<Collections />);
+
+    await askFromTileMenu();
+    await userEvent.keyboard("{Escape}");
+
+    expect(deleteCollection).not.toHaveBeenCalled();
+  });
+
+  it("asks from the open collection's own Delete button", async () => {
+    setup({ savedCourseCodes: ["AA1000"], collections: [SPRING] });
+    render(<Collections openCollectionId="c1" />);
+
+    await userEvent.click(screen.getByRole("button", { name: "Delete" }));
+    expect(deleteCollection).not.toHaveBeenCalled();
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Delete collection" }),
+    );
+    expect(deleteCollection).toHaveBeenCalledWith({ collectionId: "c1" });
+  });
+
+  it("asks from the compact chip's menu", async () => {
+    setup({ savedCourseCodes: ["AA1000"], collections: [SPRING] });
+    render(<Collections compact />);
+
+    await askFromTileMenu();
+    expect(deleteCollection).not.toHaveBeenCalled();
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Delete collection" }),
+    );
+    expect(deleteCollection).toHaveBeenCalledWith({ collectionId: "c1" });
+  });
+
+  /**
+   * The note after the fact stays — it is what says the deletion happened — but
+   * it must never grow an Undo, because the procedures cannot deliver one.
+   */
+  it("says it happened, and offers no undo", async () => {
+    setup({ savedCourseCodes: ["AA1000"], collections: [SPRING] });
+    render(<Collections />);
+
+    await askFromTileMenu();
+    await userEvent.click(
+      screen.getByRole("button", { name: "Delete collection" }),
+    );
+
+    // Twice, deliberately: the live region announces it and the strip draws it.
+    expect(
+      await screen.findAllByText('Collection "Spring" deleted'),
+    ).toHaveLength(2);
+    expect(screen.queryByRole("button", { name: /undo/i })).toBeNull();
   });
 });
 
@@ -461,5 +586,58 @@ describe("what the page promises", () => {
 
     const section = render(<Collections compact />);
     expect(section.container.textContent).not.toMatch(/compar/i);
+  });
+});
+
+/**
+ * #159. The detail pinned every card to `EXPANDED_CARD_GEOMETRY`, which was
+ * right on `/collections` and wrong inside `/saved` — the same component sits in
+ * the column the workspace pane narrows there, and the surplus was clipped
+ * rather than scrolled. The ramp is now the host's to decide.
+ */
+describe("the geometry an open collection's cards get", () => {
+  /** The element `geometryVars` writes the ramp onto: the card's own wrapper. */
+  function cardShellFor(courseCode: string): HTMLElement {
+    const card = screen
+      .getAllByRole("article")
+      .find((article) => within(article).queryByText(new RegExp(courseCode)));
+    const shell = card?.parentElement;
+    if (!shell) throw new Error(`No card rendered for ${courseCode}`);
+    return shell;
+  }
+
+  it("is the one the host measured, when a host supplies it", () => {
+    setup({
+      savedCourseCodes: ["AA1000"],
+      collections: [{ id: "c1", name: "Spring", courseCodes: ["AA1000"] }],
+    });
+    render(
+      <Collections
+        compact
+        openCollectionId="c1"
+        geo={COLLAPSED_CARD_GEOMETRY}
+      />,
+    );
+
+    expect(cardShellFor("AA1000").style.getPropertyValue("--card-h")).toBe(
+      COLLAPSED_CARD_GEOMETRY.cardHeight,
+    );
+  });
+
+  /**
+   * As a page this measures its own column. jsdom lays nothing out, so
+   * `useResultsWidth` keeps its honest `Infinity` — the top of the ramp, which
+   * is what a wide column resolves to and what this page used to pin.
+   */
+  it("is the top of the ramp on an unmeasured column", () => {
+    setup({
+      savedCourseCodes: ["AA1000"],
+      collections: [{ id: "c1", name: "Spring", courseCodes: ["AA1000"] }],
+    });
+    render(<Collections openCollectionId="c1" />);
+
+    expect(cardShellFor("AA1000").style.getPropertyValue("--card-h")).toBe(
+      EXPANDED_CARD_GEOMETRY.cardHeight,
+    );
   });
 });
