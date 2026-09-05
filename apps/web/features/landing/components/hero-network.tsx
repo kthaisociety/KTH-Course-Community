@@ -46,8 +46,11 @@ import {
  * whole design rests on; the trail is therefore rendered rather than played, and
  * the geometry below says what each style looks like standing still.
  *
- * Everything the projection derives — the scale, the centre, the screen
- * coordinates — is thrown away on the next resize. None of it is ever sent back.
+ * Everything the projection derives — the scale, the anchor, the screen
+ * coordinates, the keep-out push — is thrown away on the next resize. None of it
+ * is ever sent back. The measuring below is what the derivation is a function
+ * of: one padded rect per rendered content block, per line for a text block, so
+ * a resize or a font swap re-derives rather than drifts.
  */
 
 /** `PAL.dotA` and `PAL.lineA` from the Landing artboard's palette. */
@@ -67,6 +70,19 @@ const DIAMOND_REACH = Math.sqrt(Math.PI / 2);
 
 /** How much fainter than its node a signal is drawn. */
 const SIGNAL_ALPHA = 0.5;
+
+/**
+ * The clearance below which a thing is not painted at all.
+ *
+ * `pushClear` places nodes clear of the copy, so this is 1 for everything on an
+ * ordinary frame and the threshold never fires. It fires where the push gave
+ * up — a hero whose copy reaches past every edge has nowhere to put anybody —
+ * and there it is the whole of the keep-out. **Everything painted on this
+ * canvas has to pass it**, the reveal included: the reveal is a bigger mark
+ * than the node it replaces, so a labelled viewer exempted from the check would
+ * put more ink over the headline than the dot the check just removed.
+ */
+const VISIBLE = 0.02;
 
 /**
  * `fade`: concentric rings, each fainter and wider than the last — a trail that
@@ -251,7 +267,7 @@ function draw(scene: Scene) {
   ctx.strokeStyle = palette.line;
   ctx.lineWidth = 1;
   for (const edge of view.edges) {
-    if (edge.clearance <= 0.02) continue;
+    if (edge.clearance <= VISIBLE) continue;
     ctx.globalAlpha = EDGE_ALPHA * edge.clearance;
     ctx.beginPath();
     ctx.moveTo(edge.from.screenX, edge.from.screenY);
@@ -263,12 +279,12 @@ function draw(scene: Scene) {
   // belongs to. Two passes rather than one interleaved loop, because a node
   // drawn after its own signal would still be drawn before the *next* node's.
   for (const node of view.nodes) {
-    if (node.clearance <= 0.02 || node.signalStyle === NO_SIGNAL) continue;
-    drawSignal(scene, palette, node, view.centre);
+    if (node.clearance <= VISIBLE || node.signalStyle === NO_SIGNAL) continue;
+    drawSignal(scene, palette, node);
   }
 
   for (const node of view.nodes) {
-    if (node.clearance <= 0.02) continue;
+    if (node.clearance <= VISIBLE) continue;
     ctx.globalAlpha = NODE_ALPHA * node.clearance;
     ctx.fillStyle = nodeColour(palette, node.colorVar);
     ctx.strokeStyle = ctx.fillStyle;
@@ -277,7 +293,11 @@ function draw(scene: Scene) {
 
   if (scene.labelled) {
     const you = view.nodes.find((node) => node.isViewer);
-    if (you) drawYou(scene, palette, you);
+    // The same gate as every other mark. Their node is normally pushed clear
+    // and this passes; when the copy left the push nowhere to go it does not,
+    // and the reveal goes with the dot rather than being drawn over the
+    // headline on its own.
+    if (you && you.clearance > VISIBLE) drawYou(scene, palette, you);
   }
   ctx.globalAlpha = 1;
 }
@@ -350,13 +370,25 @@ function drawNodeShape(
  * costs no per-node state, and it leans every trail outward — away from the hero
  * copy, which sits in the middle — rather than across it. A node exactly on the
  * centre has no outward direction and falls back to a fixed diagonal.
+ *
+ * The middle of the **frame**, deliberately, and no longer `view.centre`. Those
+ * were the same point while the projection was centred on the viewport; now that
+ * `pickViewportCentre` anchors the graph clear of the copy they are not, and it
+ * is the frame the copy sits in the middle of. Aiming at the anchor instead
+ * would point the trail of every node below it straight back through the
+ * headline. `pushClear` rotates a trail as it moves the node it belongs to,
+ * which is right for the same reason: it points away from where the node ended
+ * up rather than from where the projection first put it.
+ *
+ * One knock-on from the push worth naming: `clearance` is 1 for every node the
+ * push placed, so a signal beside the copy is drawn at full strength where it
+ * used to be dimmed towards nothing. That is the fix working rather than a
+ * regression — the copy is protected by 14px of distance now instead of by
+ * dimness — and the margins hold: the longest mark here is `comet`, at
+ * `5.4 * NODE_RADIUS` = 21.6px, so it reaches at most 7.6px into a padded rect
+ * and stops about 17px short of the text `SAFETY` is padding.
  */
-function drawSignal(
-  scene: Scene,
-  palette: Palette,
-  node: ScreenNode,
-  centre: { x: number; y: number },
-) {
+function drawSignal(scene: Scene, palette: Palette, node: ScreenNode) {
   const { ctx } = scene;
   const colour = nodeColour(palette, node.colorVar);
   const base = NODE_ALPHA * node.clearance * SIGNAL_ALPHA;
@@ -398,8 +430,8 @@ function drawSignal(
     return;
   }
 
-  const dx = node.screenX - centre.x;
-  const dy = node.screenY - centre.y;
+  const dx = node.screenX - scene.w / 2;
+  const dy = node.screenY - scene.h / 2;
   const length = Math.hypot(dx, dy);
   const ux = length > 0.5 ? dx / length : Math.SQRT1_2;
   const uy = length > 0.5 ? dy / length : -Math.SQRT1_2;
