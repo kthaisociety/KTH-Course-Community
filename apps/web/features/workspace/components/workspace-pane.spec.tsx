@@ -10,6 +10,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { sanitizeHtml } from "@/lib/sanitize-html";
 import type { CourseDetails, CourseStats } from "@/types";
 import type { OpenCourse } from "../lib/open-courses";
+import { EMPTY_REVIEW_DRAFT } from "../lib/review-draft";
+import {
+  markAwaitingSignIn,
+  readDrafts,
+  writeDrafts,
+} from "../lib/workspace-storage";
 import { WorkspacePane } from "./workspace-pane";
 
 const useCourseDetails = vi.fn();
@@ -785,6 +791,128 @@ describe("what survives a page load", () => {
     renderPane([openCourse("review", "SF1626")]);
 
     expect(screen.queryByText(/Signed in as/)).not.toBeInTheDocument();
+  });
+});
+
+/*
+ * The bug this block exists for, and why the round trip above never caught it.
+ *
+ * The pane mirrors its drafts into storage in an effect, gated on having
+ * restored them first. That gate used to be a ref, set synchronously inside the
+ * restore effect while the state it described was still `{}` — so for one
+ * render the mirror was armed over nothing and wrote `{}` over every stored
+ * draft. It healed on the next commit, and anything reading storage in between
+ * adopted the blank. Strict Mode's replayed mount reads exactly there:
+ *
+ *     GET drafts -> {"DD2380":{... "message":"Half a thought"}}
+ *     SET drafts = {}
+ *     GET drafts -> {}
+ *     SET drafts = {}
+ *
+ * "keeps a draft across a remount" never caught it because it unmounts and
+ * mounts again — one mount each, and this needs two in a row. Every test in
+ * this file now runs in Strict Mode (`vitest.setup.ts`), so a mount here is the
+ * mount a developer gets. These assert on what is left in storage rather than
+ * on what is on screen, because the screen recovers a render later and storage
+ * does not.
+ */
+describe("a stored draft, and what mounting does to it", () => {
+  it("does not blank a draft belonging to a course the pane never shows", () => {
+    writeDrafts({
+      SF1626: { ...EMPTY_REVIEW_DRAFT, message: "Half a thought" },
+    });
+
+    renderPane([openCourse("details")]);
+
+    expect(readDrafts().SF1626?.message).toBe("Half a thought");
+  });
+
+  it("hands a stored draft back to its tab, and leaves it in storage", async () => {
+    writeDrafts({
+      DD2380: { ...EMPTY_REVIEW_DRAFT, message: "Half a thought" },
+    });
+
+    renderPane([openCourse("review")]);
+
+    expect(
+      await screen.findByRole("textbox", { name: "Write your review" }),
+    ).toHaveValue("Half a thought");
+    await waitFor(() =>
+      expect(readDrafts().DD2380?.message).toBe("Half a thought"),
+    );
+  });
+
+  /*
+   * The same failure with no Strict Mode in it. Two panes mounting in one
+   * commit is the second pane restoring from storage that the first pane's
+   * premature mirror has already emptied. It is unreachable through Explore and
+   * Saved today, which gate their column and their mobile sheet on one mutually
+   * exclusive ternary — so this test is the conditional, not the screens.
+   */
+  it("does not blank a draft when two panes mount in the same commit", async () => {
+    writeDrafts({
+      DD2380: { ...EMPTY_REVIEW_DRAFT, message: "Half a thought" },
+    });
+    const props = {
+      openCourses: [openCourse("review")],
+      activeId: "review:DD2380",
+      onActivate: vi.fn(),
+      onClose: vi.fn(),
+      onOpen: vi.fn(),
+    };
+
+    render(
+      <>
+        <WorkspacePane {...props} />
+        <WorkspacePane {...props} hideTabs />
+      </>,
+    );
+
+    await waitFor(() =>
+      expect(readDrafts().DD2380?.message).toBe("Half a thought"),
+    );
+  });
+});
+
+/*
+ * "Your draft came back untouched" used to render on `justSignedIn` alone, with
+ * nothing in the condition that had looked at the draft — so the writer whose
+ * draft had just been destroyed was told, on the empty form, that it had come
+ * back untouched. Publishing only ever reaches the sign-in prompt with an
+ * answered draft, so an empty one on the way back is not somebody who typed
+ * nothing.
+ */
+describe("what the writer is told on the way back", () => {
+  function comeBackSignedIn(stored?: string) {
+    if (stored !== undefined) {
+      writeDrafts({ DD2380: { ...EMPTY_REVIEW_DRAFT, message: stored } });
+    }
+    markAwaitingSignIn("DD2380");
+    useMe.mockReturnValue({
+      isAuthenticated: true,
+      isLoading: false,
+      userId: "u1",
+      user: { name: "Elsa Lindqvist" },
+    });
+    renderPane([openCourse("review")]);
+  }
+
+  it("says the draft came back when it did", async () => {
+    comeBackSignedIn("Half a thought");
+
+    expect(
+      await screen.findByText(/Your draft came back untouched/),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/did not come back/)).not.toBeInTheDocument();
+  });
+
+  it("says the draft did not come back rather than claiming it did", async () => {
+    comeBackSignedIn();
+
+    expect(
+      await screen.findByText(/your draft did not come back/),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/came back untouched/)).not.toBeInTheDocument();
   });
 });
 

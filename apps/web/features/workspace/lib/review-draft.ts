@@ -101,7 +101,7 @@ export function isUntouched(draft: ReviewDraft): boolean {
  *
  * The flags are folded away first, and explicitly rather than by relying on the
  * checkboxes having cleared the answers they cover. A draft comes back out of
- * `sessionStorage`, where it may have been written by an older build or by a
+ * `localStorage`, where it may have been written by an older build or by a
  * tab that never finished a keystroke, and `toDraft` reads each field on its
  * own — so a stored draft carrying both a ticked box and the methods it was
  * meant to clear is a shape this has to survive. "I don't remember" wins,

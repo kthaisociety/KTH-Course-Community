@@ -67,6 +67,37 @@ export function openCourseRequest(
   return { courseCode, kind: kind === "review" ? "review" : "details" };
 }
 
+/**
+ * A location with `?open=` set to this course, so arriving there opens the tab.
+ *
+ * The inverse of `openCourseRequest`, and it exists for one caller: the sign-in
+ * a guest is sent through from a half-written review. `?open=` is an
+ * instruction, spent and removed the moment a host obeys it, so the URL a
+ * reviewer is looking at while they write has stopped naming the tab they are
+ * writing in. A sign-in that returns to that URL returns to the page without
+ * the tab.
+ *
+ * That is survivable when the sign-in comes back to the same tab, where the
+ * open list is still in `sessionStorage`. It is the whole game when it does
+ * not: the magic link opens a **new** tab, and the URL the mail carries is the
+ * only thing that reaches it. Putting the instruction back is what makes the
+ * draft — which now waits in `localStorage` — have a tab to appear in.
+ *
+ * Takes and returns a path with its query, never an absolute URL, because that
+ * is what a `callbackURL` is allowed to be. See `features/auth/lib/return-to`.
+ */
+export function withOpenCourse(
+  location: string,
+  courseCode: string,
+  kind: OpenCourseKind,
+): string {
+  const [path, query = ""] = location.split("?");
+  const params = new URLSearchParams(query);
+  params.set("open", courseCode);
+  params.set("kind", kind);
+  return `${path}?${params.toString()}`;
+}
+
 /** The id a `(courseCode, kind)` pair always gets, so opening twice is idempotent. */
 function openCourseId(courseCode: string, kind: OpenCourseKind): string {
   return `${kind}:${courseCode}`;

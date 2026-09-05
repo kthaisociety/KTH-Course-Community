@@ -1,29 +1,57 @@
+import type { ExaminationKey } from "@/features/reviews/lib/review-draft";
+import { EXAMINATION_DISTRIBUTION_KEYS } from "@/types";
 import {
   EMPTY_WORKSPACE,
   type OpenCourse,
   type OpenCourseKind,
   type Workspace,
 } from "./open-courses";
-import { EMPTY_REVIEW_DRAFT, type ReviewDraft } from "./review-draft";
+import {
+  EMPTY_REVIEW_DRAFT,
+  isUntouched,
+  type ReviewDraft,
+} from "./review-draft";
 
 /**
  * What the workspace keeps across a page load, and why it has to.
  *
- * Signing in is an OAuth redirect: the page navigates away and comes back, and
+ * Signing in is a redirect: the page navigates away and comes back, and
  * everything in React state goes with it. `AuthReasonDialog` promises the
  * opposite — "Your draft is held as it is — text, ratings and the course all
  * stay put" — and the artboard says the same in its own words. Keeping that
  * promise is the whole reason this file exists.
  *
- * `sessionStorage`, not `localStorage`: an open workspace belongs to the tab
- * the student is working in, and it should not still be there next week. And
- * nothing here is data — an open course and an unpublished draft have no row
- * anywhere, which is exactly why the browser is the right place for them. A
- * vote or a saved course would not belong here; those have tables.
+ * ## Two storages, because the two things have different lifetimes
  *
- * Every read is defensive. What comes back is whatever was in the tab's
- * storage, which may be from an older build, so anything that does not match
- * the shape is dropped rather than trusted.
+ * The open list, what this workspace published, and the note that it is waiting
+ * on a sign-in are all in `sessionStorage`: an open workspace belongs to the tab
+ * the student is working in, and it should not still be there next week. That
+ * argument is right about tabs and this file still makes it.
+ *
+ * It is not right about the **draft**. A draft's lifetime is "until published or
+ * abandoned", not "until this tab closes", and the one moment we lean hardest on
+ * that promise is the moment we throw the user out of the tab entirely. Google
+ * and GitHub redirect in place, so `sessionStorage` survives them; the magic
+ * link does not. It leaves for `/auth`, sends mail, and the link in that mail is
+ * a plain `href` — the student opens it in a **new tab**, where per-tab storage
+ * is empty by construction and no amount of care on this side can make it not
+ * be. So the draft lives in `localStorage`, keyed by course, and carries a
+ * `savedAt` so a week-old abandoned draft is dropped rather than kept forever —
+ * which is the part of the `sessionStorage` argument worth keeping, expressed as
+ * an explicit expiry instead of as a side effect of closing a tab.
+ *
+ * Nothing here is data either way. An open course and an unpublished draft have
+ * no row anywhere, which is exactly why the browser is the right place for them.
+ * A vote or a saved course would not belong here; those have tables.
+ *
+ * ## Every read is defensive, and a failed read is not a delete
+ *
+ * What comes back is whatever was in storage, which may be from an older build,
+ * so anything that does not match the shape is dropped rather than trusted. But
+ * "dropped" is narrower than it looks: the pane writes its state back over
+ * storage, so anything this file refuses to decode is deleted a keystroke later.
+ * A draft therefore salvages what it can — see `toDraft` — instead of failing
+ * whole.
  */
 
 const WORKSPACE_KEY = "cc.workspace.open";
@@ -31,22 +59,56 @@ const DRAFTS_KEY = "cc.workspace.drafts";
 const PUBLISHED_KEY = "cc.workspace.published";
 const AWAITING_SIGN_IN_KEY = "cc.workspace.awaiting-sign-in";
 
+/**
+ * How long an unpublished draft is kept.
+ *
+ * Long enough that "I will finish this after the exam" works, short enough that
+ * a browser is not still holding half a review from last term. It is checked on
+ * read; the pane writes its hydrated state straight back, so an expired entry is
+ * gone from storage within a commit of being ignored.
+ */
+const DRAFT_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
 const KINDS: OpenCourseKind[] = ["details", "review"];
 
-function read(key: string): unknown {
+/** The tab's storage, and the browser's. */
+type Area = "session" | "local";
+
+/**
+ * Reading `window.localStorage` at all throws in a few real configurations —
+ * a blocked third-party frame, Firefox with cookies disabled — so even getting
+ * hold of the object is inside the guard, not just using it.
+ */
+function area(which: Area): Storage | null {
   try {
-    const raw = sessionStorage.getItem(key);
+    return which === "local" ? window.localStorage : window.sessionStorage;
+  } catch {
+    return null;
+  }
+}
+
+function read(which: Area, key: string): unknown {
+  try {
+    const raw = area(which)?.getItem(key) ?? null;
     return raw === null ? null : JSON.parse(raw);
   } catch {
     return null;
   }
 }
 
-function write(key: string, value: unknown): void {
+function write(which: Area, key: string, value: unknown): void {
   try {
-    sessionStorage.setItem(key, JSON.stringify(value));
+    area(which)?.setItem(key, JSON.stringify(value));
   } catch {
-    // A tab with storage disabled or full still works; it just forgets.
+    // A browser with storage disabled or full still works; it just forgets.
+  }
+}
+
+function remove(which: Area, key: string): void {
+  try {
+    area(which)?.removeItem(key);
+  } catch {
+    // Nothing to clear if storage is unavailable.
   }
 }
 
@@ -63,7 +125,7 @@ function toOpenCourse(value: unknown): OpenCourse | null {
 }
 
 export function readWorkspace(): Workspace {
-  const value = read(WORKSPACE_KEY);
+  const value = read("session", WORKSPACE_KEY);
   if (!isRecord(value) || !Array.isArray(value.open)) return EMPTY_WORKSPACE;
 
   const open = value.open
@@ -80,29 +142,61 @@ export function readWorkspace(): Workspace {
 }
 
 export function writeWorkspace(workspace: Workspace): void {
-  write(WORKSPACE_KEY, workspace);
+  write("session", WORKSPACE_KEY, workspace);
+}
+
+function isExaminationKey(value: unknown): value is ExaminationKey {
+  return (EXAMINATION_DISTRIBUTION_KEYS as readonly unknown[]).includes(value);
+}
+
+/** The examination split as `ReviewDraft` holds it: two parallel arrays. */
+type ExaminationSplit = Pick<ReviewDraft, "methods" | "shares">;
+
+/**
+ * The stored examination split, or no split at all.
+ *
+ * `methods` and `shares` are parallel, always add up to 100, and name methods
+ * *this* build knows about. A stored `"quiz"` from a build that offered one used
+ * to be cast straight into `ExaminationKey[]` and reach the bar as a segment
+ * with no colour and no label; a length mismatch used to reach `moveDivider` as
+ * arithmetic over `undefined`.
+ *
+ * Anything that fails drops the split and **nothing else**. This check used to
+ * reject the whole draft, and since the pane writes its state back over storage
+ * on the next keystroke, a draft rejected here was a draft permanently deleted —
+ * the write-up and the scores went with the one bad field. A split we cannot
+ * read is a question left unanswered; the rest of the review is still the
+ * writer's work and there is no reason to burn it.
+ */
+function toExaminationSplit(value: Record<string, unknown>): ExaminationSplit {
+  const none: ExaminationSplit = { methods: [], shares: [] };
+
+  const { methods, shares } = value;
+  if (!Array.isArray(methods) || !Array.isArray(shares)) return none;
+  if (methods.length !== shares.length || methods.length === 0) return none;
+
+  const named = methods.filter(isExaminationKey);
+  if (named.length !== methods.length) return none;
+  if (new Set(named).size !== named.length) return none;
+
+  const sizes = shares.filter(
+    (share): share is number => typeof share === "number" && share > 0,
+  );
+  if (sizes.length !== shares.length) return none;
+  if (sizes.reduce((total, share) => total + share, 0) !== 100) return none;
+
+  return { methods: named, shares: sizes };
 }
 
 function toDraft(value: unknown): ReviewDraft | null {
   if (!isRecord(value)) return null;
-
-  const methods = Array.isArray(value.methods) ? value.methods : [];
-  const shares = Array.isArray(value.shares) ? value.shares : [];
-  if (
-    !methods.every((method) => typeof method === "string") ||
-    !shares.every((share) => typeof share === "number") ||
-    methods.length !== shares.length
-  ) {
-    return null;
-  }
 
   const score = (candidate: unknown) =>
     typeof candidate === "number" ? candidate : null;
 
   return {
     ...EMPTY_REVIEW_DRAFT,
-    methods: methods as ReviewDraft["methods"],
-    shares,
+    ...toExaminationSplit(value),
     examinationForgotten: value.examinationForgotten === true,
     approachTheoryPercent: score(value.approachTheoryPercent),
     approachForgotten: value.approachForgotten === true,
@@ -113,20 +207,94 @@ function toDraft(value: unknown): ReviewDraft | null {
   };
 }
 
-export function readDrafts(): Record<string, ReviewDraft> {
-  const value = read(DRAFTS_KEY);
+/** One course's draft with the clock reading that decides when to forget it. */
+interface StoredDraft {
+  savedAt: number;
+  draft: ReviewDraft;
+}
+
+/**
+ * Every stored draft that is still readable and still young enough, with its
+ * stamp — the shape `readDrafts` presents and `writeDrafts` re-stamps against.
+ */
+function readStoredDrafts(): Record<string, StoredDraft> {
+  const value = read("local", DRAFTS_KEY);
   if (!isRecord(value)) return {};
 
+  const oldest = Date.now() - DRAFT_TTL_MS;
+  const stored: Record<string, StoredDraft> = {};
+  for (const [courseCode, entry] of Object.entries(value)) {
+    if (!isRecord(entry)) continue;
+    const { savedAt } = entry;
+    if (typeof savedAt !== "number" || !Number.isFinite(savedAt)) continue;
+    if (savedAt < oldest) continue;
+    const draft = toDraft(entry.draft);
+    if (draft) stored[courseCode] = { savedAt, draft };
+  }
+  return stored;
+}
+
+export function readDrafts(): Record<string, ReviewDraft> {
   const drafts: Record<string, ReviewDraft> = {};
-  for (const [courseCode, candidate] of Object.entries(value)) {
-    const draft = toDraft(candidate);
-    if (draft) drafts[courseCode] = draft;
+  for (const [courseCode, entry] of Object.entries(readStoredDrafts())) {
+    drafts[courseCode] = entry.draft;
   }
   return drafts;
 }
 
+/**
+ * Whether two drafts say the same thing.
+ *
+ * Only used to decide whether a stamp moves. Writing happens on every
+ * keystroke — the pane mirrors its state to storage — and stamping every entry
+ * on every write would mean the TTL measured "when this workspace was last
+ * used" rather than "when this draft was last touched", so a draft abandoned in
+ * one tab would be kept alive by work done in another course's tab beside it.
+ * Never stamping would be worse: a draft edited daily would expire mid-edit.
+ *
+ * Field by field rather than by serialising: both sides are small, and the two
+ * come from different places — one from `toDraft`, one from the panel's
+ * spreads — so their key order is not something to bet a comparison on.
+ */
+function sameDraft(a: ReviewDraft, b: ReviewDraft): boolean {
+  return (
+    a.message === b.message &&
+    a.happyTook === b.happyTook &&
+    a.workloadScore === b.workloadScore &&
+    a.learningScore === b.learningScore &&
+    a.approachTheoryPercent === b.approachTheoryPercent &&
+    a.approachForgotten === b.approachForgotten &&
+    a.examinationForgotten === b.examinationForgotten &&
+    a.methods.length === b.methods.length &&
+    a.shares.length === b.shares.length &&
+    a.methods.every((method, index) => method === b.methods[index]) &&
+    a.shares.every((share, index) => share === b.shares[index])
+  );
+}
+
+/**
+ * Replace what is stored with what the pane holds.
+ *
+ * The whole record is rewritten rather than merged, which is what makes
+ * publishing clear up after itself: `publish()` hands the pane an empty draft
+ * for the course it just sent, that draft is not written, and the entry is
+ * gone. It is also what stops a draft the writer emptied on purpose coming back
+ * on the next page load — an untouched draft is not a smaller draft, it is the
+ * absence of one, and storage says so.
+ */
 export function writeDrafts(drafts: Record<string, ReviewDraft>): void {
-  write(DRAFTS_KEY, drafts);
+  const stored = readStoredDrafts();
+  const now = Date.now();
+
+  const next: Record<string, StoredDraft> = {};
+  for (const [courseCode, draft] of Object.entries(drafts)) {
+    if (isUntouched(draft)) continue;
+    const previous = stored[courseCode];
+    const unchanged =
+      previous !== undefined && sameDraft(previous.draft, draft);
+    next[courseCode] = { savedAt: unchanged ? previous.savedAt : now, draft };
+  }
+  write("local", DRAFTS_KEY, next);
 }
 
 /**
@@ -135,8 +303,14 @@ export function writeDrafts(drafts: Record<string, ReviewDraft>): void {
  * The review itself is the durable record and `reviews.list` is where the pane
  * reads it from — but that is a refetch away, and a review tab reopened before
  * it lands would offer a second draft for a review that already exists. This
- * is the workspace's own memory of what it sent, which needs no round trip and
- * survives the tab being closed and reopened.
+ * is the workspace's own memory of what it sent, which needs no round trip.
+ *
+ * It stays in `sessionStorage` while the draft moves out, and the difference is
+ * what each one is for. The draft is the student's unfinished work and has to
+ * follow them into whatever tab the sign-in link opens. This is a stopgap for
+ * one request in flight, and `reviews.list` — the real record — answers within
+ * seconds of the tab that published. A tab that never asked has nothing to be
+ * stopped from doing.
  *
  * It carries *when*, not just *that*, because it has to know which list
  * responses came after it: a response fetched before the write says nothing
@@ -144,7 +318,7 @@ export function writeDrafts(drafts: Record<string, ReviewDraft>): void {
  * review is there, or somebody deleted it and its author may write another.
  */
 export function readPublished(): Record<string, number> {
-  const value = read(PUBLISHED_KEY);
+  const value = read("session", PUBLISHED_KEY);
   if (!isRecord(value)) return {};
 
   const published: Record<string, number> = {};
@@ -156,7 +330,7 @@ export function readPublished(): Record<string, number> {
 }
 
 export function writePublished(published: Record<string, number>): void {
-  write(PUBLISHED_KEY, published);
+  write("session", PUBLISHED_KEY, published);
 }
 
 /**
@@ -166,23 +340,26 @@ export function writePublished(published: Record<string, number>): void {
  * draft when the pane comes back. It is a one-shot note to the next page load,
  * so claiming it clears it — and only the course it names may claim it, or a
  * different tab coming forward first would swallow the note.
+ *
+ * `sessionStorage`, deliberately, even though the draft it accompanies is not.
+ * The note only drives a greeting — "Signed in. Your draft came back untouched"
+ * — and that sentence is only true of the tab that was thrown out and came
+ * back. The magic link opens a *new* tab, which was never thrown out of
+ * anything and has nothing to reassure anyone about; the draft still arrives
+ * there, from `localStorage`, without a note about it.
  */
 export function markAwaitingSignIn(courseCode: string): void {
-  write(AWAITING_SIGN_IN_KEY, courseCode);
+  write("session", AWAITING_SIGN_IN_KEY, courseCode);
 }
 
 export function claimAwaitingSignIn(courseCode: string): boolean {
-  if (read(AWAITING_SIGN_IN_KEY) !== courseCode) return false;
+  if (read("session", AWAITING_SIGN_IN_KEY) !== courseCode) return false;
   clearAwaitingSignIn(courseCode);
   return true;
 }
 
 /** Drop the note unclaimed — the visitor backed out of the dialog. */
 export function clearAwaitingSignIn(courseCode: string): void {
-  if (read(AWAITING_SIGN_IN_KEY) !== courseCode) return;
-  try {
-    sessionStorage.removeItem(AWAITING_SIGN_IN_KEY);
-  } catch {
-    // Nothing to clear if storage is unavailable.
-  }
+  if (read("session", AWAITING_SIGN_IN_KEY) !== courseCode) return;
+  remove("session", AWAITING_SIGN_IN_KEY);
 }

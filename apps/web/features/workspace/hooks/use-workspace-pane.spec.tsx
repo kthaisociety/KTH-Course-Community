@@ -64,12 +64,17 @@ describe("useWorkspacePane", () => {
    * allocate a workspace per turn, and the value every host reads keeps its
    * identity, so no dependency downstream is rebuilt and nothing calls back in.
    *
-   * The count is asserted with a ceiling rather than an equality because React
-   * may still render the owner of the state once before it bails out of the
-   * tree — that is documented and bounded. What the loop needed was a count
-   * that climbed with every turn, and that is what stops here. Every other
-   * assertion is an identity one: a structural comparison would pass on exactly
-   * the value that used to loop.
+   * The count is asserted as *not growing with the turns* rather than against a
+   * number, because there is no honest number to assert. React may render the
+   * owner of the state once before it bails out of the tree — documented and
+   * bounded — and Strict Mode renders everything twice on top of that, so any
+   * literal here would be a transcription of today's React rather than a
+   * statement about this hook. What the loop needed was a count that climbed
+   * with every turn; five more turns adding nothing is exactly the absence of
+   * that, and it stays true whatever the multiplier is.
+   *
+   * Every other assertion is an identity one: a structural comparison would
+   * pass on exactly the value that used to loop.
    */
   it("settles when the course already in front is opened again", () => {
     let renders = 0;
@@ -80,16 +85,50 @@ describe("useWorkspacePane", () => {
 
     act(() => result.current.open("DD2380", "details"));
     const workspace = result.current;
-    const settled = renders;
 
-    for (let turn = 0; turn < 5; turn += 1) {
-      act(() => result.current.open("DD2380", "details"));
-      act(() => result.current.activate("details:DD2380"));
+    function reopenFiveTimes() {
+      for (let turn = 0; turn < 5; turn += 1) {
+        act(() => result.current.open("DD2380", "details"));
+        act(() => result.current.activate("details:DD2380"));
+      }
     }
 
-    expect(renders).toBeLessThanOrEqual(settled + 1);
+    reopenFiveTimes();
+    const settled = renders;
+    reopenFiveTimes();
+
+    expect(renders).toBe(settled);
     expect(result.current).toBe(workspace);
     expect(result.current.openCourses).toBe(workspace.openCourses);
+  });
+
+  /*
+   * The bug, at the hook. The mirror effect used to be gated on a ref set
+   * inside the restore effect, which flips while `workspace` is still empty —
+   * so one render's mirror wrote an empty workspace over the stored one, and
+   * Strict Mode's replayed restore read exactly there and adopted it. A stored
+   * workspace with one open tab came back as zero tabs.
+   *
+   * Asserted on what is left in storage as well as on what the hook returns,
+   * because the return value recovers a render later and the storage does not.
+   */
+  it("does not blank the stored open list on the way to restoring it", () => {
+    sessionStorage.setItem(
+      "cc.workspace.open",
+      JSON.stringify({
+        open: [{ id: "review:DD2380", courseCode: "DD2380", kind: "review" }],
+        activeId: "review:DD2380",
+      }),
+    );
+
+    const { result } = renderHook(() => useWorkspacePane());
+
+    expect(result.current.openCourses.map((entry) => entry.id)).toEqual([
+      "review:DD2380",
+    ]);
+    expect(
+      JSON.parse(sessionStorage.getItem("cc.workspace.open") ?? "{}").open,
+    ).toHaveLength(1);
   });
 
   it("ignores whatever else is in the tab's storage", () => {

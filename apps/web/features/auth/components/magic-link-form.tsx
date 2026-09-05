@@ -22,6 +22,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { authClient } from "@/lib/auth-client";
+import { requestedReturnTo } from "../lib/return-to";
 
 const formSchema = z.object({
   email: z.string().email("Enter a valid email address."),
@@ -35,7 +36,11 @@ export function MagicLinkForm() {
     onSubmit: async ({ value }) => {
       const { error } = await authClient.signIn.magicLink({
         email: value.email,
-        callbackURL: "/search",
+        // Where the visitor was when they asked for the link, not the front
+        // door. This is the path that cannot recover a destination any other
+        // way: the link is opened in a new tab, so nothing but the URL the
+        // mail carries survives to say where they were going.
+        callbackURL: requestedReturnTo(),
         errorCallbackURL: "/auth",
       });
       if (error) {

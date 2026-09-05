@@ -14,11 +14,18 @@ import {
  * is not re-derivable from the server: which courses were skipped, and which
  * were already answered this round, exist nowhere else.
  *
- * `sessionStorage`, not `localStorage`, for the same reason the workspace pane
- * chose it (`features/workspace/lib/workspace-storage.ts`): a half-finished
- * queue belongs to the tab it was started in and has no business still being
- * there next week. Nothing kept here is data — an unsaved card has no row —
- * which is exactly why the browser is the right place for it.
+ * `sessionStorage`, not `localStorage`, for the reason the workspace pane
+ * still keeps its *open list* there (`features/workspace/lib/workspace-storage.ts`):
+ * a half-finished queue belongs to the tab it was started in and has no business
+ * still being there next week. Nothing kept here is data — an unsaved card has no
+ * row — which is exactly why the browser is the right place for it.
+ *
+ * That file's *draft* has since moved to `localStorage`, and the difference is
+ * worth naming rather than copying by habit: the workspace throws a guest out of
+ * the tab to sign in, and the magic-link path lands them in a new one. Nothing
+ * here does that. `/taken` is behind `proxy.ts`, so a reviewer working through
+ * this queue is already signed in and the tab they started in is the tab they
+ * finish in.
  *
  * Every read is defensive. What comes back is whatever was in the tab's
  * storage, possibly written by an older build, so anything that does not match
