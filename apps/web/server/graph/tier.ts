@@ -21,9 +21,6 @@ import { selectUnreviewedCourses } from "../reviews/unreviewed";
 /** Complete months of inactivity that cost one tier step. */
 const MONTHS_PER_DECAY_STEP = 6;
 
-/** The highest tier the ladder defines. Matches the column's check constraint. */
-export const MAX_PERSONALIZATION_TIER = 3;
-
 /**
  * Everything the ladder is decided from, and nothing else.
  *
@@ -102,8 +99,8 @@ export function deriveEarnedTier(inputs: EarnedTierInputs): number {
  *
  * Decay is read-time and disposable: this result is never stored, and no caller
  * of it may update `personalization_tier_earned`. The only write to that column
- * is `raiseEarnedPersonalizationTier`, which raises it from `deriveEarnedTier`
- * and never lowers it.
+ * is `recordEarnedPersonalizationTier` in `graph/service.ts`, which raises it
+ * from `deriveEarnedTier` and never lowers it.
  *
  * @param earnedTier The highest tier ever reached (`users.personalization_tier_earned`).
  * @param lastReviewAt The date decay is measured from: the app user's most
