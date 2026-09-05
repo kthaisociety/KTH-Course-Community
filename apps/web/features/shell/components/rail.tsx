@@ -18,11 +18,21 @@ import { cn } from "@/lib/utils";
 /**
  * The rail: the blue column every page renders beside.
  *
- * It is `--cc-rail` in both themes — deliberate, not an unswapped token — so its
- * own foreground is fixed too. There is no `--cc-rail-fg` in the palette, and
- * the artboard paints on it with plain white at varying alpha, which is what the
- * `white/nn` utilities here do. That is the one place this file is not reading a
- * `--cc-*` token, and it is the design's own decision.
+ * It is `--cc-rail` in both themes, but that token is **not** one colour in
+ * both: `cc-theme.css` now calls it "the sidebar (darkens with the theme)" and
+ * gives it `#1751a6` in light and `#0d2e5e` in dark. #85 was told the opposite
+ * — "brand blue in both themes" — and #127 §2 corrects it. Nothing here changes
+ * as a result; the token already swaps and the rail already reads it. Against
+ * the revised dark page (`--cc-pg` `#071831`) the darker rail is still the
+ * lighter of the two, so the column still separates from the content beside it
+ * without the light theme's full brand blue glaring out of a dark screen.
+ *
+ * Its foreground is fixed even though its background is not. There is no
+ * `--cc-rail-fg` in the palette, and the artboard paints on the rail with plain
+ * white at varying alpha in both themes — which is what the `white/nn`
+ * utilities here do, and what `--sidebar-*` in `globals.css` mirrors. That is
+ * the one place this file is not reading a `--cc-*` token, and it is the
+ * design's own decision.
  *
  * Two rail colours the artboard states outright have no token behind them — the
  * avatar chip (`#7ea6d8` on `#0d2f5e`) and the sign-up button's ink (`#12417f`).

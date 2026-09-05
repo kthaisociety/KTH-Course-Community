@@ -36,11 +36,45 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background`}
       >
         <TRPCReactProvider>
+          {/*
+            Three deliberate deviations from what the artboards do, each for a
+            reason the artboards have no way to express.
+
+            `attribute="class"`. The design drives the theme with a
+            `data-cc-theme` attribute on the root element. This repo drives it
+            with a `.dark` class, because Tailwind's
+            `@custom-variant dark (&:is(.dark *))` in `globals.css` is defined
+            against that class and every `dark:` utility in `components/ui/**`
+            depends on it. Switching the mechanism would be a large blast radius
+            for nothing a reader could see, so the class stays and only the
+            storage and the wording follow the design.
+
+            `defaultTheme="system"` with `enableSystem`, where the design
+            defaults to light. `cc-store.js` reads `localStorage` with a `false`
+            fallback because a static HTML mock has no way to ask the operating
+            system anything — "default light" is that limitation, not a
+            decision. Honouring `prefers-color-scheme` is a real accessibility
+            win for a reader who has already told their OS they want dark, and
+            for everyone else the OS default *is* light, so the artboard's first
+            paint is what they get anyway. An explicit choice always wins over
+            both.
+
+            `storageKey="cc:theme"`. The design persists under that key and
+            `next-themes` defaults to `"theme"`; matching costs nothing and
+            keeps one name for one thing across the two.
+
+            `disableTransitionOnChange` is deliberately *not* set. It suppresses
+            every transition for a frame while the class flips, which would kill
+            the cross-fade the `cc-theme` utility exists to provide —
+            `cc-theme.css` transitions `background-color`, `color` and
+            `border-color` on the whole subtree for exactly this moment, and
+            `AppShell` opts every route into it.
+          */}
           <ThemeProvider
             attribute="class"
             defaultTheme="system"
             enableSystem
-            disableTransitionOnChange
+            storageKey="cc:theme"
           >
             <Toaster />
             {children}
