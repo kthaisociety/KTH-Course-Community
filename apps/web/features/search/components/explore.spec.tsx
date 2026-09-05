@@ -8,6 +8,10 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  SEARCH_MORPH_KEY,
+  stashSearchBarHandoff,
+} from "@/features/shell/lib/search-morph";
 import type { CourseSummary } from "@/types";
 import { Explore } from "./explore";
 
@@ -625,6 +629,51 @@ describe("Explore", () => {
       ).toBeVisible();
       await userEvent.click(screen.getByRole("button", { name: "Try again" }));
       expect(refetch).toHaveBeenCalled();
+    });
+  });
+
+  /**
+   * The receiving end of the landing → Explore transition. Every rule about
+   * *when* the bar continues — consumed once, never stale, dropped under reduced
+   * motion — belongs to the seam that owns it, in
+   * `features/shell/components/search-morph.spec.tsx`. What is Explore's own is
+   * that its search bar is the element the handoff lands on at all.
+   */
+  describe("continuing the landing page's search bar", () => {
+    const LANDING_BAR = { left: 140, top: 400, width: 560, height: 42 };
+    const RESTING = { left: 320, top: 20, width: 560, height: 42 };
+
+    function bar() {
+      return screen.getByLabelText("Search courses").closest("form");
+    }
+
+    it("animates its own bar out of the box the landing left it in", () => {
+      const measure = vi
+        .spyOn(HTMLFormElement.prototype, "getBoundingClientRect")
+        .mockReturnValue({
+          ...RESTING,
+          x: RESTING.left,
+          y: RESTING.top,
+          right: RESTING.left + RESTING.width,
+          bottom: RESTING.top + RESTING.height,
+          toJSON: () => RESTING,
+        } as DOMRect);
+      try {
+        stashSearchBarHandoff(LANDING_BAR);
+
+        render(<Explore />);
+
+        expect(bar()?.style.transform).toBe("translate3d(-180px, 380px, 0)");
+        expect(window.sessionStorage.getItem(SEARCH_MORPH_KEY)).toBeNull();
+      } finally {
+        measure.mockRestore();
+      }
+    });
+
+    it("renders with no animation when it was reached any other way", () => {
+      render(<Explore />);
+
+      expect(bar()?.style.transform).toBe("");
     });
   });
 });

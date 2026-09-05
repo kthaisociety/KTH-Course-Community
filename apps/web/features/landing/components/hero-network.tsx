@@ -57,6 +57,8 @@ type Scene = {
   last: number;
   /** Find your dot has succeeded: the viewer's own node gets a label. */
   labelled: boolean;
+  /** The page is handing itself over to Explore; nothing on this canvas moves. */
+  paused: boolean;
   window: GraphWindow | null;
   view: GraphWindowView | null;
   /**
@@ -287,9 +289,22 @@ type Props = {
    * this adds the pulse and the label and nothing else.
    */
   labelled: boolean;
+  /**
+   * The landing is leaving for Explore.
+   *
+   * Competing motion is the biggest tell in a shared-element transition, so for
+   * the length of it the only thing moving is the layout. The pulse is the only
+   * animation this canvas ever runs, and it stops here — the scene keeps its
+   * last painted frame and fades out with the rest of the hero.
+   */
+  paused?: boolean;
 };
 
-export function HeroNetwork({ window: graphWindow, labelled }: Props) {
+export function HeroNetwork({
+  window: graphWindow,
+  labelled,
+  paused = false,
+}: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const sceneRef = useRef<Scene | null>(null);
 
@@ -313,6 +328,7 @@ export function HeroNetwork({ window: graphWindow, labelled }: Props) {
       pulse: 0,
       last: 0,
       labelled: false,
+      paused: false,
       window: null,
       view: null,
     };
@@ -341,7 +357,7 @@ export function HeroNetwork({ window: graphWindow, labelled }: Props) {
       scene.raf = 0;
     };
     const start = () => {
-      if (scene.raf || !scene.labelled || scene.reduced) return;
+      if (scene.raf || !scene.labelled || scene.reduced || scene.paused) return;
       // A hidden tab has nothing to animate for, and the label appearing while
       // one is hidden must not arm a loop nothing will see.
       if (document.hidden) return;
@@ -457,6 +473,16 @@ export function HeroNetwork({ window: graphWindow, labelled }: Props) {
     refreshView(scene);
     draw(scene);
   }, [graphWindow]);
+
+  useEffect(() => {
+    const scene = sceneRef.current;
+    if (!scene) return;
+    scene.paused = paused;
+    // `start` re-checks every reason not to run, so this is a resume request
+    // rather than an assertion that the pulse should be on.
+    if (paused) scene.stopPulse?.();
+    else scene.startPulse?.();
+  }, [paused]);
 
   useEffect(() => {
     const scene = sceneRef.current;

@@ -3,10 +3,11 @@
 import { Menu } from "lucide-react";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { type AuthReason, AuthReasonDialog } from "@/features/auth";
 import { Rail } from "@/features/shell/components/rail";
+import { SearchMorphProvider } from "@/features/shell/components/search-morph";
 import { ThemeToggle } from "@/features/shell/components/theme-toggle";
 import { pageTitleFor } from "@/features/shell/lib/page-title";
 
@@ -26,15 +27,29 @@ import { pageTitleFor } from "@/features/shell/lib/page-title";
  * `cc-theme` sits on the root because the frame now wraps every route: it is
  * the opted-in subtree that utility was written for, and it is what makes a
  * theme flip cross-fade rather than snap, exactly as `cc-theme.css` does.
+ *
+ * The frame also publishes its rail to the route rendering inside it, through
+ * `SearchMorphProvider`. A search arriving from the landing page brings the rail
+ * in from the left on the same spring that carries the search bar up, and the
+ * bar belongs to Explore while the rail belongs here — so the shell hands the
+ * rail over rather than leaving a page to go querying for chrome it does not
+ * own. See `search-morph.tsx`.
  */
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname() ?? "";
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [authReason, setAuthReason] = useState<AuthReason | null>(null);
+  const railRef = useRef<HTMLElement | null>(null);
 
   return (
     <div className="@container/shell cc-theme flex h-dvh w-full overflow-hidden bg-cc-pg text-cc-ink text-sm">
-      <aside className="hidden w-[236px] shrink-0 @3xl/shell:block">
+      {/* The rail is rendered before the content column, which is also the
+          order React attaches their refs in: by the time a route's own layout
+          effect runs, `railRef` is bound. */}
+      <aside
+        ref={railRef}
+        className="hidden w-[236px] shrink-0 @3xl/shell:block"
+      >
         <Rail onRequestAuth={setAuthReason} />
       </aside>
 
@@ -79,7 +94,9 @@ export function AppShell({ children }: { children: ReactNode }) {
               : "min-h-0 flex-1 overflow-y-auto overflow-x-hidden"
           }
         >
-          {children}
+          <SearchMorphProvider railRef={railRef}>
+            {children}
+          </SearchMorphProvider>
         </main>
       </div>
 
