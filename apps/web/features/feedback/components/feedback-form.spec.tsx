@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { FeedbackForm } from "./feedback-form";
@@ -69,6 +69,39 @@ describe("FeedbackForm", () => {
       expect(
         screen.queryByRole("button", { name: "Send message" }),
       ).not.toBeInTheDocument();
+    });
+
+    /**
+     * The panel was built when the palette had no green and borrowed
+     * `--cc-info` with `--cc-brand` ink, which read as information rather than
+     * success. The tint family exists now (#127 §1) and its three tokens are
+     * the artboard's three hexes exactly, so the panel says "this worked" in
+     * the design's own colours in both themes.
+     *
+     * Classes rather than computed colours: jsdom runs no Tailwind, so a
+     * colour assertion here would only ever observe the absence of a
+     * stylesheet. What regressed before was the token choice, and that is what
+     * a class name records.
+     */
+    it("confirms in the success tint rather than a colour-mixed stand-in", async () => {
+      const user = userEvent.setup({ delay: null });
+      render(<FeedbackForm />);
+
+      await fillIn(user, {
+        name: "Elsa",
+        email: "elsa@kth.se",
+        message: "Hello",
+      });
+      await send(user);
+
+      const sent = await screen.findByRole("status");
+      expect(sent).toHaveClass(
+        "bg-cc-success-tint",
+        "border-cc-success-tint-border",
+      );
+      expect(within(sent).getByText("Message sent")).toHaveClass(
+        "text-cc-success-ink",
+      );
     });
 
     it("never offers or asks for an account", () => {
@@ -144,9 +177,12 @@ describe("FeedbackForm", () => {
     });
     await send(user);
 
-    expect(await screen.findByRole("alert")).toHaveTextContent(
-      "That did not send. Please try again.",
-    );
+    const failure = await screen.findByRole("alert");
+    expect(failure).toHaveTextContent("That did not send. Please try again.");
+    // The artboard's `#a3452a` is `--cc-danger-ink`. The line used to borrow
+    // `--cc-warn-ink` for want of a token, which turns out to be the review
+    // draft's amber and says nothing about a failure (#127 §1, §4).
+    expect(failure).toHaveClass("text-cc-danger-ink");
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
     expect(screen.getByLabelText("Message")).toHaveValue("Hello");
   });

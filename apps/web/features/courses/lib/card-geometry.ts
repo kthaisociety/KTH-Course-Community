@@ -7,9 +7,9 @@
  * of the ramp. That split is the reason the card is one component and not two.
  *
  * Every number here is the artboard's:
- * `docs/design/Course Community - Explore.dc.html` computes exactly this ramp,
+ * `docs/design_ref_new/Course Community - Explore.dc.html` computes exactly this ramp,
  * and at full width it lands on the `SAMPLE_GEO` literal in
- * `docs/design/Course Community - Course Card.dc.html`, which the fixture
+ * `docs/design_ref_new/Course Community - Course Card.dc.html`, which the fixture
  * mirrors — `card-geometry.spec.ts` holds those two together.
  */
 

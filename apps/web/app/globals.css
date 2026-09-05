@@ -12,11 +12,8 @@
   --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
-  --color-primary-dark: var(--primary-dark);
-  --color-primary-light: var(--primary-light);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
-  --color-secondary-light: var(--secondary-light);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
   --color-accent: var(--accent);
@@ -46,7 +43,8 @@
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
 
-  /* Course Community design tokens (see cc-theme.css in the design project). */
+  /* Course Community design tokens — see `docs/design_ref_new/cc-theme.css`,
+     which the `:root` and `.dark` blocks below mirror verbatim. */
   --color-cc-pg: var(--cc-pg);
   --color-cc-surface: var(--cc-surface);
   --color-cc-inset: var(--cc-inset);
@@ -96,50 +94,21 @@
 }
 
 :root {
-  --background: #faf8f1;
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: #243744;
-  --primary-dark: #18242d;
-  --primary-light: #778c9c;
-  --primary-foreground: white;
-  --secondary: #423842;
-  --secondary-light: #6b5b6b;
-  --secondary-foreground: white;
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: #243744;
-  --sidebar-primary-foreground: white;
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  /* Course Community — light palette, mirrored verbatim from
+     `docs/design_ref_new/cc-theme.css`. That file is the design's single
+     definition of both palettes, so nothing here is tuned locally: a colour
+     change belongs in the design and arrives here as a re-mirror.
 
-  /* Course Community — light palette.
-     pg  page background   surface cards, fields, menus   inset recessed panel
-     pill chips and tracks  rail the sidebar (brand blue in both themes)
+     pg page background  surface cards, fields, menus  inset recessed panel
+     pill chips, tracks and hover fills
+     rail the sidebar — it darkens with the theme rather than holding one brand
+     blue across both, which is what `cc-theme.css` now says and what #127 §2
+     corrects: light `#1751a6`, dark `#0d2e5e`
      ink primary text  ink2 secondary  muted supporting  dim/dim2 labels and hints
-     chip-ink text on a pill  rule/2/3 hairline, border, strong border
-     hov hover border  brand links and brand text  btn/btn-fg filled button
-     warn/warn-border/warn-ink the nudge to write a review, and
-     warn-btn/warn-btn-fg its call to action — amber in dark, blue in light */
+     chip-ink text on a pill
+     rule/rule2/rule3 hairline between rows, card border, control border
+     hov hover and focus border  brand links and brand text
+     btn/btn-fg the filled button and its foreground */
   --cc-pg: #faf8f1;
   --cc-surface: #ffffff;
   --cc-inset: #faf8f1;
@@ -159,6 +128,26 @@
   --cc-btn: #1751a6;
   --cc-btn-fg: #ffffff;
   --cc-info: rgba(23, 81, 166, 0.07);
+
+  /* `--cc-warn-*` is the **review draft** family. It used to be documented here
+     as "the nudge to write a review", which #127 §4 flags as wrong: #88 showed
+     the actual nudge is `--cc-btn` on `--cc-surface`, and nothing amber appears
+     on it.
+
+     The tint half is the draft's header. The Design System artboard names
+     `--warn` "Review draft header" in both `TINTS` and `BANNERS`, and
+     `Course Community - Workspace Pane.dc.html` paints exactly it in its
+     `isReview` branch — `--warn` behind the draft's title block, `--warnInk` on
+     its "Review draft" eyebrow, and `--warnBorder` + `--warnSolid` as the
+     border and opaque backing of the progress row that sticks beneath it.
+
+     `--cc-warn-btn`/`--cc-warn-btn-fg` are a separate pair, and the one place
+     the old wording was not wrong: the Design System demos them under "Status
+     text & buttons" as a **"Write a review"** button. They are an accent, not a
+     banner tint — the filled progress segments and the submit button in
+     `review-draft-panel.tsx`, and the Review Card's accent for a review that
+     was not happy (`Review Card.dc.html:51`). Neither appears anywhere in the
+     Workspace Pane's `isReview` branch. */
   --cc-warn: #fdf7ea;
   --cc-warn-border: #f0e6d2;
   --cc-warn-ink: #7a5309;
@@ -177,18 +166,25 @@
      six tokens are the client half of that contract and the palette can be
      re-skinned here without a data migration.
 
-     They are additions to `cc-theme.css` rather than a mirror of it: the design
-     has no node token at all (`cc-store.js` carries five raw hexes against the
-     schema's six names). Five of these are the design's own hexes reused;
-     `moss` is the sixth the design never assigned. Provisional, like the
-     examination palette's `seminars` — the only requirement is that no two of
-     the six read as each other. */
+     Mirrored, like everything above: the revised `cc-theme.css` names all six
+     (`--nodeAurora` … `--nodeViolet`), and the Design System artboard renders
+     them under "Community graph nodes". They are *unassigned* rather than
+     absent — #68 §3 settled that a node with no configured appearance is
+     `--cc-brand`, and these are the palette personalisation will draw from once
+     a tier writer exists. */
   --cc-node-aurora: #2f9e8e;
   --cc-node-ember: #c96a4a;
   --cc-node-frost: #2f5fa8;
   --cc-node-moss: #4a7c2f;
   --cc-node-slate: #57646f;
   --cc-node-violet: #6a4ea8;
+
+  /* The panel-tint families. A tint, its border and its ink are three separate
+     tokens because a banner needs all three and none of them is derivable from
+     `--cc-success` / `--cc-danger`: dark states them as alpha over the page,
+     light as flat mixes that are not a percentage of anything. Anything
+     deriving one with `color-mix` is reading the palette from before these
+     existed (#127 §1). */
   --cc-success-tint: #e9f3ef;
   --cc-success-tint-border: #cfe4de;
   --cc-success-ink: #1c6b60;
@@ -196,47 +192,107 @@
   --cc-danger-tint-border: #f0d7cf;
   --cc-danger-ink: #a3452a;
   --cc-danger-ink2: #7a3b26;
+
+  /* "Mark as taken" and "Save" once they are on, plus that state's hover. */
   --cc-checked-tint: rgba(23, 81, 166, 0.08);
   --cc-checked-hover-tint: rgba(23, 81, 166, 0.14);
-}
 
-.dark {
-  --background: oklch(0.28 0.04 260);
-  --foreground: #e5e7eb;
-  --card: #0f172a;
-  --card-foreground: #e5e7eb;
-  --popover: #0f172a;
-  --popover-foreground: #e5e7eb;
-  --primary: oklch(0.21 0.04 266);
-  --primary-dark: #18242d;
-  --primary-light: #5b86a5;
-  --primary-foreground: #f8fafc;
-  --secondary: oklch(0.71 0.04 257);
-  --secondary-light: #6b5b6b;
-  --secondary-foreground: #e5e7eb;
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
+  /* ── shadcn primitives, expressed in Course Community tokens ──────────────
+     `components/ui/**` is a stock shadcn set and styles itself against
+     `--background`, `--card`, `--muted` and friends. Those used to be a second,
+     unrelated neutral palette sitting beside `--cc-*` and disagreeing with it:
+     light `--background` was the design's cream while dark `--background` was a
+     blue-grey nothing like `--cc-pg`, and `--card` was pure white against a
+     `#0f172a` dark. That is the whole reason dark "worked better" than light —
+     the design's dark palette is self-consistent, so it was only in light that
+     the two systems sat side by side and every seam showed.
+
+     So every shadcn token is now an alias onto the `--cc-*` token that means
+     the same thing. There is one palette, and a dialog, popover or button
+     inherits the theme without knowing the design exists.
+
+     The aliases are declared once, here, rather than repeated under `.dark`. A
+     custom property is substituted at computed-value time, so `var(--cc-pg)`
+     resolves against whichever `--cc-*` values are in scope *on the element the
+     alias is declared on*. `next-themes` is configured `attribute="class"` in
+     `app/layout.tsx`, which puts `.dark` on `<html>` — the same element as
+     `:root` — so one declaration covers both themes. A second `.dark` nested on
+     a descendant would not re-resolve them; nothing in the repo does that, and
+     Tailwind's `@custom-variant dark (&:is(.dark *))` assumes the same. */
+  --background: var(--cc-pg);
+  --foreground: var(--cc-ink);
+  --card: var(--cc-surface);
+  --card-foreground: var(--cc-ink);
+  /* A popover is a menu, and `--cc-surface` is "cards, fields, menus". */
+  --popover: var(--cc-surface);
+  --popover-foreground: var(--cc-ink);
+  --primary: var(--cc-btn);
+  --primary-foreground: var(--cc-btn-fg);
+  /* shadcn's `secondary` is a *filled* quiet control, not the design's outlined
+     "Secondary" button. The design's quiet fill is the pill, and `--cc-chip-ink`
+     is literally "text on a pill". */
+  --secondary: var(--cc-pill);
+  --secondary-foreground: var(--cc-chip-ink);
+  --muted: var(--cc-pill);
+  --muted-foreground: var(--cc-muted);
+  /* `accent` is the hover or selected fill inside menus and lists. The Design
+     System lists "hover" under `--pill` alongside chips and tracks, and text on
+     a hover fill stays primary ink rather than dropping to chip ink. */
+  --accent: var(--cc-pill);
+  --accent-foreground: var(--cc-ink);
+  --destructive: var(--cc-danger);
+  /* `RULES` in the Design System splits these: `--rule2` is the card border,
+     `--rule3` the control border. shadcn's `--input` is only ever a control's
+     border (and `bg-input/30` its dark fill), so it takes `--cc-rule3` rather
+     than joining `--border` on `--cc-rule2`. */
+  --border: var(--cc-rule2);
+  --input: var(--cc-rule3);
+  /* The focus ring. `--cc-hov` is the palette's own emphasis border and is
+     already what the feedback form focuses to, so the ring matches the design
+     instead of introducing a colour the design does not have. */
+  --ring: var(--cc-hov);
+  --radius: 0.625rem;
+
+  /* The rail family. `bg-sidebar` has no consumer today — this repo's rail is
+     `features/shell/components/rail.tsx`, not shadcn's `Sidebar`, which is not
+     even vendored — but leaving these on stock greys would reintroduce the
+     second palette the moment anyone reached for one.
+
+     The rail is the one surface the design paints without tokens: there is no
+     `--cc-rail-fg`, and the artboard draws on it in plain white at varying
+     alpha in both themes. `rail.tsx` says the same and uses the same `white/nn`
+     values, so these mirror it — `.16` is the active nav item, `.20` the
+     divider above the signed-out block, and the filled button is white with
+     `--cc-rail` ink, which is the artboard's "Sign up". */
+  --sidebar: var(--cc-rail);
+  --sidebar-foreground: #ffffff;
+  --sidebar-primary: #ffffff;
+  --sidebar-primary-foreground: var(--cc-rail);
+  --sidebar-accent: rgba(255, 255, 255, 0.16);
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: rgba(255, 255, 255, 0.2);
+  --sidebar-ring: #ffffff;
+
+  /* `--chart-*` stays on its stock neutral ramp: it has no honest `--cc-*`
+     counterpart. The six `--cc-node-*` are the community graph's palette, and
+     #68 settled that they are what personalisation will assign to a person —
+     they are not a categorical chart scale. The one chart this repo draws, the
+     examination split, carries its own literals in
+     `features/reviews/lib/examination-palette.ts` for the reason recorded
+     there, and `components/ui/chart.tsx` has no consumer at all. Greys read
+     acceptably on either ground, so they are left rather than forced. */
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.21 0.04 266);
-  --sidebar-primary-foreground: #f8fafc;
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+}
 
-  /* Course Community — dark palette. */
+/* Course Community — dark palette, again `cc-theme.css` verbatim. Only the
+   `--cc-*` tokens are restated: every shadcn alias in `:root` is written in
+   terms of these and `.dark` lands on that same `<html>` element, so the whole
+   primitive set swaps with them. */
+.dark {
   --cc-pg: #071831;
   --cc-surface: #0b254c;
   --cc-inset: #040f1f;
@@ -256,8 +312,9 @@
   --cc-btn: #8bb3ef;
   --cc-btn-fg: #0a2449;
   --cc-info: rgba(226, 236, 251, 0.1);
-  /* The warn button is amber here where light is blue. That hue change is the
-     design's, not a mistake: on the dark blue surface a blue button vanishes. */
+  /* The review draft's call to action is amber here where light is blue. That
+     hue change is the design's, not a mistake: on the dark blue surface a blue
+     button vanishes. */
   --cc-warn: rgba(223, 165, 60, 0.16);
   --cc-warn-border: rgba(223, 165, 60, 0.3);
   --cc-warn-ink: #f2c879;
@@ -271,16 +328,20 @@
   --cc-danger: #ff8a80;
   --cc-danger-fg: #2b0a08;
 
-  /* Community graph node colours — dark. The light hues are mixed for the cream
-     page and disappear into `--cc-pg`'s deep blue, so each is lifted to the same
-     hue at a much higher lightness. The names, and which name means which hue,
-     do not change. */
+  /* Community graph node colours — dark. The design lifts each light hue to the
+     same hue at a much higher lightness, because the light set is mixed for the
+     cream page and disappears into `--cc-pg`'s deep blue. The names, and which
+     name means which hue, do not change. */
   --cc-node-aurora: #5fd8c4;
   --cc-node-ember: #f2946f;
   --cc-node-frost: #8ec2ff;
   --cc-node-moss: #a5d47c;
   --cc-node-slate: #b3c1d0;
   --cc-node-violet: #bda2f0;
+
+  /* The tints are alpha over the page here rather than the flat mixes light
+     uses, and the inks collapse onto the solid colour: at this lightness
+     `--cc-success` and `--cc-danger` already read as text. */
   --cc-success-tint: rgba(95, 208, 138, 0.14);
   --cc-success-tint-border: rgba(95, 208, 138, 0.3);
   --cc-success-ink: #5fd08a;

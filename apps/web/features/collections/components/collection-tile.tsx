@@ -113,6 +113,11 @@ export function CollectionTile({
               >
                 Rename
               </button>
+              {/* Same pair as the chip's Delete, and the artboard's own:
+                  `--cc-danger-ink` over a `--cc-danger-tint` hover. The
+                  `color-mix` this replaces predated the tint family (#127 §1)
+                  and could not have reproduced it — dark states the tint as
+                  alpha over the page, not as a share of the solid colour. */}
               <button
                 type="button"
                 role="menuitem"
@@ -120,7 +125,7 @@ export function CollectionTile({
                   menu.close();
                   onDelete();
                 }}
-                className="block w-full cursor-pointer rounded-[6px] px-[9px] py-2 text-left text-[12.5px] text-cc-danger hover:bg-[color-mix(in_srgb,var(--cc-danger)_12%,var(--cc-surface))]"
+                className="block w-full cursor-pointer rounded-[6px] px-[9px] py-2 text-left text-[12.5px] text-cc-danger-ink hover:bg-cc-danger-tint"
               >
                 Delete
               </button>

@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import { useSubmitFeedback } from "../api/mutations";
 
 /**
- * The **Feedback form** — `docs/design/Course Community - Contact Form.dc.html`,
+ * The **Feedback form** — `docs/design_ref_new/Course Community - Contact Form.dc.html`,
  * which the About artboard imports as a section and `/contact` renders on its
  * own.
  *
@@ -105,22 +105,22 @@ export function FeedbackForm() {
       // role is `status`, which is what announces the confirmation.
       //
       // The artboard paints this panel green — `#e9f3ef` on `#cfe4de` with
-      // `#1c6b60` ink — and the palette has no green. There is no success or
-      // danger family among the 24 `--cc-*` tokens at all, and inventing one
-      // here would desynchronise `globals.css` from `cc-theme.css`, which it
-      // mirrors. So the panel takes the nearest family that swaps correctly for
-      // dark — `--cc-info` on `--cc-rule` with `--cc-brand` ink — and the tick
-      // carries the "this worked" reading that the hue no longer does. The PR
-      // reports the gap so the design gets a success token at source.
-      <output className="mt-4 flex animate-in items-start gap-[11px] rounded-[12px] border border-cc-rule bg-cc-info px-4 py-[15px] duration-200 ease-out fade-in slide-in-from-bottom-[6px]">
+      // `#1c6b60` ink — and when the form was built the palette had no green at
+      // all, so the panel borrowed `--cc-info` on `--cc-rule` with `--cc-brand`
+      // ink and the PR reported the gap. The gap is closed: those three hexes
+      // are now `--cc-success-tint`, `--cc-success-tint-border` and
+      // `--cc-success-ink` verbatim, and the Design System artboard's `BANNERS`
+      // names this exact combination "Upload success banner" (#127 §1). The
+      // tick stays, because a colour is not what should carry "this worked".
+      <output className="mt-4 flex animate-in items-start gap-[11px] rounded-[12px] border border-cc-success-tint-border bg-cc-success-tint px-4 py-[15px] duration-200 ease-out fade-in slide-in-from-bottom-[6px]">
         <CircleCheck
           size={17}
           strokeWidth={2.1}
           aria-hidden
-          className="mt-px shrink-0 text-cc-brand"
+          className="mt-px shrink-0 text-cc-success-ink"
         />
         <div>
-          <div className="font-semibold text-[14px] text-cc-brand">
+          <div className="font-semibold text-[14px] text-cc-success-ink">
             Message sent
           </div>
           <div className="mt-[3px] text-[12.5px] text-cc-ink2">
@@ -211,12 +211,13 @@ export function FeedbackForm() {
         >
           {submitFeedback.isPending ? "Sending…" : "Send message"}
         </button>
-        {/* The artboard's `#a3452a` has no token either, and `--cc-warn-ink` is
-            the palette's only ink that means "look at this" and swaps for dark.
-            `role="alert"` is what actually carries the message, so the reading
-            does not rest on the hue. Reported in the PR with the panel above. */}
+        {/* The artboard's `#a3452a` is `--cc-danger-ink` exactly. It had no
+            token when this was written, so the line borrowed `--cc-warn-ink`;
+            it has one now (#127 §1), and `--cc-warn-*` turns out to mean the
+            review draft rather than anything that failed. `role="alert"` is
+            still what carries the message — the hue only agrees with it. */}
         {error ? (
-          <p className="mt-2 text-[12.5px] text-cc-warn-ink" role="alert">
+          <p className="mt-2 text-[12.5px] text-cc-danger-ink" role="alert">
             {error}
           </p>
         ) : null}

@@ -103,6 +103,13 @@ export function CollectionChip({
             >
               Rename
             </button>
+            {/* The artboard's own pair — `#a4402a` on a `#fdf3ef` hover — which
+                is `--cc-danger-ink` over `--cc-danger-tint` now that the tint
+                family exists. This used to derive the hover with `color-mix`
+                against `--cc-danger`, because when the chip was built the
+                palette stopped at the solid colour (#127 §1). The derivation
+                was never the design's: dark states the tint as alpha over the
+                page, so no percentage of the solid reaches it. */}
             <button
               type="button"
               role="menuitem"
@@ -110,7 +117,7 @@ export function CollectionChip({
                 menu.close();
                 onDelete();
               }}
-              className="block w-full cursor-pointer rounded-[6px] px-[9px] py-2 text-left text-[12.5px] text-cc-danger hover:bg-[color-mix(in_srgb,var(--cc-danger)_12%,var(--cc-surface))]"
+              className="block w-full cursor-pointer rounded-[6px] px-[9px] py-2 text-left text-[12.5px] text-cc-danger-ink hover:bg-cc-danger-tint"
             >
               Delete
             </button>
