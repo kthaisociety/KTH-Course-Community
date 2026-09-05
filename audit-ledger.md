@@ -1541,3 +1541,417 @@ declares six, including `seminars`. #68 settled that the schema wins and
 palette. The Swedish label `seminarier` is recorded for whoever adds an i18n
 layer, and — correctly — **no i18n layer was built to satisfy it**.
 **Confidence: high.**
+---
+
+# Cross-cutting — tokens, dead code, and things nobody assigned
+
+## Findings
+
+### X-01 — stale `docs/design/` and `docs/design_ref_old/` citations are gone — **satisfied; deferred item 4 is closed**
+
+**Confidence: high.**
+
+Deferred item 4 records stale `docs/design/` citations in `my-page/`, `reviews/`,
+`saved/`, `search/` and `taken/`. I grepped the entire repository — every `.ts`,
+`.tsx`, `.css` and `.md` file — for `docs/design/` and for `design_ref_old`.
+**Zero hits.** Every surviving citation names `docs/design_ref_new/`.
+
+The brief warned that the path was "the smaller half of the problem" and that a
+comment citing the old folder might be wrong about the *design* rather than only
+about the path. So I did not stop at the grep: I re-read the revised artboards
+behind the claims most likely to have gone stale, and the results are recorded
+under their own routes — C-02 (the compact chip, which the revision **fixed**,
+closing a deferral that reads as open), L-01 (the landing copy, which the
+revision did **not** change, so the deviation is still live and still correct),
+and E-05 (the Mobile Preview's sheet stack, where the artboard says something
+the code does not do).
+
+The one residue of the old numbering I found is C-03, a line number that moved
+inside a correctly-named file.
+
+### X-02 — `color-mix` still derives two tints that have real tokens — **defect; a #127 §1 "Done when" line is not met**
+
+**Severity: S3** in light theme, **S4** in dark. **Confidence: high.**
+
+#127 §1's closing condition is *"No `color-mix` derivation remains where a real
+tint token exists"*, and `globals.css:182-187` states the rule in the codebase's
+own words:
+
+> *"…none of them is derivable from `--cc-success` / `--cc-danger`: dark states
+> them as alpha over the page, light as flat mixes that are not a percentage of
+> anything. **Anything deriving one with `color-mix` is reading the palette from
+> before these existed (#127 §1).**"*
+
+Two live sites still do exactly that:
+
+| File | Line | Derivation | Token that exists |
+|---|---|---|---|
+| `features/search/components/explore.tsx` | 330 | `color-mix(in srgb, var(--cc-danger) 12%, var(--cc-surface))` | `--cc-danger-tint` |
+| `features/workspace/components/review-draft-panel.tsx` | 726 | `color-mix(in srgb, var(--cc-success) 12%, var(--cc-surface))` | `--cc-success-tint` |
+
+I verified the tokens exist on both sides of the mirror: `globals.css:188-194`
+(light) and `:345-348` (dark), and `docs/design_ref_new/cc-theme.css:44-52`
+(light) and `:93-101` (dark) as `--successTint` / `--dangerTint`.
+
+**How visible it is, stated honestly rather than inflated.** Computing the light
+values: `color-mix(in srgb, #b3261e 12%, #ffffff)` ≈ `#f6e5e4`, a pink, against
+`--cc-danger-tint` `#fdf3ef`, a warm peach — a visible hue difference on the
+Explore error panel's circle. The success pair is much closer:
+`color-mix(in srgb, #1c7a4a 12%, #ffffff)` ≈ `#e4efe9` against
+`--cc-success-tint` `#e9f3ef`. In dark the alpha token composites over the same
+surface the mix uses, so both are near-identical there. **So this is primarily a
+palette-hygiene and drift-risk defect, and secondarily a small visible
+divergence in the light theme.** I am not claiming it is glaring.
+
+**The sharper half of the finding is that the justification is now false, and
+the artboard says so in as many words.** `explore.tsx:321-325` reads:
+
+> *"Its tinted circle has no token — `cc-theme.css` carries no error surface — so
+> the fill is mixed from `--cc-danger` rather than pinned to the artboard's
+> `#fbeceb`…"*
+
+`cc-theme.css` **does** carry an error surface, and
+`Course Community - Design System.dc.html` does not merely define the tokens —
+it has a whole "Status banners" section that **names this exact combination**.
+Its `BANNERS` constant (line 175-180) is:
+
+```js
+["--successTint", "var(--successTintBorder)", "var(--successInk)", "Upload success banner"],
+["--dangerTint",  "var(--dangerTintBorder)",  "var(--dangerInk)",  "Error banner"],
+```
+
+So the design system artboard designates `--dangerTint` as *the* error banner
+surface, and the one place in the app that draws an error banner derives its own
+instead, under a comment asserting no such token exists. That is how a
+derivation survives three reconciliation passes.
+
+`feedback-form.tsx:112-114` already cites this same `BANNERS` table when it
+migrated the success panel — so the evidence was found once, used for one of the
+two families, and not carried across to the other.
+`collection-chip.tsx:106-112` contains the argument in general form, written
+while migrating the same derivation: *"The derivation was never the design's:
+dark states the tint as alpha over the page, so no percentage of the solid
+reaches it."*
+
+**What the fix would be:** replace both with `bg-cc-danger-tint` /
+`bg-cc-success-tint` (plus `--cc-success-ink` for the published banner's text,
+which currently uses `var(--cc-success)` — the solid, not the ink), and delete
+the two stale sentences. Two class changes and a comment. The #127 §1 sites that
+were *named* — the feedback form's success and error panels, and the collection
+chip and tile — are all correctly migrated already; these two were not on that
+list, which is why they were missed.
+
+### X-03 — the workspace pane's dragged width is not persisted — **defect, S4; deferred item 3 confirmed still open**
+
+**Confidence: high.**
+
+`features/workspace/components/workspace-pane-host.tsx:117` holds the width in
+`useState(PANE_DEFAULT)`. `features/workspace/lib/workspace-storage.ts:29-32`
+defines four `sessionStorage` keys — `cc.workspace.open`, `cc.workspace.drafts`,
+`cc.workspace.published`, `cc.workspace.awaiting-sign-in` — and **none of them
+is a width**. So the open tab list, the half-written drafts and the
+already-published markers all survive an OAuth round trip, and the column size
+the reader dragged does not: they come back from signing in to their courses at
+the default 504px.
+
+The drag itself is complete and well built — pointer drag, arrow-key nudge, a
+double-click reset, a measured floor from `CARD_RAMP_FLOOR`, and a title
+attribute naming all three. It is only the persistence that is missing.
+
+**What the fix would be:** a fifth key, `cc.workspace.width`, written from
+`resize()` and read in the same restore effect the open list uses, clamped
+through the existing `clamp()` (which already guards an unmeasured row). The
+restore must go through an effect rather than initial state, exactly as
+`useWorkspacePane` does, or the server and first client render disagree.
+
+**A judgement call worth recording:** `sessionStorage` is the right store here
+only if the width is meant to be per-tab, like the open list. If it is meant to
+be a preference, it belongs in `localStorage` and the choice differs from every
+other key in that file. I lean per-tab for consistency, but flag it.
+
+### X-04 — dead code — **defect, S4**
+
+**Confidence: high** for each row; each was verified by grepping the whole of
+`apps/web` for every import form.
+
+| Path | Files | Importers | Note |
+|---|---|---|---|
+| `components/blocks/editor-00/` | 3 | **0** | deferred item 2, confirmed |
+| `components/Textarea.tsx` | 1 | **0** | not previously recorded |
+| `components/ui/**` unused primitives | 35 | 0 each | vendored library, see below |
+
+**`components/blocks/editor-00/**` — deferred item 2 confirmed.** `editor.tsx`,
+`nodes.ts` and `plugins.tsx`. Nothing imports them; the only mention of the
+string `editor-00` anywhere in the repo is a comment in
+`features/shell/lib/page-title.spec.ts:42` noting that the `/editor-00` *route*
+is gone. `RichEditor` uses `components/editor/**` directly and does not go
+through this block.
+
+One thing to check before deleting, which is why I am recording it rather than
+saying "just delete": `components/blocks/editor-00/editor.tsx:10` is the **only**
+importer of `@/components/editor/themes/editor-theme`. Removing the block may
+orphan that module too. `RichEditor.tsx` imports `ContentEditable` and the
+format plugins from `components/editor/**` but not the theme, so a deletion pass
+should re-run the orphan check afterwards rather than assuming a clean cut.
+
+**`components/Textarea.tsx` — a new finding.** Zero importers. The three
+`Textarea` hits elsewhere are `components/ui/input-group.tsx` referencing
+`components/ui/textarea`, a different file. Safe to delete.
+
+**The 35 unused `components/ui/**` primitives are *not* a defect and I am not
+filing them.** shadcn primitives are a vendored library that is copied in whole
+and drawn from as needed; an unused `calendar.tsx` is a component not yet
+needed, not dead code someone forgot. I list them only so the ledger is honest
+about what the sweep saw. They do carry one consequence worth knowing: several
+use scroll utilities from a different vocabulary (`no-scrollbar`,
+`scrollbar-thin`, `scrollbar-none`) than the `scrollbar-subtle` /
+`scrollbar-hidden` convention in `globals.css`, which is a reason to leave them
+out of scope for N-03 rather than to align them.
+
+### X-05 — `/contact` is reachable, and the rail's single "About & contact" entry is correct — **satisfied**
+
+Checked because an unreachable route is exactly the kind of thing nobody is
+assigned. `/contact` renders `Contact` → `FeedbackForm`, and it is linked from
+`features/my-page/components/account-settings.tsx:233`. The rail carries no
+separate Contact entry, but that is right: the artboard is one page called
+*"About & contact"* which imports the Contact Form artboard as a section, so
+`about.tsx` renders the form inline and the rail's footer link is labelled
+"About & contact" (`rail.tsx:204-216`). Both doors reach the form. The Landing
+artboard's rail draws a separate "Contact" row (line 147); merging it into the
+About entry follows the About artboard, which is the one that actually defines
+the page. **Confidence: high.**
+
+### X-06 — `pageTitleFor` deliberately omits the retired course route — **satisfied**
+
+`features/shell/lib/page-title.ts:31-34` records that `/course` and
+`/course/<code>` are absent on purpose: both are `redirect()` calls that throw
+before anything renders, so *"a title for a route that never paints inside the
+shell would be a claim this app no longer has a page to back."* `page-title.spec.ts`
+holds the list and fails if a route is added without a title. This is the kind of
+absence that reads as an oversight and is not one. **Confidence: high.**
+
+---
+
+# Requirements matrix
+
+Every requirement #134 inherits from #127, plus #134's own acceptance criteria,
+plus the eight deferred items the brief named. **Verified against the code as it
+stands**, not against the state of any checkbox.
+
+## #127 requirements, as #134 restates them
+
+| # | Requirement | Status | Where |
+|---|---|---|---|
+| 1 | Adopt panel-tint and semantic tokens; remove `color-mix` where a token exists | **partly met** — named sites migrated, two unnamed sites remain | X-02 |
+| 2 | Inspect feature code for stray hardcoded colours | **satisfied** | X-07 below |
+| 3 | Verify the rail against the revised dark palette | **satisfied** | X-07 below |
+| 4 | Re-diff every artboard against its implementation | **done**, 22 artboards | matrix below |
+| 5 | `WorkspacePane` meaningfully mounted for Explore and Saved | **satisfied** | E-02 |
+| 6 | Reconcile Saved organized / unorganized behaviour | **product decision required** | S-01 |
+| 7 | Reconcile the landing → Explore transition | **satisfied** | L-02 |
+| 8 | Reconcile the inaccurate side-by-side course copy | **satisfied** | L-01 |
+| 9 | Reconcile compact Collection chip layout | **satisfied** — revision closed it | C-02 |
+| 10 | Destructive Collection deletion confirms before mutation | **not met; conflicts with the artboard** | C-01 |
+| 11 | Correct stale warning-token documentation | **satisfied** | X-07 below |
+| 12 | Preserve Collection terminology; no "comparison" | **satisfied**, held by 5 guard tests | C-06 |
+| 13 | Keep schema/server expansion out; render only real data | **satisfied** | E-01, M-04, M-06, CC-03 |
+
+### X-07 — items 2, 3 and 11, grouped because each is a one-line answer
+
+**Item 2 — stray hardcoded colours in `features/`.** I grepped every `.ts`/`.tsx`
+under `features/`, `components/` and `app/` for `#rrggbb` literals. Every hit is
+either **inside a comment** (quoting the artboard's hex while naming the token
+that replaces it — `collection-chip.tsx`, `collection-tile.tsx`,
+`course-card.tsx`, `feedback-form.tsx`, `rail.tsx`, `pane-parts.tsx`,
+`neighbourhood-view.ts`, `explore.tsx`) or in
+`features/reviews/lib/examination-palette.ts`, which is a **deliberate**
+design-data constant — the artboard's own `EXAMINATION_COLORS` table plus the
+sixth colour #68 authorised, and `course-card-sample.ts` sets the precedent for
+holding design data as literals. The one hit in `components/ui/chart.tsx` is a
+vendored shadcn recharts selector (`[stroke='#ccc']`), not a colour choice.
+**No stray hardcoded colour in shipped feature styling. Satisfied.**
+
+**Item 3 — the rail against the revised dark palette.** `rail.tsx:22-38` records
+that `--cc-rail` changed meaning (its comment went from "brand blue in both
+themes" to "darkens with the theme", and dark moved `#1751a6` → `#0d2e5e`), that
+#85 was told the opposite, and that #127 §2 corrects it. It inherits the new
+value from the token and the file states why the darker rail still reads
+correctly against the revised `--cc-pg` `#071831`. **Satisfied**, and the
+comment is accurate — I checked both values against `globals.css`.
+
+**Item 11 — stale `--cc-warn-*` documentation.** #127 §4 says the comment calls
+it *"the nudge to write a review"* while #88 showed the actual nudge uses
+`--cc-btn` on `--cc-surface`. It has been corrected, and the correction
+propagated: `feedback-form.tsx:214-218` records that the error line used to
+borrow `--cc-warn-ink` and that *"`--cc-warn-*` turns out to mean the review
+draft rather than anything that failed"*, and `workspace-pane.tsx:29-34` uses
+`--cc-warn-ink` as the tab accent for a review being written — which is the
+meaning the corrected comment asserts. **Satisfied.**
+
+## #134's own acceptance criteria
+
+| Criterion | Status | Where |
+|---|---|---|
+| Every applicable mobile action has the same meaningful outcome as desktop | **one gap** | E-05 |
+| Explore mobile workspace uses the same API-backed panels and actions | **satisfied at the data layer**; tab switching is the exception | E-05 |
+| Saved, Collections, Taken, My Page responsive controls verified not assumed | **done** — inventories per route | routes 3-6 |
+| Every actionable #127 requirement closed or represented by a follow-up | **done** | this matrix + follow-ups |
+| Drawer navigation and route titles accessible at supported breakpoints | **satisfied** | N-01 |
+| No production mock data restored | **satisfied** | CC-03 |
+| Quality, tests, typecheck, formatting pass | **satisfied** — unchanged from baseline | Gates |
+| PR based on the latest confirmed `feat/frontend` | **satisfied** — `1e09ea5` | header |
+| Greptile 5/5, zero unresolved threads | pending the loop | PR |
+
+## The eight deferred items from waves 1 and 2
+
+| # | Item | Verdict | Where |
+|---|---|---|---|
+| 1 | Hero canvas does not repaint on DPR change | **still open** | L-07 |
+| 2 | `components/blocks/editor-00/**` orphaned | **still open**, confirmed by full-repo grep | X-04 |
+| 3 | Pane's dragged width not persisted | **still open** | X-03 |
+| 4 | Stale `docs/design/` citations | **closed** — zero hits; one line number moved | X-01, C-03 |
+| 5 | `CollectionDetail` pins geometry while Saved ramps | **still open, and worse than recorded** | C-04, C-05 |
+| 6 | Reviews barrel drags a CSS pipeline into the `logic` project | **still open, mitigated at one call site** | R-03 |
+| 7 | `notCreating` unread; `onReview` optional but unconditional | **both still open** | CC-01, CC-02 |
+| 8 | Suspense tripwire on the morph | **latent, not active** | L-08 |
+
+## The three named bug patterns
+
+| Pattern | Verdict |
+|---|---|
+| Unbounded render loops (`router` / `setParams` in deps) | **none found.** Four candidate effects, all guarded, all with comments naming the OOM crash — L-04 |
+| Strict Mode double-mount over a ref-guarded destructive read | **none found.** The two such reads are both correct, for two different reasons — L-03 |
+| Non-idempotent `openCourse` | **still present**, now S4 because every consumer guards its own call site — E-07 |
+
+## Artboard coverage
+
+All 22 files in `docs/design_ref_new/` were opened.
+
+| Artboard | Implementation | Verdict |
+|---|---|---|
+| Landing | `features/landing/` | L-01 (authorised copy deviation), L-06 |
+| Explore | `features/search/` | E-01, E-03 |
+| Saved | `features/saved/` | S-01 |
+| Saved copy | — | **an earlier variant, not a duplicate** — see X-08 |
+| Collections | `features/collections/` | C-01, C-02, C-03 |
+| Taken Courses | `features/taken/` + `Reviewer` | T-01 satisfied |
+| My Page | `features/my-page/` | M-01, M-02, M-04 |
+| Workspace Pane | `features/workspace/` | E-07; **the thinnest diff in this audit** |
+| Course Card | `features/courses/` | CC-01, CC-02, CC-03 |
+| Review Card | `features/reviews/review-card.tsx` | R-02 satisfied |
+| Review Card Options | same | satisfied |
+| Unreviewed Card | `unreviewed-card.tsx` | M-02 |
+| Unreviewed Card Options | same | satisfied |
+| Page Header | `features/shell/page-header.tsx` | N-01 satisfied — the whole artboard |
+| Mobile Preview | shell drawer + sheet host | E-05, E-06, N-01 |
+| About | `features/about/` | X-05 satisfied |
+| Contact Form | `features/feedback/` | satisfied; adjacent to X-02 |
+| Design System | tokens in `globals.css` | X-02, X-07 |
+| Design System copy | — | **an earlier variant** — see X-08 |
+| `cc-theme.css` | `app/globals.css` | tint families verified token-for-token for X-02; no value drift found |
+| `cc-store.js` | — | reference data (`EXAMINATION_KEYS`, `TIER_AXES`) — R-05, M-04 |
+| `support.js`, `ios-frame.jsx`, `assets/` | — | artboard scaffolding, nothing to implement |
+
+### X-08 — the two "copy" artboards are earlier variants, not duplicates — **satisfied, and one of them is evidence**
+
+**Confidence: high.** I nearly recorded both as duplicates on the strength of
+their names and equal line counts. They are not; I diffed them.
+
+**`Saved copy.dc.html` differs from `Saved.dc.html` in exactly one thing: the
+scroll model.** Ten changed lines, all of it:
+
+| | `Saved.dc.html` (primary) | `Saved copy.dc.html` |
+|---|---|---|
+| page column | `overflow:hidden` | `overflow-y:auto; overflow-x:hidden` |
+| content wrapper | `flex:1; min-height:0` | no flex sizing |
+| results column | `class="cc-pane-scroll"` + `overflow-y:auto` | `overflow-y:auto`, **no class** |
+| helmet | defines `.cc-pane-scroll { scrollbar-width:none }` | rule absent |
+
+So the copy is a variant in which **the page scrolls and the results column
+keeps a default scrollbar**, and the primary is the one in which the page does
+not scroll and the results column scrolls with its bar hidden.
+
+**The implementation follows the primary, precisely.** `saved.tsx:229-236` is
+`PageColumn className="h-full min-h-0 overflow-hidden"` with the results div
+`scrollbar-hidden … overflow-y-auto`. `scrollbar-hidden` is this codebase's
+`cc-pane-scroll`, and `globals.css` calls hiding the bar "the deliberate
+exception, and the only one" for exactly the surfaces that carry their own
+scroll affordance. **This is independent confirmation of N-02**: the hidden
+scrollbar on Saved's and Explore's results columns is not a shortcut, it is the
+artboard's own choice, and the rejected alternative is sitting in the folder
+next to it.
+
+**`Design System copy.dc.html` is the older of that pair** — 81 diff lines, and
+the primary is strictly richer: it adds the whole **"Status tints"**, **"Status
+banners"** and **"Checked state"** sections that the copy lacks, plus a
+different wordmark treatment. Those added sections are the `TINTS`, `BANNERS`
+and `--checkedTint` documentation, which is to say: *the sections that exist
+precisely because the tint families were added in the revision*. That is the
+evidence X-02 rests on, and it only exists in the primary.
+
+**A note for whoever maintains the mirror:** neither "copy" is marked as
+superseded, and both are plausible things for an agent to read first. Naming
+them, or removing them, would prevent the mistake I nearly made. Recorded as an
+observation, not filed — the folder is the product owner's mirror and outside
+what I may change.
+
+---
+
+# Product decisions escalated
+
+Five, in the order I would take them.
+
+1. **C-01 — collection deletion is irreversible.** A #127 requirement says
+   confirm before mutating; the artboard deletes on the click and the code
+   matches the artboard. Recommend keeping the artboard's flow and adding
+   **Undo** to the note that already appears, which is expressible in today's
+   contracts. **This is the only S1 in the ledger.**
+2. **S-01 — Saved's unorganized / all-organized split.** Unresolved since #127
+   §4. Three shapes offered; the artboard now supplies the "Every saved course
+   is in a collection" panel that #90's objection lacked.
+3. **M-01 — `/taken?review=1` cannot name a course.** Needs a route-contract
+   choice (`?review=<CODE>` versus `?review=1&start=<CODE>`) before the defect
+   can be fixed.
+4. **M-04 — tiers 2 and 3.** The revised design contradicts itself; the schema
+   is silent. Cannot be resolved by matching the artboard.
+5. **E-05 — one mobile sheet or a stack.** The artboard draws a stack; the code
+   draws one sheet. The Mobile Preview artboard labels itself a draft concept,
+   so its authority is weaker and the simplification may be intentional.
+
+---
+
+# Where this audit is thin
+
+Stated plainly, because a ledger that does not say what it did not check cannot
+be trusted about what it did.
+
+- **Nothing was run in a browser.** Every responsive, visual and animation
+  finding is read off class names, container queries and computed colour values,
+  not observed. L-02's *feel*, E-05's stack, C-04's clipping and X-02's hue
+  difference are all reasoned rather than seen. Confidence ratings reflect this.
+- **No screen reader, and no real device.** The accessibility findings
+  (`aria-live` mounting, the roving tablist, the WCAG 2.5.3 name/label match)
+  are code-level reviews of the right patterns being present. Whether they
+  *announce* correctly is unverified.
+- **`server/**` was not audited**, per scope. So client/server contract
+  mismatches would only surface where the client already documents them. I found
+  none that the client had not already recorded — but I was not looking from the
+  server side, and #134's own pre-audit comment about graph account placement
+  (`joinCommunityGraphOnSignUp`, self-repair on first read) is a server-side
+  claim I verified only the client half of.
+- **The `logic`/`ui`/`server` vitest split was not stress-tested.** R-03 is a
+  latent import-weight problem; I verified the seam holds today by grepping, not
+  by adding a test that would fail if it broke.
+- **Coverage is breadth-first by instruction.** Ten routes in one pass means
+  each got roughly an hour. The workspace pane's `ReviewDraftPanel` (~750 lines)
+  and `CourseDetailsPanel` (~400 lines) were read for wiring, states and the
+  named bug patterns, but **not diffed property-by-property** against
+  `Course Community - Workspace Pane.dc.html`, which is the largest artboard with
+  the second-largest revision (62 changed lines, 34 involving tokens). If one
+  place is hiding a divergence I did not find, it is there.
+- **I did not recompute the `seminars` contrast ratio** (R-04); I recorded the
+  4.98:1 the source claims.
+- **Test quality was not audited.** 843 tests pass, and I did not ask whether
+  they assert the right things. Several findings here (CC-01, CC-02, X-03) sit in
+  code with tests around it, which means the tests are not asserting these
+  properties.
