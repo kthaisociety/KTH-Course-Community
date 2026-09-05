@@ -28,6 +28,11 @@ import type { TranscriptProposal } from "@/server/ingest/transcript/service";
 import { useTakenMutations } from "../api/mutations";
 import { uploadTranscript } from "../api/transcript";
 import {
+  parseReviewDeepLink,
+  type ReviewDeepLink,
+  reviewQueue,
+} from "../lib/review-deep-link";
+import {
   lastTranscriptImport,
   planTranscriptImport,
   type TakenEdits,
@@ -36,6 +41,7 @@ import {
   toTakenRows,
 } from "../lib/taken-rows";
 import { AddTakenCourseDialog } from "./add-taken-course-dialog";
+import { RemoveTakenCourseDialog } from "./remove-taken-course-dialog";
 import { TAKEN_GRID, TakenCourseRow } from "./taken-course-row";
 import { TranscriptDropZone } from "./transcript-drop-zone";
 import { TranscriptProposalReview } from "./transcript-proposal";
@@ -142,9 +148,15 @@ function importedSummary(added: number, filled: number): string {
  * save-error row and the done screen. It is presentation only: it maps a card
  * onto `ReviewFormData` and hands it to `useAddReview`, which is the same hook
  * the workspace pane and the review dialog write through and the one place
- * `reviewFormSchema` runs. `?review=1` opens it on arrival — that is My Page's
- * deep link — and the parameter is taken back out so a reload does not replay
- * it.
+ * `reviewFormSchema` runs. `?review=…` opens it on arrival — that is My Page's
+ * deep link, and it carries the course a row named — and the parameter is taken
+ * back out so a reload does not replay it.
+ *
+ * **Removing a row confirms first.** The artboard confirms after, with an
+ * undoable note; #155 settled that destructive actions confirm before, and a
+ * taken course is the most destructive of the three because everything on the
+ * row is self-reported and exists nowhere else. The note and its Undo stay: the
+ * dialog is about the wrong row, the note is about the right one.
  */
 export function TakenCourses() {
   useRequireSession();
@@ -199,6 +211,13 @@ export function TakenCourses() {
   const [banner, setBanner] = useState<string | null>(null);
   const [isConfirming, setIsConfirming] = useState(false);
   /**
+   * The row whose removal is waiting to be confirmed, or `null`. It is the
+   * whole row rather than a code because the dialog names the course and says
+   * which of the two removals this is — a hand-entered row can be put straight
+   * back, an imported one cannot.
+   */
+  const [pendingRemove, setPendingRemove] = useState<TakenRow | null>(null);
+  /**
    * The round on screen, or `null` when the list is. `restored` is the stored
    * progress and unsaved answers when the round is one this tab was already in
    * the middle of.
@@ -214,7 +233,8 @@ export function TakenCourses() {
    * queue is still true.
    */
   const [pendingOpen, setPendingOpen] = useState<{
-    deepLinked: boolean;
+    /** What `?review=…` asked for, or `null` when the URL asked for nothing. */
+    deepLink: ReviewDeepLink | null;
     session: ReviewerSession | null;
   } | null>(null);
   /** Whether the arrival below has already been read. See why it must be. */
@@ -225,8 +245,15 @@ export function TakenCourses() {
 
   /**
    * How the reviewer gets opened without a click: My Page's prompt deep-links
-   * `/taken?review=1`, and a round this tab was in the middle of survives a
+   * `/taken?review=…`, and a round this tab was in the middle of survives a
    * reload.
+   *
+   * **The parameter carries a course.** `?review=<CODE>` starts the round on
+   * that course with the rest dealt behind it, which is what a row on My Page's
+   * prompt means and what it could not say while the parameter was the bare
+   * flag `1` (#157). `1` still means what it always did — open the reviewer, on
+   * no particular course — so links already in the wild keep working;
+   * `parseReviewDeepLink` is the whole contract.
    *
    * The query parameter is read from `window.location` rather than through
    * `useSearchParams`, which would need a `Suspense` boundary around this
@@ -247,16 +274,11 @@ export function TakenCourses() {
     if (hasReadArrival.current) return;
     hasReadArrival.current = true;
 
-    let asked = false;
-    try {
-      asked = new URLSearchParams(window.location.search).get("review") === "1";
-    } catch {
-      asked = false;
-    }
-    if (asked) router.replace("/taken");
+    const deepLink = parseReviewDeepLink(window.location.search);
+    if (deepLink !== null) router.replace("/taken");
 
     const session = readReviewerSession();
-    if (asked || session) setPendingOpen({ deepLinked: asked, session });
+    if (deepLink !== null || session) setPendingOpen({ deepLink, session });
   }, [router]);
 
   /**
@@ -321,8 +343,15 @@ export function TakenCourses() {
       clearReviewerSession();
     }
 
-    if (pendingOpen.deepLinked && stillUnreviewed.length > 0) {
-      setRound({ queue: stillUnreviewed, restored: null });
+    const deepLink = pendingOpen.deepLink;
+    if (deepLink !== null && stillUnreviewed.length > 0) {
+      // A course the link named that is no longer unreviewed is dropped by
+      // `reviewQueue`, and the round opens on the rest — the same quiet
+      // degrading the link already did when nothing at all was unreviewed.
+      setRound({
+        queue: reviewQueue(stillUnreviewed, deepLink.startCode),
+        restored: null,
+      });
     }
   }, [pendingOpen, reviewsKnown, unreviewedKey]);
 
@@ -333,11 +362,10 @@ export function TakenCourses() {
    * course is exactly who is most likely to review a second.
    */
   function openReviewer(startCode?: string) {
-    const codes = unreviewed.map((course) => course.courseCode);
-    const queue =
-      startCode === undefined
-        ? codes
-        : [startCode, ...codes.filter((code) => code !== startCode)];
+    const queue = reviewQueue(
+      unreviewed.map((course) => course.courseCode),
+      startCode ?? null,
+    );
     if (queue.length === 0) return;
     // A new round replaces whatever the tab was holding, drafts included.
     clearReviewerSession();
@@ -489,6 +517,19 @@ export function TakenCourses() {
     }
   }
 
+  /**
+   * Removes a row the reader has confirmed removing.
+   *
+   * The confirmation is not decoration. `CONTEXT.md` holds taken courses to be
+   * **self-reported**: the grade, credits, year and periods on this row exist
+   * nowhere but here, and the only cheap way back is reading a transcript
+   * again — which cannot restore a hand-entered course at all. The artboard
+   * confirms *after*, with a note; the product owner settled on confirming
+   * before for every destructive action, and this is one of them (#155).
+   *
+   * The note stays anyway. Confirming before is about not removing the wrong
+   * row; Undo is about the row it was right to remove and wrong to lose.
+   */
   function removeCourse(row: TakenRow) {
     remove
       .mutateAsync({ courseCode: row.courseCode })
@@ -649,7 +690,7 @@ export function TakenCourses() {
             <UnreviewedCard
               courses={unreviewed.map((course) => ({
                 code: course.courseCode,
-                name: names.get(course.courseCode),
+                name: course.name,
               }))}
               line={
                 unreviewed.length === 1
@@ -695,7 +736,7 @@ export function TakenCourses() {
                 }
                 isBusy={isBusy}
                 onSave={(edits) => saveEdits(row, edits)}
-                onRemove={() => removeCourse(row)}
+                onRemove={() => setPendingRemove(row)}
               />
             ))}
           </div>
@@ -722,6 +763,22 @@ export function TakenCourses() {
         onClose={() => setAddOpen(false)}
         onAdd={addCourse}
       />
+
+      {/*
+        Mounted only while a row is pending, so the confirmation can name the
+        course it is about rather than holding a dialog open over nothing.
+      */}
+      {pendingRemove ? (
+        <RemoveTakenCourseDialog
+          row={pendingRemove}
+          onCancel={() => setPendingRemove(null)}
+          onConfirm={() => {
+            const row = pendingRemove;
+            setPendingRemove(null);
+            removeCourse(row);
+          }}
+        />
+      ) : null}
 
       <Dialog open={updateOpen} onOpenChange={setUpdateOpen}>
         <DialogContent

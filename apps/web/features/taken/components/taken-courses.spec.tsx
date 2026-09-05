@@ -1,6 +1,8 @@
 import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { StrictMode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { UnreviewedTakenCourse } from "@/features/reviews/api/queries";
 import type { TranscriptProposal } from "@/server/ingest/transcript/service";
 import type { TakenCourse } from "../lib/taken-rows";
 import { TakenCourses } from "./taken-courses";
@@ -13,7 +15,11 @@ const refetchTaken =
   >();
 const unreviewed =
   vi.fn<
-    () => { courses: TakenCourse[]; isLoading: boolean; isUnavailable: boolean }
+    () => {
+      courses: UnreviewedTakenCourse[];
+      isLoading: boolean;
+      isUnavailable: boolean;
+    }
   >();
 const searchResults =
   vi.fn<
@@ -143,6 +149,18 @@ function takenCourse(overrides: Partial<TakenCourse> = {}): TakenCourse {
   };
 }
 
+/**
+ * One unreviewed course as the hook now hands it over: the taken row plus the
+ * catalogue title. The lookup moved into `useUnreviewedTakenCourses` so neither
+ * host has to remember it, and My Page was the host that forgot (#157).
+ */
+function unreviewedCourse(
+  overrides: Partial<TakenCourse> = {},
+): UnreviewedTakenCourse {
+  const course = takenCourse(overrides);
+  return { ...course, name: CATALOGUE[course.courseCode]?.titleEng ?? null };
+}
+
 function proposal(
   overrides: Partial<TranscriptProposal> = {},
 ): TranscriptProposal {
@@ -212,7 +230,7 @@ describe("the list", () => {
 
   it("says a course is not reviewed only once the review lists have arrived", () => {
     unreviewed.mockReturnValue({
-      courses: [takenCourse()],
+      courses: [unreviewedCourse()],
       isLoading: false,
       isUnavailable: false,
     });
@@ -454,13 +472,64 @@ describe("adding by hand", () => {
   });
 });
 
+/**
+ * Everything on a taken row is self-reported — `CONTEXT.md` says so — and a
+ * transcript re-read is the only cheap way back, so the mutation waits behind a
+ * confirmation (#155). The artboard confirms after; the product owner settled
+ * on before for every destructive action.
+ */
 describe("removing", () => {
+  const askToRemove = (code = "DD1337") =>
+    userEvent.click(
+      screen.getByLabelText(`Remove ${code} from your taken courses`),
+    );
+  const confirmRemove = () =>
+    userEvent.click(screen.getByRole("button", { name: "Remove course" }));
+
+  it("asks before it removes anything", async () => {
+    render(<TakenCourses />);
+
+    await askToRemove();
+
+    expect(
+      screen.getByText("Remove DD1337 from your courses?"),
+    ).toBeInTheDocument();
+    expect(removeTaken).not.toHaveBeenCalled();
+  });
+
+  it("keeps the course when the reader backs out", async () => {
+    render(<TakenCourses />);
+
+    await askToRemove();
+    await userEvent.click(screen.getByRole("button", { name: "Keep course" }));
+
+    expect(
+      screen.queryByText("Remove DD1337 from your courses?"),
+    ).not.toBeInTheDocument();
+    expect(removeTaken).not.toHaveBeenCalled();
+  });
+
+  /**
+   * The row came from a transcript, so the note that follows offers no Undo —
+   * the dialog is where that has to be said, before the click rather than by
+   * the reader noticing an absent button afterwards.
+   */
+  it("says an imported row cannot be put back in a tap", async () => {
+    takenList.mockReturnValue([
+      takenCourse({ transcriptImportedAt: "2026-08-24T09:00:00.000Z" }),
+    ]);
+    render(<TakenCourses />);
+
+    await askToRemove();
+
+    expect(screen.getByText(/read from a transcript/i)).toBeInTheDocument();
+  });
+
   it("removes the course and nothing else", async () => {
     render(<TakenCourses />);
 
-    await userEvent.click(
-      screen.getByLabelText("Remove DD1337 from your taken courses"),
-    );
+    await askToRemove();
+    await confirmRemove();
 
     expect(removeTaken).toHaveBeenCalledWith({ courseCode: "DD1337" });
     expect(updateTaken).not.toHaveBeenCalled();
@@ -468,9 +537,8 @@ describe("removing", () => {
 
   it("puts a hand-entered row back exactly as it was, periods included", async () => {
     render(<TakenCourses />);
-    await userEvent.click(
-      screen.getByLabelText("Remove DD1337 from your taken courses"),
-    );
+    await askToRemove();
+    await confirmRemove();
 
     await waitFor(() => expect(toastSuccess).toHaveBeenCalled());
     const [, options] = toastSuccess.mock.calls[0];
@@ -490,9 +558,8 @@ describe("removing", () => {
       takenCourse({ transcriptImportedAt: "2026-08-24T09:00:00.000Z" }),
     ]);
     render(<TakenCourses />);
-    await userEvent.click(
-      screen.getByLabelText("Remove DD1337 from your taken courses"),
-    );
+    await askToRemove();
+    await confirmRemove();
 
     await waitFor(() => expect(toastSuccess).toHaveBeenCalled());
     expect(toastSuccess.mock.calls[0][1].action).toBeUndefined();
@@ -749,7 +816,7 @@ describe("reading a transcript", () => {
 describe("the fast-track reviewer", () => {
   const bothUnreviewed = () =>
     unreviewed.mockReturnValue({
-      courses: [takenCourse(), takenCourse({ courseCode: "DD2380" })],
+      courses: [unreviewedCourse(), unreviewedCourse({ courseCode: "DD2380" })],
       isLoading: false,
       isUnavailable: false,
     });
@@ -845,7 +912,7 @@ describe("a round a reload interrupted", () => {
       takenCourse({ courseCode: "DD2380" }),
     ]);
     unreviewed.mockReturnValue({
-      courses: [takenCourse(), takenCourse({ courseCode: "DD2380" })],
+      courses: [unreviewedCourse(), unreviewedCourse({ courseCode: "DD2380" })],
       isLoading: false,
       isUnavailable: false,
     });
@@ -872,7 +939,7 @@ describe("a round a reload interrupted", () => {
       takenCourse({ courseCode: "DD2380" }),
     ]);
     unreviewed.mockReturnValue({
-      courses: [takenCourse()],
+      courses: [unreviewedCourse()],
       isLoading: false,
       isUnavailable: false,
     });
@@ -896,7 +963,7 @@ describe("a round a reload interrupted", () => {
       takenCourse({ courseCode: "DD2380" }),
     ]);
     unreviewed.mockReturnValue({
-      courses: [takenCourse()],
+      courses: [unreviewedCourse()],
       isLoading: false,
       isUnavailable: false,
     });
@@ -913,7 +980,7 @@ describe("a round a reload interrupted", () => {
     both();
     storeRound(["DD1337", "DD2380"], { DD1337: "saved" });
     unreviewed.mockReturnValue({
-      courses: [takenCourse({ courseCode: "DD2380" })],
+      courses: [unreviewedCourse({ courseCode: "DD2380" })],
       isLoading: false,
       isUnavailable: false,
     });
@@ -935,7 +1002,7 @@ describe("a round a reload interrupted", () => {
       takenCourse({ courseCode: "DD2380" }),
     ]);
     unreviewed.mockReturnValue({
-      courses: [takenCourse()],
+      courses: [unreviewedCourse()],
       isLoading: false,
       isUnavailable: false,
     });
@@ -994,11 +1061,18 @@ describe("a round a reload interrupted", () => {
   });
 });
 
-describe("arriving with ?review=1", () => {
+describe("arriving with ?review=…", () => {
+  const both = () =>
+    unreviewed.mockReturnValue({
+      courses: [unreviewedCourse(), unreviewedCourse({ courseCode: "DD2380" })],
+      isLoading: false,
+      isUnavailable: false,
+    });
+
   it("opens the reviewer and takes the parameter back out of the URL", async () => {
     window.history.replaceState({}, "", "/taken?review=1");
     unreviewed.mockReturnValue({
-      courses: [takenCourse()],
+      courses: [unreviewedCourse()],
       isLoading: false,
       isUnavailable: false,
     });
@@ -1026,5 +1100,63 @@ describe("arriving with ?review=1", () => {
 
     await waitFor(() => expect(routerReplace).toHaveBeenCalledWith("/taken"));
     expect(screen.queryByTestId("reviewer")).not.toBeInTheDocument();
+  });
+
+  /**
+   * The defect this contract was widened for (#157): a row on My Page's prompt
+   * names a course, and the round has to start on it rather than on whatever
+   * the unreviewed set happens to list first.
+   */
+  it("starts on the course the link names, with the rest dealt behind it", async () => {
+    both();
+    window.history.replaceState({}, "", "/taken?review=DD2380");
+    render(<TakenCourses />);
+
+    await waitFor(() =>
+      expect(screen.getByTestId("reviewer")).toHaveTextContent(
+        "Reviewing DD2380, DD1337",
+      ),
+    );
+    expect(routerReplace).toHaveBeenCalledWith("/taken");
+  });
+
+  /** Reviewed elsewhere since, or never taken: there is no card to deal for it. */
+  it("deals the rest when the named course is no longer unreviewed", async () => {
+    unreviewed.mockReturnValue({
+      courses: [unreviewedCourse()],
+      isLoading: false,
+      isUnavailable: false,
+    });
+    window.history.replaceState({}, "", "/taken?review=SF1625");
+    render(<TakenCourses />);
+
+    await waitFor(() =>
+      expect(screen.getByTestId("reviewer")).toHaveTextContent(
+        "Reviewing DD1337",
+      ),
+    );
+  });
+
+  /**
+   * The parameter is a moment, not a value. It is read once, replaced out of
+   * the URL, and never read again — so a second pass over the arrival effect,
+   * which is exactly what Strict Mode's mount replay is, must not open a second
+   * round or replace a second time.
+   */
+  it("reads the arrival once under Strict Mode's mount replay", async () => {
+    both();
+    window.history.replaceState({}, "", "/taken?review=DD2380");
+    render(
+      <StrictMode>
+        <TakenCourses />
+      </StrictMode>,
+    );
+
+    await waitFor(() =>
+      expect(screen.getByTestId("reviewer")).toHaveTextContent(
+        "Reviewing DD2380, DD1337",
+      ),
+    );
+    expect(routerReplace).toHaveBeenCalledTimes(1);
   });
 });

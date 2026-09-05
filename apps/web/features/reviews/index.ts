@@ -13,6 +13,7 @@
 
 export {
   type TakenCourse,
+  type UnreviewedTakenCourse,
   useReviewList,
   useUnreviewedTakenCourses,
 } from "./api/queries";
