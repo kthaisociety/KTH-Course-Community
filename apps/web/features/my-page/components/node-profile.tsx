@@ -1,7 +1,11 @@
 "use client";
 
 import { Lock } from "lucide-react";
-import { NODE_COLOR_VARS, type NodeColorName } from "@/features/landing";
+import {
+  DEFAULT_NODE_COLOR_VAR,
+  NODE_COLOR_VARS,
+  type NodeColorName,
+} from "@/features/landing";
 import { personalizationTierRows } from "../lib/personalization-tiers";
 
 /** The six stored colour names, in the order `server/graph/placement.ts` lists them. */
@@ -21,23 +25,27 @@ type Props = {
 /**
  * How far the viewer has unlocked their **node profile** — a node's appearance,
  * stored separately from graph topology. This is the tab the artboard labels
- * "My dot" (`docs/design/Course Community - My Page.dc.html`, its `isDot`
- * branch); `CONTEXT.md` licenses "dot" for the **Find your dot** flow's copy
- * alone, so the label stays and the identifiers say what the glossary says.
+ * "My dot" (`docs/design_ref_new/Course Community - My Page.dc.html`, its
+ * `isDot` branch); `CONTEXT.md` licenses "dot" for the **Find your dot** flow's
+ * copy alone, so the label stays and the identifiers say what the glossary says.
  *
- * **Nothing here is choosable, and that is the schema's decision.** The
+ * **Nothing here is choosable, and nobody has been given anything.** The
  * artboard renders each unlocked tier as a row of pickable options and writes
  * the choice back. There is no procedure that writes `users_node_profiles`:
- * `graph` exposes `join`, `neighbourhood` and `effectiveTier`, and placement
- * picks a colour for a joining node deterministically. So the palette is shown
- * as what the six colours are, not as six buttons that would silently do
- * nothing. Two of the three axes could not offer a choice regardless —
- * `node_style` and `node_signal_style` are Postgres enums with exactly one
- * value each.
+ * `graph` exposes `join`, `neighbourhood`, `publicWindow` and `effectiveTier`,
+ * and placement stores the column default. Nothing raises
+ * `users.personalization_tier_earned` either, so every account is at tier 0 and
+ * all three rows read as locked. The palette is therefore shown as what the
+ * colours *are*, not as buttons that would silently do nothing. Two of the
+ * three axes could not offer a choice regardless — `node_style` and
+ * `node_signal_style` are Postgres enums with exactly one value each.
  *
  * The colours are drawn from `--cc-node-*`, mapped from the stored **names**
  * through the same table the landing page's canvas uses. The server stores a
- * name and never a hex; `cc-store.js` inverts that and is wrong.
+ * name and never a hex; `cc-store.js` inverts that — its `NODE_COLORS` is five
+ * hex strings — and is wrong about the shape. It is right about the state,
+ * though: "Tier 0 accounts keep the default look; only personalized nodes carry
+ * a row", which is every account today.
  */
 export function NodeProfile({ effectiveTier, isUnavailable }: Props) {
   const rows = personalizationTierRows(effectiveTier ?? 0);
@@ -112,28 +120,54 @@ export function NodeProfile({ effectiveTier, isUnavailable }: Props) {
   );
 }
 
-/** The six node colours, named and swatched. Shown, not offered. */
+/**
+ * The node colours, named and swatched. Shown, not offered.
+ *
+ * The default leads the row because it is the colour of every node in the
+ * community: `users_node_profiles.color` defaults to `"default"`, placement
+ * stores exactly that, and the landing canvas draws it in `--cc-brand`. The
+ * artboard's own list opens on the same brand blue.
+ *
+ * This used to say a colour was assigned on joining, which was true of the code
+ * and wrong of the product — placement hashed each app user onto one of the six
+ * and gave everybody a colour nobody chose. It no longer does, so the row below
+ * says what is actually the case.
+ */
 function NodePalette() {
+  const swatches = [
+    { name: "default", variable: DEFAULT_NODE_COLOR_VAR, isDefault: true },
+    ...NODE_COLOR_NAMES.map((name) => ({
+      name,
+      variable: NODE_COLOR_VARS[name],
+      isDefault: false,
+    })),
+  ];
+
   return (
     <div className="mt-3 ml-[25px]">
       <ul className="m-0 flex list-none flex-wrap gap-2 p-0">
-        {NODE_COLOR_NAMES.map((name) => (
+        {swatches.map((swatch) => (
           <li
-            key={name}
-            className="flex h-9 items-center gap-2 rounded-[9px] border border-cc-rule3 bg-cc-surface px-[13px] text-[13px] text-cc-ink capitalize"
+            key={swatch.name}
+            className={`flex h-9 items-center gap-2 rounded-[9px] border bg-cc-surface px-[13px] text-[13px] capitalize ${
+              swatch.isDefault
+                ? "border-cc-brand font-semibold text-cc-brand"
+                : "border-cc-rule3 text-cc-ink"
+            }`}
           >
             <span
               aria-hidden
               className="size-[13px] flex-none rounded-full"
-              style={{ background: `var(${NODE_COLOR_VARS[name]})` }}
+              style={{ background: `var(${swatch.variable})` }}
             />
-            {name}
+            {swatch.name}
           </li>
         ))}
       </ul>
       <p className="m-0 mt-2 text-[12px] text-cc-dim2">
-        Your colour is assigned when you join the network. Choosing one is not
-        available yet.
+        Every node is the default colour. The other six are the palette
+        personalisation will use — nobody is assigned one, and choosing one is
+        not available yet.
       </p>
     </div>
   );

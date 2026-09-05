@@ -1,31 +1,32 @@
 import { describe, expect, it } from "vitest";
+import * as placement from "./placement";
 import {
   chooseAnchorCount,
   computeWorldPosition,
+  DEFAULT_NODE_COLOR,
   MAX_ANCHORS,
   MIN_ANCHORS,
   NODE_COLORS,
-  pickNodeColor,
 } from "./placement";
 
 const ids = Array.from({ length: 300 }, (_, i) => `user-${i}`);
 const radiusOf = (p: { x: number; y: number }) => Math.hypot(p.x, p.y);
 
-describe("pickNodeColor", () => {
-  it("gives the same app user the same colour every time", () => {
-    expect(pickNodeColor("user-42")).toBe(pickNodeColor("user-42"));
+describe("the node colour palette", () => {
+  // The six names are what personalisation will hand out once it has a writer.
+  // Nothing hands them out today, and placement must not quietly start again:
+  // hashing an app user onto one of them gave everybody a colour nobody chose.
+  it("offers nothing that turns an app user into a colour", () => {
+    expect(placement).not.toHaveProperty("pickNodeColor");
+    const callable = Object.entries(placement)
+      .filter(([, value]) => typeof value === "function")
+      .map(([name]) => name);
+    expect(callable).toEqual(["chooseAnchorCount", "computeWorldPosition"]);
   });
 
-  it("only ever picks a name from the palette", () => {
-    for (const id of ids) {
-      expect(NODE_COLORS).toContain(pickNodeColor(id));
-    }
-  });
-
-  it("uses the whole palette across a community", () => {
-    const used = new Set(ids.map(pickNodeColor));
-
-    expect(used.size).toBe(NODE_COLORS.length);
+  it("keeps the unconfigured default out of the palette — it is not a choice", () => {
+    expect(DEFAULT_NODE_COLOR).toBe("default");
+    expect(NODE_COLORS).not.toContain(DEFAULT_NODE_COLOR as never);
   });
 });
 

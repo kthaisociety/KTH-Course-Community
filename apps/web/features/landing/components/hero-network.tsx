@@ -1,80 +1,47 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import type { Neighbourhood } from "../api/queries";
-import {
-  buildField,
-  clearAt,
-  DRIFT_BOX,
-  envelope,
-  type Field,
-  type FieldEdge,
-  type FieldNode,
-  fallbackRects,
-  INSET,
-  lineClearance,
-  quadPoint,
-  type Rect,
-  SAFETY,
-} from "../lib/hero-field";
+import type { GraphWindow } from "../api/queries";
+import { fallbackRects, type Rect, SAFETY } from "../lib/hero-keepout";
 import {
   FALLBACK_NODE_COLOR_VAR,
-  type NeighbourhoodView,
+  type GraphWindowView,
   NODE_COLOR_VARS,
-  projectNeighbourhood,
+  NODE_RADIUS,
+  projectGraphWindow,
 } from "../lib/neighbourhood-view";
 
 /**
- * The network behind the hero copy.
+ * The network behind the hero copy: the **real community graph**, always.
  *
- * It draws one of two things, and the difference matters:
+ * It used to draw a synthetic Halton field of invented dots and cross-fade to
+ * the real graph only if a member asked for it. Both halves of that were wrong.
+ * An illustration of a community is not the community, and the community is not
+ * something a person should have to ask to see, so there is one thing on this
+ * canvas now — a bounded window on the stored graph:
  *
- * - **Ambient** — a decorative field of drifting dots. It is an illustration of
- *   a community, not the community: no dot carries an account, none is ever
- *   labelled, and nothing about it comes from the database.
- * - **Revealed** — the caller's real bounded neighbourhood, projected from the
- *   stored world positions. Their own node is marked "You".
+ * - a member sees their own neighbourhood, centred on their own node;
+ * - a visitor sees a window centred on the community origin, with no "You".
  *
- * The revealed graph is still: real world positions must not appear to wander,
- * and its lines carry no travelling signals because a **backbone edge records
- * placement history and is not a friendship** — animating a recommendation
- * along one would give it a social meaning the data does not have.
+ * **Find your dot** no longer swaps anything. The graph is already on screen;
+ * the flow only labels the viewer's own node, and the reveal is the pulse and
+ * the label appearing. Nothing else changes, which is also what the artboard
+ * does: "the graph never moves: the dot grows and pulses in place".
+ *
+ * The graph is still. Real world positions must not appear to wander, and no
+ * signal travels along a line, because a **backbone edge records placement
+ * history and is not a friendship** — animating a recommendation along one
+ * would give it a social meaning the data does not have. The only motion on
+ * this canvas is the pulse on the labelled node, so the frame loop runs only
+ * while that pulse is on screen and the scene is otherwise drawn once.
  *
  * Everything the projection derives — the scale, the centre, the screen
  * coordinates — is thrown away on the next resize. None of it is ever sent back.
  */
 
-/**
- * How many dots the ambient field draws inside the frame.
- *
- * A phone gets a much sparser field, as the design's own Mobile Preview does —
- * it embeds this page with `account-count="14"` against the desktop default.
- */
-const AMBIENT_COUNT = 50;
-const AMBIENT_COUNT_NARROW = 14;
-const NARROW_WIDTH = 500;
-
-function ambientCount(width: number) {
-  return width < NARROW_WIDTH ? AMBIENT_COUNT_NARROW : AMBIENT_COUNT;
-}
-
-type Signal = {
-  edge: FieldEdge;
-  from: FieldNode;
-  to: FieldNode;
-  ax: number;
-  ay: number;
-  bx: number;
-  by: number;
-  cx: number;
-  cy: number;
-  headX: number;
-  headY: number;
-  len: number;
-  p: number;
-  dur: number;
-  prominence: number;
-};
+/** `PAL.dotA` and `PAL.lineA` from the Landing artboard's palette. */
+const NODE_ALPHA = 0.82;
+const EDGE_ALPHA = 0.26;
 
 type Scene = {
   canvas: HTMLCanvasElement;
@@ -83,19 +50,21 @@ type Scene = {
   w: number;
   h: number;
   dpr: number;
-  rects: Rect[];
-  field: Field;
-  signals: Signal[];
-  spawnAt: number;
-  last: number;
   raf: number;
   reduced: boolean;
-  clearCursor: number;
-  /** 0 ambient, 1 the real graph — eased so the swap is not a jump cut. */
-  reveal: number;
+  /** Seconds the pulse has been running, and only ever while it is running. */
   pulse: number;
-  neighbourhood: Neighbourhood | null;
-  view: NeighbourhoodView | null;
+  last: number;
+  /** Find your dot has succeeded: the viewer's own node gets a label. */
+  labelled: boolean;
+  window: GraphWindow | null;
+  view: GraphWindowView | null;
+  /**
+   * Start and stop the pulse loop. They close over the frame callback, so the
+   * effect that builds it hands them back here for the props effects to use.
+   */
+  startPulse?: () => void;
+  stopPulse?: () => void;
 };
 
 /**
@@ -144,12 +113,11 @@ function prefersReducedMotion() {
  * Every colour the frame needs, read from the `--cc-*` tokens in one pass.
  *
  * `getComputedStyle` is the expensive half, so it is called once a frame rather
- * than once a node — a 150-node neighbourhood would otherwise force 150 style
+ * than once a node — a 150-node window would otherwise force 150 style
  * recalculations every 16ms.
  */
 type Palette = {
   line: string;
-  dot: string;
   ink: string;
   surface: string;
   node: Record<string, string>;
@@ -160,46 +128,42 @@ function readPalette(canvas: HTMLCanvasElement): Palette {
   const read = (name: string) =>
     style.getPropertyValue(name).trim() || "currentColor";
   const node: Record<string, string> = {};
-  for (const variable of Object.values(NODE_COLOR_VARS)) {
+  // The six palette tokens plus the one every unconfigured node draws in, which
+  // today is all of them.
+  for (const variable of [
+    ...Object.values(NODE_COLOR_VARS),
+    FALLBACK_NODE_COLOR_VAR,
+  ]) {
     node[variable] = read(variable);
   }
   return {
     line: read("--cc-hov"),
-    dot: read("--cc-brand"),
     ink: read("--cc-ink"),
     surface: read("--cc-surface"),
     node,
   };
 }
 
-function layout(scene: Scene) {
-  scene.rects = measureRects(scene.root, scene.canvas);
-  if (!scene.rects.length) scene.rects = fallbackRects(scene.w, scene.h);
-  scene.field = buildField({
-    w: scene.w,
-    h: scene.h,
-    rects: scene.rects,
-    count: ambientCount(scene.w),
-  });
-  scene.signals = [];
-  scene.clearCursor = 0;
-  refreshView(scene);
+function nodeColour(palette: Palette, colorVar: string) {
+  return palette.node[colorVar] ?? palette.node[FALLBACK_NODE_COLOR_VAR];
 }
 
 /**
- * Re-derive where the real neighbourhood lands, for the frame as it is now.
+ * Re-derive where the window lands, for the frame as it is now.
  *
- * Called on every relayout and whenever the read answers, so the projection is
+ * Called on every relayout and whenever a read answers, so the projection is
  * always a function of the current frame — which is why it can be thrown away
  * and why none of it is ever persisted.
  */
 function refreshView(scene: Scene) {
-  scene.view = scene.neighbourhood
-    ? projectNeighbourhood({
-        neighbourhood: scene.neighbourhood,
+  const measured = measureRects(scene.root, scene.canvas);
+  const keepOut = measured.length ? measured : fallbackRects(scene.w, scene.h);
+  scene.view = scene.window
+    ? projectGraphWindow({
+        window: scene.window,
         width: scene.w,
         height: scene.h,
-        keepOut: scene.rects,
+        keepOut,
       })
     : null;
 }
@@ -216,246 +180,67 @@ function resize(scene: Scene) {
   scene.dpr = dpr;
   scene.canvas.width = Math.round(w * dpr);
   scene.canvas.height = Math.round(h * dpr);
-  layout(scene);
 }
 
-function spawnSignal(scene: Scene) {
-  const edges = scene.field.edges;
-  if (!edges.length) return;
-  for (let attempt = 0; attempt < 14; attempt++) {
-    const edge = edges[Math.floor(Math.random() * edges.length)];
-    if (scene.signals.some((s) => s.edge === edge)) continue;
-    const from = Math.random() < 0.5 ? edge.a : edge.b;
-    const to = from === edge.a ? edge.b : edge.a;
-    const len = Math.max(1, Math.hypot(to.x - from.x, to.y - from.y));
-    scene.signals.push({
-      edge,
-      from,
-      to,
-      ax: from.x,
-      ay: from.y,
-      bx: to.x,
-      by: to.y,
-      cx: (from.x + to.x) / 2,
-      cy: (from.y + to.y) / 2,
-      headX: from.x,
-      headY: from.y,
-      len,
-      p: 0,
-      // A constant pace, whatever the length of the line.
-      dur: Math.max(2.6, len / (26 + Math.random() * 22)),
-      prominence: 0.72 + Math.random() * 0.28,
-    });
-    return;
-  }
-}
-
-function drift(scene: Scene, dt: number) {
-  const { field, w, h, rects } = scene;
-  for (const n of field.nodes) {
-    n.x += n.vx * dt;
-    n.y += n.vy * dt;
-    if (n.x < n.hx - DRIFT_BOX) {
-      n.x = n.hx - DRIFT_BOX;
-      n.vx = Math.abs(n.vx);
-    }
-    if (n.x > n.hx + DRIFT_BOX) {
-      n.x = n.hx + DRIFT_BOX;
-      n.vx = -Math.abs(n.vx);
-    }
-    if (n.y < n.hy - DRIFT_BOX) {
-      n.y = n.hy - DRIFT_BOX;
-      n.vy = Math.abs(n.vy);
-    }
-    if (n.y > n.hy + DRIFT_BOX) {
-      n.y = n.hy + DRIFT_BOX;
-      n.vy = -Math.abs(n.vy);
-    }
-    // Drawn dots stay on screen and off the copy; off-frame nodes stay off it.
-    if (!n.offFrame) {
-      if (n.x < INSET) {
-        n.x = INSET;
-        n.vx = Math.abs(n.vx);
-      }
-      if (n.x > w - INSET) {
-        n.x = w - INSET;
-        n.vx = -Math.abs(n.vx);
-      }
-      if (n.y < INSET) {
-        n.y = INSET;
-        n.vy = Math.abs(n.vy);
-      }
-      if (n.y > h - INSET) {
-        n.y = h - INSET;
-        n.vy = -Math.abs(n.vy);
-      }
-      if (clearAt(n.x, n.y, rects, n.r + 1) < 1) {
-        n.x -= n.vx * dt * 2;
-        n.y -= n.vy * dt * 2;
-        n.vx = -n.vx;
-        n.vy = -n.vy;
-      }
-    }
-  }
-}
-
-function drawAmbient(scene: Scene, palette: Palette, alpha: number) {
-  const { ctx, field, rects } = scene;
-
-  // Clearance barely moves — drift is clamped to a few px — so it is cached and
-  // refreshed on a rolling slice rather than recomputed for every line, every
-  // frame. Four alpha buckets let the whole field draw in four strokes.
-  const edges = field.edges;
-  if (edges.length) {
-    const slice = Math.max(1, Math.ceil(edges.length / 30));
-    for (let i = 0; i < slice; i++) {
-      const edge = edges[(scene.clearCursor + i) % edges.length];
-      edge.clear = lineClearance(edge.a, edge.b, rects);
-    }
-    scene.clearCursor = (scene.clearCursor + slice) % edges.length;
-  }
-
-  const buckets: FieldEdge[][] = [[], [], [], []];
-  for (const edge of edges) {
-    const clear = edge.clear ?? lineClearance(edge.a, edge.b, rects);
-    if (clear <= 0.02) continue;
-    buckets[Math.min(3, Math.floor(clear * 4 - 0.0001))].push(edge);
-  }
-  ctx.lineWidth = 1;
-  ctx.strokeStyle = palette.line;
-  for (let bucket = 0; bucket < buckets.length; bucket++) {
-    if (!buckets[bucket].length) continue;
-    ctx.globalAlpha = alpha * 0.26 * ((bucket + 1) / 4);
-    ctx.beginPath();
-    for (const edge of buckets[bucket]) {
-      ctx.moveTo(edge.a.x, edge.a.y);
-      ctx.lineTo(edge.b.x, edge.b.y);
-    }
-    ctx.stroke();
-  }
-
-  ctx.fillStyle = palette.dot;
-  for (const node of field.nodes) {
-    if (node.offFrame) continue;
-    ctx.globalAlpha = alpha * 0.82 * clearAt(node.x, node.y, rects);
-    ctx.beginPath();
-    ctx.arc(node.x, node.y, node.r, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  ctx.globalAlpha = 1;
-}
-
-function drawSignals(
-  scene: Scene,
-  palette: Palette,
-  dt: number,
-  ts: number,
-  alpha: number,
-) {
-  const { ctx, field } = scene;
-  if (ts > scene.spawnAt && scene.signals.length < field.maxSignals) {
-    spawnSignal(scene);
-    scene.spawnAt = ts + 260 + Math.random() * 900;
-  }
-
-  for (let i = scene.signals.length - 1; i >= 0; i--) {
-    const s = scene.signals[i];
-    s.p += dt / s.dur;
-    if (s.p >= 1) {
-      scene.signals.splice(i, 1);
-      continue;
-    }
-    // The ends follow their dots, so the flash still lands on one.
-    s.ax = s.from.x;
-    s.ay = s.from.y;
-    s.bx = s.to.x;
-    s.by = s.to.y;
-    s.cx = (s.ax + s.bx) / 2;
-    s.cy = (s.ay + s.by) / 2;
-    s.len = Math.max(1, Math.hypot(s.bx - s.ax, s.by - s.ay));
-    const head = quadPoint(s, s.p);
-    s.headX = head.x;
-    s.headY = head.y;
-
-    const k = Math.min(1, envelope(s.p) * s.prominence) * alpha;
-    if (k <= 0.002) continue;
-    const tail = quadPoint(s, s.p - Math.min(s.p, (16 + 74 * k) / s.len));
-
-    const grad = ctx.createLinearGradient(tail.x, tail.y, s.headX, s.headY);
-    grad.addColorStop(0, "transparent");
-    grad.addColorStop(0.9, palette.dot);
-    grad.addColorStop(1, palette.ink);
-    ctx.globalAlpha = k;
-    ctx.strokeStyle = grad;
-    ctx.lineWidth = 1.1 + 1.9 * k;
-    ctx.lineCap = "round";
-    ctx.beginPath();
-    ctx.moveTo(tail.x, tail.y);
-    ctx.lineTo(s.headX, s.headY);
-    ctx.stroke();
-  }
-  ctx.globalAlpha = 1;
-}
-
-/** Motion off: two dots hold a steady glow instead of anything travelling. */
-function drawGlows(scene: Scene, palette: Palette, alpha: number) {
-  const { ctx, field } = scene;
-  for (const node of field.glows) {
-    ctx.globalAlpha = alpha * 0.7;
-    ctx.fillStyle = palette.dot;
-    ctx.beginPath();
-    ctx.arc(node.x, node.y, node.r + 2.5, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  ctx.globalAlpha = 1;
-}
-
-function drawNeighbourhood(scene: Scene, palette: Palette, alpha: number) {
+function draw(scene: Scene) {
   const { ctx, view } = scene;
+  ctx.setTransform(scene.dpr, 0, 0, scene.dpr, 0, 0);
+  ctx.clearRect(0, 0, scene.w, scene.h);
+  // Nobody has joined yet, or the read has not answered. An empty community
+  // draws as an empty hero: the copy reads perfectly well on `--cc-pg` alone,
+  // and there is nothing here that may invent a node to fill the frame.
   if (!view) return;
 
+  const palette = readPalette(scene.canvas);
+
+  // The artboard's own weights: `PAL.lineA` for a backbone edge, `PAL.dotA` for
+  // a node, each multiplied by how clear of the copy it landed.
   ctx.strokeStyle = palette.line;
   ctx.lineWidth = 1;
-  for (const [from, to] of view.edges) {
-    ctx.globalAlpha = alpha * 0.3 * Math.min(from.clearance, to.clearance);
+  for (const edge of view.edges) {
+    if (edge.clearance <= 0.02) continue;
+    ctx.globalAlpha = EDGE_ALPHA * edge.clearance;
     ctx.beginPath();
-    ctx.moveTo(from.screenX, from.screenY);
-    ctx.lineTo(to.screenX, to.screenY);
+    ctx.moveTo(edge.from.screenX, edge.from.screenY);
+    ctx.lineTo(edge.to.screenX, edge.to.screenY);
     ctx.stroke();
   }
 
   for (const node of view.nodes) {
-    if (node.isViewer) continue;
-    ctx.globalAlpha = alpha * 0.85 * node.clearance;
-    ctx.fillStyle =
-      palette.node[node.colorVar] ?? palette.node[FALLBACK_NODE_COLOR_VAR];
+    if (node.clearance <= 0.02) continue;
+    ctx.globalAlpha = NODE_ALPHA * node.clearance;
+    ctx.fillStyle = nodeColour(palette, node.colorVar);
     ctx.beginPath();
-    ctx.arc(node.screenX, node.screenY, 4, 0, Math.PI * 2);
+    ctx.arc(node.screenX, node.screenY, NODE_RADIUS, 0, Math.PI * 2);
     ctx.fill();
   }
 
-  const you = view.nodes.find((n) => n.isViewer);
-  if (you) drawYou(scene, palette, you, alpha);
+  if (scene.labelled) {
+    const you = view.nodes.find((node) => node.isViewer);
+    if (you) drawYou(scene, palette, you);
+  }
   ctx.globalAlpha = 1;
 }
 
-/** The caller's own node: a restrained pulse and a small label, no fanfare. */
+/**
+ * The viewer's own node, once **Find your dot** has found it: a restrained
+ * pulse and a small label, no fanfare — and drawn exactly where the node
+ * already was. The reveal adds a label to the graph; it does not rearrange it.
+ */
 function drawYou(
   scene: Scene,
   palette: Palette,
   you: { screenX: number; screenY: number; colorVar: string },
-  alpha: number,
 ) {
   const { ctx } = scene;
   const x = you.screenX;
   const y = you.screenY;
-  const colour =
-    palette.node[you.colorVar] ?? palette.node[FALLBACK_NODE_COLOR_VAR];
+  const colour = nodeColour(palette, you.colorVar);
 
   if (!scene.reduced) {
     const phase = (scene.pulse % 1.9) / 1.9;
     const ease = Math.max(0, phase * (2 - phase));
-    ctx.globalAlpha = alpha * 0.34 * (1 - ease);
+    ctx.globalAlpha = 0.34 * (1 - ease);
     ctx.strokeStyle = colour;
     ctx.lineWidth = 1.3;
     ctx.beginPath();
@@ -463,12 +248,12 @@ function drawYou(
     ctx.stroke();
   }
 
-  ctx.globalAlpha = alpha;
+  ctx.globalAlpha = 1;
   ctx.fillStyle = colour;
   ctx.beginPath();
   ctx.arc(x, y, 7.5, 0, Math.PI * 2);
   ctx.fill();
-  ctx.globalAlpha = alpha * 0.5;
+  ctx.globalAlpha = 0.5;
   ctx.strokeStyle = colour;
   ctx.lineWidth = 1;
   ctx.beginPath();
@@ -480,7 +265,7 @@ function drawYou(
   const width = ctx.measureText(label).width;
   const lx = Math.min(Math.max(x - width / 2 - 7, 6), scene.w - width - 20);
   const ly = y + 17;
-  ctx.globalAlpha = alpha;
+  ctx.globalAlpha = 1;
   ctx.fillStyle = palette.ink;
   ctx.beginPath();
   if (ctx.roundRect) ctx.roundRect(lx, ly, width + 14, 19, 9.5);
@@ -493,13 +278,18 @@ function drawYou(
 
 type Props = {
   /**
-   * The caller's own neighbourhood, once `graph.neighbourhood` has answered.
-   * `null` while they are a visitor, unplaced, or simply have not asked.
+   * The bounded window to draw: the member's own neighbourhood, or the public
+   * one. `null` only while the first read is still in flight.
    */
-  neighbourhood: Neighbourhood | null;
+  window: GraphWindow | null;
+  /**
+   * **Find your dot** has located the viewer's node. The graph is unaffected —
+   * this adds the pulse and the label and nothing else.
+   */
+  labelled: boolean;
 };
 
-export function HeroNetwork({ neighbourhood }: Props) {
+export function HeroNetwork({ window: graphWindow, labelled }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const sceneRef = useRef<Scene | null>(null);
 
@@ -518,77 +308,123 @@ export function HeroNetwork({ neighbourhood }: Props) {
       w: 0,
       h: 0,
       dpr: 1,
-      rects: [],
-      field: {
-        nodes: [],
-        edges: [],
-        byNode: new Map(),
-        glows: [],
-        minGap: 0,
-        maxSignals: 3,
-        marginX: 0,
-        marginY: 0,
-      },
-      signals: [],
-      spawnAt: 0,
-      last: 0,
       raf: 0,
       reduced: prefersReducedMotion(),
-      clearCursor: 0,
-      reveal: 0,
       pulse: 0,
-      neighbourhood: null,
+      last: 0,
+      labelled: false,
+      window: null,
       view: null,
     };
     sceneRef.current = scene;
     resize(scene);
+    refreshView(scene);
+    draw(scene);
 
+    /**
+     * The pulse, and only the pulse.
+     *
+     * A graph of stored positions does not move, so there is nothing to animate
+     * until a node is labelled: the scene is painted once and left alone. This
+     * loop starts when the label appears and stops when it goes, rather than
+     * burning a frame every 16ms to redraw an identical picture.
+     */
     const tick = (ts: number) => {
-      const dt = Math.max(0, Math.min(0.05, (ts - scene.last) / 1000 || 0.016));
+      scene.pulse += Math.max(0, Math.min(0.05, (ts - scene.last) / 1000));
       scene.last = ts;
-      scene.pulse += dt;
-
-      const want = scene.view ? 1 : 0;
-      scene.reveal +=
-        (want - scene.reveal) * (scene.reduced ? 1 : Math.min(1, dt / 0.45));
-
-      ctx.setTransform(scene.dpr, 0, 0, scene.dpr, 0, 0);
-      ctx.clearRect(0, 0, scene.w, scene.h);
-
-      const palette = readPalette(canvas);
-      const ambient = 1 - scene.reveal;
-      if (ambient > 0.01) {
-        if (!scene.reduced) drift(scene, dt);
-        drawAmbient(scene, palette, ambient);
-        if (scene.reduced) drawGlows(scene, palette, ambient);
-        else drawSignals(scene, palette, dt, ts, ambient);
-      }
-      if (scene.reveal > 0.01) drawNeighbourhood(scene, palette, scene.reveal);
-
+      draw(scene);
       scene.raf = requestAnimationFrame(tick);
+    };
+    const stop = () => {
+      if (!scene.raf) return;
+      cancelAnimationFrame(scene.raf);
+      scene.raf = 0;
+    };
+    const start = () => {
+      if (scene.raf || !scene.labelled || scene.reduced) return;
+      // A hidden tab has nothing to animate for, and the label appearing while
+      // one is hidden must not arm a loop nothing will see.
+      if (document.hidden) return;
+      scene.last = performance.now();
+      scene.raf = requestAnimationFrame(tick);
+    };
+    scene.startPulse = start;
+    scene.stopPulse = stop;
+
+    const relayout = () => {
+      resize(scene);
+      refreshView(scene);
+      draw(scene);
     };
 
     const observer =
       typeof ResizeObserver === "function"
-        ? new ResizeObserver(() => resize(scene))
+        ? new ResizeObserver(relayout)
         : null;
     if (observer && canvas.parentElement)
       observer.observe(canvas.parentElement);
-    const onWindowResize = () => resize(scene);
+    const onWindowResize = () => relayout();
     if (!observer) window.addEventListener("resize", onWindowResize);
 
     // A hidden tab has nothing to animate for. Browsers throttle rAF there, but
     // stopping outright means no work at all rather than less of it.
     const onVisibility = () => {
-      if (document.hidden) {
-        cancelAnimationFrame(scene.raf);
-        scene.raf = 0;
-      } else if (!scene.raf) {
-        scene.last = performance.now();
-        scene.raf = requestAnimationFrame(tick);
-      }
+      if (document.hidden) stop();
+      else start();
     };
     document.addEventListener("visibilitychange", onVisibility);
+
+    /**
+     * Repaint when the theme changes.
+     *
+     * Every colour on this canvas is a `--cc-*` token resolved at draw time, so
+     * the palette is an input to the frame exactly like the data and the size
+     * are. Pixels already rasterised do not re-resolve a custom property, and
+     * the scene is otherwise painted once and left alone, so without this the
+     * graph keeps its old colours until something else happens to redraw it.
+     *
+     * The root element is watched rather than `next-themes`' `resolvedTheme`,
+     * and the difference is not a preference. `ThemeProvider` applies the theme
+     * from a `useEffect` of its own — `setTheme` only writes state and
+     * `localStorage` — and it is an ancestor of this component, so React runs
+     * this child's effects first: an effect keyed on `resolvedTheme` here would
+     * call `getComputedStyle` before the class it depends on had landed and
+     * repaint with the palette it was trying to replace. The DOM is the honest
+     * signal because it is the thing the tokens actually hang off, and watching
+     * it also covers a theme changed by the OS or in another tab, neither of
+     * which re-renders this component.
+     *
+     * Every attribute is watched rather than `class` alone. Today the theme is
+     * a `.dark` class on `<html>` and `next-themes` writes `style.colorScheme`
+     * in the same breath, but the design drives it with a `data-cc-theme`
+     * attribute and `next-themes` defaults to `data-theme` — so a filter here
+     * would be a second place that has to be edited in step with
+     * `app/layout.tsx`, and forgetting would leave stale pixels rather than a
+     * failing build. Root attributes change rarely enough that redrawing a
+     * still scene for one is cheaper than getting the filter wrong.
+     */
+    const themeWatcher = new MutationObserver(() => draw(scene));
+    themeWatcher.observe(document.documentElement, { attributes: true });
+
+    /**
+     * Repaint once the web font has loaded.
+     *
+     * The keep-out is measured off the rendered text — `getClientRects()` per
+     * line — so it is measured against whatever font was in place at the time.
+     * A fallback face swapping to Geist reflows those lines without necessarily
+     * resizing the section, so the `ResizeObserver` need not fire and the fade
+     * would go on protecting copy that has moved.
+     *
+     * `fonts.ready` cannot be cancelled, so the flag is the only teardown there
+     * is: a hero unmounted during a slow font load would otherwise re-measure a
+     * canvas that has already left the document and paint a scene nobody owns.
+     */
+    let mounted = true;
+    document.fonts?.ready
+      .then(() => {
+        if (mounted) relayout();
+      })
+      .catch(() => {});
 
     const media =
       typeof window.matchMedia === "function"
@@ -596,16 +432,16 @@ export function HeroNetwork({ neighbourhood }: Props) {
         : null;
     const onMedia = () => {
       scene.reduced = prefersReducedMotion();
-      layout(scene);
+      if (scene.reduced) stop();
+      else start();
+      draw(scene);
     };
     media?.addEventListener?.("change", onMedia);
 
-    scene.last = performance.now();
-    scene.spawnAt = scene.last + 500;
-    scene.raf = requestAnimationFrame(tick);
-
     return () => {
-      cancelAnimationFrame(scene.raf);
+      mounted = false;
+      stop();
+      themeWatcher.disconnect();
       observer?.disconnect();
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("resize", onWindowResize);
@@ -617,9 +453,23 @@ export function HeroNetwork({ neighbourhood }: Props) {
   useEffect(() => {
     const scene = sceneRef.current;
     if (!scene) return;
-    scene.neighbourhood = neighbourhood;
+    scene.window = graphWindow;
     refreshView(scene);
-  }, [neighbourhood]);
+    draw(scene);
+  }, [graphWindow]);
+
+  useEffect(() => {
+    const scene = sceneRef.current;
+    if (!scene) return;
+    scene.labelled = labelled;
+    if (labelled) {
+      scene.pulse = 0;
+      scene.startPulse?.();
+    } else {
+      scene.stopPulse?.();
+    }
+    draw(scene);
+  }, [labelled]);
 
   return (
     <canvas

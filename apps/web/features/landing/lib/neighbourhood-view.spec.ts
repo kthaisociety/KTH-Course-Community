@@ -1,15 +1,13 @@
 import { describe, expect, it } from "vitest";
-import type { Rect } from "./hero-field";
+import type { Rect } from "./hero-keepout";
 import {
-  DEFAULT_SCALE,
+  DEFAULT_NODE_COLOR_VAR,
   FALLBACK_NODE_COLOR_VAR,
-  fitScale,
-  MAX_SCALE,
-  type NeighbourhoodInput,
+  type GraphWindowInput,
   NODE_COLOR_VARS,
   nodeColorVar,
-  pickViewportCentre,
-  projectNeighbourhood,
+  projectGraphWindow,
+  VIEW_SCALE,
 } from "./neighbourhood-view";
 
 const WIDTH = 1000;
@@ -18,16 +16,39 @@ const HEIGHT = 600;
 /** A block of copy across the top half, the way the hero headline sits. */
 const COPY: Rect[] = [{ x: 200, y: 40, w: 600, h: 220 }];
 
-function neighbourhood(
-  nodes: { userId: string; x: number; y: number; color?: string }[],
-  edges: { nodeUserId: string; anchorUserId: string }[] = [],
-): NeighbourhoodInput {
-  const [viewer] = nodes;
+type NodeSpec = {
+  id: string;
+  x: number;
+  y: number;
+  color?: string;
+  isViewer?: boolean;
+};
+
+function graphWindow(
+  centre: { x: number; y: number },
+  nodes: NodeSpec[],
+  edges: { fromId: string; toId: string }[] = [],
+): GraphWindowInput {
   return {
-    viewer: { userId: viewer.userId, x: viewer.x, y: viewer.y },
-    nodes: nodes.map((n) => ({ ...n, color: n.color ?? "frost" })),
+    centre,
+    nodes: nodes.map((node) => ({
+      id: node.id,
+      x: node.x,
+      y: node.y,
+      color: node.color ?? "default",
+      isViewer: node.isViewer ?? false,
+    })),
     edges,
   };
+}
+
+function project(input: GraphWindowInput, keepOut: Rect[] = COPY) {
+  return projectGraphWindow({
+    window: input,
+    width: WIDTH,
+    height: HEIGHT,
+    keepOut,
+  });
 }
 
 describe("nodeColorVar", () => {
@@ -37,7 +58,14 @@ describe("nodeColorVar", () => {
     }
   });
 
-  it("draws a name this build has never heard of in the neutral", () => {
+  // The column defaults to "default" and placement stores exactly that, so this
+  // is the colour of every node in the community today.
+  it("draws an unconfigured node in the brand blue", () => {
+    expect(nodeColorVar("default")).toBe(DEFAULT_NODE_COLOR_VAR);
+    expect(DEFAULT_NODE_COLOR_VAR).toBe("--cc-brand");
+  });
+
+  it("draws a name this build has never heard of as unconfigured", () => {
     expect(nodeColorVar("chartreuse")).toBe(FALLBACK_NODE_COLOR_VAR);
     expect(nodeColorVar("")).toBe(FALLBACK_NODE_COLOR_VAR);
   });
@@ -46,167 +74,212 @@ describe("nodeColorVar", () => {
   it("never trusts a hex value as a colour", () => {
     expect(nodeColorVar("#1751a6")).toBe(FALLBACK_NODE_COLOR_VAR);
   });
-});
 
-describe("pickViewportCentre", () => {
-  it("keeps the viewer's node out of the hero copy", () => {
-    const centre = pickViewportCentre(WIDTH, HEIGHT, COPY);
-    const insideCopy =
-      centre.x > COPY[0].x &&
-      centre.x < COPY[0].x + COPY[0].w &&
-      centre.y > COPY[0].y &&
-      centre.y < COPY[0].y + COPY[0].h;
-    expect(insideCopy).toBe(false);
-  });
-
-  it("stays inside the frame", () => {
-    const centre = pickViewportCentre(WIDTH, HEIGHT, COPY);
-    expect(centre.x).toBeGreaterThan(0);
-    expect(centre.x).toBeLessThan(WIDTH);
-    expect(centre.y).toBeGreaterThan(0);
-    expect(centre.y).toBeLessThan(HEIGHT);
-  });
-
-  it("takes the middle when nothing is in the way", () => {
-    expect(pickViewportCentre(WIDTH, HEIGHT, [])).toEqual({ x: 500, y: 300 });
-  });
-
-  it("is deterministic — the same frame gives the same centre", () => {
-    expect(pickViewportCentre(WIDTH, HEIGHT, COPY)).toEqual(
-      pickViewportCentre(WIDTH, HEIGHT, COPY),
+  it("keeps the six palette names out of the default, so none is assigned", () => {
+    expect(Object.values(NODE_COLOR_VARS)).not.toContain(
+      DEFAULT_NODE_COLOR_VAR,
     );
   });
 });
 
-describe("fitScale", () => {
-  const centre = { x: 500, y: 300 };
-
-  it("brings the furthest node inside the frame", () => {
-    const input = neighbourhood([
-      { userId: "me", x: 0, y: 0 },
-      { userId: "far", x: 4000, y: 0 },
-    ]);
-    const scale = fitScale(input, WIDTH, HEIGHT, centre);
-    expect(4000 * scale + centre.x).toBeLessThanOrEqual(WIDTH);
-  });
-
-  it("fits each direction separately, because the centre is rarely central", () => {
-    const input = neighbourhood([
-      { userId: "me", x: 0, y: 0 },
-      { userId: "left", x: -1000, y: 0 },
-    ]);
-    const offCentre = { x: 200, y: 300 };
-    const scale = fitScale(input, WIDTH, HEIGHT, offCentre);
-    expect(offCentre.x - 1000 * scale).toBeGreaterThanOrEqual(0);
-  });
-
-  it("does not magnify a tight neighbourhood past the cap", () => {
-    const input = neighbourhood([
-      { userId: "me", x: 0, y: 0 },
-      { userId: "close", x: 1, y: 1 },
-    ]);
-    expect(fitScale(input, WIDTH, HEIGHT, centre)).toBe(MAX_SCALE);
-  });
-
-  it("has nothing to measure when the viewer is alone", () => {
-    const input = neighbourhood([{ userId: "me", x: 0, y: 0 }]);
-    expect(fitScale(input, WIDTH, HEIGHT, centre)).toBe(DEFAULT_SCALE);
-  });
-});
-
-describe("projectNeighbourhood", () => {
-  const input = neighbourhood(
+describe("projectGraphWindow", () => {
+  const input = graphWindow(
+    { x: 100, y: 100 },
     [
-      { userId: "me", x: 100, y: 100, color: "violet" },
-      { userId: "a", x: 400, y: 100, color: "moss" },
-      { userId: "b", x: 100, y: -200, color: "not-a-colour" },
+      { id: "me", x: 100, y: 100, isViewer: true },
+      { id: "a", x: 400, y: 100, color: "moss" },
+      { id: "b", x: 100, y: -200, color: "not-a-colour" },
     ],
     [
-      { nodeUserId: "a", anchorUserId: "me" },
-      { nodeUserId: "b", anchorUserId: "a" },
+      { fromId: "a", toId: "me" },
+      { fromId: "b", toId: "a" },
       // An edge to somebody outside the bounded set.
-      { nodeUserId: "a", anchorUserId: "elsewhere" },
+      { fromId: "a", toId: "elsewhere" },
     ],
   );
 
-  const view = () =>
-    projectNeighbourhood({
-      neighbourhood: input,
-      width: WIDTH,
-      height: HEIGHT,
-      keepOut: COPY,
-    });
-
-  it("puts the viewer's own node exactly on the chosen centre", () => {
-    const projected = view();
-    const me = projected.nodes.find((n) => n.isViewer);
-    expect(me?.screenX).toBeCloseTo(projected.centre.x);
-    expect(me?.screenY).toBeCloseTo(projected.centre.y);
+  it("puts the window's centre exactly on the middle of the frame", () => {
+    const view = project(input);
+    expect(view.centre).toEqual({ x: WIDTH / 2, y: HEIGHT / 2 });
+    const me = view.nodes.find((node) => node.isViewer);
+    expect(me?.screenX).toBeCloseTo(WIDTH / 2);
+    expect(me?.screenY).toBeCloseTo(HEIGHT / 2);
   });
 
-  it("places everyone else relative to the viewer, in world units times scale", () => {
-    const projected = view();
-    const a = projected.nodes.find((n) => n.userId === "a");
-    expect(a?.screenX).toBeCloseTo(300 * projected.scale + projected.centre.x);
-    expect(a?.screenY).toBeCloseTo(projected.centre.y);
+  // The camera used to be grid-searched for a gap in the hero copy, which made
+  // it a function of the headline layout rather than of the viewer.
+  it("does not move the camera for the copy", () => {
+    const withCopy = project(input, COPY);
+    const withNone = project(input, []);
+    expect(withCopy.centre).toEqual(withNone.centre);
+    expect(withCopy.nodes.map((node) => [node.screenX, node.screenY])).toEqual(
+      withNone.nodes.map((node) => [node.screenX, node.screenY]),
+    );
   });
 
-  it("marks exactly one node as the viewer's", () => {
-    expect(view().nodes.filter((n) => n.isViewer)).toHaveLength(1);
+  it("places everyone relative to the centre, in world units times the scale", () => {
+    const view = project(input);
+    const a = view.nodes.find((node) => node.id === "a");
+    expect(a?.screenX).toBeCloseTo(300 * VIEW_SCALE + WIDTH / 2);
+    expect(a?.screenY).toBeCloseTo(HEIGHT / 2);
+  });
+
+  it("uses the constant scale, whatever the window contains", () => {
+    const tight = graphWindow({ x: 0, y: 0 }, [
+      { id: "me", x: 0, y: 0, isViewer: true },
+      { id: "near", x: 1, y: 1 },
+    ]);
+    const sprawling = graphWindow({ x: 0, y: 0 }, [
+      { id: "me", x: 0, y: 0, isViewer: true },
+      { id: "far", x: 40000, y: -9000 },
+    ]);
+    const alone = graphWindow({ x: 0, y: 0 }, [
+      { id: "me", x: 0, y: 0, isViewer: true },
+    ]);
+
+    for (const candidate of [tight, sprawling, alone, input]) {
+      expect(project(candidate).scale).toBe(VIEW_SCALE);
+    }
+  });
+
+  /**
+   * The reported bug, as a test. Two members whose neighbourhoods overlap are
+   * looking at one community: the dots they share must sit the same distance
+   * and the same direction apart on both screens, however differently their own
+   * bounded sets were cut.
+   */
+  it("shows two viewers in one region the same graph", () => {
+    // The same three world positions, read by two different people. Each read
+    // is centred on its own viewer and hands back its own opaque ids, and one
+    // of the two also sees a distant node the other does not.
+    const ida = graphWindow({ x: 0, y: 0 }, [
+      { id: "ida-self", x: 0, y: 0, isViewer: true },
+      { id: "ida-sees-otto", x: 180, y: -60 },
+      { id: "ida-sees-vera", x: -90, y: 240 },
+    ]);
+    const otto = graphWindow({ x: 180, y: -60 }, [
+      { id: "otto-self", x: 180, y: -60, isViewer: true },
+      { id: "otto-sees-ida", x: 0, y: 0 },
+      { id: "otto-sees-vera", x: -90, y: 240 },
+      { id: "otto-sees-a-stranger", x: 900, y: 900 },
+    ]);
+
+    const fromIda = project(ida);
+    const fromOtto = project(otto);
+    const gap = (view: ReturnType<typeof project>, a: string, b: string) => {
+      const from = view.nodes.find((node) => node.id === a);
+      const to = view.nodes.find((node) => node.id === b);
+      if (!from || !to) throw new Error(`${a} or ${b} was not projected`);
+      return [to.screenX - from.screenX, to.screenY - from.screenY];
+    };
+
+    const same = (a: number[], b: number[]) => {
+      expect(a[0]).toBeCloseTo(b[0], 9);
+      expect(a[1]).toBeCloseTo(b[1], 9);
+    };
+    same(
+      gap(fromIda, "ida-self", "ida-sees-otto"),
+      gap(fromOtto, "otto-sees-ida", "otto-self"),
+    );
+    same(
+      gap(fromIda, "ida-sees-otto", "ida-sees-vera"),
+      gap(fromOtto, "otto-self", "otto-sees-vera"),
+    );
+  });
+
+  it("marks exactly one node as the viewer's, and only when the read had one", () => {
+    expect(project(input).nodes.filter((node) => node.isViewer)).toHaveLength(
+      1,
+    );
+
+    const publicWindow = graphWindow({ x: 0, y: 0 }, [
+      { id: "one", x: 0, y: 0 },
+      { id: "two", x: 120, y: 0 },
+    ]);
+    expect(project(publicWindow).nodes.some((node) => node.isViewer)).toBe(
+      false,
+    );
   });
 
   it("maps stored colour names onto tokens, falling back for unknown ones", () => {
-    const projected = view();
-    expect(projected.nodes.find((n) => n.userId === "me")?.colorVar).toBe(
-      NODE_COLOR_VARS.violet,
+    const view = project(input);
+    expect(view.nodes.find((node) => node.id === "a")?.colorVar).toBe(
+      NODE_COLOR_VARS.moss,
     );
-    expect(projected.nodes.find((n) => n.userId === "b")?.colorVar).toBe(
+    expect(view.nodes.find((node) => node.id === "b")?.colorVar).toBe(
       FALLBACK_NODE_COLOR_VAR,
     );
   });
 
   it("draws only the backbone edges whose two ends are both in the set", () => {
-    const edges = view().edges;
-    expect(edges).toHaveLength(2);
-    for (const [from, to] of edges) {
-      expect(input.nodes.map((n) => n.userId)).toContain(from.userId);
-      expect(input.nodes.map((n) => n.userId)).toContain(to.userId);
+    const view = project(input);
+    const ids = new Set(view.nodes.map((node) => node.id));
+    expect(view.edges).toHaveLength(2);
+    for (const edge of view.edges) {
+      expect(ids.has(edge.from.id)).toBe(true);
+      expect(ids.has(edge.to.id)).toBe(true);
     }
   });
 
-  it("never fades the node the whole flow exists to reveal", () => {
-    const projected = projectNeighbourhood({
-      neighbourhood: input,
-      width: WIDTH,
-      height: HEIGHT,
-      // Copy covering the entire frame: everyone else is invisible, the viewer
-      // is not.
-      keepOut: [{ x: 0, y: 0, w: WIDTH, h: HEIGHT }],
-    });
-    const me = projected.nodes.find((n) => n.isViewer);
-    expect(me?.clearance).toBe(1);
-    for (const other of projected.nodes.filter((n) => !n.isViewer)) {
-      expect(other.clearance).toBe(0);
+  // Two endpoints in the open do not make a line that is: an edge between
+  // neighbours either side of the headline runs straight through it.
+  it("fades an edge by the whole line, not by its two ends", () => {
+    const spanning = graphWindow(
+      { x: 0, y: 0 },
+      [
+        { id: "left", x: -600, y: 0 },
+        { id: "right", x: 600, y: 0 },
+      ],
+      [{ fromId: "left", toId: "right" }],
+    );
+    const across: Rect[] = [{ x: 400, y: 250, w: 200, h: 100 }];
+    const view = project(spanning, across);
+
+    expect(view.nodes.every((node) => node.clearance === 1)).toBe(true);
+    expect(view.edges[0].clearance).toBe(0);
+  });
+
+  it("fades a node under the copy instead of moving it", () => {
+    const covered = project(input, [{ x: 0, y: 0, w: WIDTH, h: HEIGHT }]);
+    const open = project(input, []);
+
+    for (const node of covered.nodes.filter((n) => !n.isViewer)) {
+      expect(node.clearance).toBe(0);
     }
+    expect(covered.nodes.map((node) => [node.screenX, node.screenY])).toEqual(
+      open.nodes.map((node) => [node.screenX, node.screenY]),
+    );
+  });
+
+  it("never fades the node the whole flow exists to reveal", () => {
+    const covered = project(input, [{ x: 0, y: 0, w: WIDTH, h: HEIGHT }]);
+    expect(covered.nodes.find((node) => node.isViewer)?.clearance).toBe(1);
+  });
+
+  it("draws an empty community as an empty canvas, inventing nobody", () => {
+    const view = project(graphWindow({ x: 0, y: 0 }, []));
+    expect(view.nodes).toEqual([]);
+    expect(view.edges).toEqual([]);
+    expect(view.centre).toEqual({ x: WIDTH / 2, y: HEIGHT / 2 });
   });
 
   // The projection is derived per frame and thrown away. If it ever mutated its
   // input, a projected pixel could find its way back to the server.
   it("leaves the world positions it was given untouched", () => {
     const before = structuredClone(input);
-    view();
+    project(input);
     expect(input).toEqual(before);
   });
 
   it("keeps world units out of the result — only screen positions come back", () => {
-    for (const node of view().nodes) {
+    for (const node of project(input).nodes) {
       expect(Object.keys(node).sort()).toEqual([
         "clearance",
         "colorVar",
+        "id",
         "isViewer",
         "screenX",
         "screenY",
-        "userId",
       ]);
     }
   });

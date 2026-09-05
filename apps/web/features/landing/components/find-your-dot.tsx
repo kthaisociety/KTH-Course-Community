@@ -302,11 +302,12 @@ function SignIn(props: {
 /**
  * Signed in, and no node exists for this app user.
  *
- * This is the state every member sees today: `graph.join` places a node and
- * nothing calls it yet. The panel says so plainly rather than drawing a dot
- * that is not there — an invented position would be a lie about where somebody
- * stands in the community, and it would be the first thing to go wrong when
- * placement does land.
+ * Rare, and no longer the state every member sees. Sign-up places a node, and
+ * `graph.neighbourhood` places one on the first read for an account that
+ * somehow missed it, so reaching this panel means the read found no app user at
+ * all — a session outliving the account row behind it. The panel says so
+ * plainly rather than drawing a dot that is not there: an invented position
+ * would be a lie about where somebody stands in the community.
  *
  * Deliberately **informational, not an error**. Nobody has failed at anything
  * here and nothing went wrong, so there is no `--cc-danger`, no `role="alert"`
@@ -333,8 +334,8 @@ function Unplaced({ onClose }: { onClose: () => void }) {
         is hidden from you.
       </DialogDescription>
       <p className="mt-2 text-[12.5px] text-cc-dim2 leading-[1.5]">
-        Come back once placement is switched on and this is where your dot
-        appears.
+        There is nothing here for you to do. This is the spot your dot appears
+        in as soon as it exists.
       </p>
       <OutlineButton onClick={onClose}>Done</OutlineButton>
     </div>

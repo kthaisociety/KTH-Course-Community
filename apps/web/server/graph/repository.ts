@@ -4,7 +4,7 @@ import * as schema from "../db/schema";
 import type {
   DEFAULT_NODE_SIGNAL_STYLE,
   DEFAULT_NODE_STYLE,
-  NodeColor,
+  StoredNodeColor,
   WorldPosition,
 } from "./placement";
 
@@ -37,7 +37,7 @@ export type PlacementWrite = {
   node: GraphNode;
   profile: {
     userId: string;
-    color: NodeColor;
+    color: StoredNodeColor;
     style: typeof DEFAULT_NODE_STYLE;
     signalStyle: typeof DEFAULT_NODE_SIGNAL_STYLE;
   };

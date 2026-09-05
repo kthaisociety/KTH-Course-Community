@@ -1,14 +1,22 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NotFoundError } from "../errors";
-import { MAX_ANCHORS, MIN_ANCHORS, NODE_COLORS } from "./placement";
+import {
+  DEFAULT_NODE_COLOR,
+  MAX_ANCHORS,
+  MIN_ANCHORS,
+  NODE_COLORS,
+} from "./placement";
 import type { BackboneEdge, NeighbourNode, PlacementWrite } from "./repository";
 import * as graphRepo from "./repository";
 import {
+  COMMUNITY_ORIGIN,
   getEffectiveTier,
   getNeighbourhood,
+  getPublicWindow,
   joinCommunityGraph,
   joinCommunityGraphOnSignUp,
   MAX_NEIGHBOURHOOD_NODES,
+  MAX_PUBLIC_WINDOW_NODES,
 } from "./service";
 
 vi.mock("./repository");
@@ -20,7 +28,7 @@ function neighbour(userId: string, x: number, y: number): NeighbourNode {
     userId,
     x,
     y,
-    color: "aurora",
+    color: DEFAULT_NODE_COLOR,
     style: "default",
     signalStyle: "default",
   };
@@ -156,14 +164,29 @@ describe("joinCommunityGraph", () => {
     expect(lastPlacement().edges).toEqual([]);
   });
 
-  it("supplies a valid node profile", async () => {
+  // Placement used to hash the app user onto one of the six palette names, so
+  // everybody ended up with a colour nobody chose while the colour axis was
+  // locked for all of them. It stores the column default instead.
+  it("gives the new node the unconfigured appearance, choosing nothing for anybody", async () => {
     await joinCommunityGraph("newcomer");
     const { profile } = lastPlacement();
 
     expect(profile.userId).toBe("newcomer");
-    expect(NODE_COLORS).toContain(profile.color);
+    expect(profile.color).toBe(DEFAULT_NODE_COLOR);
+    expect(NODE_COLORS).not.toContain(profile.color as never);
     expect(profile.style).toBe("default");
     expect(profile.signalStyle).toBe("default");
+  });
+
+  it("never hands out a palette colour, however many app users join", async () => {
+    inMemoryCommunity();
+    for (let i = 0; i < 40; i++) await joinCommunityGraph(`member-${i}`);
+
+    const colours = vi
+      .mocked(graphRepo.persistPlacement)
+      .mock.calls.map(([write]) => write.profile.color);
+
+    expect(new Set(colours)).toEqual(new Set([DEFAULT_NODE_COLOR]));
   });
 
   it("leaves an already-placed app user exactly where they are", async () => {
@@ -250,12 +273,16 @@ describe("joinCommunityGraphOnSignUp", () => {
 describe("getNeighbourhood", () => {
   const viewer = neighbour("viewer", 100, 100);
 
-  it("bounds the node set to the neighbourhood maximum", async () => {
+  function placedViewer() {
     vi.mocked(graphRepo.findNode).mockResolvedValue({
       userId: "viewer",
       x: 100,
       y: 100,
     });
+  }
+
+  it("bounds the node set to the neighbourhood maximum", async () => {
+    placedViewer();
     vi.mocked(graphRepo.findNearestNodes).mockResolvedValue([viewer]);
 
     await getNeighbourhood("viewer");
@@ -266,29 +293,35 @@ describe("getNeighbourhood", () => {
     );
   });
 
-  it("includes the viewer's own node in the set, so they can find their dot", async () => {
-    vi.mocked(graphRepo.findNode).mockResolvedValue({
-      userId: "viewer",
+  it("centres the window on the viewer's own world position", async () => {
+    placedViewer();
+    vi.mocked(graphRepo.findNearestNodes).mockResolvedValue([viewer]);
+
+    expect((await getNeighbourhood("viewer")).centre).toEqual({
       x: 100,
       y: 100,
     });
+  });
+
+  it("includes the viewer's own node, flagged, so they can find their dot", async () => {
+    placedViewer();
     vi.mocked(graphRepo.findNearestNodes).mockResolvedValue([
       viewer,
       neighbour("a", 1, 1),
     ]);
 
-    const neighbourhood = await getNeighbourhood("viewer");
+    const { nodes } = await getNeighbourhood("viewer");
 
-    expect(neighbourhood.nodes.map((node) => node.userId)).toContain("viewer");
+    expect(nodes.filter((node) => node.isViewer)).toHaveLength(1);
+    expect(nodes.find((node) => node.isViewer)).toMatchObject({
+      x: 100,
+      y: 100,
+    });
   });
 
   it("returns only the backbone edges spanning the returned set", async () => {
     const inside = [viewer, neighbour("a", 1, 1), neighbour("b", 2, 2)];
-    vi.mocked(graphRepo.findNode).mockResolvedValue({
-      userId: "viewer",
-      x: 100,
-      y: 100,
-    });
+    placedViewer();
     vi.mocked(graphRepo.findNearestNodes).mockResolvedValue(inside);
     vi.mocked(graphRepo.findBackboneEdgesWithin).mockResolvedValue([
       { nodeUserId: "a", anchorUserId: "b" },
@@ -296,41 +329,36 @@ describe("getNeighbourhood", () => {
       { nodeUserId: "far-away", anchorUserId: "viewer" },
     ]);
 
-    const neighbourhood = await getNeighbourhood("viewer");
+    const { nodes, edges } = await getNeighbourhood("viewer");
 
     expect(graphRepo.findBackboneEdgesWithin).toHaveBeenCalledWith([
       "viewer",
       "a",
       "b",
     ]);
-    expect(neighbourhood.edges).toEqual([
-      { nodeUserId: "a", anchorUserId: "b" },
-    ]);
+    const byId = new Map(nodes.map((node) => [node.id, node]));
+    expect(edges).toHaveLength(1);
+    expect(byId.get(edges[0].fromId)).toMatchObject({ x: 1, y: 1 });
+    expect(byId.get(edges[0].toId)).toMatchObject({ x: 2, y: 2 });
   });
 
-  it("reports the viewer's effective tier alongside their own node", async () => {
-    vi.mocked(graphRepo.findNode).mockResolvedValue({
-      userId: "viewer",
-      x: 100,
-      y: 100,
-    });
+  // The landing reads this on every visit now, so it must not carry work the
+  // page does not need. The tier lives on `graph.effectiveTier`, which is what
+  // My Page asks, and reading it here cost two queries for a number nothing on
+  // the landing looks at.
+  it("returns a window and nothing else, reading no tier", async () => {
+    placedViewer();
     vi.mocked(graphRepo.findNearestNodes).mockResolvedValue([viewer]);
-    vi.mocked(graphRepo.findLastReviewAt).mockResolvedValue(
-      new Date("2024-01-15T12:00:00.000Z"),
-    );
 
-    const neighbourhood = await getNeighbourhood(
-      "viewer",
-      new Date("2025-01-15T12:00:00.000Z"),
-    );
+    const neighbourhood = await getNeighbourhood("viewer");
 
-    expect(neighbourhood.viewer).toEqual({
-      userId: "viewer",
-      x: 100,
-      y: 100,
-      effectiveTier: 1,
-    });
-    expect(neighbourhood.nodes).toEqual([viewer]);
+    expect(Object.keys(neighbourhood).sort()).toEqual([
+      "centre",
+      "edges",
+      "nodes",
+    ]);
+    expect(graphRepo.findTierBasis).not.toHaveBeenCalled();
+    expect(graphRepo.findLastReviewAt).not.toHaveBeenCalled();
   });
 
   it("places an app user who has no node yet, rather than turning them away", async () => {
@@ -341,11 +369,138 @@ describe("getNeighbourhood", () => {
 
     const neighbourhood = await getNeighbourhood("latecomer");
 
-    expect(neighbourhood.viewer.userId).toBe("latecomer");
-    expect(neighbourhood.nodes.map((node) => node.userId)).toContain(
-      "latecomer",
-    );
+    expect(neighbourhood.nodes.some((node) => node.isViewer)).toBe(true);
     expect(nodes.map((node) => node.userId)).toContain("latecomer");
+  });
+
+  // The read is authenticated, but naming a member's neighbours to them is
+  // still naming them, and nothing on the client needs an id it did not
+  // generate itself.
+  it("names nobody, not even the viewer", async () => {
+    placedViewer();
+    vi.mocked(graphRepo.findNearestNodes).mockResolvedValue([
+      viewer,
+      neighbour("a", 1, 1),
+    ]);
+    vi.mocked(graphRepo.findBackboneEdgesWithin).mockResolvedValue([
+      { nodeUserId: "a", anchorUserId: "viewer" },
+    ]);
+
+    const payload = JSON.stringify(await getNeighbourhood("viewer"));
+
+    expect(payload).not.toContain("viewer");
+    expect(payload).not.toContain("userId");
+  });
+});
+
+describe("getPublicWindow", () => {
+  const around = [
+    neighbour("first", 0, 0),
+    neighbour("second", 120, 0),
+    neighbour("third", -60, 90),
+  ];
+
+  it("centres on the community origin, never on the caller", async () => {
+    vi.mocked(graphRepo.findNearestNodes).mockResolvedValue(around);
+
+    const window = await getPublicWindow();
+
+    expect(graphRepo.findNearestNodes).toHaveBeenCalledWith(
+      COMMUNITY_ORIGIN,
+      MAX_PUBLIC_WINDOW_NODES,
+    );
+    expect(window.centre).toEqual({ x: 0, y: 0 });
+  });
+
+  it("has no You in it", async () => {
+    vi.mocked(graphRepo.findNearestNodes).mockResolvedValue(around);
+
+    const window = await getPublicWindow();
+
+    expect(window.nodes.every((node) => node.isViewer === false)).toBe(true);
+  });
+
+  /**
+   * The procedure is unauthenticated, so this payload is readable by anybody
+   * with the URL. A user id in it would hand a stranger the membership list —
+   * and, joined against a review byline, a name for a dot.
+   */
+  it("returns no user id, anywhere, in any form", async () => {
+    vi.mocked(graphRepo.findNearestNodes).mockResolvedValue(around);
+    vi.mocked(graphRepo.findBackboneEdgesWithin).mockResolvedValue([
+      { nodeUserId: "second", anchorUserId: "first" },
+      { nodeUserId: "third", anchorUserId: "first" },
+    ]);
+
+    const window = await getPublicWindow();
+    const payload = JSON.stringify(window);
+
+    for (const node of around) {
+      expect(payload).not.toContain(node.userId);
+    }
+    expect(payload).not.toContain("userId");
+    expect(payload).not.toContain("nodeUserId");
+    expect(payload).not.toContain("anchorUserId");
+    for (const node of window.nodes) {
+      expect(Object.keys(node).sort()).toEqual([
+        "color",
+        "id",
+        "isViewer",
+        "x",
+        "y",
+      ]);
+    }
+  });
+
+  it("gives every node a distinct token, and reuses none of them next time", async () => {
+    vi.mocked(graphRepo.findNearestNodes).mockResolvedValue(around);
+
+    const first = await getPublicWindow();
+    const second = await getPublicWindow();
+    const firstIds = first.nodes.map((node) => node.id);
+
+    expect(new Set(firstIds).size).toBe(around.length);
+    for (const id of second.nodes.map((node) => node.id)) {
+      expect(firstIds).not.toContain(id);
+    }
+  });
+
+  it("joins its edges to its own nodes and to nothing else", async () => {
+    vi.mocked(graphRepo.findNearestNodes).mockResolvedValue(around);
+    vi.mocked(graphRepo.findBackboneEdgesWithin).mockResolvedValue([
+      { nodeUserId: "second", anchorUserId: "first" },
+      // A backbone edge reaching outside the bounded set.
+      { nodeUserId: "third", anchorUserId: "somebody-far-away" },
+    ]);
+
+    const window = await getPublicWindow();
+    const ids = new Set(window.nodes.map((node) => node.id));
+
+    expect(window.edges).toHaveLength(1);
+    for (const edge of window.edges) {
+      expect(ids.has(edge.fromId)).toBe(true);
+      expect(ids.has(edge.toId)).toBe(true);
+    }
+  });
+
+  // The real community is small and the hero is allowed to be sparse. What it
+  // must never do is invent somebody to fill the frame.
+  it("returns an empty window rather than inventing a community", async () => {
+    vi.mocked(graphRepo.findNearestNodes).mockResolvedValue([]);
+
+    expect(await getPublicWindow()).toEqual({
+      centre: COMMUNITY_ORIGIN,
+      nodes: [],
+      edges: [],
+    });
+  });
+
+  it("writes nothing — a visitor's read may not place anybody", async () => {
+    vi.mocked(graphRepo.findNearestNodes).mockResolvedValue(around);
+
+    await getPublicWindow();
+
+    expect(graphRepo.persistPlacement).not.toHaveBeenCalled();
   });
 });
 
