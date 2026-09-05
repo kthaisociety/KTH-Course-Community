@@ -894,12 +894,46 @@ and the second is better:
    contradicts the artboard's flow.
 2. **Keep the artboard's flow and give the existing note an Undo.** The note
    already exists, already sits where the reader is looking, and already fires
-   at the right moment. `collections.create` plus `collections.reorder` can
-   restore name, membership and order, so an undo is expressible in the
-   contracts that exist today — no schema work. This satisfies "no irreversible
-   destruction" *and* keeps the artboard's one-click delete.
+   at the right moment. An undo is expressible in the contracts that exist
+   today — no schema work — but it is **three procedures, not two**, and the
+   sequence matters:
+
+   1. `collections.create(name)` — returns a collection with **empty**
+      `courseCodes`. `server/collections/service.ts:55-65` ends
+      `return toCollection(row, [])`, so creating restores the name and
+      nothing else.
+   2. `collections.addCourse(collectionId, courseCode)` — **once per course**,
+      because `reorder` cannot add membership.
+      `reorderCollectionCourses` (`:140-166`) reads the current members and
+      throws `NotFoundError` for **any** requested code that is not already
+      one, so a `create` → `reorder` pair fails outright rather than
+      partially working.
+   3. `collections.reorder(collectionId, courseCodes)` — last, to restore the
+      saved ordering. `addCourse` appends, so order has to be reasserted after
+      every member is back.
+
+   **And there is a failure mode the sequence cannot paper over.**
+   `addCourseToCollection` (`:97-107`) throws `ForbiddenError`
+   — *"Save `<code>` before adding it to a collection"* — when the course is no
+   longer in `user_saved_courses`. So an undo attempted after the reader has
+   also unsaved one of the courses **cannot fully restore the collection**.
+   Whoever implements this has to decide what that partial restore says to the
+   reader; it is not a detail that can be left to the happy path.
+
+   This still satisfies "no irreversible destruction" and still keeps the
+   artboard's one-click delete. It is simply more work than one line of the
+   ledger originally implied.
 
 **Escalated to the product owner.** Recommending option 2.
+
+**Correction, prompted by Greptile on PR #163 (round 1).** An earlier version of
+this finding said `collections.create` plus `collections.reorder` could restore
+"name, membership and order". That was wrong: `reorder` validates every
+requested code against existing membership before writing positions, so it can
+never add a member. Greptile reproduced this with an executable test against the
+real service, and the recipe above is the corrected one. The `ForbiddenError`
+constraint in the last paragraph is a further limit that neither the original
+claim nor Greptile's correction mentioned, found while verifying the fix.
 
 ### C-02 — the compact chip now matches the revised artboard — **satisfied; #127 §4 item 3 is closed**
 
@@ -1959,8 +1993,12 @@ be trusted about what it did.
 
 # Follow-up issues filed
 
-Nine, covering every finding in this ledger that is actionable. Each links back
-to its ledger reference. Nothing was fixed on this branch.
+Nine. Each links back to its ledger reference. Nothing was fixed on this branch.
+
+Every **actionable** finding is represented below. The findings deliberately
+*not* filed are listed under "recorded but deliberately not filed" further down,
+each with its reason — those are the ones I judged to be observations rather
+than work. Read the two lists together; neither is complete on its own.
 
 | Issue | Title | Ledger refs | Severity | Label |
 |---|---|---|---|---|
@@ -1972,7 +2010,15 @@ to its ledger reference. Nothing was fixed on this branch.
 | [#159](https://github.com/kthaisociety/KTH-Course-Community/issues/159) | `CollectionDetail` pins card geometry, wrong inside Saved's narrowed column | C-04, C-05 | S3 | `bug`, `ready-for-agent` |
 | [#160](https://github.com/kthaisociety/KTH-Course-Community/issues/160) | Mobile workspace renders one sheet where the artboard stacks them | E-05, E-06 | S3, S4 | `enhancement`, `ready-for-human` |
 | [#161](https://github.com/kthaisociety/KTH-Course-Community/issues/161) | The design contradicts itself about which tier buys which personalization axis | M-04 | S3 | `question`, `ready-for-human` |
-| [#162](https://github.com/kthaisociety/KTH-Course-Community/issues/162) | Eight small findings: dead code, unread fields and latent risks | X-04, CC-01, CC-02, X-03, N-03, L-07, L-08, R-03 | S4 | `bug`, `ready-for-agent` |
+| [#162](https://github.com/kthaisociety/KTH-Course-Community/issues/162) | Eight small findings: dead code, unread fields and latent risks | X-04, CC-01, CC-02, X-03, N-03, L-07, L-08, R-03 — **plus W-02 and C-03, added as comments** | S4 | `bug`, `ready-for-agent` |
+
+**On #162's two added items.** W-02 (the review draft's absent "Save draft"
+button) and C-03 (the stale artboard line number in `collection-chip.tsx`) were
+both added to #162 **as comments rather than in its body**, because they were
+found after it was filed. They are part of the issue and will be read with it,
+but a check that reads only `gh issue view 162 --json body` will not see them —
+which is exactly what happened during Greptile's review of this PR. Recorded
+here so the next reader does not repeat that.
 
 `ready-for-human` marks the four that carry a product decision an agent must not
 make on its own. `ready-for-agent` marks the five that are fully specified.
