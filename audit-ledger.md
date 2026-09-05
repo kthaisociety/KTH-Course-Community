@@ -679,3 +679,366 @@ pre-paint script that copies a valid `theme` value to `cc:theme` only when
 throws outright where site data is blocked. It runs before `next-themes`' own
 pre-paint script, which is why it lives in the provider rather than an effect.
 **Confidence: high.**
+---
+
+# Route 3 — Saved (`/saved`)
+
+**Artboard:** `docs/design_ref_new/Course Community - Saved.dc.html` (1226 lines),
+and `Course Community - Saved copy.dc.html` (identical length; a duplicate export).
+**Files inspected:** `apps/web/app/(service)/saved/page.tsx`,
+`features/saved/components/saved.tsx`, `features/saved/api/mutations.ts`,
+`features/courses/lib/card-geometry.ts`,
+`features/workspace/hooks/use-results-width.ts`,
+`features/workspace/hooks/use-workspace-presentation.ts`.
+
+## Control inventory
+
+| Control | Desktop | Mobile | Same handler? |
+|---|---|---|---|
+| Collections strip (compact) | `Collections compact` | identical component | yes |
+| Card open | `workspace.open(code,"details")` | identical | yes |
+| Card "Write a review" | `workspace.open(code,"review")` | identical | yes |
+| Card remove (trash) | `unsave` → `setSaved(code,false)` | identical | yes |
+| Collection picker on card | `action="add"` | identical | yes |
+| Empty-state "Explore courses" | `router.push("/search")` | identical | yes |
+| Workspace surface | `WorkspacePaneHost` | `MobileWorkspaceSheetHost` | same state — see E-05 |
+
+## States exercised
+
+| State | Rendered by | Verdict |
+|---|---|---|
+| Session loading | 3 × `CardSkeleton` (236px, the artboard's own) | satisfied |
+| Empty | "No saved courses yet" + Explore button | satisfied |
+| Partial failure | `<output>` note, "N saved courses could not be loaded. They are still saved" | satisfied, and unusually good — see S-02 |
+| Detail open | saved list hidden (`openDetail !== null ? null : …`) | satisfied — the artboard's own `showSavedSection` |
+| Signed out with stale cookie | `AuthReasonDialog` via the card's prompts | satisfied — see S-04 |
+
+## Findings
+
+### S-01 — the unorganized / all-organized split is still not built — **product decision required, unchanged since #127 §4**
+
+**Severity: S3.** **Confidence: high.**
+
+#127 §4 records this as *"dropped because a course would vanish from `/saved` on
+joining a collection, reachable only behind a chip. Needs a product decision,
+not just code."* I verified it against the code as it stands, and it is still
+deferred, still for that reason, and now documented at length in
+`features/saved/components/saved.tsx:70-85`.
+
+What the artboard draws and the code does not:
+
+- Below the chips, only saved courses **not** in a collection (artboard line 128).
+- An `h2` reading "Saved courses" over the line *"Courses you have saved but not
+  yet added to a collection"*.
+- An *"Every saved course is in a collection"* panel when none are left.
+
+What the code does: one flat list of every saved course. The `h2` is dropped too,
+on the reasoning that "Saved courses" under an `h1` also reading "Saved courses"
+says nothing once the distinguishing subtitle is gone — which is correct as far
+as it goes.
+
+**The objection is still valid.** A reader who files everything would land on a
+page whose only list is empty, under a heading promising their saved courses,
+with every course reachable only by opening the collection holding it.
+
+**What the fix would be — and why it is not mine to pick.** Three shapes, and
+they are product choices, not code choices:
+
+1. Build the artboard exactly, and accept that a fully-organized library shows
+   an empty list plus the "Every saved course is in a collection" panel. The
+   artboard *does* provide that panel, so this is more defensible than #90
+   judged.
+2. Keep the flat list and drop the split from the design.
+3. Flat list with an "organized" affordance — a filter or a badge on cards that
+   belong to a collection — so the information the split carries survives
+   without removing anything from the page.
+
+**Escalated to the product owner.** This is #127's own "needs a product
+decision, not just code", and nothing since has decided it.
+
+### S-02 — partial-load failure is reported rather than swallowed — **satisfied**
+
+Worth recording because it is the kind of state audits usually find missing.
+`saved.tsx` computes `unreadable = savedCourseCodes.length - courses.length` and
+renders an `<output>` (the element that carries the status role the artboard's
+`aria-live` asks for) saying the courses are **still saved**. Critically, a page
+where *every* summary failed does not fall through to "No saved courses yet" —
+the empty branch keys on `savedCourseCodes.length === 0`, not on
+`courses.length`. An empty library and an unreadable one are different pictures
+and are drawn differently. **Confidence: high.**
+
+### S-03 — `user.me` is the single source for saved codes — **satisfied**
+
+`saved.tsx` reads `user?.savedCourseCodes` rather than `saved.list`, with the
+comment *"A second copy would mean an unsave that empties one and leaves the
+other holding the course."* The card's own Save state reads the same query, so
+an unsave invalidates one cache and both surfaces agree. This is exactly the
+"divergent local state" class #134 asks about, and it has been avoided
+deliberately. **Confidence: high.**
+
+### S-04 — the auth gate is honest about `proxy.ts` — **satisfied**
+
+`proxy.ts` (Next 16; not `middleware.ts`) only checks that a session *cookie*
+exists for `/profile`, `/saved` and `/taken` — it does not validate it. So a
+stale cookie reaches this page signed out. `saved.tsx` calls
+`useRequireSession()` and still renders `AuthReasonDialog`, and the card's
+controls ask for a session the way they do everywhere else rather than failing
+silently. The component carries a comment saying precisely this. The real gate
+is `protectedProcedure` on the server. **Confidence: high.**
+
+### S-05 — the card ramp on Saved is measured, and the artboard is followed over #90 — **satisfied**
+
+#90 decided "Saved pins the card's `geo` to the fully collapsed end". That was
+decided when this page had no pane to yield to. It has one now, and the artboard
+computes `geo` from what the pane leaves of the row (line 844) exactly as
+Explore does. `saved.tsx:127-128` uses `courseCardGeometry(resultsWidth)` with
+`useResultsWidth()`. Correct, and correctly reasoned in the file's header.
+**Confidence: high.**
+
+---
+
+# Route 4 — Collections (`/collections`, and the `compact` section inside `/saved`)
+
+**Artboard:** `docs/design_ref_new/Course Community - Collections.dc.html` (445 lines).
+**Files inspected:** `apps/web/app/(service)/collections/page.tsx`,
+`features/collections/components/collections.tsx`,
+`features/collections/components/collection-detail.tsx`,
+`features/collections/components/collection-chip.tsx`,
+`features/collections/components/collection-tile.tsx`,
+`features/collections/components/new-collection-dialog.tsx`,
+`features/collections/components/empty-panel.tsx`,
+`features/collections/hooks/use-popover.ts`,
+`features/collections/hooks/use-rename-draft.ts`,
+`features/collections/lib/collection-model.ts`,
+`features/courses/lib/collection-order.ts`.
+
+## Control inventory
+
+| Control | Full page | `compact` (inside Saved) | Same handler? |
+|---|---|---|---|
+| "New collection" | `EmptyPanel` button / header button | dashed 40px chip, always first in the row | both `setDialogOpen(true)` |
+| Open a collection | `CollectionTile` click | `CollectionChip` click (whole chip) | both `openCollection(id)` |
+| Rename | tile ⋯ menu → inline input | chip ⋯ menu → inline input | both `onRename`, via `useRenameDraft` |
+| Delete | tile ⋯ menu | chip ⋯ menu | both `onDelete` — **see C-01** |
+| Detail: back | "All collections" | identical | yes |
+| Detail: add course | `usePopover` menu of addable saved codes | identical | yes |
+| Detail: remove course | card `removeLabel` button | identical | yes |
+| Detail: reorder | ▲ / ▼ per course, ends disabled | identical | `collections.reorder` |
+| Detail: delete | "Delete" button | identical | **see C-01** |
+| New-collection dialog | name + filter + checkbox list | identical | yes |
+
+`/collections` and the compact section are **one component** with a `compact`
+flag, so there is no divergent handler anywhere in this table. Recorded as
+satisfied.
+
+## Findings
+
+### C-01 — collection deletion is immediate and irreversible, from three entry points — **product decision required; a #127 requirement reads as unmet**
+
+**Severity: S1** — a reader loses data with no way back.
+**Confidence: high.**
+
+#134's inherited requirements list says, verbatim: *"ensure destructive
+Collection deletion confirms before mutation"*.
+
+That is not what the code does. Three call sites —
+`collection-detail.tsx:186`, `collection-tile.tsx:126`, `collection-chip.tsx:118`
+— all reach `collections.tsx:281`:
+
+```ts
+function onDelete(collection: Collection) {
+  deleteCollection
+    .mutateAsync({ collectionId: collection.id })
+    .then(() => {
+      if (openId === collection.id) openCollection(null);
+      showNote(`Collection "${collection.name}" deleted`);
+    })
+```
+
+The mutation fires **on the click**. There is no dialog, no second click, no
+hold-to-confirm. `showNote` is a transient text banner plus an `aria-live`
+region — it carries **no Undo**; I read `showNote` and the `note` state at
+`collections.tsx:172-182` and `:341-349` to be sure. So the sequence is
+delete → tell the reader it happened.
+
+What is lost: the collection and its curation — its name and its stored course
+order. The courses themselves survive (`user_saved_courses` has no dependency on
+it), so this is not catastrophic, but the ordering work is unrecoverable.
+
+**Why I am escalating rather than calling it a straight defect.** The
+implementation is matching the artboard, deliberately and correctly under the
+precedence rule. I checked `Course Community - Collections.dc.html` directly:
+
+- line 83 — detail `Delete` → `onDetailDelete`
+- line 402-405 — `onDetailDelete: () => { … STORE.deleteCollection(detail.id);
+  this.setState({ detail: null, note: "Collection deleted" }) }`
+- lines 124 / 163 / 276-279 — the tile and chip menus, same shape.
+
+So the artboard also deletes on the click and shows the note afterwards, with no
+confirm and no undo. #127 §4 says exactly this: *"Collection deletion (#91)
+confirms *after* rather than *before*. That is the artboard's own behaviour, so
+it was followed, but it deletes immediately and irreversibly."*
+
+**This is a genuine conflict between the requirements list and the design
+authority**, and the brief is explicit that where they disagree I match the
+artboard and report rather than change. So:
+
+- As a **design-conformance** item: **satisfied**, exactly.
+- As a **#127 requirement**: **unmet**, and it cannot be met without
+  overriding the artboard.
+
+**What the fix would be, if the product owner chooses to override.** Two options,
+and the second is better:
+
+1. An `AlertDialog` before the mutation. Costs a modal on a frequent action and
+   contradicts the artboard's flow.
+2. **Keep the artboard's flow and give the existing note an Undo.** The note
+   already exists, already sits where the reader is looking, and already fires
+   at the right moment. `collections.create` plus `collections.reorder` can
+   restore name, membership and order, so an undo is expressible in the
+   contracts that exist today — no schema work. This satisfies "no irreversible
+   destruction" *and* keeps the artboard's one-click delete.
+
+**Escalated to the product owner.** Recommending option 2.
+
+### C-02 — the compact chip now matches the revised artboard — **satisfied; #127 §4 item 3 is closed**
+
+**Confidence: high.** This is the item the brief warned would mislead: #127 §4
+says *"`Collections`' `compact` chip layout (#91, partly built by #90) — still
+not what the artboard draws"*, and reading that as an open defect would be
+wrong, because the artboard was revised.
+
+I read the revised artboard rather than trusting the deferral.
+`Course Community - Collections.dc.html:106-112` is the `compact` branch:
+
+| Property | Artboard (line 112) | `collection-chip.tsx` | Match |
+|---|---|---|---|
+| height | `height:40px` | `h-10` | yes |
+| padding | `padding:0 12px` | `px-3` | yes |
+| gap | `gap:9px` | `gap-[9px]` | yes |
+| radius | `border-radius:9px` | `rounded-[9px]` | yes |
+| border | `1px solid var(--rule)` | `border border-cc-rule` | yes |
+| surface | `background:var(--surface)` | `bg-cc-surface` | yes |
+| hover | `border-color:var(--hov)` | `hover:border-cc-hov` | yes |
+| whole chip opens | `onClick={{ col.onOpen }}` | absolute inset-0 button | yes |
+
+The dashed "New collection" chip (artboard line 108: `height:40px`, `padding:0 13px`,
+`gap:6px`, dashed `#9dbfe4`, `rgba(23,81,166,.06)`) is
+`collections.tsx:449-457`: `h-10`, `px-[13px]`, `gap-1.5`, `border-dashed
+border-cc-hov`, `bg-cc-info` — the tokenised equivalents of that hex pair, kept
+first in the row whether or not any collection exists, which is what the
+artboard does. **#127 §4 item 3 is closed.**
+
+### C-03 — `collection-chip.tsx` cites an artboard line that has moved — **defect, S4**
+
+**Severity: S4.** **Confidence: high.**
+
+`features/collections/components/collection-chip.tsx:19` reads:
+
+> *"`Course Community - Collections.dc.html` **line 174** draws this row when the
+> artboard is embedded rather than shown as a page"*
+
+Line 174 of the current artboard is the *"No collections yet"* empty panel. The
+compact chip row is **line 112**. The comment was written against the earlier
+export and the artboard was revised under it.
+
+This is the smaller half of the problem the #127 correction warns about — the
+*claim* is still true (the artboard does draw this row when embedded), only the
+line number moved. But it is exactly the kind of citation that sends the next
+reader to the wrong place, and I checked rather than assumed.
+
+**What the fix would be:** change `line 174` to `line 112`. One character-level
+edit. I also checked the repo for stale `docs/design/` and `docs/design_ref_old/`
+paths and found **none** — see X-01 — so this is a residue of a different kind.
+
+### C-04 — `CollectionDetail` pins the card geometry, and on `/saved` that is wrong — **defect; deferred item 5 confirmed and sharpened**
+
+**Severity: S3.** **Confidence: medium-high** — the mechanism is read directly
+off the code; I did not render it at a narrow width.
+
+`collection-detail.tsx:235` hard-pins every card:
+
+```tsx
+geo={EXPANDED_CARD_GEOMETRY}
+```
+
+and `:61-62` justifies it:
+
+> *"The geometry is pinned to the expanded end: **the page column has nothing
+> competing for its width**, so there is no ramp to interpolate along."*
+
+**That claim is true on `/collections` and false on `/saved`.** Saved embeds
+`Collections compact` *inside* `resultsRef` — the very column
+`WorkspacePaneHost` narrows, by up to the pane's full width. When a reader has a
+workspace tab open on `/saved` and then opens a collection, the collection's
+cards render at maximum geometry inside a column that may be several hundred
+pixels narrower, and the column is `overflow-x-hidden`, so the surplus is
+**clipped rather than scrolled**. Each row also spends ~36px on the ▲/▼ column
+before the card starts.
+
+This is deferred item 5 stated precisely: it is not merely that "the same card
+behaves differently by which list it is in", it is that one of the two behaviours
+is *wrong in a reachable state*.
+
+**Root cause:** the pin was correct when `CollectionDetail` only ever rendered on
+the full-width `/collections` route; it was embedded into Saved later and the
+assumption in its comment was not revisited.
+
+**What the fix would be:** `CollectionDetail` should take `geo` as a prop, the
+way `CourseCardItem` already does. `/collections` passes
+`EXPANDED_CARD_GEOMETRY` (its column genuinely has no competition); Saved passes
+its own measured `courseCardGeometry(resultsWidth)`, which it already computes at
+`saved.tsx:128`. That is a prop-drill of one value through
+`Collections` → `CollectionDetail`, no new measurement, and it makes the card
+behave identically in both lists. The comment at `:61-62` then belongs on
+`/collections`' call site instead.
+
+### C-05 — `card-geometry.ts`'s header now contradicts Saved's — **defect, S4**
+
+**Severity: S4.** **Confidence: high.**
+
+`features/courses/lib/card-geometry.ts:5-7`:
+
+> *"…which is what lets Explore interpolate the whole card from its results
+> column as a workspace pane is dragged open, while **Saved and Collections
+> simply pin an end of the ramp**."*
+
+Saved does not pin. `saved.tsx:128` is `courseCardGeometry(resultsWidth)`, and
+`saved.tsx:47-52` explicitly explains why #90's pinning decision was reversed.
+Two comments in the same feature now state opposite things about the same page,
+and the geometry module's is the one a newcomer reads first.
+
+**What the fix would be:** amend the sentence to name only `CollectionDetail` as
+pinning — and, if C-04 is taken, drop the clause entirely. Documentation only.
+
+### C-06 — "comparison" has not been reintroduced — **satisfied**
+
+#127's requirement: *"preserve settled Collection terminology and do not
+reintroduce comparison as a product concept."* I grepped the whole of
+`apps/web` for `comparison`/`comparisons`/`hasComparisons`/`onNewComparison`.
+
+The only hits are inside `docs/design_ref_new/*.dc.html` — the artboards'
+own mock stores, including `Saved.dc.html:691` and `:706`, which the #127
+comment already flagged as *"the design catching up rather than work for us"*.
+No repository identifier, fixture field, prop or reader-facing string carries
+it. Every hit inside `apps/web` is either a comment explaining the ban or a
+**guard test asserting the word is absent** — `collections.spec.tsx:443`,
+`course-card.spec.tsx:186`, `landing.spec.tsx:267`, `saved.spec.tsx:171` and
+`app-shell.spec.tsx:116`. (`server/search/service.ts:17` uses "comparison" in
+its ordinary English sense — comparing two scales — not the product concept.)
+So the terminology is not merely correct today, it is held in place by tests. `course-card-model.ts:254-262` records the decision on the one string that
+was closest to the line — the card's add button reads "Add to collection", and
+the comment explains that the artboards' "Add to comparison" is overridden by
+#68 decision 1 because promising a feature in the words a reader sees is the
+same error as promising it in an identifier. **Confidence: high.**
+
+### C-07 — `?collection=` round-trips, and `/collections` is kept for the resolver — **satisfied**
+
+`/saved?collection=<id>` is the permalink (the artboard reaches collections only
+from Saved, so the permalink is Saved's), and `saved.tsx:120-121` mirrors the
+prop into `openDetail` so the route is the authority on first paint and the chips
+after. `/collections` survives as the resolver #91 kept deliberately, with the
+rail still carrying no link to it — which is #68 decision 5's stated intent, so
+its absence from the rail is not an oversight. An id that is not the viewer's own
+reads as not-found rather than refused, because ownership is scoped in the query.
+**Confidence: high.**
