@@ -199,11 +199,19 @@ export function Reviewer({
       </div>
 
       <div className="flex items-center gap-3.5 pt-4">
-        <p className="m-0 flex-none font-medium text-[12px] text-cc-dim tabular-nums">
+        {/*
+          The segments are decoration — a screen reader gets nothing from
+          twelve unlabelled bars — so this line is the only progress a
+          non-sighted reviewer has. `<output>` is a live region, which is
+          what makes it arrive when a card is saved or skipped rather than
+          only when someone goes looking for it; it is the element the rest
+          of this app already uses for the same job.
+        */}
+        <output className="m-0 flex-none font-medium text-[12px] text-cc-dim tabular-nums">
           {activeCode === null
             ? `${round.order.length} ${round.order.length === 1 ? "card" : "cards"} done`
             : `Card ${activeIndex + 1} of ${round.order.length}`}
-        </p>
+        </output>
         <div aria-hidden className="flex flex-1 gap-[5px]">
           {round.order.map((code) => (
             <span
@@ -239,6 +247,11 @@ export function Reviewer({
               key={activeCode}
               course={courses.get(activeCode) ?? { courseCode: activeCode }}
               draft={round.drafts[activeCode] ?? EMPTY_REVIEW_DRAFT}
+              // The artboard's `revStackLabel` is
+              // `(queue - at - 1) + " more after this"`, which on the final
+              // card renders "0 more after this" — a sentence that has to be
+              // read twice to mean "this is the last one". It says that
+              // instead.
               stackLabel={
                 remaining === 0 ? "Last one" : `${remaining} more after this`
               }
