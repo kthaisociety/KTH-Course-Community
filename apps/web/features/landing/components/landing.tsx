@@ -167,8 +167,12 @@ export function Landing() {
    * The exit runs for 130ms and then navigates; without the route already in
    * the client cache, the reader watches the hero clear and then waits on a
    * fetch, and the bar arrives on Explore late enough that it reads as a new
-   * page rather than the same one continuing. Fired from a focus handler and
-   * fenced by a ref: a prefetch is a request, not a piece of state, and putting
+   * page rather than the same one continuing.
+   *
+   * Both ways into a search warm it: focusing the field, and reaching for a
+   * "Try" chip — a chip is a one-click submit that never touches the field, so
+   * focus alone would leave that path cold. Fired from event handlers and fenced
+   * by a ref: a prefetch is a request, not a piece of state, and putting
    * `router` in an effect's dependency array is how two of this repo's earlier
    * render loops started.
    */
@@ -382,6 +386,8 @@ export function Landing() {
                 <button
                   key={term}
                   type="button"
+                  onPointerEnter={warmExplore}
+                  onFocus={warmExplore}
                   onClick={() => submitSearch(term)}
                   className="flex h-7 items-center rounded-[14px] border border-cc-rule2 bg-cc-surface px-[11px] text-[12.5px] text-cc-chip-ink hover:border-cc-hov"
                 >

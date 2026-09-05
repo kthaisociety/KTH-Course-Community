@@ -335,6 +335,18 @@ describe("Landing", () => {
         expect(prefetch).toHaveBeenCalledExactlyOnceWith("/search");
       });
 
+      // A chip is a one-click submit that never touches the field, so focusing
+      // the field is not the only way into a search worth warming.
+      it("prefetches Explore for a chip that is only being reached for", async () => {
+        const user = userEvent.setup();
+        render(<Landing />);
+
+        await user.hover(screen.getByRole("button", { name: "DD2380" }));
+
+        expect(prefetch).toHaveBeenCalledExactlyOnceWith("/search");
+        expect(push).not.toHaveBeenCalled();
+      });
+
       it("navigates plainly, and hands nothing over, under reduced motion", async () => {
         reduceMotion.mockReturnValue(true);
         layOutTheBar();
