@@ -72,6 +72,9 @@ describe("openCourse", () => {
 
     expect(next).not.toBe(workspace);
     expect(next.activeId).toBe("details:DD2380");
+    // The tab list itself is untouched, so a host memoised on `openCourses`
+    // alone does not rebuild for a change that only moved the front.
+    expect(next.open).toBe(workspace.open);
   });
 });
 
