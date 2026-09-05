@@ -291,9 +291,11 @@ describe("Explore", () => {
       );
 
       expect(screen.getByLabelText("Open courses")).toBeInTheDocument();
+      // What the handle does is asserted in `workspace-pane-host.spec.tsx`;
+      // this screen only has to prove the column arrived with it.
       expect(
         screen.getByRole("button", { name: "Resize workspace" }),
-      ).toHaveAttribute("title", "Drag to resize · double-click to reset");
+      ).toBeInTheDocument();
       expect(push).not.toHaveBeenCalled();
     });
 
