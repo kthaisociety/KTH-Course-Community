@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { authClient } from "@/lib/auth-client";
 import type { OauthProvider } from "@/types";
+import { requestedReturnTo } from "../lib/return-to";
 
 export function AuthProviders() {
   const [isLoading, setIsLoading] = useState(false);
@@ -20,7 +21,10 @@ export function AuthProviders() {
     try {
       const { error } = await authClient.signIn.social({
         provider,
-        callbackURL: "/search",
+        // `?next=` if `AuthReasonDialog` sent them here, `/search` otherwise —
+        // the same promise the dialog's own buttons make, kept by the page it
+        // hands off to.
+        callbackURL: requestedReturnTo(),
       });
       if (error) {
         toast.error("Failed to sign in");

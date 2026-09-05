@@ -27,6 +27,7 @@ import {
   MAX_REVIEW_SCORE,
   MIN_REVIEW_SCORE,
 } from "@/types";
+import { withOpenCourse } from "../lib/open-courses";
 import {
   EMPTY_REVIEW_DRAFT,
   isUntouched,
@@ -219,7 +220,7 @@ export function ReviewDraftPanel({
    * What was published, once something was.
    *
    * A published draft is no longer a draft — it is a Review, with a row — so
-   * the workspace forgets it and stops keeping it in the tab's storage.
+   * the workspace forgets it and stops keeping it in the browser's storage.
    * Reopening the tab a week later must not offer a second copy of a review
    * that is already live. The panel keeps its own snapshot so the writer can
    * still see what they sent, and stops taking edits to it.
@@ -237,8 +238,10 @@ export function ReviewDraftPanel({
   }
 
   // Signing in navigated the page away and back. The draft came with it
-  // through `sessionStorage`; this is the note that says so, and only the
-  // course that asked for the sign-in may claim it.
+  // through `localStorage`; this is the note that says so, and only the course
+  // that asked for the sign-in may claim it. The note itself is per-tab, so it
+  // greets the tab that was thrown out — the magic link opens a new one, which
+  // gets its draft back without being told it was ever at risk.
   useEffect(() => {
     if (sessionLoading || !isAuthenticated) return;
     if (claimAwaitingSignIn(courseCode)) setJustSignedIn(true);
@@ -725,10 +728,37 @@ export function ReviewDraftPanel({
           Recorded because a deviation nobody wrote down is a deviation the next
           pass "restores". Do not add the button. */}
       <div className="sticky bottom-0 mt-auto border-cc-rule border-t bg-cc-surface">
-        {justSignedIn && !justPublished && (
+        {/* Two greetings, because there are two things that can have happened
+            and the banner used to claim the good one either way.
+
+            "Your draft came back untouched" was rendered on `justSignedIn`
+            alone, with nothing in the condition that had so much as looked at
+            the draft — so the guest whose draft had just been overwritten with
+            `{}` was told, on the empty form, that it had come back untouched.
+            The overwrite is fixed in `workspace-pane.tsx`, and this is fixed
+            separately, because a banner that asserts something it never checked
+            is wrong even on the day nothing else is.
+
+            The empty case is a sentence rather than silence. `publish()` only
+            reaches the sign-in prompt with an answered draft — it returns before
+            it unless `toReviewFormData` gave it a form — so a draft that is
+            untouched on the way back is not a writer who typed
+            nothing — it is work that existed and is gone, and the only useful
+            thing to say is which. Silence would leave them staring at a blank
+            form deciding whether they had imagined filling it in; the tint is
+            the danger family, because this is the one banner here that reports
+            a loss. */}
+        {justSignedIn && !justPublished && !isUntouched(draft) && (
           <p className="flex items-center gap-2.5 border-cc-rule border-b bg-cc-pill px-5 py-2.5 text-[12.5px] text-cc-brand leading-[1.45]">
             Signed in{user?.name ? ` as ${user.name}` : ""}. Your draft came
             back untouched — check it and publish when you are ready.
+          </p>
+        )}
+        {justSignedIn && !justPublished && isUntouched(draft) && (
+          <p className="flex items-center gap-2.5 border-cc-rule border-b bg-cc-danger-tint px-5 py-2.5 text-[12.5px] text-cc-danger-ink leading-[1.45]">
+            Signed in{user?.name ? ` as ${user.name}` : ""}, but your draft did
+            not come back — this browser did not keep it. Sorry; you will have
+            to write it again.
           </p>
         )}
         {/* The success tint family, which is what the artboard draws:
@@ -786,6 +816,12 @@ export function ReviewDraftPanel({
       <AuthReasonDialog
         reason={authReason}
         onReasonChange={setAuthReason}
+        // Sign in and come back to *this tab*, not just to this page. `?open=`
+        // has been spent and removed by now, so the URL alone would bring them
+        // back to the search behind the pane with the draft nowhere on screen.
+        // It matters most on the email path, which opens a new tab where the
+        // URL is the only thing that arrives.
+        returnTo={(here) => withOpenCourse(here, courseCode, "review")}
         onClose={() => {
           setAuthReason(null);
           // Backing out of the dialog is not signing in, so the note that

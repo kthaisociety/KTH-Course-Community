@@ -24,19 +24,57 @@ import { readWorkspace, writeWorkspace } from "../lib/workspace-storage";
  * OAuth redirect away and back — returns the student to the courses they had
  * open rather than to an empty pane. Restoring happens in an effect rather
  * than in the initial state so the server and the first client render agree.
+ *
+ * ## Why `hydrated` is state and not a ref
+ *
+ * The mirror effect below must not run before the restore effect above, and
+ * the gate that says so has to be committed *with* the value it guards. A ref
+ * is not: `restored.current = true` inside the restore effect flips
+ * synchronously while `workspace` is still `EMPTY_WORKSPACE`, so for exactly
+ * one render the mirror is armed over pre-restore state and writes an empty
+ * workspace over the stored one. It self-heals on the next commit — and too
+ * late for anything that reads storage inside that window. React Strict Mode
+ * replaying the mount effects reads precisely there, which is why a stored
+ * workspace with one open tab came back as zero tabs in development.
+ *
+ * As state, `hydrated` cannot be `true` in a render where `workspace` is still
+ * the placeholder, so there is no write path that can carry one. Same bug, same
+ * shape and same fix as the drafts and published maps in `workspace-pane.tsx`;
+ * the long version of the reasoning, including why write-through was not the
+ * answer, is written out there.
+ *
+ * ## And why the *read* is guarded by a ref, which is not the same thing
+ *
+ * Restoring must happen once per mount, ever — not once per effect run. Strict
+ * Mode runs the mount effects, tears them down and runs them again, and by the
+ * second pass the workspace may already have moved: `use-explore.ts` spends a
+ * `?open=` in its own mount effect, so a reader arriving on
+ * `/course/DD2380` has a tab open before the replay, and a replayed restore
+ * reads storage that has not caught up yet and puts the empty workspace back.
+ * The tab opens and vanishes in the same commit, and `use-explore` will not
+ * reopen it because it has already spent the instruction.
+ *
+ * So the two guards guard different things and are deliberately different
+ * kinds. `read.current` is a ref because it has to survive the replay — that is
+ * exactly what makes it able to say "already done". `hydrated` is state because
+ * it has to arrive *with* the value it describes. Swapping them is the bug at
+ * both ends.
  */
 export function useWorkspacePane() {
   const [workspace, setWorkspace] = useState<Workspace>(EMPTY_WORKSPACE);
-  const restored = useRef(false);
+  const [hydrated, setHydrated] = useState(false);
+  const read = useRef(false);
 
   useEffect(() => {
+    if (read.current) return;
+    read.current = true;
     setWorkspace(readWorkspace());
-    restored.current = true;
+    setHydrated(true);
   }, []);
 
   useEffect(() => {
-    if (restored.current) writeWorkspace(workspace);
-  }, [workspace]);
+    if (hydrated) writeWorkspace(workspace);
+  }, [hydrated, workspace]);
 
   const open = useCallback((courseCode: string, kind: OpenCourseKind) => {
     setWorkspace((current) => openCourse(current, courseCode, kind));

@@ -9,6 +9,7 @@ import {
   tabLabel,
   tabLayout,
   type Workspace,
+  withOpenCourse,
 } from "./open-courses";
 
 function withOpen(...codes: string[]): Workspace {
@@ -206,5 +207,26 @@ describe("openCourseRequest", () => {
     expect(openCourseRequest(null, "review")).toBeNull();
     expect(openCourseRequest(undefined, undefined)).toBeNull();
     expect(openCourseRequest("   ", "details")).toBeNull();
+  });
+});
+
+describe("withOpenCourse", () => {
+  it("puts the instruction back into a location that has spent it", () => {
+    expect(withOpenCourse("/search?q=graphs", "DD2380", "review")).toBe(
+      "/search?q=graphs&open=DD2380&kind=review",
+    );
+  });
+
+  it("works on a location with no query at all", () => {
+    expect(withOpenCourse("/saved", "SF1626", "details")).toBe(
+      "/saved?open=SF1626&kind=details",
+    );
+  });
+
+  // Two instructions in one URL is one host obeying whichever it reads first.
+  it("replaces an instruction already there rather than adding a second", () => {
+    expect(
+      withOpenCourse("/search?open=SF1626&kind=details", "DD2380", "review"),
+    ).toBe("/search?open=DD2380&kind=review");
   });
 });

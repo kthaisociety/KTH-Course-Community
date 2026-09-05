@@ -13,6 +13,7 @@ import {
 import { Spinner } from "@/components/ui/spinner";
 import { authClient } from "@/lib/auth-client";
 import type { OauthProvider } from "@/types";
+import { authHref, currentReturnTo, safeReturnTo } from "../lib/return-to";
 
 /**
  * Why the visitor is being asked to sign in. Browsing never needs an account, so
@@ -55,20 +56,46 @@ type Props = {
   reason: AuthReason | null;
   onReasonChange: (reason: AuthReason) => void;
   onClose: () => void;
+  /**
+   * Adjust where the sign-in comes back to.
+   *
+   * Given the page the visitor is on — path and query, which is the default —
+   * return where they should land instead. It exists for the review draft,
+   * whose caller knows something the URL has stopped saying: `?open=` is spent
+   * on arrival and taken back out, so by the time a guest presses "Post
+   * review" the URL no longer names the tab they are writing in. Putting it
+   * back is what lets the *email* path work at all, since the link in that mail
+   * opens a new tab where the URL is the only thing that arrived.
+   *
+   * A mapper rather than a string, because the page it maps from is read off
+   * `window.location` at the moment of leaving, and this component renders on
+   * the server too.
+   */
+  returnTo?: (here: string) => string;
 };
 
-export function AuthReasonDialog({ reason, onReasonChange, onClose }: Props) {
+export function AuthReasonDialog({
+  reason,
+  onReasonChange,
+  onClose,
+  returnTo,
+}: Props) {
   const router = useRouter();
   const [pending, setPending] = useState<OauthProvider | null>(null);
   const copy = REASONS[reason ?? "log-in"];
 
+  /** Come back to exactly where they were — nothing they were reading is lost. */
+  function destination(): string {
+    const here = currentReturnTo();
+    return safeReturnTo(returnTo ? returnTo(here) : here);
+  }
+
   async function signInWith(provider: OauthProvider) {
     setPending(provider);
     try {
-      // Come back to exactly where they were — nothing they were reading is lost.
       const { error } = await authClient.signIn.social({
         provider,
-        callbackURL: window.location.pathname + window.location.search,
+        callbackURL: destination(),
       });
       if (error) toast.error("Could not sign in. Try again.");
     } catch (error) {
@@ -130,7 +157,7 @@ export function AuthReasonDialog({ reason, onReasonChange, onClose }: Props) {
           <button
             type="button"
             disabled={pending !== null}
-            onClick={() => router.push("/auth")}
+            onClick={() => router.push(authHref(destination()))}
             className="flex h-[42px] items-center justify-center rounded-[9px] border border-cc-rule3 bg-cc-surface font-medium text-[13.5px] text-cc-ink hover:border-cc-hov disabled:opacity-60"
           >
             Continue with email

@@ -64,12 +64,15 @@ export interface WorkspacePaneProps {
  *
  * Each open course is a tab, and a tab is either the course's **details** or a
  * **review draft** for it — so a student can read three courses and write a
- * review without losing the search behind them. Nothing here is persisted;
- * closing the last tab is the whole of "closing the pane".
+ * review without losing the search behind them. Closing the last tab is the
+ * whole of "closing the pane".
  *
  * The open list belongs to the host screen (`useWorkspacePane`), which needs
  * it to size its results column. Drafts belong here, keyed by course, so
- * switching tabs never loses half-written text.
+ * switching tabs never loses half-written text — and outlive the page, in
+ * `localStorage`, because signing in navigates away and back and sometimes
+ * lands in a different tab entirely. `workspace-storage.ts` is where that split
+ * is argued.
  */
 export function WorkspacePane({
   openCourses,
@@ -82,25 +85,101 @@ export function WorkspacePane({
 }: Readonly<WorkspacePaneProps>) {
   const [drafts, setDrafts] = useState<Record<string, ReviewDraft>>({});
   const [published, setPublished] = useState<Record<string, number>>({});
-  const restored = useRef(false);
+  /**
+   * Whether the two states above hold what storage held, and why this is state
+   * and not a `useRef`.
+   *
+   * Drafts, and what has already been published, outlive the tab they were
+   * written in: signing in navigates the page away and back, and a review tab
+   * is a thing you come back to. Both are restored in an effect rather than in
+   * the initial state, so the first client render matches the server's, and
+   * mirrored back in an effect on every change.
+   *
+   * That pairing needs a gate — the mirror must not run before the restore —
+   * and the gate has to *move with the value it guards*. A ref does not. A ref
+   * set inside the restore effect flips synchronously while `drafts` is still
+   * `{}`, so for one render the mirror is armed over pre-restore state and
+   * writes `{}` over everything stored. It self-heals on the next commit, which
+   * is why this survived review, and it self-heals too late for anything that
+   * reads storage inside that window:
+   *
+   *     GET drafts -> {"DD2380":{…,"message":"Half a thought"}}   restore
+   *     SET drafts = {}                                           mirror, too early
+   *     GET drafts -> {}                                          restore, replayed
+   *     SET drafts = {}
+   *
+   * That third line is React Strict Mode replaying the mount effects, which it
+   * does in development on every App Router page — and it lands exactly in the
+   * window, adopts the blank it just caused, and makes the loss permanent. The
+   * guest who filled in a draft, signed in and came back to an empty form was
+   * reading their own draft being overwritten with nothing.
+   *
+   * As state, `hydrated` is committed in the same batch as the value it
+   * describes: no render exists in which it is `true` and the state is still
+   * empty, so no mirror can carry an empty value. That holds for a replayed
+   * mount, and it holds for the case with no Strict Mode in it at all — two
+   * panes mounting in one commit, where the second pane's restore reads what
+   * the first pane's premature mirror wrote. `explore.tsx` and `saved.tsx`
+   * happen to gate their two hosts on the same ternary today, so that one is
+   * latent rather than live; it is closed here either way, because "latent"
+   * means "one conditional away".
+   *
+   * The alternative is to drop the mirror and write through from `patchDraft` /
+   * `markPublished` instead, which cannot regress this way because there is no
+   * effect to arm early. It was rejected for two reasons. It spreads the
+   * obligation to persist across every mutator that exists — including
+   * `forgetPublished`, and including the next one somebody adds, which fails
+   * silently by simply not writing — where one effect covers all of them by
+   * construction. And computing the value to write means either doing it inside
+   * the state updater, which Strict Mode double-invokes, or reading `drafts`
+   * from the render closure, which gives up the functional updater that keeps
+   * two courses' edits in one batch from overwriting each other. The gate below
+   * is a total invariant over one write path; write-through is a promise every
+   * future call site has to keep.
+   *
+   * The *read* below is guarded the other way round, by a ref, and the
+   * asymmetry is the point. Restoring has to happen once per mount and not once
+   * per effect run: a replayed restore reads storage that whatever has happened
+   * since has not been mirrored into yet, and puts the older value back over the
+   * newer one. A ref is what survives the replay to say "already done"; state
+   * would be `false` in both passes, because neither has re-rendered. So the
+   * read is gated on a ref and the write on state, each on the only thing that
+   * can do its job.
+   */
+  const [hydrated, setHydrated] = useState(false);
+  const read = useRef(false);
+  /**
+   * What this pane and storage last agreed on, per course.
+   *
+   * `localStorage` is shared between tabs, so "what the pane holds" is no
+   * longer the same statement as "what should be stored": a pane carries every
+   * draft it hydrated, including ones it has not touched since, and another tab
+   * may have moved them on. Handing `writeDrafts` this baseline is what lets it
+   * tell "I changed this" from "I am simply still holding it", and write only
+   * the first. Set at the restore and after every write, which are exactly the
+   * moments the two are known to agree.
+   */
+  const synced = useRef<Record<string, ReviewDraft>>({});
 
-  // Drafts, and what has already been published, outlive the tab they were
-  // written in: signing in navigates the page away and back, and a review tab
-  // is a thing you come back to. Restored in an effect so the first client
-  // render matches the server's.
   useEffect(() => {
-    setDrafts(readDrafts());
+    if (read.current) return;
+    read.current = true;
+    const restored = readDrafts();
+    synced.current = restored;
+    setDrafts(restored);
     setPublished(readPublished());
-    restored.current = true;
+    setHydrated(true);
   }, []);
 
   useEffect(() => {
-    if (restored.current) writeDrafts(drafts);
-  }, [drafts]);
+    if (!hydrated) return;
+    writeDrafts(drafts, synced.current);
+    synced.current = drafts;
+  }, [hydrated, drafts]);
 
   useEffect(() => {
-    if (restored.current) writePublished(published);
-  }, [published]);
+    if (hydrated) writePublished(published);
+  }, [hydrated, published]);
 
   const active =
     openCourses.find((entry) => entry.id === activeId) ?? openCourses[0];
