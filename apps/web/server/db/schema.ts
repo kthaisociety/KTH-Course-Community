@@ -36,9 +36,31 @@ export const courseState = pgEnum("course_state", [
 
 export const reviewVoteType = pgEnum("review_vote_type", ["up", "down"]);
 
-export const nodeStyle = pgEnum("node_style", ["default"]);
+/**
+ * The two shape axes of a node profile, as Postgres enums.
+ *
+ * `"default"` leads each list and is the column default: it is what an
+ * unconfigured node stores, and what a node whose tier has decayed renders as
+ * while its stored pick is left untouched. The chosen values come from
+ * `server/graph/appearance.ts`, which is the one definition of the vocabulary —
+ * these declarations exist so the database refuses anything outside it.
+ *
+ * A value added here needs an `ALTER TYPE ... ADD VALUE` migration; see
+ * `drizzle/0015_node_appearance_axes.sql` for the constraints on writing one.
+ */
+export const nodeStyle = pgEnum("node_style", [
+  "default",
+  "solid",
+  "ring",
+  "diamond",
+]);
 
-export const nodeSignalStyle = pgEnum("node_signal_style", ["default"]);
+export const nodeSignalStyle = pgEnum("node_signal_style", [
+  "default",
+  "fade",
+  "comet",
+  "dashed",
+]);
 
 // used for pgvector full-text search
 const tsvector = customType<{ data: string }>({

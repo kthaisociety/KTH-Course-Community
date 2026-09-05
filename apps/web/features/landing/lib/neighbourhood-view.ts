@@ -31,30 +31,36 @@
  * community so that a headline reads better.
  */
 
+import {
+  NODE_SIGNAL_STYLES,
+  NODE_STYLES,
+  type NodeColor,
+  type NodeSignalStyle,
+  type NodeStyle,
+  UNCONFIGURED,
+} from "@/server/graph/appearance";
 import { clearAt, lineClearance, type Rect } from "./hero-keepout";
 
 /**
  * The node colour palette, as the server stores it: **names, never hex**.
- * `server/graph/placement.ts` owns the list; this is the client half of the
+ * `server/graph/appearance.ts` owns the list; this is the client half of the
  * contract, mapping each name onto a `--cc-*` custom property so the palette
  * can be re-skinned in CSS without a data migration.
  *
- * Nobody is assigned one of these today, and earning a tier does not change
- * that. `server/graph/tier.ts` now writes `users.personalization_tier_earned`,
- * so tier 1 genuinely unlocks the colour axis — but no procedure writes
- * `users_node_profiles.color`, so every node still renders the `"default"`
- * brand blue. These are what a member will pick from once that writer exists.
+ * Typed as a total map over the server's `NodeColor`, so adding a name there
+ * without a token here is a build error rather than a node that quietly draws
+ * in the fallback.
  */
-export const NODE_COLOR_VARS = {
+export const NODE_COLOR_VARS: Record<NodeColor, string> = {
   aurora: "--cc-node-aurora",
   ember: "--cc-node-ember",
   frost: "--cc-node-frost",
   moss: "--cc-node-moss",
   slate: "--cc-node-slate",
   violet: "--cc-node-violet",
-} as const;
+};
 
-export type NodeColorName = keyof typeof NODE_COLOR_VARS;
+export type NodeColorName = NodeColor;
 
 /**
  * What a node with no configured appearance draws as, which today is every
@@ -81,6 +87,43 @@ export function nodeColorVar(name: string): string {
 }
 
 /**
+ * What a node with no configured shape draws as: the filled dot every node in
+ * the community has always been. `"solid"` names the same geometry, which is
+ * why an unconfigured node and a node whose owner chose "solid" are
+ * indistinguishable on the canvas — that is the design, not an oversight. The
+ * distinction lives in the column, and it matters when the member changes their
+ * mind rather than when the pixels land.
+ */
+export const DEFAULT_NODE_STYLE_NAME = "solid" as const;
+
+/** What a node with no configured signal draws as: no signal at all. */
+export const NO_SIGNAL = "none" as const;
+
+/** The shape a stored style name draws with. Anything unrecognised is a dot. */
+export function nodeStyleName(name: string): NodeStyle {
+  return (NODE_STYLES as readonly string[]).includes(name)
+    ? (name as NodeStyle)
+    : DEFAULT_NODE_STYLE_NAME;
+}
+
+/**
+ * The signal a stored name draws, or `"none"`.
+ *
+ * `UNCONFIGURED` is the common case and means the node carries no signal — a
+ * **signal** is ongoing, so "not carrying one" is a real state rather than a
+ * quieter version of carrying one. An unrecognised name lands here too: a build
+ * that has never heard of a signal style draws none rather than guessing.
+ */
+export function nodeSignalStyleName(
+  name: string,
+): NodeSignalStyle | typeof NO_SIGNAL {
+  if (name === UNCONFIGURED) return NO_SIGNAL;
+  return (NODE_SIGNAL_STYLES as readonly string[]).includes(name)
+    ? (name as NodeSignalStyle)
+    : NO_SIGNAL;
+}
+
+/**
  * Exactly the shape `graph.neighbourhood` and `graph.publicWindow` return,
  * narrowed to what is drawn.
  *
@@ -94,7 +137,15 @@ export type GraphWindowInput = {
     id: string;
     x: number;
     y: number;
+    /**
+     * The three appearance names, already masked by the server: an axis whose
+     * owner's tier has decayed arrives as `"default"` while their pick stays in
+     * the column. Nothing on this side undoes that, and nothing on this side
+     * needs a tier number to draw a node.
+     */
     color: string;
+    style: string;
+    signalStyle: string;
     isViewer: boolean;
   }[];
   edges: { fromId: string; toId: string }[];
@@ -107,6 +158,10 @@ export type ScreenNode = {
   screenY: number;
   /** The custom property this node's stored colour name maps onto. */
   colorVar: string;
+  /** The shape to draw: `solid`, `ring` or `diamond`. */
+  style: NodeStyle;
+  /** The signal to draw along it, or `"none"` when it carries none. */
+  signalStyle: NodeSignalStyle | typeof NO_SIGNAL;
   isViewer: boolean;
   /** 1 well clear of the hero copy, 0 underneath it. */
   clearance: number;
@@ -179,6 +234,8 @@ export function projectGraphWindow(args: {
       screenX,
       screenY,
       colorVar: nodeColorVar(node.color),
+      style: nodeStyleName(node.style),
+      signalStyle: nodeSignalStyleName(node.signalStyle),
       isViewer: node.isViewer,
       // The viewer's own node sits on the viewport centre, which is where the
       // hero copy is; fading it would hide the one node **Find your dot**

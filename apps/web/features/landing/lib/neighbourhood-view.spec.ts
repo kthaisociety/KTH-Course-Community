@@ -21,6 +21,8 @@ type NodeSpec = {
   x: number;
   y: number;
   color?: string;
+  style?: string;
+  signalStyle?: string;
   isViewer?: boolean;
 };
 
@@ -36,6 +38,8 @@ function graphWindow(
       x: node.x,
       y: node.y,
       color: node.color ?? "default",
+      style: node.style ?? "default",
+      signalStyle: node.signalStyle ?? "default",
       isViewer: node.isViewer ?? false,
     })),
     edges,
@@ -280,6 +284,8 @@ describe("projectGraphWindow", () => {
         "isViewer",
         "screenX",
         "screenY",
+        "signalStyle",
+        "style",
       ]);
     }
   });

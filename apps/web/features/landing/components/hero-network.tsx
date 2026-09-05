@@ -6,9 +6,11 @@ import { fallbackRects, type Rect, SAFETY } from "../lib/hero-keepout";
 import {
   FALLBACK_NODE_COLOR_VAR,
   type GraphWindowView,
+  NO_SIGNAL,
   NODE_COLOR_VARS,
   NODE_RADIUS,
   projectGraphWindow,
+  type ScreenNode,
 } from "../lib/neighbourhood-view";
 
 /**
@@ -35,6 +37,15 @@ import {
  * this canvas is the pulse on the labelled node, so the frame loop runs only
  * while that pulse is on screen and the scene is otherwise drawn once.
  *
+ * **Node appearance is drawn, and none of it animates.** A node draws its
+ * `style` as a shape and its `signalStyle` as a mark around that shape. A signal
+ * is *ongoing* — `CONTEXT.md` — so it is painted on every frame a node is
+ * painted, unlike the **pulse**, which is a one-shot reveal on the viewer's own
+ * node and the only thing here that moves. Drawing a signal in motion would mean
+ * a frame loop that never stops, which is the one property of this canvas the
+ * whole design rests on; the trail is therefore rendered rather than played, and
+ * the geometry below says what each style looks like standing still.
+ *
  * Everything the projection derives — the scale, the centre, the screen
  * coordinates — is thrown away on the next resize. None of it is ever sent back.
  */
@@ -42,6 +53,46 @@ import {
 /** `PAL.dotA` and `PAL.lineA` from the Landing artboard's palette. */
 const NODE_ALPHA = 0.82;
 const EDGE_ALPHA = 0.26;
+
+/**
+ * A diamond's half-diagonal, as a multiple of `NODE_RADIUS`.
+ *
+ * Chosen so the square covers the same area as the circle it replaces: a square
+ * of diagonal `d` has area `d^2 / 2`, so matching `pi * r^2` gives
+ * `d = r * sqrt(2 * pi)` and a half-diagonal of `r * sqrt(pi / 2)`, about 1.25.
+ * Without it a diamond inscribed in the same radius reads as a markedly smaller
+ * node, and a member who picked a shape would appear to have shrunk.
+ */
+const DIAMOND_REACH = Math.sqrt(Math.PI / 2);
+
+/** How much fainter than its node a signal is drawn. */
+const SIGNAL_ALPHA = 0.5;
+
+/**
+ * `fade`: concentric rings, each fainter and wider than the last — a trail that
+ * has spread out and gone soft rather than one caught mid-flight.
+ *
+ * Radii are multiples of `NODE_RADIUS`, so the whole mark scales with the dot.
+ */
+const FADE_RINGS = [
+  { reach: 1.9, alpha: 0.34 },
+  { reach: 2.9, alpha: 0.19 },
+  { reach: 3.9, alpha: 0.1 },
+];
+
+/**
+ * `comet`: a tapering trail behind the node, as segments of falling width and
+ * alpha. `from`/`to` are distances from the node centre in multiples of
+ * `NODE_RADIUS`; the head is nearest the node and the tail thins away from it.
+ */
+const COMET_SEGMENTS = [
+  { from: 1.1, to: 2.5, width: 1.7, alpha: 0.62 },
+  { from: 2.5, to: 3.9, width: 1.2, alpha: 0.36 },
+  { from: 3.9, to: 5.4, width: 0.8, alpha: 0.16 },
+];
+
+/** `dashed`: one broken ring, as a radius multiple and a dash pattern in px. */
+const DASHED_RING = { reach: 2.4, dash: [2.2, 2.6], alpha: 0.55, width: 1.1 };
 
 type Scene = {
   canvas: HTMLCanvasElement;
@@ -208,13 +259,20 @@ function draw(scene: Scene) {
     ctx.stroke();
   }
 
+  // Signals go under the nodes, so a trail never sits on top of the dot it
+  // belongs to. Two passes rather than one interleaved loop, because a node
+  // drawn after its own signal would still be drawn before the *next* node's.
+  for (const node of view.nodes) {
+    if (node.clearance <= 0.02 || node.signalStyle === NO_SIGNAL) continue;
+    drawSignal(scene, palette, node, view.centre);
+  }
+
   for (const node of view.nodes) {
     if (node.clearance <= 0.02) continue;
     ctx.globalAlpha = NODE_ALPHA * node.clearance;
     ctx.fillStyle = nodeColour(palette, node.colorVar);
-    ctx.beginPath();
-    ctx.arc(node.screenX, node.screenY, NODE_RADIUS, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.strokeStyle = ctx.fillStyle;
+    drawNodeShape(ctx, node.screenX, node.screenY, NODE_RADIUS, node.style);
   }
 
   if (scene.labelled) {
@@ -225,15 +283,150 @@ function draw(scene: Scene) {
 }
 
 /**
+ * One node's shape, at `radius`, in whatever style it carries.
+ *
+ * The Landing artboard has no geometry for these — its own canvas is the older
+ * synthetic field, where every node is `ctx.arc(...)` and the only shapes are
+ * dots. `cc-store.js` names the three styles and stops there. So the shapes are
+ * defined here, and they are defined by what makes them tell apart at a
+ * four-pixel radius:
+ *
+ * - `solid` is the filled dot, which is also what an unconfigured node draws.
+ * - `ring` is the same circle stroked and left hollow, so it reads as lighter
+ *   without reading as further away.
+ * - `diamond` is a square on its point, sized by `DIAMOND_REACH` to hold the
+ *   same visual weight as the circle.
+ *
+ * `ctx.fillStyle` and `ctx.strokeStyle` are the caller's: this traces and paints
+ * a shape, it does not decide a colour.
+ */
+function drawNodeShape(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  radius: number,
+  style: ScreenNode["style"],
+) {
+  if (style === "ring") {
+    ctx.lineWidth = Math.max(1, radius * 0.36);
+    ctx.beginPath();
+    // Inset by half the stroke so the ring occupies the same footprint as the
+    // filled dot rather than spilling `lineWidth / 2` beyond it.
+    ctx.arc(x, y, Math.max(0.5, radius - ctx.lineWidth / 2), 0, Math.PI * 2);
+    ctx.stroke();
+    return;
+  }
+
+  if (style === "diamond") {
+    const reach = radius * DIAMOND_REACH;
+    ctx.beginPath();
+    ctx.moveTo(x, y - reach);
+    ctx.lineTo(x + reach, y);
+    ctx.lineTo(x, y + reach);
+    ctx.lineTo(x - reach, y);
+    ctx.closePath();
+    ctx.fill();
+    return;
+  }
+
+  ctx.beginPath();
+  ctx.arc(x, y, radius, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+/**
+ * The signal a node carries, drawn standing still.
+ *
+ * **It does not move, and that is deliberate.** A signal is ongoing rather than
+ * one-shot, so it is painted every time its node is painted — but this canvas
+ * paints on demand, and a signal that animated would mean a frame loop running
+ * for as long as anybody has the landing page open. `hero-network.spec.tsx` is
+ * written as the checklist of what triggers a repaint precisely because there is
+ * no such loop, and the pulse on the viewer's own node remains the only motion
+ * here.
+ *
+ * `comet` needs a direction, and the only one available is geometric: the trail
+ * points away from the middle of the frame. That is stable across repaints, it
+ * costs no per-node state, and it leans every trail outward — away from the hero
+ * copy, which sits in the middle — rather than across it. A node exactly on the
+ * centre has no outward direction and falls back to a fixed diagonal.
+ */
+function drawSignal(
+  scene: Scene,
+  palette: Palette,
+  node: ScreenNode,
+  centre: { x: number; y: number },
+) {
+  const { ctx } = scene;
+  const colour = nodeColour(palette, node.colorVar);
+  const base = NODE_ALPHA * node.clearance * SIGNAL_ALPHA;
+  ctx.strokeStyle = colour;
+
+  if (node.signalStyle === "fade") {
+    for (const ring of FADE_RINGS) {
+      ctx.globalAlpha = base * ring.alpha;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(
+        node.screenX,
+        node.screenY,
+        NODE_RADIUS * ring.reach,
+        0,
+        Math.PI * 2,
+      );
+      ctx.stroke();
+    }
+    return;
+  }
+
+  if (node.signalStyle === "dashed") {
+    ctx.globalAlpha = base * DASHED_RING.alpha;
+    ctx.lineWidth = DASHED_RING.width;
+    ctx.setLineDash?.(DASHED_RING.dash);
+    ctx.beginPath();
+    ctx.arc(
+      node.screenX,
+      node.screenY,
+      NODE_RADIUS * DASHED_RING.reach,
+      0,
+      Math.PI * 2,
+    );
+    ctx.stroke();
+    // Every later stroke on this frame — the next node's, the pulse ring — is
+    // solid, so the pattern is cleared here rather than trusted to be reset.
+    ctx.setLineDash?.([]);
+    return;
+  }
+
+  const dx = node.screenX - centre.x;
+  const dy = node.screenY - centre.y;
+  const length = Math.hypot(dx, dy);
+  const ux = length > 0.5 ? dx / length : Math.SQRT1_2;
+  const uy = length > 0.5 ? dy / length : -Math.SQRT1_2;
+  ctx.lineCap = "round";
+  for (const segment of COMET_SEGMENTS) {
+    ctx.globalAlpha = base * segment.alpha;
+    ctx.lineWidth = segment.width;
+    ctx.beginPath();
+    ctx.moveTo(
+      node.screenX + ux * NODE_RADIUS * segment.from,
+      node.screenY + uy * NODE_RADIUS * segment.from,
+    );
+    ctx.lineTo(
+      node.screenX + ux * NODE_RADIUS * segment.to,
+      node.screenY + uy * NODE_RADIUS * segment.to,
+    );
+    ctx.stroke();
+  }
+  ctx.lineCap = "butt";
+}
+
+/**
  * The viewer's own node, once **Find your dot** has found it: a restrained
  * pulse and a small label, no fanfare — and drawn exactly where the node
  * already was. The reveal adds a label to the graph; it does not rearrange it.
  */
-function drawYou(
-  scene: Scene,
-  palette: Palette,
-  you: { screenX: number; screenY: number; colorVar: string },
-) {
+function drawYou(scene: Scene, palette: Palette, you: ScreenNode) {
   const { ctx } = scene;
   const x = you.screenX;
   const y = you.screenY;
@@ -252,9 +445,10 @@ function drawYou(
 
   ctx.globalAlpha = 1;
   ctx.fillStyle = colour;
-  ctx.beginPath();
-  ctx.arc(x, y, 7.5, 0, Math.PI * 2);
-  ctx.fill();
+  ctx.strokeStyle = colour;
+  // The reveal enlarges the node the member already has; it does not swap it
+  // for a generic dot. Somebody who chose a diamond is looking for a diamond.
+  drawNodeShape(ctx, x, y, 7.5, you.style);
   ctx.globalAlpha = 0.5;
   ctx.strokeStyle = colour;
   ctx.lineWidth = 1;

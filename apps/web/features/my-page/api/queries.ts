@@ -40,17 +40,25 @@ export function useAllReviews(enabled: boolean) {
   return useQuery(trpc.reviews.list.queryOptions({}, { enabled }));
 }
 
+/** Both tier numbers and the stored appearance, as `graph.personalization` returns them. */
+export type NodePersonalization = RouterOutputs["graph"]["personalization"];
+
 /**
- * The viewer's effective personalization tier.
+ * How far the viewer has unlocked their node profile, and what they picked.
  *
  * Read-only and derived: `users.personalization_tier_earned` holds the highest
  * tier ever reached and this never touches it. Retries are off because the one
- * error worth surfacing — no graph node — is not transient.
+ * error worth surfacing — no such app user — is not transient.
+ *
+ * It answers with **both** tier numbers because the tab has three states to
+ * draw, not two. The effective tier says what may be edited; the earned tier is
+ * only ever used to tell a **dormant** axis — earned, decayed, pick still in the
+ * column — from a **locked** one that was never reached.
  */
-export function useEffectiveTier(enabled: boolean) {
+export function useNodePersonalization(enabled: boolean) {
   const trpc = useTRPC();
   return useQuery({
-    ...trpc.graph.effectiveTier.queryOptions(),
+    ...trpc.graph.personalization.queryOptions(),
     enabled,
     retry: false,
   });

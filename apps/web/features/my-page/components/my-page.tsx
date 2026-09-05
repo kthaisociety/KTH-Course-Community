@@ -18,10 +18,11 @@ import { PageColumn, PageHeader } from "@/features/shell";
 // route contract is one pure function and this is the half of it that builds
 // a link — `/taken` owns the half that reads one.
 import { reviewHref } from "@/features/taken/lib/review-deep-link";
+import { useSetNodeAppearance } from "../api/mutations";
 import {
   isTierUnavailable,
   useAllReviews,
-  useEffectiveTier,
+  useNodePersonalization,
   useTakenCourses,
 } from "../api/queries";
 import { useAveragePreference } from "../hooks/use-average-preference";
@@ -70,7 +71,8 @@ type OpenEditor = { review: EditableReview; courseCode: string };
  * tabs (Overview, Reviews, My dot, Settings) and the Mobile Preview's stacked
  * version of the same. Everything it shows is the viewer's own: `user.me` for
  * who they are, `taken.list` for their courses, `reviews.list` for what they
- * wrote and upvoted, `graph.effectiveTier` for how far their node is unlocked.
+ * wrote and upvoted, `graph.personalization` for how far their node is unlocked
+ * and what they have chosen for it.
  *
  * ## Reviews here are anonymous, and votes are not local
  *
@@ -135,7 +137,8 @@ export function MyPage() {
 
   const takenQuery = useTakenCourses(isAuthenticated);
   const reviewsQuery = useAllReviews(isAuthenticated);
-  const tierQuery = useEffectiveTier(isAuthenticated);
+  const personalizationQuery = useNodePersonalization(isAuthenticated);
+  const setAppearance = useSetNodeAppearance();
   const unreviewed = useUnreviewedTakenCourses();
 
   const takenCourses = useMemo(() => takenQuery.data ?? [], [takenQuery.data]);
@@ -396,10 +399,14 @@ export function MyPage() {
 
             {view === "node" ? (
               <NodeProfile
-                effectiveTier={tierQuery.data}
+                personalization={personalizationQuery.data}
                 isUnavailable={
-                  tierQuery.isError && isTierUnavailable(tierQuery.error)
+                  personalizationQuery.isError &&
+                  isTierUnavailable(personalizationQuery.error)
                 }
+                onChoose={(choice) => setAppearance.mutate(choice)}
+                isSaving={setAppearance.isPending}
+                saveFailed={setAppearance.isError}
               />
             ) : null}
 
