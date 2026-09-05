@@ -39,8 +39,8 @@ export function Kicker({ children }: { children: ReactNode }) {
  * The derivation is therefore the substitution, not a shortcut past a token.
  * Naming it is worth doing and is not this file's to do — `globals.css` owns
  * both halves of the mirror, and a token would want a dark value chosen for the
- * dark page rather than mixed for it. Filed as a follow-up; until then this
- * constant is the single place the mix is written, and
+ * dark page rather than mixed for it. Filed as #173; until then this constant
+ * is the single place the mix is written, and
  * `features/reviews/components/reviewer-card.tsx` carries the one copy that has
  * escaped it.
  */
