@@ -143,7 +143,7 @@ export function WorkspacePane({
             </DropdownMenuTrigger>
             <DropdownMenuContent
               align="start"
-              className="cc-theme max-h-[222px] w-[262px] overflow-y-auto border-cc-rule2 bg-cc-surface p-[5px] text-cc-ink"
+              className="scrollbar-subtle cc-theme max-h-[222px] w-[262px] overflow-y-auto border-cc-rule2 bg-cc-surface p-[5px] text-cc-ink"
             >
               {openCourses.map((entry) => (
                 <DropdownMenuItem

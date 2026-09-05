@@ -281,7 +281,7 @@ export function Landing() {
     <motion.div
       initial={false}
       animate={leavingFor ? "leaving" : "at-rest"}
-      className="@container cc-theme min-h-dvh bg-cc-pg text-cc-ink text-sm lg:h-dvh lg:overflow-y-auto"
+      className="scrollbar-subtle @container cc-theme min-h-dvh bg-cc-pg text-cc-ink text-sm lg:h-dvh lg:overflow-y-auto"
     >
       <motion.header
         variants={HERO_EXIT}

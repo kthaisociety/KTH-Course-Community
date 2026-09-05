@@ -102,7 +102,7 @@ export function TranscriptProposalReview({
         ) : null}
 
         {candidates.length > 0 ? (
-          <ul className="m-0 mt-4 flex max-h-[320px] list-none flex-col overflow-y-auto rounded-[12px] border border-cc-rule bg-cc-surface p-0">
+          <ul className="scrollbar-subtle m-0 mt-4 flex max-h-[320px] list-none flex-col overflow-y-auto rounded-[12px] border border-cc-rule bg-cc-surface p-0">
             {candidates.map((row) => (
               <li
                 key={row.courseCode}

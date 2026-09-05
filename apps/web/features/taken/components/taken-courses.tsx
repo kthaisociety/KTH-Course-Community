@@ -661,7 +661,7 @@ export function TakenCourses() {
             />
           ) : null}
 
-          <div className="overflow-x-auto overflow-y-hidden rounded-[12px] border border-cc-rule bg-cc-surface">
+          <div className="scrollbar-subtle overflow-x-auto overflow-y-hidden rounded-[12px] border border-cc-rule bg-cc-surface">
             <div
               className={`${TAKEN_GRID} border-cc-rule border-b bg-cc-pg px-4 py-3.5 font-semibold text-[11px] text-cc-dim uppercase tracking-[0.06em]`}
             >

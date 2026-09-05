@@ -117,7 +117,7 @@ export function NewCollectionDialog({
               aria-label="Filter saved courses"
               className="mt-2 box-border h-[34px] w-full rounded-[9px] border border-cc-rule bg-cc-inset px-3 text-[12.5px] text-cc-ink outline-none focus:border-cc-brand"
             />
-            <div className="mt-2.5 max-h-[210px] overflow-auto rounded-[9px] border border-cc-rule">
+            <div className="scrollbar-subtle mt-2.5 max-h-[210px] overflow-auto rounded-[9px] border border-cc-rule">
               {matches.map((course) => {
                 const checked = picked.includes(course.courseCode);
                 return (

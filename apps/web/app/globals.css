@@ -362,7 +362,16 @@
   }
 }
 
-/* Thin, muted scrollbar for internal scroll panes (e.g. search list, sidebar). */
+/* The default for every scroll container in the app: thin and muted, so a pane
+   that scrolls says so without a chunky OS bar cutting across the design.
+
+   The convention is that a scroll container picks one of these two utilities
+   deliberately. Neither is the same as picking nothing: a container with no
+   utility renders the browser's default bar, which is what the artboards do not
+   draw and what this pass corrected across ten surfaces. If you add
+   `overflow-auto` anywhere, add one of these with it.
+
+   `--border` is mapped onto `--cc-rule2`, so this tracks the theme on its own. */
 @utility scrollbar-subtle {
   scrollbar-width: thin;
   scrollbar-color: var(--border) transparent;
@@ -383,9 +392,14 @@
   }
 }
 
-/* Explore owns its list's scroll surface. Hiding its rail keeps that surface
-   visually quiet while retaining wheel, touch, keyboard, and programmatic
-   scrolling. */
+/* The deliberate exception, and the only one. Explore owns its list's scroll
+   surface: hiding the rail keeps that surface visually quiet while retaining
+   wheel, touch, keyboard and programmatic scrolling.
+
+   Reach for this only where something else already tells the reader the region
+   scrolls. Hiding the bar on a list that carries no other affordance takes one
+   away rather than tidying one up, which is why everywhere else takes
+   `scrollbar-subtle`. */
 @utility scrollbar-hidden {
   scrollbar-width: none;
 
