@@ -11,6 +11,7 @@
     "lint": "biome check",
     "format": "biome format --write",
     "ingest": "bun --env-file=.env.local scripts/ingest.ts",
+    "backfill:tiers": "bun --env-file=.env.local scripts/backfill-personalization-tiers.ts",
     "db:generate": "drizzle-kit generate --config server/db/drizzle.config.ts",
     "db:push": "drizzle-kit push --config server/db/drizzle.config.ts",
     "db:migrate": "drizzle-kit migrate --config server/db/drizzle.config.ts",

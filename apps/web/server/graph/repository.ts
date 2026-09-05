@@ -269,6 +269,40 @@ export function findTranscriptImportedCourses(
 }
 
 /**
+ * A page of the app users whose contributions could earn a tier at all: they
+ * have reviewed something, or they have a transcript-imported course.
+ *
+ * This exists for the backfill, and the narrowing is the whole point of it.
+ * Every other app user is at the column default with nothing to raise them
+ * above it, so walking the entire `users` table would be a recompute per
+ * account to learn what the absence of a row already says.
+ *
+ * Paged on the user id with a cursor rather than an offset, so a page cannot
+ * skip or repeat an app user because a review landed mid-run. `after` is the
+ * last id of the previous page; `null` starts at the beginning.
+ */
+export async function findTierCandidateUserIds(
+  after: string | null,
+  limit: number,
+): Promise<string[]> {
+  const candidates = await db.execute<{ user_id: string }>(sql`
+    select user_id
+    from (
+      select distinct ${schema.reviews.userId} as user_id
+      from ${schema.reviews}
+      union
+      select distinct ${schema.userTakenCourses.userId} as user_id
+      from ${schema.userTakenCourses}
+      where ${schema.userTakenCourses.transcriptImportedAt} is not null
+    ) as tier_candidates
+    where ${after === null ? sql`true` : sql`user_id > ${after}`}
+    order by user_id
+    limit ${limit}
+  `);
+  return candidates.rows.map((row) => row.user_id);
+}
+
+/**
  * Raise `personalization_tier_earned` to `tier`, and never lower it.
  *
  * The monotonicity is enforced in SQL rather than in the caller. `greatest` is

@@ -238,11 +238,13 @@ export async function getEffectiveTier(
  * if somebody tries. Decay is the other half of the same policy and is derived
  * at read time by `getEffectiveTier`, which stores nothing.
  *
- * Returns the tier the contributions earn, whether or not the column moved.
+ * Reports the tier the contributions earn and whether the column actually
+ * moved. Those are different answers whenever the recompute is at or below
+ * what is already stored, which is the normal case for a repeat run.
  */
 export async function recordEarnedPersonalizationTier(
   userId: string,
-): Promise<number> {
+): Promise<{ earned: number; raised: boolean }> {
   const [reviews, transcriptImportedCourses] = await Promise.all([
     graphRepo.findReviewedCourses(userId),
     graphRepo.findTranscriptImportedCourses(userId),
@@ -255,8 +257,63 @@ export async function recordEarnedPersonalizationTier(
   });
   // Tier 0 is the column default and cannot raise anything, so the write is
   // skipped rather than issued and thrown away.
-  if (earned > 0) await graphRepo.raiseEarnedTier(userId, earned);
-  return earned;
+  const raised =
+    earned > 0 && (await graphRepo.raiseEarnedTier(userId, earned));
+  return { earned, raised };
+}
+
+/**
+ * How many app users one backfill page recomputes.
+ *
+ * A page is a bound on the work in flight, not on the run: the backfill keeps
+ * asking until a page comes back short. Small, because each app user in it
+ * costs two reads and possibly a write, and nothing is waiting on the result.
+ */
+const TIER_BACKFILL_PAGE = 200;
+
+/**
+ * Give every app user who already contributed the tier they already earned.
+ *
+ * The writer above only fires on a *new* review or a *new* import, so on the
+ * day this ships, everybody who reviewed or imported before it exists is still
+ * at the column default and still sees three locked axes until they contribute
+ * again. This is the one-off that fixes that, and it is safe to run whenever
+ * anybody doubts the column: it derives from the same `deriveEarnedTier`, it
+ * raises through the same `greatest`, so a second run is a no-op and a run
+ * racing a live contribution cannot lower anything.
+ *
+ * It walks only the app users who could earn something —
+ * `findTierCandidateUserIds` — and pages on the user id, so a review published
+ * mid-run cannot make it skip somebody. One app user at a time rather than a
+ * single statement, because the rule that decides a tier is TypeScript and
+ * expressing it again in SQL is exactly the second definition #161 forbids.
+ *
+ * Unlike the per-contribution path this does **not** swallow: a backfill that
+ * half-ran and reported success is worse than one that stops and says where.
+ */
+export async function backfillEarnedPersonalizationTiers(
+  pageSize: number = TIER_BACKFILL_PAGE,
+): Promise<{ scanned: number; raised: number }> {
+  let after: string | null = null;
+  let scanned = 0;
+  let raised = 0;
+
+  for (;;) {
+    const userIds: string[] = await graphRepo.findTierCandidateUserIds(
+      after,
+      pageSize,
+    );
+    if (userIds.length === 0) return { scanned, raised };
+
+    for (const userId of userIds) {
+      const result = await recordEarnedPersonalizationTier(userId);
+      scanned += 1;
+      if (result.raised) raised += 1;
+    }
+
+    if (userIds.length < pageSize) return { scanned, raised };
+    after = userIds[userIds.length - 1] ?? null;
+  }
 }
 
 /**
