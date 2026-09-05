@@ -369,13 +369,15 @@ describe("Explore", () => {
 
       const host = screen.getByTestId("workspace-pane-host");
       const resize = screen.getByRole("button", { name: "Resize workspace" });
-      expect(host).toHaveStyle({ width: "412px" });
+      // `900 - 396 - 18`: the pane takes what the results column's floor and
+      // the row's gap leave it, rather than the 504px it opens at.
+      expect(host).toHaveStyle({ width: "486px" });
 
       fireEvent.pointerDown(resize, { clientX: 500 });
       fireEvent.pointerCancel(window);
       fireEvent.pointerMove(window, { clientX: 800 });
 
-      expect(host).toHaveStyle({ width: "412px" });
+      expect(host).toHaveStyle({ width: "486px" });
     });
   });
 

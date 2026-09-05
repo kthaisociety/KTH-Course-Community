@@ -198,8 +198,30 @@ export function useExplore({ onOpenCourse }: ExploreOptions = {}) {
     openHandler.current = onOpenCourse;
   }, [onOpenCourse]);
 
+  /**
+   * The request this hook has already spent, so it spends it exactly once.
+   *
+   * `setParams` is rebuilt whenever the URL changes and whenever `router`
+   * changes identity, and the handler above re-renders the host — `openCourse`
+   * returns a new workspace even for a tab that is already open. Without this
+   * guard those two facts close a loop that allocates on every turn and ends in
+   * an out-of-memory crash rather than a failed assertion. Next's `router` is
+   * stable in practice; nothing promises it, and a test double is not.
+   *
+   * It clears when the parameter goes, so the same course arriving again later
+   * is a new instruction rather than one this hook thinks it has done.
+   */
+  const spentRequest = useRef<string | null>(null);
+
   useEffect(() => {
-    if (!requestedCode || !requestedKind) return;
+    if (!requestedCode || !requestedKind) {
+      spentRequest.current = null;
+      return;
+    }
+    const request = `${requestedKind}:${requestedCode}`;
+    if (spentRequest.current === request) return;
+    spentRequest.current = request;
+
     openHandler.current?.({ courseCode: requestedCode, kind: requestedKind });
     setParams({ open: null, kind: null });
   }, [requestedCode, requestedKind, setParams]);

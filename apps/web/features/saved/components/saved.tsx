@@ -131,6 +131,25 @@ export function Saved({ openCollectionId = null, openCourse = null }: Props) {
   const requestedKind = openCourse?.kind ?? null;
   const openTab = workspace.open;
 
+  /**
+   * The request this page has already acted on, so it acts on it exactly once.
+   *
+   * The guard is not belt-and-braces. `openCourse` is not idempotent at the
+   * state level — re-opening an open tab still returns a *new* workspace — so
+   * every run of the effect below re-renders this component, and any dependency
+   * whose identity is not stable across that render sends the effect round
+   * again immediately. `router` is exactly such a dependency: Next's own object
+   * happens to be stable, nothing promises it, and a test double that returns
+   * `{ push, replace }` per call is not. That is an unbounded loop that
+   * allocates a workspace per turn, and it shows up as an out-of-memory crash
+   * rather than as a failing assertion.
+   *
+   * Clearing it when the request goes away is what keeps it a one-shot rather
+   * than a once-ever: the same course opened from a collection a second time is
+   * a new instruction, and by then `?open=` has been out of the URL in between.
+   */
+  const spentRequest = useRef<string | null>(null);
+
   /*
    * `?open=` says "open this", not "this is open", so it is spent and then
    * cleared. `?collection=` is the one parameter this route carries as state,
@@ -138,12 +157,18 @@ export function Saved({ openCollectionId = null, openCourse = null }: Props) {
    * to `/saved` would close the detail the reader is standing in.
    *
    * Only primitives are watched. The pair arrives as a fresh object from the
-   * server on every render of this route, and `openCourse` is not idempotent at
-   * the state level — it returns a new workspace either way — so an effect keyed
-   * on the object would reopen the tab on its own re-render, forever.
+   * server on every render of this route, so an effect keyed on the object
+   * would see a change that never happened.
    */
   useEffect(() => {
-    if (!requestedCode || !requestedKind) return;
+    if (!requestedCode || !requestedKind) {
+      spentRequest.current = null;
+      return;
+    }
+    const request = `${requestedKind}:${requestedCode}`;
+    if (spentRequest.current === request) return;
+    spentRequest.current = request;
+
     openTab(requestedCode, requestedKind);
     router.replace(
       openCollectionId
