@@ -77,6 +77,22 @@ function openCourseId(courseCode: string, kind: OpenCourseKind): string {
  *
  * Re-opening never duplicates a tab and never resets what is in it: a review
  * draft the user has half-written survives a second click on "Write a review".
+ *
+ * ## Opening an already-front tab returns the *same object*
+ *
+ * Not merely an equal one. Three separate unbounded render loops have shipped
+ * on this branch, and every one of them was an effect that called into the
+ * workspace and then re-ran because something it depended on had been rebuilt.
+ * A transition that hands back a fresh `Workspace` for a no-op is the fuel:
+ * `useState` bails out of a re-render when the next state is `Object.is`-equal
+ * to the current one, and a spread is never that, so "open the course that is
+ * already open and already in front" used to re-render every host of this
+ * state — which rebuilds `setParams`, which re-runs the effect, which opens the
+ * course again. The guards in `use-explore.ts` and `saved.tsx` each stop that
+ * loop one caller at a time; this stops it at the value.
+ *
+ * The bail-out is deliberately narrow. Bringing a *background* tab forward is a
+ * real change and still allocates, because `activeId` genuinely differs.
  */
 export function openCourse(
   workspace: Workspace,
@@ -85,7 +101,9 @@ export function openCourse(
 ): Workspace {
   const id = openCourseId(courseCode, kind);
   if (workspace.open.some((entry) => entry.id === id)) {
-    return { ...workspace, activeId: id };
+    return workspace.activeId === id
+      ? workspace
+      : { ...workspace, activeId: id };
   }
   return {
     open: [...workspace.open, { id, courseCode, kind }],
@@ -112,9 +130,17 @@ export function closeCourse(workspace: Workspace, id: string): Workspace {
   return { open, activeId: next.id };
 }
 
-/** Bring an already-open tab forward. Unknown ids are ignored. */
+/**
+ * Bring an already-open tab forward. Unknown ids are ignored.
+ *
+ * Activating the tab that is already in front returns the same object, for the
+ * reason spelled out on {@link openCourse}: a no-op that allocates is a
+ * re-render nothing asked for, and this state has three hosts that size their
+ * own layout against it.
+ */
 export function activateCourse(workspace: Workspace, id: string): Workspace {
   if (!workspace.open.some((entry) => entry.id === id)) return workspace;
+  if (workspace.activeId === id) return workspace;
   return { ...workspace, activeId: id };
 }
 

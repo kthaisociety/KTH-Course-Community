@@ -711,6 +711,19 @@ export function ReviewDraftPanel({
         </Card>
       </div>
 
+      {/* The artboard's footer has two controls: a bordered "Save draft" beside
+          the post button (`Course Community - Workspace Pane.dc.html:301-303`).
+          Only the post button is here, deliberately.
+
+          There is no unsaved state for a "Save draft" to resolve. Every
+          keystroke goes `onDraftChange` → `patchDraft` → the `writeDrafts`
+          effect in `workspace-pane.tsx`, so the button would either be a no-op
+          or imply the draft had been at risk. The artboard's own reassurance is
+          kept: its `savedLabel` (`:170`, defined at `:645`) is the "Not saved
+          yet" / "Saved just now" line in this panel's header, word for word.
+
+          Recorded because a deviation nobody wrote down is a deviation the next
+          pass "restores". Do not add the button. */}
       <div className="sticky bottom-0 mt-auto border-cc-rule border-t bg-cc-surface">
         {justSignedIn && !justPublished && (
           <p className="flex items-center gap-2.5 border-cc-rule border-b bg-cc-pill px-5 py-2.5 text-[12.5px] text-cc-brand leading-[1.45]">
@@ -718,15 +731,15 @@ export function ReviewDraftPanel({
             back untouched — check it and publish when you are ready.
           </p>
         )}
+        {/* The success tint family, which is what the artboard draws:
+            `Course Community - Workspace Pane.dc.html:296-297` paints this
+            banner `var(--successTint)` with `var(--successInk)` on the text and
+            the tick. This used to derive the fill from `--cc-success` at 12%
+            and take the *solid* for the text; neither is reachable that way,
+            because dark states the tint as alpha over the page and light as a
+            flat mix that is not a percentage of anything (#127 §1). */}
         {justPublished && (
-          <p
-            className="flex items-center gap-2.5 border-cc-rule border-b px-5 py-2.5 text-[12.5px]"
-            style={{
-              background:
-                "color-mix(in srgb, var(--cc-success) 12%, var(--cc-surface))",
-              color: "var(--cc-success)",
-            }}
-          >
+          <p className="flex items-center gap-2.5 border-cc-rule border-b bg-cc-success-tint px-5 py-2.5 text-[12.5px] text-cc-success-ink">
             Published. Thanks — your review is live on the course.
           </p>
         )}

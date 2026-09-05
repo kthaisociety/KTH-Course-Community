@@ -23,6 +23,26 @@ export function Kicker({ children }: { children: ReactNode }) {
  * The design draws it as a fixed pale blue (`#9dbfe4`) that no `--cc-*` token
  * carries, so it is derived from the brand fill rather than invented — the
  * same substitution rule the course card's workload bar took in #86.
+ *
+ * ## Why this `color-mix` stays, when #127 §1 removed the others
+ *
+ * That rule is "no derivation where a real token exists", and here none does.
+ * Re-checked against the 2026-09-05 export: `cc-theme.css` contains no
+ * `9dbfe4` and names no token for it, while
+ * `Course Community - Workspace Pane.dc.html:115` writes the hex inline for
+ * this very segment — and again at `:274`, as the dashed border on the draft's
+ * starter pills. So it is a small pale blue the design reuses without ever
+ * having named, not a token this file failed to find. Pinning the hex is the
+ * one thing that would be wrong: it is a light-mode value, and on the dark page
+ * it is a bar that reads as brighter than the brand it is meant to sit under.
+ *
+ * The derivation is therefore the substitution, not a shortcut past a token.
+ * Naming it is worth doing and is not this file's to do — `globals.css` owns
+ * both halves of the mirror, and a token would want a dark value chosen for the
+ * dark page rather than mixed for it. Filed as #173; until then this constant
+ * is the single place the mix is written, and
+ * `features/reviews/components/reviewer-card.tsx` carries the one copy that has
+ * escaped it.
  */
 export const APPLIED_FILL =
   "color-mix(in srgb, var(--cc-btn) 40%, var(--cc-surface))";

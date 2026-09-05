@@ -38,6 +38,13 @@ const BETA: CourseCardCourse = {
   department: "EECS",
 };
 
+/**
+ * The card draws "Write a review" unconditionally, as the artboard does, so
+ * `useCourseCard` requires a handler for it rather than leaving the button
+ * wired to `undefined` when a screen forgets.
+ */
+const onReview = vi.fn();
+
 function List({ courses }: { courses: CourseCardCourse[] }) {
   return (
     <>
@@ -47,6 +54,7 @@ function List({ courses }: { courses: CourseCardCourse[] }) {
           course={course}
           stats={{ reviews: null, takenCount: 0 }}
           geo={EXPANDED_CARD_GEOMETRY}
+          onReview={onReview}
           onRequestAuth={vi.fn()}
         />
       ))}
@@ -65,6 +73,7 @@ function cardWithOpenPicker(): number {
 }
 
 beforeEach(() => {
+  onReview.mockClear();
   useMe.mockReturnValue({ user: { userId: "u1", savedCourseCodes: [] } });
 });
 
@@ -110,5 +119,28 @@ describe("CourseCardItem", () => {
       expect(() => rerender(<List courses={[ALPHA]} />)).not.toThrow();
       expect(screen.getAllByRole("article")).toHaveLength(1);
     });
+  });
+});
+
+/**
+ * The review button is wired, and cannot silently stop being.
+ *
+ * `CourseCardModel.onReview` is optional — that type mirrors the artboard's own
+ * prop shape, and the fixture built from its literals carries no handlers — but
+ * the card renders "Write a review" unconditionally, exactly as the artboard
+ * draws it. Those two facts together mean a screen that forgot the handler used
+ * to ship a button that did nothing when clicked. All three lists passed one, so
+ * it was latent rather than broken; `useCourseCard` now requires it, and this
+ * holds the wiring the type change protects.
+ */
+describe("the review button", () => {
+  it("calls the handler the screen gave it", async () => {
+    render(<List courses={[ALPHA]} />);
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Write a review" }),
+    );
+
+    expect(onReview).toHaveBeenCalledTimes(1);
   });
 });

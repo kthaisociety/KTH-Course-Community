@@ -16,8 +16,8 @@ const WorkspacePane = dynamic(
  * The width the results column keeps for itself before the pane may grow.
  *
  * Both artboards say 396 and both call it "the cropped card's own minimum" —
- * `Course Community - Saved.dc.html` line 842 clamps the pane to
- * `rowW - 396 - 40 - 18`, and `Course Community - Explore.dc.html` line 507
+ * `Course Community - Saved.dc.html` line 834 clamps the pane to
+ * `rowW - 396 - 40 - 18`, and `Course Community - Explore.dc.html` line 510
  * names the same number `RESULTS_FLOOR`. It is deliberately *not* 470: 470 is
  * `CARD_RAMP_FLOOR`, the width at which the card finishes collapsing, and the
  * artboard lets the column go on past it to 396 because a fully collapsed card
@@ -51,7 +51,7 @@ export interface WorkspacePaneHostProps {
  * The workspace pane as a resizable column beside a host's results.
  *
  * Explore and Saved draw the same thing — `Course Community - Explore.dc.html`
- * line 277 and `Course Community - Saved.dc.html` line 166 import the pane with
+ * line 277 and `Course Community - Saved.dc.html` line 161 import the pane with
  * an identical contract, down to the 504px hint and the -14px handle — so the
  * column, its drag handle and its width policy live here rather than twice.
  * The host keeps only what is genuinely its own: the open list (it sizes its

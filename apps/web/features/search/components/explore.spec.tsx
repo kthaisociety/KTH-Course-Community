@@ -630,6 +630,32 @@ describe("Explore", () => {
       await userEvent.click(screen.getByRole("button", { name: "Try again" }));
       expect(refetch).toHaveBeenCalled();
     });
+
+    /**
+     * `Course Community - Explore.dc.html:243` draws the panel's badge as
+     * `#a3452a` over `#fbeceb` — `--cc-danger-ink` over `--cc-danger-tint`, the
+     * pair the Design System artboard names as the error banner. It used to
+     * derive the fill with
+     * `color-mix(in srgb, var(--cc-danger) 12%, var(--cc-surface))` under a
+     * comment claiming no error surface token existed (#127 §1). It did, the
+     * mix landed on a pink rather than the token's warm peach, and no mix of
+     * the solid could have reached it in dark, where the design states the tint
+     * as alpha over the page instead.
+     *
+     * Classes rather than computed colours: jsdom runs no Tailwind, so what is
+     * assertable is the token the component asked for, which is what regressed.
+     */
+    it("paints the badge in the danger tint family, not a colour-mixed derivation", () => {
+      search = "q=graphs";
+      useSearchCourses.mockReturnValue(searchState({ isError: true }));
+      render(<Explore />);
+
+      const badge = screen.getByText("The course catalogue did not answer")
+        .previousElementSibling as HTMLElement;
+
+      expect(badge).toHaveClass("bg-cc-danger-tint", "text-cc-danger-ink");
+      expect(badge.className).not.toContain("color-mix");
+    });
   });
 
   /**

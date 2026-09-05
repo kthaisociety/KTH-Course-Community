@@ -31,7 +31,18 @@ export type UseCourseCardOptions = {
   /** Names and enables the remove button. Saved and Collections pass one. */
   removeLabel?: string;
   onOpen?: () => void;
-  onReview?: () => void;
+  /**
+   * Required, because the card always draws "Write a review".
+   *
+   * `CourseCardModel.onReview` is optional — that type is the artboard's own
+   * prop shape and `data/course-card-sample.ts` fills it from the artboard's
+   * literals, which carry no handlers. But the card renders the button
+   * unconditionally, as the artboard draws it, so a screen that reached this
+   * hook without a handler would ship a button that does nothing. Every caller
+   * passes one today; requiring it is what keeps that true by compilation
+   * rather than by coincidence.
+   */
+  onReview: () => void;
   onRemove?: () => void;
   /**
    * Opens the app's one sign-in surface. The card's inline prompts name the

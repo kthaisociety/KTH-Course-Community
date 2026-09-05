@@ -41,6 +41,12 @@ const COURSE = {
 
 const NO_REVIEWS: CourseStats = { reviews: null, takenCount: 0 };
 
+/**
+ * The card always draws "Write a review", so the hook requires a handler for it
+ * — a screen that reached this hook without one would ship a dead button.
+ */
+const onReview = vi.fn();
+
 function signedOut() {
   useMe.mockReturnValue({ user: null });
 }
@@ -55,6 +61,7 @@ function card(overrides: Record<string, unknown> = {}) {
       course: COURSE,
       stats: NO_REVIEWS,
       onRequestAuth,
+      onReview,
       ...overrides,
     }),
   );

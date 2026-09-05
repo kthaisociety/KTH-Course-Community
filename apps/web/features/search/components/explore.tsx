@@ -52,12 +52,12 @@ import {
  *   field alone. #89 requires filters, so they are built here in the artboard's
  *   own control vocabulary.
  * - The artboard narrows its **search bar** by 236px while tabs are open
- *   (`searchBarMargin`, line 1350) so the field stays centred over the results
+ *   (`searchBarMargin`, line 1351) so the field stays centred over the results
  *   rather than over the whole row. Not built: the bar is centred inside a
  *   `max-w-[560px]` box that is already narrower than the results column at
  *   every width the pane can open at, so the correction has nothing to correct.
  * - The artboard's **shared-element handoff from the landing hero** (its
- *   `pickUpSharedBar()`, line 855) *is* built, and is the one place in the app
+ *   `pickUpSharedBar()`, line 856) *is* built, and is the one place in the app
  *   authorised to improve on the artboard rather than match it.
  *   `useSearchBarArrival` below is the receiving end: when this mount is
  *   continuing a search the reader submitted on `/`, the bar animates out of the
@@ -318,16 +318,26 @@ function StartHere({ onSuggest }: { onSuggest: (query: string) => void }) {
 /**
  * The artboard's error panel.
  *
- * Its tinted circle has no token — `cc-theme.css` carries no error surface —
- * so the fill is mixed from `--cc-danger` rather than pinned to the artboard's
- * `#fbeceb`, which is a light-mode hex that would go invisible on the dark
- * page.
+ * Its tinted circle is the danger tint family, not a derivation of the solid.
+ * This comment used to claim `cc-theme.css` carried no error surface and mix
+ * the fill from `--cc-danger` at 12%; that was wrong twice over. The Design
+ * System artboard names `--dangerTint` as *the* error banner surface
+ * (`Course Community - Design System.dc.html:175-177`, alongside its border and
+ * its ink), and none of the three is derivable from the solid — dark states
+ * them as alpha over the page, light as flat mixes that are not a percentage of
+ * anything (`globals.css:182-187`, #127 §1). In light the difference showed:
+ * the mix landed on a pink, the token is a warm peach.
+ *
+ * The icon takes `--cc-danger-ink` for the same reason, and it is also literally
+ * what the artboard draws — `Course Community - Explore.dc.html:243` strokes it
+ * `#a3452a`, which is the ink, over the tint. Neither hex is pinned here: both
+ * are light-mode values that would go invisible on the dark page.
  */
 function ResultsError({ onRetry }: { onRetry: () => void }) {
   return (
     <Panel>
       <span
-        className="inline-flex size-[34px] items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--cc-danger)_12%,var(--cc-surface))] text-cc-danger"
+        className="inline-flex size-[34px] items-center justify-center rounded-full bg-cc-danger-tint text-cc-danger-ink"
         aria-hidden
       >
         <TriangleAlert size={17} strokeWidth={2.2} />
