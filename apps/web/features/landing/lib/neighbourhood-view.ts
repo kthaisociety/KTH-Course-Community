@@ -206,8 +206,18 @@ export type ScreenEdge = {
   clearance: number;
 };
 
+/**
+ * A projected window, ready to paint.
+ *
+ * `scale` and `centre` are the projection's own parameters rather than
+ * something the canvas reads — it draws `screenX`/`screenY` and nothing else.
+ * They are here because they are what makes the result checkable: a test can
+ * ask where the anchor landed and whether the zoom is still a constant, which
+ * are the two properties this file exists to hold.
+ */
 export type GraphWindowView = {
   scale: number;
+  /** The anchor: where the window's centre, and so the viewer, landed. */
   centre: { x: number; y: number };
   nodes: ScreenNode[];
   edges: ScreenEdge[];
@@ -300,7 +310,7 @@ const ANCHOR_PULL = 0.35;
  * **What is and is not promised across sessions.** For a given frame size and a
  * given copy layout this is deterministic, so a returning member finds their own
  * dot in the same place on the glass — on the rendered hero that is the top
- * centre, an eleventh of the way down, at both 1920x600 and 360x480. Resize the
+ * centre, a twelfth of the way down, at both 1920x600 and 360x480. Resize the
  * window or reword the headline and the anchor moves, which is a responsive
  * adjustment and not a broken promise. Two candidates can also tie on score, and
  * the earlier one in the scan wins; a copy edit that flips such a tie moves the
