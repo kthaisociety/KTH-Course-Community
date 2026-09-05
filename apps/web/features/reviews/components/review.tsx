@@ -205,7 +205,23 @@ export function Review({
             </Button>
           </DialogTrigger>
         )}
-        <DialogContent className="scrollbar-subtle max-h-[100vh] max-w-4xl min-w-3xl overflow-y-auto">
+        {/*
+          The width is one `max-w-*` that already carries its own viewport
+          guard. It used to be `max-w-4xl min-w-3xl`, and the floor was the bug
+          (#165): `min-w-3xl` is 768px, min-width beats max-width in CSS, and it
+          therefore beat `DialogContent`'s own `max-w-[calc(100%-2rem)]` too — so
+          on any phone the dialog was wider than the screen and the page scrolled
+          sideways. This is reachable: it is the edit-review dialog, opened from
+          My Page.
+
+          `w-full` is what supplies the floor now, and it cannot fight the
+          viewport the way a fixed `min-w-*` could: the element is `fixed`, so it
+          takes the whole viewport and the `min()` caps it — 896px wherever there
+          is room for 896px, and the viewport less a 1rem gutter wherever there
+          is not. Both halves of the cap are stated here because a plain
+          `max-w-*` replaces the primitive's guard rather than joining it.
+        */}
+        <DialogContent className="scrollbar-subtle max-h-[100vh] w-full max-w-[min(56rem,calc(100vw-2rem))] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {editing ? "Edit your review" : "Share Your Experience"}
