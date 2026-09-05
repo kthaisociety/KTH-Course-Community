@@ -61,9 +61,25 @@ vi.mock("../api/mutations", () => ({
  */
 vi.mock("@/features/reviews", () => ({
   useUnreviewedTakenCourses: () => unreviewed(),
-  UnreviewedCard: ({ courses }: { courses: { code: string }[] }) =>
+  UnreviewedCard: ({
+    courses,
+    onStart,
+    onSelect,
+  }: {
+    courses: { code: string }[];
+    onStart: () => void;
+    onSelect?: (code: string) => void;
+  }) =>
     courses.length === 0 ? null : (
-      <div data-testid="unreviewed">{courses.map((c) => c.code).join(",")}</div>
+      <div data-testid="unreviewed">
+        {courses.map((c) => c.code).join(",")}
+        <button type="button" onClick={onStart}>
+          Start reviewing
+        </button>
+        <button type="button" onClick={() => onSelect?.(courses[0].code)}>
+          Pick a row
+        </button>
+      </div>
     ),
   ReviewCard: ({
     review,
@@ -300,6 +316,31 @@ describe("MyPage empty states", () => {
     expect(document.querySelectorAll(".animate-pulse").length).toBeGreaterThan(
       0,
     );
+  });
+
+  /**
+   * My Page has no reviewer of its own and should not grow one: `/taken` owns
+   * the queue, and it is the screen that still knows which courses are
+   * unreviewed by the time the reader arrives. Both the prompt's button and one
+   * of its rows therefore go to the same place — the artboard's own
+   * `window.location.href = "…Taken Courses…?review=1"`.
+   */
+  it("sends both the prompt's button and a row to the fast-track reviewer", async () => {
+    unreviewed.mockReturnValue({
+      courses: [takenCourse({ courseCode: "DD2380" })],
+      isLoading: false,
+      isUnavailable: false,
+    });
+    render(<MyPage />);
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Start reviewing" }),
+    );
+    expect(push).toHaveBeenCalledWith("/taken?review=1");
+
+    push.mockClear();
+    await userEvent.click(screen.getByRole("button", { name: "Pick a row" }));
+    expect(push).toHaveBeenCalledWith("/taken?review=1");
   });
 });
 
