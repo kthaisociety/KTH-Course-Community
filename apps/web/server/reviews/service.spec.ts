@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ForbiddenError, NotFoundError, ValidationError } from "../errors";
+import * as graphService from "../graph/service";
 import * as reviewsRepo from "./repository";
 import {
   createReview,
@@ -10,6 +11,8 @@ import {
 } from "./service";
 
 vi.mock("./repository");
+// The tier writer belongs to the graph domain and is reached service -> service.
+vi.mock("../graph/service");
 
 const review = {
   id: "review-123",
@@ -120,6 +123,47 @@ describe("reviews", () => {
       downvoteCount: 0,
       userVote: null,
     });
+  });
+
+  /**
+   * Publishing a review is one of the two moments #161's ladder can move, and
+   * the recompute runs here rather than in a job so the member sees the unlock
+   * on the page they earned it from.
+   */
+  it("createReview recomputes the earned personalization tier", async () => {
+    vi.mocked(reviewsRepo.insertReviewIfFirst).mockResolvedValue(review);
+
+    await createReview("SF1625", "user-456", {
+      examinationDistribution: null,
+      approachTheoryPercent: null,
+      workloadScore: 8,
+      learningScore: 9,
+      happyTook: true,
+      message: null,
+    });
+
+    expect(
+      graphService.recordEarnedPersonalizationTierOnContribution,
+    ).toHaveBeenCalledWith("user-456");
+  });
+
+  it("createReview does not recompute the tier when nothing was published", async () => {
+    // A rejected duplicate changes no review and can earn no tier.
+    vi.mocked(reviewsRepo.insertReviewIfFirst).mockResolvedValue(undefined);
+
+    await expect(
+      createReview("SF1625", "user-456", {
+        examinationDistribution: null,
+        approachTheoryPercent: null,
+        workloadScore: 8,
+        learningScore: 9,
+        happyTook: true,
+        message: null,
+      }),
+    ).rejects.toThrow(ValidationError);
+    expect(
+      graphService.recordEarnedPersonalizationTierOnContribution,
+    ).not.toHaveBeenCalled();
   });
 
   it("createReview keeps an unremembered distribution and percent null", async () => {

@@ -9,7 +9,7 @@ import {
 } from "./placement";
 import type { BackboneEdge, GraphNode, NeighbourNode } from "./repository";
 import * as graphRepo from "./repository";
-import { deriveEffectiveTier } from "./tier";
+import { deriveEarnedTier, deriveEffectiveTier } from "./tier";
 
 /**
  * How many nodes one bounded neighbourhood read may return.
@@ -56,7 +56,8 @@ export type WindowNode = {
   /**
    * The stored appearance name. Node appearance is drawn on a public landing
    * page by design, so it is not a disclosure; it is also `"default"` for
-   * everybody until personalisation has a writer.
+   * everybody until a member has some way to choose a colour. The earned tier
+   * has a writer now, but nothing writes `users_node_profiles.color`.
    */
   color: string;
   /** The one node belonging to the caller. Never true in a public window. */
@@ -221,6 +222,141 @@ export async function getEffectiveTier(
     lastReviewAt ?? basis.accountCreatedAt,
     now,
   );
+}
+
+/**
+ * Recompute what this app user's contributions have earned and raise the stored
+ * tier to match.
+ *
+ * **It raises and never lowers.** `personalization_tier_earned` is the highest
+ * value ever reached — `CONTEXT.md`, under **Personalization tier** — while
+ * `deriveEarnedTier`'s answer is a statement about right now and can fall:
+ * importing a second transcript leaves imported courses unreviewed again and
+ * turns tier 3's condition false. The earned tier still stands. Do not "fix"
+ * that asymmetry by writing the computed value straight into the column; the
+ * `greatest` in `raiseEarnedTier` is there to make the mistake impossible even
+ * if somebody tries. Decay is the other half of the same policy and is derived
+ * at read time by `getEffectiveTier`, which stores nothing.
+ *
+ * Reports the tier the contributions earn and whether the column actually
+ * moved. Those are different answers whenever the recompute is at or below
+ * what is already stored, which is the normal case for a repeat run.
+ */
+export async function recordEarnedPersonalizationTier(
+  userId: string,
+): Promise<{ earned: number; raised: boolean }> {
+  const [reviews, transcriptImportedCourses] = await Promise.all([
+    graphRepo.findReviewedCourses(userId),
+    graphRepo.findTranscriptImportedCourses(userId),
+  ]);
+
+  const earned = deriveEarnedTier({
+    userId,
+    reviews,
+    transcriptImportedCourses,
+  });
+  // Tier 0 is the column default and cannot raise anything, so the write is
+  // skipped rather than issued and thrown away.
+  const raised =
+    earned > 0 && (await graphRepo.raiseEarnedTier(userId, earned));
+  return { earned, raised };
+}
+
+/**
+ * How many app users one backfill page recomputes.
+ *
+ * A page is a bound on the work in flight, not on the run: the backfill keeps
+ * asking until a page comes back short. Small, because each app user in it
+ * costs two reads and possibly a write, and nothing is waiting on the result.
+ */
+const TIER_BACKFILL_PAGE = 200;
+
+/**
+ * Give every app user who already contributed the tier they already earned.
+ *
+ * The writer above only fires on a *new* review or a *new* import, so on the
+ * day this ships, everybody who reviewed or imported before it exists is still
+ * at the column default and still sees three locked axes until they contribute
+ * again. This is the one-off that fixes that, and it is safe to run whenever
+ * anybody doubts the column: it derives from the same `deriveEarnedTier`, it
+ * raises through the same `greatest`, so a second run is a no-op and a run
+ * racing a live contribution cannot lower anything.
+ *
+ * It walks only the app users who could earn something —
+ * `findTierCandidateUserIds` — and pages on the user id, so a review published
+ * mid-run cannot make it skip somebody. One app user at a time rather than a
+ * single statement, because the rule that decides a tier is TypeScript and
+ * expressing it again in SQL is exactly the second definition #161 forbids.
+ *
+ * Unlike the per-contribution path this does **not** swallow: a backfill that
+ * half-ran and reported success is worse than one that stops and says where.
+ */
+export async function backfillEarnedPersonalizationTiers(
+  pageSize: number = TIER_BACKFILL_PAGE,
+): Promise<{ scanned: number; raised: number }> {
+  let after: string | null = null;
+  let scanned = 0;
+  let raised = 0;
+
+  for (;;) {
+    const userIds: string[] = await graphRepo.findTierCandidateUserIds(
+      after,
+      pageSize,
+    );
+    if (userIds.length === 0) return { scanned, raised };
+
+    for (const userId of userIds) {
+      const result = await recordEarnedPersonalizationTier(userId);
+      scanned += 1;
+      if (result.raised) raised += 1;
+    }
+
+    if (userIds.length < pageSize) return { scanned, raised };
+    after = userIds[userIds.length - 1] ?? null;
+  }
+}
+
+/**
+ * Recompute the earned tier after a contribution that could have raised it.
+ *
+ * **When this runs.** The two moments the inputs change are publishing a review
+ * and confirming a transcript import, and both call this immediately after
+ * their own write commits — `reviews/service.ts` and
+ * `ingest/transcript/service.ts`. A background job would leave a member staring
+ * at a locked axis for however long the job's period is, and computing it at
+ * read time would mean `graph.effectiveTier` wrote to the database, which the
+ * whole tier design says it must not.
+ *
+ * **Why after the write rather than inside its transaction.** Recomputing
+ * inside would mean the reviews repository reading `user_taken_courses` and
+ * writing `users`, which is the layering this repo enforces with Biome, for a
+ * guarantee that is not needed: the recompute reads committed state and the
+ * write is `greatest`, so it is idempotent and order-independent. Two
+ * contributions racing cannot produce a wrong number, and a recompute that is
+ * lost costs a tier that the next contribution recomputes anyway.
+ *
+ * **Why it swallows.** A member who published a review has published it. Losing
+ * their review, or seeing their transcript import fail, because a cosmetic
+ * number could not be updated would be a much worse trade — the same reasoning,
+ * and the same shape, as `joinCommunityGraphOnSignUp`.
+ *
+ * Not called on deletion. Removing a review or an imported course can only make
+ * a lower tier true, and the column does not go down, so there is nothing to
+ * write. Removing an imported course can also complete a transcript and make
+ * tier 3 true; that raise waits for the next contribution rather than putting a
+ * tier write on a delete path, and #161 settles the ladder, not its latency.
+ */
+export async function recordEarnedPersonalizationTierOnContribution(
+  userId: string,
+): Promise<void> {
+  try {
+    await recordEarnedPersonalizationTier(userId);
+  } catch (error) {
+    console.error(
+      `Could not update the earned personalization tier for app user ${userId}:`,
+      error,
+    );
+  }
 }
 
 /**

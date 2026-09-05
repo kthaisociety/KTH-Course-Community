@@ -13,11 +13,15 @@
  * migration. This is the one place the list lives.
  *
  * **Nobody is assigned one of these today.** Placement used to hash every app
- * user onto a name here, which gave everyone a colour nobody chose. A node
- * profile is personalisation, and personalisation has no writer: nothing in
- * `server/` raises `users.personalization_tier_earned`, so every account sits
- * at tier 0 and the colour axis is locked for all of them. The palette stays
- * because it is what personalisation will hand out once that writer exists.
+ * user onto a name here, which gave everyone a colour nobody chose, and a node
+ * profile is personalisation: a colour is chosen, never dealt out.
+ *
+ * `users.personalization_tier_earned` does have a writer now —
+ * `recordEarnedPersonalizationTier` raises it from #161's ladder — so accounts
+ * are no longer all at tier 0 and the axis a tier unlocks can genuinely open.
+ * What is still missing is the other half: nothing writes
+ * `users_node_profiles.color`, because no surface yet lets a member pick one.
+ * The palette stays for the moment that surface exists.
  */
 export const NODE_COLORS = [
   "aurora",

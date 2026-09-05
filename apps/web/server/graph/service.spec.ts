@@ -9,6 +9,7 @@ import {
 import type { BackboneEdge, NeighbourNode, PlacementWrite } from "./repository";
 import * as graphRepo from "./repository";
 import {
+  backfillEarnedPersonalizationTiers,
   COMMUNITY_ORIGIN,
   getEffectiveTier,
   getNeighbourhood,
@@ -17,6 +18,8 @@ import {
   joinCommunityGraphOnSignUp,
   MAX_NEIGHBOURHOOD_NODES,
   MAX_PUBLIC_WINDOW_NODES,
+  recordEarnedPersonalizationTier,
+  recordEarnedPersonalizationTierOnContribution,
 } from "./service";
 
 vi.mock("./repository");
@@ -546,13 +549,178 @@ describe("getEffectiveTier", () => {
   it("never writes the earned tier back", async () => {
     await getEffectiveTier("reader", new Date("2044-01-01T00:00:00.000Z"));
 
-    // The only write the graph domain owns is placement; there is deliberately
-    // no repository function that could update personalization_tier_earned.
+    // Decay is derived and thrown away. The graph domain owns exactly two
+    // writes — placement, and the monotonic tier raise — and reading a decayed
+    // tier must touch neither. The name list is the guard against a third
+    // appearing quietly.
     expect(graphRepo.persistPlacement).not.toHaveBeenCalled();
+    expect(graphRepo.raiseEarnedTier).not.toHaveBeenCalled();
     expect(
       Object.keys(graphRepo).filter((name) =>
-        /^(insert|update|upsert|delete|save|persist|set)/.test(name),
+        /^(insert|update|upsert|delete|save|persist|set|raise)/.test(name),
       ),
-    ).toEqual(["persistPlacement"]);
+    ).toEqual(["persistPlacement", "raiseEarnedTier"]);
+  });
+});
+
+describe("recordEarnedPersonalizationTier", () => {
+  beforeEach(() => {
+    vi.mocked(graphRepo.findReviewedCourses).mockResolvedValue([]);
+    vi.mocked(graphRepo.findTranscriptImportedCourses).mockResolvedValue([]);
+    vi.mocked(graphRepo.raiseEarnedTier).mockResolvedValue(true);
+  });
+
+  it("raises the column to what the contributions earn", async () => {
+    vi.mocked(graphRepo.findReviewedCourses).mockResolvedValue([
+      { courseCode: "SF1625", userId: "u1" },
+    ]);
+    vi.mocked(graphRepo.findTranscriptImportedCourses).mockResolvedValue([
+      { courseCode: "SF1625" },
+    ]);
+
+    expect(await recordEarnedPersonalizationTier("u1")).toEqual({
+      earned: 3,
+      raised: true,
+    });
+    expect(graphRepo.raiseEarnedTier).toHaveBeenCalledWith("u1", 3);
+  });
+
+  it("counts only transcript-imported courses towards tier 2", async () => {
+    // A manually typed course never reaches the service: the repository read
+    // filters on `transcript_imported_at`, so an app user with none is at the
+    // tier their reviews alone earn.
+    vi.mocked(graphRepo.findReviewedCourses).mockResolvedValue([
+      { courseCode: "SF1625", userId: "u1" },
+    ]);
+
+    expect(await recordEarnedPersonalizationTier("u1")).toEqual({
+      earned: 1,
+      raised: true,
+    });
+    expect(graphRepo.raiseEarnedTier).toHaveBeenCalledWith("u1", 1);
+  });
+
+  it("writes nothing for an app user who has earned nothing", async () => {
+    expect(await recordEarnedPersonalizationTier("u1")).toEqual({
+      earned: 0,
+      raised: false,
+    });
+    expect(graphRepo.raiseEarnedTier).not.toHaveBeenCalled();
+  });
+
+  /**
+   * The monotonicity itself is `greatest` in SQL, which is the only place it
+   * can be true under concurrency. What the service must not do is talk itself
+   * out of it: a recompute that answers 2 for somebody the column already has
+   * at 3 still asks for 2, and the repository declines. Never a demotion, and
+   * never a read-then-write that could race one in.
+   */
+  it("asks for the recomputed tier and lets the repository refuse to lower it", async () => {
+    vi.mocked(graphRepo.findReviewedCourses).mockResolvedValue([
+      { courseCode: "SF1625", userId: "u1" },
+    ]);
+    vi.mocked(graphRepo.findTranscriptImportedCourses).mockResolvedValue([
+      { courseCode: "SF1625" },
+      { courseCode: "DD1337" },
+    ]);
+    vi.mocked(graphRepo.raiseEarnedTier).mockResolvedValue(false);
+
+    expect(await recordEarnedPersonalizationTier("u1")).toEqual({
+      earned: 2,
+      raised: false,
+    });
+    expect(graphRepo.raiseEarnedTier).toHaveBeenCalledWith("u1", 2);
+    expect(graphRepo.findTierBasis).not.toHaveBeenCalled();
+  });
+
+  it("swallows its own failure so a contribution is never lost to it", async () => {
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.mocked(graphRepo.findReviewedCourses).mockRejectedValue(
+      new Error("neon is having a day"),
+    );
+
+    await expect(
+      recordEarnedPersonalizationTierOnContribution("u1"),
+    ).resolves.toBeUndefined();
+    expect(logged).toHaveBeenCalled();
+
+    logged.mockRestore();
+  });
+});
+
+/**
+ * The writer only fires on a new contribution, so everybody who reviewed or
+ * imported before it shipped needs one pass to be given what they had already
+ * earned. These cover the properties that make that pass safe to run at all:
+ * it visits each contributor once, it pages until the pages run out, and a
+ * second run changes nothing.
+ */
+describe("backfillEarnedPersonalizationTiers", () => {
+  beforeEach(() => {
+    vi.mocked(graphRepo.findReviewedCourses).mockResolvedValue([]);
+    vi.mocked(graphRepo.findTranscriptImportedCourses).mockResolvedValue([]);
+    vi.mocked(graphRepo.raiseEarnedTier).mockResolvedValue(true);
+  });
+
+  /** Candidates served a page at a time, the way the repository serves them. */
+  function candidates(userIds: string[], pageSize: number) {
+    vi.mocked(graphRepo.findTierCandidateUserIds).mockImplementation(
+      async (after, limit) => {
+        const start = after === null ? 0 : userIds.indexOf(after) + 1;
+        return userIds.slice(start, start + Math.min(limit, pageSize));
+      },
+    );
+  }
+
+  it("recomputes every contributor, following the cursor across pages", async () => {
+    const userIds = ["u1", "u2", "u3", "u4", "u5"];
+    candidates(userIds, 2);
+    vi.mocked(graphRepo.findReviewedCourses).mockImplementation(
+      async (userId) => [{ courseCode: "SF1625", userId }],
+    );
+
+    const result = await backfillEarnedPersonalizationTiers(2);
+
+    expect(result).toEqual({ scanned: 5, raised: 5 });
+    for (const userId of userIds) {
+      expect(graphRepo.raiseEarnedTier).toHaveBeenCalledWith(userId, 1);
+    }
+    // Each app user exactly once: paging on the id, never on an offset.
+    expect(vi.mocked(graphRepo.raiseEarnedTier).mock.calls.length).toBe(5);
+  });
+
+  it("does nothing when nobody has contributed", async () => {
+    candidates([], 200);
+
+    expect(await backfillEarnedPersonalizationTiers()).toEqual({
+      scanned: 0,
+      raised: 0,
+    });
+    expect(graphRepo.raiseEarnedTier).not.toHaveBeenCalled();
+  });
+
+  it("reports no raises on a second run, because the write only ever raises", async () => {
+    candidates(["u1", "u2"], 200);
+    vi.mocked(graphRepo.findReviewedCourses).mockImplementation(
+      async (userId) => [{ courseCode: "SF1625", userId }],
+    );
+    // The repository declines a raise that would not move the column.
+    vi.mocked(graphRepo.raiseEarnedTier).mockResolvedValue(false);
+
+    expect(await backfillEarnedPersonalizationTiers()).toEqual({
+      scanned: 2,
+      raised: 0,
+    });
+  });
+
+  it("stops rather than reporting a half-finished run", async () => {
+    candidates(["u1", "u2"], 200);
+    vi.mocked(graphRepo.findReviewedCourses).mockRejectedValue(
+      new Error("neon is having a day"),
+    );
+
+    await expect(backfillEarnedPersonalizationTiers()).rejects.toThrow(
+      "neon is having a day",
+    );
   });
 });

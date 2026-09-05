@@ -12,6 +12,7 @@ Bun workspace monorepo (`workspaces: ["apps/*"]`). The only app is `apps/web`: N
 - Lint / format: `bun run lint` / `bun run format` (Biome)
 - DB: `bun run db:push` / `bun run db:generate`
 - Ingest: `bun run ingest` (optional `--test`)
+- Backfill earned personalization tiers: `bun run backfill:tiers` (idempotent; only ever raises)
 
 Run scripts from the repo root. Env lives in `apps/web/.env.local` (see `apps/web/.env.example`). Path alias `@/*` → `apps/web/*`.
 
@@ -42,6 +43,7 @@ apps/web/
     ai.ts                   # embeddings (search/ingest)
     ingest/                 # KOPPS → Neon
     email/                  # SES magic-link mail
+    http/                   # request-shaping helpers shared by app/api routes
 ```
 
 ## Conventions
@@ -57,6 +59,7 @@ apps/web/
 - Feature `api/` exposes wrapped `useQuery` / `useMutation` hooks, not raw queryOptions factories.
 - `protectedProcedure` is the real auth gate (`ctx.session.user`). `proxy.ts` (Next 16; not `middleware.ts`) only checks that a session cookie exists for `/profile`, `/saved` and `/taken`. Visitors may browse courses, search, and read reviews.
 - Browser calls same-origin `/api/trpc` and `/api/auth`. Multipart profile pictures POST to `/api/user/profile-picture` (not tRPC).
+- Every multipart route in `app/api/` caps its body with `capRequestBody` from `server/http/body-cap.ts` **before** calling `request.formData()`, which buffers the whole body before anything can read a file's size. `server/http/` is domain-neutral on purpose: this cap lived under `server/ingest/transcript/` and the profile-picture route never found it.
 - Tests colocate as `*.spec.ts` next to server code; mock repositories, not the database.
 - Domain words: `CONTEXT.md`. Decisions: `docs/adr/NNNN-slug.md`.
 - Design: `docs/design_ref/` holds the artboards, in one dated folder per export.
