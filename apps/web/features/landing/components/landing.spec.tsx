@@ -1,4 +1,11 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { TRPCClientError } from "@trpc/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -170,6 +177,34 @@ function searchField() {
 function stashed() {
   const raw = window.sessionStorage.getItem(SEARCH_MORPH_KEY);
   return raw === null ? null : JSON.parse(raw);
+}
+
+/**
+ * Submit without `userEvent`, so nothing in the test's own machinery is sharing
+ * a timer queue with the departure's deadline.
+ */
+function submit(value = "graph theory") {
+  const field = searchField();
+  fireEvent.change(field, { target: { value } });
+  const form = field.closest("form");
+  if (!form) throw new Error("the search field is not inside a form");
+  fireEvent.submit(form);
+}
+
+/** Put the tab in the background and tell the page about it. */
+function backgroundTab() {
+  Object.defineProperty(document, "hidden", {
+    configurable: true,
+    get: () => true,
+  });
+  fireEvent(document, new Event("visibilitychange"));
+}
+
+function foregroundTab() {
+  Object.defineProperty(document, "hidden", {
+    configurable: true,
+    get: () => false,
+  });
 }
 
 function openFindYourDot(user: ReturnType<typeof userEvent.setup>) {
@@ -372,6 +407,77 @@ describe("Landing", () => {
         await user.type(searchField(), "graph theory{Enter}");
 
         expect(stashed()).toBeNull();
+      });
+
+      /**
+       * The exit animation completing is what normally fires the navigation, and
+       * a blind timer *driving* the departure is the artboard's mistake. These
+       * two are the floor under it: a reader who submits a valid search must
+       * never be left standing on the page they were leaving because a frame
+       * loop stopped running.
+       */
+      it("goes as soon as the tab is hidden, and drops the rect with it", () => {
+        layOutTheBar();
+        render(<Landing />);
+
+        submit();
+        expect(stashed()).not.toBeNull();
+        expect(push).not.toHaveBeenCalled();
+
+        try {
+          backgroundTab();
+
+          expect(push).toHaveBeenCalledExactlyOnceWith(
+            "/search?q=graph%20theory",
+          );
+          // Nobody watched the bar leave, so there is no gesture for Explore to
+          // continue and it must not invent one.
+          expect(stashed()).toBeNull();
+        } finally {
+          foregroundTab();
+        }
+      });
+
+      it("navigates on its own deadline if the exit never reports finishing", () => {
+        // Only the timer queue is faked: the exit runs on `requestAnimationFrame`
+        // and must stay unable to finish inside this test, or it would be the
+        // thing under test that never runs.
+        vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+        try {
+          layOutTheBar();
+          render(<Landing />);
+
+          submit();
+          expect(push).not.toHaveBeenCalled();
+
+          act(() => {
+            vi.advanceTimersByTime(600);
+          });
+
+          expect(push).toHaveBeenCalledExactlyOnceWith(
+            "/search?q=graph%20theory",
+          );
+        } finally {
+          vi.useRealTimers();
+        }
+      });
+
+      it("navigates once, whichever of the three routes out gets there first", async () => {
+        layOutTheBar();
+        render(<Landing />);
+
+        submit();
+        await waitFor(() =>
+          expect(push).toHaveBeenCalledWith("/search?q=graph%20theory"),
+        );
+
+        try {
+          backgroundTab();
+        } finally {
+          foregroundTab();
+        }
+
+        expect(push).toHaveBeenCalledTimes(1);
       });
 
       it("navigates plainly when the bar has no box to hand over", async () => {

@@ -71,6 +71,19 @@ const EXIT_EASE: [number, number, number, number] = [0.4, 0, 1, 1];
  * the whole landing layer up by 40px on the way to Explore. Ten pixels reads as
  * the page being drawn after it rather than as a separate movement.
  */
+/**
+ * How long after the exit begins the navigation happens whatever the animation
+ * says.
+ *
+ * The exit itself is 130ms and completing it is still what normally fires the
+ * navigation — a blind timer *driving* the transition is the artboard's mistake,
+ * and this is not that. It is the floor under it: an animation that never
+ * reports finishing must not strand a reader who submitted a valid search on the
+ * page they were leaving. Four and a half times the exit is far enough out that
+ * it never wins a race with a merely janky frame.
+ */
+const EXIT_FALLBACK_MS = 600;
+
 const HERO_EXIT: Variants = {
   "at-rest": { opacity: 1, y: 0 },
   leaving: {
@@ -129,6 +142,12 @@ export function Landing() {
   const [leavingFor, setLeavingFor] = useState<string | null>(null);
   const navigatedRef = useRef(false);
   const prefetchedRef = useRef(false);
+  /** Tears down whatever is still watching for the departure to finish. */
+  const departureRef = useRef<(() => void) | null>(null);
+
+  // The deadline and the visibility listener the departure arms belong to the
+  // page, not to the timer: if it leaves before either fires, they go with it.
+  useEffect(() => () => departureRef.current?.(), []);
 
   // The private link lands here with its outcome in the URL. Read once, then
   // take it back out so a reload does not replay the reveal.
@@ -204,6 +223,40 @@ export function Landing() {
 
     stashSearchBarHandoff(from);
     setLeavingFor(href);
+
+    // Two things finish the departure besides the exit animation, and both exist
+    // because a hidden tab throttles `requestAnimationFrame` to nothing — so
+    // `onAnimationComplete` may simply never arrive. Neither is what normally
+    // drives the navigation, and both go through the same one-time guard.
+    const deadline = window.setTimeout(() => depart(href), EXIT_FALLBACK_MS);
+    const onVisibility = () => {
+      if (!document.hidden) return;
+      // Nobody is watching the departure, so there is no gesture for Explore to
+      // continue: it arrives plainly rather than springing out of a rect the
+      // reader never saw the bar leave.
+      clearSearchBarHandoff();
+      depart(href);
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    departureRef.current = () => {
+      window.clearTimeout(deadline);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }
+
+  /**
+   * Leave, once, whichever of the three routes here gets there first.
+   *
+   * The guard is what makes the fallbacks safe to arm at all: the exit
+   * completing, the deadline expiring and the tab going away all call this, and
+   * only the first one does anything.
+   */
+  function depart(href: string) {
+    if (navigatedRef.current) return;
+    navigatedRef.current = true;
+    departureRef.current?.();
+    departureRef.current = null;
+    router.push(href);
   }
 
   /**
@@ -217,9 +270,8 @@ export function Landing() {
    * guard is for.
    */
   function onExitComplete() {
-    if (!leavingFor || navigatedRef.current) return;
-    navigatedRef.current = true;
-    router.push(leavingFor);
+    if (!leavingFor) return;
+    depart(leavingFor);
   }
 
   return (

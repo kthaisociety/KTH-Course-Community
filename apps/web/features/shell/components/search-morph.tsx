@@ -9,7 +9,10 @@ import {
   useMemo,
   useRef,
 } from "react";
-import { takeSearchBarHandoff } from "@/features/shell/lib/search-morph";
+import {
+  type SearchBarHandoff,
+  takeSearchBarHandoff,
+} from "@/features/shell/lib/search-morph";
 
 /**
  * The receiving half of the landing → Explore transition: the search bar
@@ -153,21 +156,30 @@ export function useSearchBarArrival(
   const railRef = frame?.railRef;
   const reduceMotion = useReducedMotion();
   const arrival = useMotionValue(1);
-  const spent = useRef(false);
+  /**
+   * What this mount took out of storage: the rect, or `null` for "there was
+   * none". `undefined` means it has not looked yet.
+   *
+   * The read and the animation are deliberately not guarded together. The read
+   * is destructive and must happen once per mount — a dependency array only
+   * promises not to re-run when every identity it lists happens to hold still,
+   * so the ref is what actually guarantees that. The *animation* must survive an
+   * effect being replayed, and React replays every effect on mount under Strict
+   * Mode: run, clean up, run again. A single "already spent" guard would let the
+   * first pass consume the rect and start the spring, let the cleanup stop it,
+   * and then refuse to start it again — no arrival at all, in exactly the
+   * development build where it would be looked at. Caching the rect here lets
+   * the replay pick the same gesture back up.
+   */
+  const taken = useRef<SearchBarHandoff | null | undefined>(undefined);
 
   useLayoutEffect(() => {
-    // One mount, one handoff. The guard is a ref rather than an empty
-    // dependency array because this effect both reads storage destructively and
-    // starts an animation: re-running it would replay a gesture the reader has
-    // already finished, and a dependency array only promises not to re-run when
-    // every identity it lists happens to hold still.
-    if (spent.current) return;
-    spent.current = true;
+    if (taken.current === undefined) taken.current = takeSearchBarHandoff();
 
     // Read first, decide second. The handoff is consumed even when it is not
     // used — under reduced motion, or with no bar to move — so a rect can never
     // outlive the navigation that produced it.
-    const handoff = takeSearchBarHandoff();
+    const handoff = taken.current;
     if (!handoff || reduceMotion) return;
 
     const bar = barRef.current;

@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { useRef } from "react";
+import { StrictMode, useRef } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   SEARCH_MORPH_KEY,
@@ -161,6 +161,26 @@ describe("useSearchBarArrival", () => {
 
       expect(bar().style.transform).toBe("");
       expect(rail().style.transform).toBe("");
+    });
+
+    /**
+     * React replays every effect on mount under Strict Mode — run, clean up,
+     * run — and Next turns it on in development. Guarding the destructive read
+     * and the animation with one flag would let the first pass consume the rect
+     * and start the spring, let the cleanup stop it, and then refuse to start it
+     * again: no arrival at all, in the one build a developer looks at.
+     */
+    it("still animates when React replays the effect under Strict Mode", () => {
+      render(
+        <StrictMode>
+          <Shell>
+            <ArrivingPage />
+          </Shell>
+        </StrictMode>,
+      );
+
+      expect(bar().style.transform).toBe("translate3d(-180px, 380px, 0)");
+      expect(rail().style.transform).toBe("translate3d(-236px, 0, 0)");
     });
 
     it("moves the bar even where the shell has published no rail", () => {
