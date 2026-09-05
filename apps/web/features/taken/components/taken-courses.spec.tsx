@@ -871,7 +871,31 @@ describe("a round a reload interrupted", () => {
     );
   });
 
-  /** A card this round already dealt with stays: it is the progress row. */
+  /**
+   * A skip is a fact about a moment that has passed. If the course was
+   * reviewed elsewhere afterwards, keeping the skip would have the done screen
+   * call it "still marked unreviewed in your list" when it is not, and offer
+   * it again under "Go through the skipped ones".
+   */
+  it("drops a course it skipped that was reviewed elsewhere since", async () => {
+    takenList.mockReturnValue([
+      takenCourse(),
+      takenCourse({ courseCode: "DD2380" }),
+    ]);
+    unreviewed.mockReturnValue({
+      courses: [takenCourse()],
+      isLoading: false,
+      isUnavailable: false,
+    });
+    storeRound(["DD2380", "DD1337"], { DD2380: "skipped" });
+    render(<TakenCourses />);
+
+    expect(await screen.findByTestId("reviewer")).toHaveTextContent(
+      "Reviewing DD1337",
+    );
+  });
+
+  /** A card this round already saved stays: it is the progress row. */
   it("keeps the cards the round has already answered", async () => {
     both();
     storeRound(["DD1337", "DD2380"], { DD1337: "saved" });

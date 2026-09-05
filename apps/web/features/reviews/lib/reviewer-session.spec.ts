@@ -84,6 +84,23 @@ describe("storage that cannot be believed", () => {
     expect(readReviewerSession()?.queue).toEqual(["DD2424"]);
   });
 
+  /**
+   * The round is a set of courses dealt in an order. Everything downstream
+   * keys progress by course code, so a repeated code would draw two cards that
+   * one skip finishes and count two skipped courses.
+   */
+  it("keeps a repeated course code only once", () => {
+    sessionStorage.setItem(
+      KEY,
+      JSON.stringify({
+        queue: ["DD2424", "SF1918", "DD2424"],
+        done: {},
+        drafts: {},
+      }),
+    );
+    expect(readReviewerSession()?.queue).toEqual(["DD2424", "SF1918"]);
+  });
+
   it("drops an outcome that is not one of the two", () => {
     sessionStorage.setItem(
       KEY,

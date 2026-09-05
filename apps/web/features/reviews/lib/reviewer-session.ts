@@ -106,9 +106,20 @@ export function readReviewerSession(): ReviewerSession | null {
   }
   if (!isRecord(value) || !Array.isArray(value.queue)) return null;
 
-  const queue = value.queue.filter(
-    (code): code is string => typeof code === "string",
-  );
+  /**
+   * Deduplicated, because the round is a set of courses dealt in an order and
+   * not a list that may repeat. Everything downstream keys progress by course
+   * code — `done`, `drafts`, and the reviewer's own "which card is active" —
+   * so a queue holding a code twice would draw two cards that one skip
+   * finishes, count two skipped courses, and hand React two children with the
+   * same key. There is no writer that can produce one; a tab's storage is not
+   * a writer this file gets to trust.
+   */
+  const queue = [
+    ...new Set(
+      value.queue.filter((code): code is string => typeof code === "string"),
+    ),
+  ];
   if (queue.length === 0) return null;
 
   const done: Record<string, CardOutcome> = {};

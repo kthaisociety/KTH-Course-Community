@@ -249,13 +249,22 @@ export function TakenCourses() {
    *
    * **A stored round is pruned, not trusted.** `sessionStorage` says what this
    * tab was doing, not what is still true; the reader may have reviewed some of
-   * those courses in the workspace pane, or in another tab, since. Any course
-   * that is no longer unreviewed and was not already dealt with this round is
-   * dropped, because dealing its card again would ask for a second review of a
-   * course that has one. Cards the round already saved or skipped stay in the
-   * queue — they are what the progress row counts — and if that leaves nothing
-   * still to deal, the round is over and gets forgotten rather than reopened on
-   * its own done screen.
+   * those courses in the workspace pane, or in another tab, since. So a course
+   * survives the prune on exactly one of two grounds:
+   *
+   * - it is **still unreviewed**, so its card is worth dealing; or
+   * - **this round saved it**, which is why it is no longer unreviewed. That is
+   *   the round's own history and it is what the progress row counts.
+   *
+   * Everything else goes, and the case that matters is a course this round
+   * *skipped* that has since been reviewed elsewhere. Its skip is a fact about
+   * a moment that has passed: keeping it would have the done screen report a
+   * course as "still unreviewed in your list" when it is not, and offer it
+   * again under "Go through the skipped ones", which would deal a card for a
+   * course that already has a review.
+   *
+   * If the prune leaves nothing still to deal, the round is over and gets
+   * forgotten rather than reopened on its own done screen.
    *
    * **An interrupted round outranks the deep link**, because it holds answers
    * that were typed and never saved and a fresh queue would throw them away.
@@ -270,7 +279,7 @@ export function TakenCourses() {
     if (session !== null) {
       const current = new Set(stillUnreviewed);
       const queue = session.queue.filter(
-        (code) => current.has(code) || session.done[code] !== undefined,
+        (code) => current.has(code) || session.done[code] === "saved",
       );
       const hasCardsLeft = queue.some(
         (code) => session.done[code] === undefined,
