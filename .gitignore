@@ -89,3 +89,6 @@ AUDIT_REPORT.md
 # Real Ladok transcripts — contain personnummer. Never commit.
 transcript_pdfs/
 *.pdf
+
+#worktrees for git
+.claude/worktrees/
