@@ -1955,3 +1955,83 @@ be trusted about what it did.
   they assert the right things. Several findings here (CC-01, CC-02, X-03) sit in
   code with tests around it, which means the tests are not asserting these
   properties.
+---
+
+# Follow-up issues filed
+
+Nine, covering every finding in this ledger that is actionable. Each links back
+to its ledger reference. Nothing was fixed on this branch.
+
+| Issue | Title | Ledger refs | Severity | Label |
+|---|---|---|---|---|
+| [#154](https://github.com/kthaisociety/KTH-Course-Community/issues/154) | `openCourse` is not idempotent by identity, which is the engine behind both OOM crashes | E-07 | S4 now, S1 historically | `bug`, `ready-for-agent` |
+| [#155](https://github.com/kthaisociety/KTH-Course-Community/issues/155) | Collection deletion is irreversible: the artboard and #127's requirement disagree | C-01 | **S1** | `bug`, `ready-for-human` |
+| [#156](https://github.com/kthaisociety/KTH-Course-Community/issues/156) | Saved's unorganized / all-organized split needs a product decision | S-01 | S3 | `enhancement`, `ready-for-human` |
+| [#157](https://github.com/kthaisociety/KTH-Course-Community/issues/157) | My Page's unreviewed rows discard the course they name | M-01, M-02 | S2, S3 | `bug`, `ready-for-human` |
+| [#158](https://github.com/kthaisociety/KTH-Course-Community/issues/158) | Two `color-mix` derivations remain where a tint token exists (#127 §1) | X-02 | S3 / S4 | `bug`, `ready-for-agent` |
+| [#159](https://github.com/kthaisociety/KTH-Course-Community/issues/159) | `CollectionDetail` pins card geometry, wrong inside Saved's narrowed column | C-04, C-05 | S3 | `bug`, `ready-for-agent` |
+| [#160](https://github.com/kthaisociety/KTH-Course-Community/issues/160) | Mobile workspace renders one sheet where the artboard stacks them | E-05, E-06 | S3, S4 | `enhancement`, `ready-for-human` |
+| [#161](https://github.com/kthaisociety/KTH-Course-Community/issues/161) | The design contradicts itself about which tier buys which personalization axis | M-04 | S3 | `question`, `ready-for-human` |
+| [#162](https://github.com/kthaisociety/KTH-Course-Community/issues/162) | Eight small findings: dead code, unread fields and latent risks | X-04, CC-01, CC-02, X-03, N-03, L-07, L-08, R-03 | S4 | `bug`, `ready-for-agent` |
+
+`ready-for-human` marks the four that carry a product decision an agent must not
+make on its own. `ready-for-agent` marks the five that are fully specified.
+
+The existing **#148** (Explore's pager) is confirmed still correct and still
+correctly deferred — E-01. No new issue was opened for it and none should be.
+
+## Findings recorded but deliberately not filed
+
+Three, each with its reason:
+
+- **L-09** — `useReducedMotion()` may return `null` on a first render, and
+  `null` is falsy in the guard. I could not construct a real case, so it is a
+  suspicion recorded at low confidence rather than a defect.
+- **R-02's consistency note** — vote controls *vanish* when signed out, where
+  Save and Mark-as-taken *prompt*. The card documents the choice and it is
+  defensible; it is simply the opposite principle from the one applied two
+  components away. Worth a reader's attention, not worth an issue.
+- **X-08's note on the mirror** — `Saved copy.dc.html` and
+  `Design System copy.dc.html` are earlier variants, not duplicates, and nothing
+  marks them as superseded. I nearly misread them on the strength of their
+  names. `docs/design_ref_new/` is the product owner's mirror and outside what
+  an agent may change, so this is an observation for whoever maintains it.
+
+## Regression journeys — specified, not added
+
+#134 asks for cross-route regression journeys for the parity matrix. The brief
+for this pass says explicitly **do not add them here**; specify them instead.
+These are the seven that would have caught what this audit found, in the order I
+would write them.
+
+1. **Re-opening the active tab allocates nothing.** Call `openCourse` twice with
+   the same `(code, kind)` when it is already active; assert the second call
+   returns the **same object reference**. Catches E-07 / #154 directly, and is
+   the one test that would have made both OOM crashes impossible.
+2. **A per-course unreviewed row opens the reviewer on that course.** Render
+   `UnreviewedCard` in both hosts, click the *second* row, assert the reviewer's
+   first card is that course. Catches M-01 / #157, and would have caught the
+   divergence between the two hosts at the moment it appeared.
+3. **Deleting a collection is recoverable.** Whatever #155 decides, assert it:
+   either a confirm appears before `collections.delete` is called, or the note
+   offers an Undo that restores name, membership and order.
+4. **A collection's cards ramp with the column on `/saved`.** Mount Saved with a
+   workspace tab open and a collection detail open; assert the cards' `geo`
+   matches the measured width rather than `EXPANDED_CARD_GEOMETRY`. Catches
+   C-04 / #159.
+5. **The rail is never transformed when Explore suspends.** Render Explore
+   behind a boundary that suspends on first render, with a handoff in
+   `sessionStorage`; assert the rail's inline transform is never set. Catches
+   L-08 / #162 before it can ever happen.
+6. **Every workspace control reachable on desktop is reachable on mobile.** A
+   parity test that enumerates the controls `WorkspacePane` renders with and
+   without `hideTabs` and asserts the difference is exactly the documented set.
+   This is the general form of E-05 and would catch the next divergence rather
+   than this one.
+7. **Every scroll container carries a scrollbar utility.** A lint-shaped test
+   over the source: any `overflow-auto` / `overflow-y-auto` / `overflow-x-auto`
+   class list in `features/`, `app/` and `components/` must also carry
+   `scrollbar-subtle` or `scrollbar-hidden`, with an explicit allowlist for
+   `components/ui/**`. This is the only item on the list that turns a convention
+   documented in a comment into something enforced, and it would have caught
+   N-03 — the four containers the corrective pass missed.
