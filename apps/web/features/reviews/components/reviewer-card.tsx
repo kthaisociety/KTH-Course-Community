@@ -269,7 +269,7 @@ export function ReviewerCard({
                   aria-pressed={picked}
                   onClick={() => onDraftChange(toggleMethod(draft, key))}
                   className={cn(
-                    "flex h-[30px] items-center gap-1.5 rounded-[15px] border px-[11px] text-[12.5px]",
+                    "flex h-[30px] cursor-pointer items-center gap-1.5 rounded-[15px] border px-[11px] text-[12.5px]",
                     picked
                       ? "border-cc-brand bg-cc-pill text-cc-ink"
                       : "border-cc-rule3 bg-cc-surface text-cc-muted hover:border-cc-brand",
@@ -472,7 +472,7 @@ export function ReviewerCard({
                   aria-pressed={picked}
                   onClick={() => patch({ happyTook: option.value })}
                   className={cn(
-                    "flex h-10 flex-1 items-center justify-center gap-[7px] rounded-[9px] border text-[13.5px] hover:border-cc-brand",
+                    "flex h-10 flex-1 cursor-pointer items-center justify-center gap-[7px] rounded-[9px] border text-[13.5px] hover:border-cc-brand",
                     picked
                       ? "border-cc-brand bg-cc-pill font-semibold text-cc-brand"
                       : "border-cc-rule3 bg-cc-surface font-medium text-cc-muted",
