@@ -10,6 +10,10 @@ import {
 } from "react";
 import type { AuthReason } from "@/features/auth";
 import { NO_COURSE_STATS, useCourseStats } from "@/features/courses";
+import {
+  type OpenCourseRequest,
+  openCourseRequest,
+} from "@/features/workspace";
 import type { CourseStats, CourseSummary } from "@/types";
 import {
   type ExploreFilters,
@@ -50,6 +54,15 @@ function readStars(raw: string | null): number | null {
     : null;
 }
 
+export interface ExploreOptions {
+  /**
+   * Where a course named by `?open=` is sent. Explore hands it to the workspace
+   * pane, which is the only place a course opens now that `/course/<code>` is a
+   * redirect onto this very parameter.
+   */
+  onOpenCourse?: (request: OpenCourseRequest) => void;
+}
+
 /**
  * Everything Explore renders, and everything a click on it does.
  *
@@ -75,8 +88,19 @@ function readStars(raw: string | null): number | null {
  * What the two paths *do* share is `setParams`, and they write through it at
  * genuinely independent moments — see `issuedParams` for why a write cannot
  * simply read the URL it is about to change.
+ *
+ * ## `?open=` is an instruction, not state
+ *
+ * `?q=` and the filters describe the page; `?open=<code>&kind=details|review`
+ * asks it to do something once. It arrives from the `/course/<code>` redirect
+ * that replaced the course page (#68 §5), and it is handed straight to the
+ * host's workspace and then taken back out of the URL — otherwise every reload
+ * would reopen a tab the reader had closed. It goes through `setParams` like
+ * every other write here rather than through a second `router.replace`, because
+ * two independent writers on one query string is exactly the race
+ * `issuedParams` exists to prevent.
  */
-export function useExplore() {
+export function useExplore({ onOpenCourse }: ExploreOptions = {}) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -150,6 +174,28 @@ export function useExplore() {
     setDebouncedField(urlQuery);
   }, [urlQuery, setDebouncedField]);
 
+  const requestedOpen = openCourseRequest(
+    searchParams.get("open"),
+    searchParams.get("kind"),
+  );
+  const requestedCode = requestedOpen?.courseCode ?? null;
+  const requestedKind = requestedOpen?.kind ?? null;
+
+  /**
+   * The handler by reference, so the effect below fires on the *parameter*
+   * arriving and not on the host re-rendering with a fresh closure. Re-running
+   * it would reopen a tab the reader may already have closed, in the window
+   * before `router.replace` has taken the parameter back out of the URL.
+   */
+  const openHandler = useRef(onOpenCourse);
+  openHandler.current = onOpenCourse;
+
+  useEffect(() => {
+    if (!requestedCode || !requestedKind) return;
+    openHandler.current?.({ courseCode: requestedCode, kind: requestedKind });
+    setParams({ open: null, kind: null });
+  }, [requestedCode, requestedKind, setParams]);
+
   const filters: ExploreFilters = {
     department: department || undefined,
     minRatingStars: minRatingStars ?? undefined,
@@ -206,16 +252,6 @@ export function useExplore() {
     [setParams],
   );
 
-  const onOpenCourse = useCallback(
-    (courseCode: string) => router.push(`/course/${courseCode}`),
-    [router],
-  );
-
-  const onReviewCourse = useCallback(
-    (courseCode: string) => router.push(`/course/${courseCode}?writeReview=1`),
-    [router],
-  );
-
   return {
     field,
     onQueryChange,
@@ -244,7 +280,5 @@ export function useExplore() {
 
     authReason,
     setAuthReason,
-    onOpenCourse,
-    onReviewCourse,
   };
 }

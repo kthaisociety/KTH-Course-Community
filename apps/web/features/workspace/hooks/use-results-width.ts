@@ -3,14 +3,15 @@
 import { useEffect, useRef, useState } from "react";
 
 /**
- * The width of the results column, watched rather than assumed.
+ * The width of the column the pane shares its row with, watched rather than
+ * assumed.
  *
- * Explore owns the course card's collapse ramp, and the ramp's input is this
+ * Both hosts hand the course card a collapse ramp, and the ramp's input is this
  * number: `courseCardGeometry(width)` turns it into the card's `geo`. Watching
  * the column's own box rather than the viewport is what makes the ramp right for
- * every reason the column can narrow — a phone, a resized window, and, once #94
- * lands, a workspace pane dragged open beside it. Explore never has to learn
- * that the pane exists.
+ * every reason the column can narrow — a phone, a resized window, and a
+ * workspace pane dragged open beside it. Neither host has to learn that the pane
+ * exists; it lives here because the pane is the reason the column moves at all.
  *
  * `Infinity` is the honest starting value: it is the top of the ramp, so a card
  * renders fully expanded on the server and on the first client paint, and only

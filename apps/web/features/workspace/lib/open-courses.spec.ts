@@ -5,6 +5,7 @@ import {
   EMPTY_WORKSPACE,
   openCourse,
   openCourseLabel,
+  openCourseRequest,
   tabLabel,
   tabLayout,
   type Workspace,
@@ -125,5 +126,35 @@ describe("openCourseLabel", () => {
         kind: "review",
       }),
     ).toBe("DD2380 · Review draft");
+  });
+});
+
+/**
+ * `/course/<code>` redirects onto this pair (#68 §5), and Collections navigates
+ * to Saved with it, so it is read off a URL that people paste and edit.
+ */
+describe("openCourseRequest", () => {
+  it("reads the pair a host was navigated with", () => {
+    expect(openCourseRequest("DD2380", "review")).toEqual({
+      courseCode: "DD2380",
+      kind: "review",
+    });
+  });
+
+  // `/course/dd2380` was a working URL; the catalogue keys courses upper-case.
+  it("upper-cases a hand-typed code, and trims it", () => {
+    expect(openCourseRequest("  dd2380 ", null)?.courseCode).toBe("DD2380");
+  });
+
+  it("opens the course rather than refusing an unusable kind", () => {
+    expect(openCourseRequest("DD2380", null)?.kind).toBe("details");
+    expect(openCourseRequest("DD2380", "")?.kind).toBe("details");
+    expect(openCourseRequest("DD2380", "nonsense")?.kind).toBe("details");
+  });
+
+  it("asks for nothing when no course is named", () => {
+    expect(openCourseRequest(null, "review")).toBeNull();
+    expect(openCourseRequest(undefined, undefined)).toBeNull();
+    expect(openCourseRequest("   ", "details")).toBeNull();
   });
 });

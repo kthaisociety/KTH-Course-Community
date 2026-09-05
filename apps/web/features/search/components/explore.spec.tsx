@@ -242,7 +242,12 @@ describe("Explore", () => {
       ).toBeVisible();
     });
 
-    it("queues a course open until its container chooses the mobile sheet", async () => {
+    /**
+     * The sheet locks the page's scroll, so it may only mount once the
+     * container has been measured as narrow — but the open list is the same
+     * either way, so the click itself never has to wait for that measurement.
+     */
+    it("holds a course open until its container chooses the mobile sheet", async () => {
       delayResizeObserver = true;
       render(<Explore />);
 
@@ -292,7 +297,13 @@ describe("Explore", () => {
       expect(push).not.toHaveBeenCalled();
     });
 
-    it("continues to route at an intermediate container width", async () => {
+    /**
+     * There used to be a third presentation here: between the sheet's width and
+     * the column's, a course opened on its own page. #68 §5 deleted that page,
+     * so the widths either side of 768 have to cover the whole range between
+     * them and nothing may route away.
+     */
+    it("opens the sheet rather than routing just below the column's width", async () => {
       containerWidth = 767;
       render(<Explore />);
 
@@ -303,8 +314,45 @@ describe("Explore", () => {
         ),
       );
 
-      expect(push).toHaveBeenCalledWith("/course/DD2380");
-      expect(screen.queryByLabelText("Open courses")).not.toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Close DD2380 · Details" }),
+      ).toBeVisible();
+      expect(
+        screen.queryByTestId("workspace-pane-host"),
+      ).not.toBeInTheDocument();
+      expect(push).not.toHaveBeenCalled();
+    });
+
+    // `/course/<code>` redirects here with the course it was asked for, so the
+    // parameter has to land in the pane — and then leave, or every reload would
+    // reopen a tab the reader had closed.
+    describe("a course named by the route", () => {
+      // A hand-typed `/course/dd2380` was a working URL, so the code is
+      // upper-cased on the way in rather than sent to the catalogue as typed.
+      it("opens it in the workspace, and takes the instruction back out of the URL", async () => {
+        search = "q=graphs&open=dd2380&kind=review";
+        render(<Explore />);
+
+        expect(
+          await screen.findByRole("button", {
+            name: "Close DD2380 · Review draft",
+          }),
+        ).toBeVisible();
+        await waitFor(() =>
+          expect(replace).toHaveBeenCalledWith("/search?q=graphs", {
+            scroll: false,
+          }),
+        );
+      });
+
+      it("opens the details tab when no kind is named", async () => {
+        search = "q=graphs&open=DD2380";
+        render(<Explore />);
+
+        expect(
+          await screen.findByRole("button", { name: "Close DD2380 · Details" }),
+        ).toBeVisible();
+      });
     });
 
     it("stops resizing when a pointer gesture is cancelled", async () => {
