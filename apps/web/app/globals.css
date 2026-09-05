@@ -156,12 +156,12 @@
      six tokens are the client half of that contract and the palette can be
      re-skinned here without a data migration.
 
-     They are additions to `cc-theme.css` rather than a mirror of it: the design
-     has no node token at all (`cc-store.js` carries five raw hexes against the
-     schema's six names). Five of these are the design's own hexes reused;
-     `moss` is the sixth the design never assigned. Provisional, like the
-     examination palette's `seminars` — the only requirement is that no two of
-     the six read as each other. */
+     Mirrored, like everything above: the revised `cc-theme.css` names all six
+     (`--nodeAurora` … `--nodeViolet`), and the Design System artboard renders
+     them under "Community graph nodes". They are *unassigned* rather than
+     absent — #68 §3 settled that a node with no configured appearance is
+     `--cc-brand`, and these are the palette personalisation will draw from once
+     a tier writer exists. */
   --cc-node-aurora: #2f9e8e;
   --cc-node-ember: #c96a4a;
   --cc-node-frost: #2f5fa8;
@@ -318,10 +318,10 @@
   --cc-danger: #ff8a80;
   --cc-danger-fg: #2b0a08;
 
-  /* Community graph node colours — dark. The light hues are mixed for the cream
-     page and disappear into `--cc-pg`'s deep blue, so each is lifted to the same
-     hue at a much higher lightness. The names, and which name means which hue,
-     do not change. */
+  /* Community graph node colours — dark. The design lifts each light hue to the
+     same hue at a much higher lightness, because the light set is mixed for the
+     cream page and disappears into `--cc-pg`'s deep blue. The names, and which
+     name means which hue, do not change. */
   --cc-node-aurora: #5fd8c4;
   --cc-node-ember: #f2946f;
   --cc-node-frost: #8ec2ff;

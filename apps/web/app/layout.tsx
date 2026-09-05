@@ -61,7 +61,11 @@ export default function RootLayout({
 
             `storageKey="cc:theme"`. The design persists under that key and
             `next-themes` defaults to `"theme"`; matching costs nothing and
-            keeps one name for one thing across the two.
+            keeps one name for one thing across the two. It does not cost a
+            reader their existing choice either — `ThemeProvider` carries a
+            one-time migration of the old key, which has to run before
+            `next-themes`' own pre-paint script and so lives there rather than
+            in an effect.
 
             `disableTransitionOnChange` is deliberately *not* set. It suppresses
             every transition for a frame while the class flips, which would kill
