@@ -29,6 +29,15 @@ function draftWith(over: Partial<ReviewDraft> = {}): ReviewDraft {
   return { ...EMPTY_REVIEW_DRAFT, message: "Half a thought", ...over };
 }
 
+/**
+ * A pane writing drafts it has just typed — nothing synchronised yet, so every
+ * course named is one this tab changed. The baseline is the whole point of the
+ * second argument, so the tests that care about it pass their own.
+ */
+function writeFresh(drafts: Record<string, ReviewDraft>) {
+  writeDrafts(drafts, {});
+}
+
 /** What is actually sitting in the browser, decoder and all bypassed. */
 function storedDrafts(): Record<string, { savedAt: number; draft: unknown }> {
   return JSON.parse(localStorage.getItem(DRAFTS_KEY) ?? "{}");
@@ -58,7 +67,7 @@ describe("drafts", () => {
    * would pass either way.
    */
   it("keeps a draft in localStorage, where a new tab can still find it", () => {
-    writeDrafts({ DD2380: draftWith() });
+    writeFresh({ DD2380: draftWith() });
 
     expect(localStorage.getItem(DRAFTS_KEY)).not.toBeNull();
     expect(sessionStorage.getItem(DRAFTS_KEY)).toBeNull();
@@ -86,11 +95,11 @@ describe("drafts", () => {
   it("leaves the stamp alone while the draft says the same thing", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-01-01T00:00:00Z"));
-    writeDrafts({ DD2380: draftWith() });
+    writeFresh({ DD2380: draftWith() });
     const first = storedDrafts().DD2380.savedAt;
 
     vi.setSystemTime(new Date("2026-01-03T00:00:00Z"));
-    writeDrafts({ DD2380: draftWith() });
+    writeFresh({ DD2380: draftWith() });
 
     expect(storedDrafts().DD2380.savedAt).toBe(first);
   });
@@ -98,24 +107,60 @@ describe("drafts", () => {
   it("moves the stamp when the draft changes", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-01-01T00:00:00Z"));
-    writeDrafts({ DD2380: draftWith() });
+    writeFresh({ DD2380: draftWith() });
     const first = storedDrafts().DD2380.savedAt;
 
     vi.setSystemTime(new Date("2026-01-03T00:00:00Z"));
-    writeDrafts({ DD2380: draftWith({ message: "A whole thought" }) });
+    writeFresh({ DD2380: draftWith({ message: "A whole thought" }) });
 
     expect(storedDrafts().DD2380.savedAt).toBeGreaterThan(first);
   });
 
   // What `publish()` does: it hands the pane an empty draft for the course it
-  // just sent. That has to be a delete, not a stored blank.
+  // just sent. That has to be a delete, not a stored blank — and the baseline
+  // is what says so, since an empty draft a tab never had is not a deletion.
   it("drops a draft that has been emptied, which is how publishing clears up", () => {
-    writeDrafts({ DD2380: draftWith(), SF1626: draftWith() });
+    const held = { DD2380: draftWith(), SF1626: draftWith() };
+    writeFresh(held);
 
-    writeDrafts({ DD2380: EMPTY_REVIEW_DRAFT, SF1626: draftWith() });
+    writeDrafts({ ...held, DD2380: EMPTY_REVIEW_DRAFT }, held);
 
     expect(storedDrafts().DD2380).toBeUndefined();
     expect(readDrafts().SF1626).toBeDefined();
+  });
+
+  /*
+   * A tab carries every draft it hydrated, including ones it has not touched
+   * since. Writing that whole record back would replace a course another tab
+   * has moved on with the copy this tab happens to still be holding — losing
+   * newer work on the way to saving an unrelated draft. The baseline is what
+   * tells "I changed this" apart from "I am still holding it".
+   */
+  it("does not write back a course it is only still holding", () => {
+    // Tab 2 hydrates DD2380 as it stands.
+    writeFresh({ DD2380: draftWith({ message: "First pass" }) });
+    const hydrated = readDrafts();
+
+    // Tab 1 gets further with the same course.
+    writeDrafts(
+      { ...hydrated, DD2380: draftWith({ message: "Second pass" }) },
+      hydrated,
+    );
+
+    // Tab 2, which never touched DD2380 again, saves a different course.
+    writeDrafts({ ...hydrated, SF1626: draftWith() }, hydrated);
+
+    expect(readDrafts().DD2380?.message).toBe("Second pass");
+    expect(readDrafts().SF1626?.message).toBe("Half a thought");
+  });
+
+  it("still writes a course it did change since it synchronised", () => {
+    writeFresh({ DD2380: draftWith({ message: "First pass" }) });
+    const hydrated = readDrafts();
+
+    writeDrafts({ DD2380: draftWith({ message: "Mine now" }) }, hydrated);
+
+    expect(readDrafts().DD2380?.message).toBe("Mine now");
   });
 
   /*
@@ -125,9 +170,9 @@ describe("drafts", () => {
    * must not take the first tab's work with it.
    */
   it("leaves a draft it has never heard of where another tab put it", () => {
-    writeDrafts({ SF1626: draftWith({ message: "Written next door" }) });
+    writeFresh({ SF1626: draftWith({ message: "Written next door" }) });
 
-    writeDrafts({ DD2380: draftWith() });
+    writeFresh({ DD2380: draftWith() });
 
     expect(readDrafts().SF1626?.message).toBe("Written next door");
     expect(readDrafts().DD2380?.message).toBe("Half a thought");
@@ -146,10 +191,66 @@ describe("drafts", () => {
       });
 
     expect(readDrafts()).toEqual({});
-    expect(() => writeDrafts({ DD2380: draftWith() })).not.toThrow();
+    expect(() => writeFresh({ DD2380: draftWith() })).not.toThrow();
 
     getItem.mockRestore();
     setItem.mockRestore();
+  });
+});
+
+/*
+ * Shipping this change must not be the data loss it fixes. The release it
+ * replaces wrote `{ [courseCode]: ReviewDraft }` under the same key in the
+ * tab's `sessionStorage`; a student with a half-written review open at deploy
+ * time still has it, in the place the new code no longer looks.
+ */
+describe("drafts the previous release left behind", () => {
+  const LEGACY = { DD2380: { ...EMPTY_REVIEW_DRAFT, message: "From before" } };
+
+  it("brings a legacy draft across, once, and drops the old key", () => {
+    sessionStorage.setItem(DRAFTS_KEY, JSON.stringify(LEGACY));
+
+    expect(readDrafts().DD2380?.message).toBe("From before");
+    expect(sessionStorage.getItem(DRAFTS_KEY)).toBeNull();
+    expect(storedDrafts().DD2380.savedAt).toBeTypeOf("number");
+    // And it is genuinely in the new home now, not read from the old one again.
+    expect(readDrafts().DD2380?.message).toBe("From before");
+  });
+
+  // A draft written since the deploy is the current one; the copy an old tab
+  // left behind must not replace it.
+  it("lets a draft written since the deploy win", () => {
+    writeFresh({ DD2380: draftWith({ message: "Written since" }) });
+    sessionStorage.setItem(DRAFTS_KEY, JSON.stringify(LEGACY));
+
+    expect(readDrafts().DD2380?.message).toBe("Written since");
+  });
+
+  // The old build stored cleared drafts; this one does not. Carrying one across
+  // would put back an entry the student had emptied.
+  it("does not resurrect a legacy draft that was already empty", () => {
+    sessionStorage.setItem(
+      DRAFTS_KEY,
+      JSON.stringify({ DD2380: EMPTY_REVIEW_DRAFT }),
+    );
+
+    expect(readDrafts()).toEqual({});
+  });
+
+  // Losing the legacy key before the new one is safely written would be the
+  // migration losing the draft it exists to save.
+  it("keeps the old key when the new one cannot be written", () => {
+    sessionStorage.setItem(DRAFTS_KEY, JSON.stringify(LEGACY));
+    const setItem = vi
+      .spyOn(Storage.prototype, "setItem")
+      .mockImplementation(() => {
+        throw new Error("quota exceeded");
+      });
+
+    expect(readDrafts().DD2380?.message).toBe("From before");
+
+    setItem.mockRestore();
+    expect(sessionStorage.getItem(DRAFTS_KEY)).not.toBeNull();
   });
 });
 

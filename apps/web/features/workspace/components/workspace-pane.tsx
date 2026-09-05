@@ -148,17 +148,33 @@ export function WorkspacePane({
    */
   const [hydrated, setHydrated] = useState(false);
   const read = useRef(false);
+  /**
+   * What this pane and storage last agreed on, per course.
+   *
+   * `localStorage` is shared between tabs, so "what the pane holds" is no
+   * longer the same statement as "what should be stored": a pane carries every
+   * draft it hydrated, including ones it has not touched since, and another tab
+   * may have moved them on. Handing `writeDrafts` this baseline is what lets it
+   * tell "I changed this" from "I am simply still holding it", and write only
+   * the first. Set at the restore and after every write, which are exactly the
+   * moments the two are known to agree.
+   */
+  const synced = useRef<Record<string, ReviewDraft>>({});
 
   useEffect(() => {
     if (read.current) return;
     read.current = true;
-    setDrafts(readDrafts());
+    const restored = readDrafts();
+    synced.current = restored;
+    setDrafts(restored);
     setPublished(readPublished());
     setHydrated(true);
   }, []);
 
   useEffect(() => {
-    if (hydrated) writeDrafts(drafts);
+    if (!hydrated) return;
+    writeDrafts(drafts, synced.current);
+    synced.current = drafts;
   }, [hydrated, drafts]);
 
   useEffect(() => {

@@ -96,11 +96,16 @@ function read(which: Area, key: string): unknown {
   }
 }
 
-function write(which: Area, key: string, value: unknown): void {
+/** Reports whether the value landed. The migration below has to know. */
+function write(which: Area, key: string, value: unknown): boolean {
   try {
-    area(which)?.setItem(key, JSON.stringify(value));
+    const store = area(which);
+    if (!store) return false;
+    store.setItem(key, JSON.stringify(value));
+    return true;
   } catch {
     // A browser with storage disabled or full still works; it just forgets.
+    return false;
   }
 }
 
@@ -217,7 +222,7 @@ interface StoredDraft {
  * Every stored draft that is still readable and still young enough, with its
  * stamp — the shape `readDrafts` presents and `writeDrafts` re-stamps against.
  */
-function readStoredDrafts(): Record<string, StoredDraft> {
+function decodeStoredDrafts(): Record<string, StoredDraft> {
   const value = read("local", DRAFTS_KEY);
   if (!isRecord(value)) return {};
 
@@ -232,6 +237,51 @@ function readStoredDrafts(): Record<string, StoredDraft> {
     if (draft) stored[courseCode] = { savedAt, draft };
   }
   return stored;
+}
+
+/**
+ * Drafts the previous release left in `sessionStorage`, brought across once.
+ *
+ * The release this replaces wrote `{ [courseCode]: ReviewDraft }` under the
+ * same key in the tab's storage. Without this, shipping the fix is itself the
+ * data loss it fixes: every student with a half-written review open at deploy
+ * time reloads into a blank form, and their tab still had the draft — it was
+ * simply being looked for in the wrong place. A migration is cheap and the
+ * alternative is a one-off outage of exactly the thing this PR is about.
+ *
+ * Deliberately conservative. The new format wins for any course present in
+ * both, so a draft written since the deploy is never overwritten by the stale
+ * copy the old tab left behind. An untouched legacy draft is not carried at
+ * all — the old build stored those, the new one does not, and resurrecting one
+ * would put an entry back that the student had cleared. The legacy key is
+ * removed only once the new one has actually been written, so a browser that
+ * refuses the write keeps the old value and can try again on the next read.
+ *
+ * It runs at most once per browser: the first read moves everything and drops
+ * the key, and thereafter there is nothing to find.
+ */
+function adoptLegacyDrafts(
+  stored: Record<string, StoredDraft>,
+): Record<string, StoredDraft> | null {
+  const legacy = read("session", DRAFTS_KEY);
+  if (!isRecord(legacy)) return null;
+
+  const now = Date.now();
+  const merged: Record<string, StoredDraft> = { ...stored };
+  for (const [courseCode, candidate] of Object.entries(legacy)) {
+    if (courseCode in merged) continue;
+    const draft = toDraft(candidate);
+    if (!draft || isUntouched(draft)) continue;
+    merged[courseCode] = { savedAt: now, draft };
+  }
+
+  if (write("local", DRAFTS_KEY, merged)) remove("session", DRAFTS_KEY);
+  return merged;
+}
+
+function readStoredDrafts(): Record<string, StoredDraft> {
+  const stored = decodeStoredDrafts();
+  return adoptLegacyDrafts(stored) ?? stored;
 }
 
 export function readDrafts(): Record<string, ReviewDraft> {
@@ -273,47 +323,63 @@ function sameDraft(a: ReviewDraft, b: ReviewDraft): boolean {
 }
 
 /**
- * Store what the pane holds, without trampling what it does not.
+ * Store what this pane has *changed*, and leave everything else alone.
  *
- * A pane says two different things by not naming a course, and the whole of
- * this function is telling them apart.
+ * The second argument is what the pane's state held the last time it and
+ * storage agreed — at hydration, and after each write. Without it this function
+ * cannot tell the two meanings of "the pane is holding an old value" apart, and
+ * both of them matter:
  *
- * A course the pane holds **as an untouched draft** has been cleared, and the
- * entry goes. That is how publishing tidies up after itself — `publish()` hands
- * the pane an empty draft for the course it just sent — and equally how a
- * writer who selects all and deletes gets what they asked for rather than their
- * old text back on the next page load. An untouched draft is not a smaller
- * draft; it is the absence of one.
+ * - The pane has the same text it hydrated, and storage has since moved on.
+ *   Another tab wrote it. This tab has nothing to say and must say nothing.
+ * - The pane's text differs from what it last synchronised. This tab edited it,
+ *   and its version is the one the student is looking at.
  *
- * A course the pane **has never heard of** is somebody else's, and is carried
- * through untouched. This did not arise while drafts were per-tab: a pane's
- * record was the whole of its tab's storage, so rewriting it wholesale was
- * exactly right. `localStorage` is shared, so it no longer is — a second tab
- * writing its own record would silently delete the first tab's draft for
- * another course. The pane hydrates every stored draft into its state, so
- * anything genuinely its own is named here either way; anything unnamed
- * appeared after it hydrated and belongs to whoever wrote it.
+ * Comparing against storage alone cannot separate those — a difference between
+ * memory and storage is equally consistent with either — so `synced` is passed
+ * in rather than guessed at. That is what stops a tab from carrying its whole
+ * hydrated record forward and writing a stale copy of course A back over a
+ * newer one, on its way to saving an unrelated draft for course B.
  *
- * Two tabs editing the *same* course still race, and last write wins. That is
- * the same race two tabs have always had over one draft, and the same one the
- * open list has; nothing here can arbitrate it, and nothing needs to — the
- * losing tab still has its own copy on screen.
+ * The two other rules fall out of the same idea. A course the pane has never
+ * heard of is somebody else's and is carried through untouched. A course the
+ * pane holds as an untouched draft *and has changed since syncing* has been
+ * cleared, and the entry goes — that is how publishing tidies up after itself,
+ * and how a writer who selects all and deletes gets what they asked for rather
+ * than their old text back on the next page load.
+ *
+ * Two tabs editing the *same* course still race, and the last write wins. That
+ * is the race two tabs have always had over one draft, and the losing tab still
+ * has its own copy on screen; what is fixed here is the tab that was not
+ * editing that course at all.
  */
-export function writeDrafts(drafts: Record<string, ReviewDraft>): void {
+export function writeDrafts(
+  drafts: Record<string, ReviewDraft>,
+  synced: Record<string, ReviewDraft>,
+): void {
   const stored = readStoredDrafts();
   const now = Date.now();
+  const changed = (courseCode: string, draft: ReviewDraft) =>
+    !sameDraft(synced[courseCode] ?? EMPTY_REVIEW_DRAFT, draft);
 
   const next: Record<string, StoredDraft> = {};
   for (const [courseCode, entry] of Object.entries(stored)) {
-    if (!(courseCode in drafts)) next[courseCode] = entry;
-  }
-  for (const [courseCode, draft] of Object.entries(drafts)) {
+    const draft = drafts[courseCode];
+    if (draft === undefined || !changed(courseCode, draft)) {
+      next[courseCode] = entry;
+      continue;
+    }
     if (isUntouched(draft)) continue;
-    const previous = stored[courseCode];
-    const unchanged =
-      previous !== undefined && sameDraft(previous.draft, draft);
-    next[courseCode] = { savedAt: unchanged ? previous.savedAt : now, draft };
+    const unchanged = sameDraft(entry.draft, draft);
+    next[courseCode] = { savedAt: unchanged ? entry.savedAt : now, draft };
   }
+
+  for (const [courseCode, draft] of Object.entries(drafts)) {
+    if (courseCode in stored) continue;
+    if (isUntouched(draft) || !changed(courseCode, draft)) continue;
+    next[courseCode] = { savedAt: now, draft };
+  }
+
   write("local", DRAFTS_KEY, next);
 }
 

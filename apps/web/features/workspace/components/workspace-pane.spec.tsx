@@ -10,7 +10,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { sanitizeHtml } from "@/lib/sanitize-html";
 import type { CourseDetails, CourseStats } from "@/types";
 import type { OpenCourse } from "../lib/open-courses";
-import { EMPTY_REVIEW_DRAFT } from "../lib/review-draft";
+import { EMPTY_REVIEW_DRAFT, type ReviewDraft } from "../lib/review-draft";
 import {
   markAwaitingSignIn,
   readDrafts,
@@ -818,7 +818,7 @@ describe("what survives a page load", () => {
  */
 describe("a stored draft, and what mounting does to it", () => {
   it("does not blank a draft belonging to a course the pane never shows", () => {
-    writeDrafts({
+    storeDraft({
       SF1626: { ...EMPTY_REVIEW_DRAFT, message: "Half a thought" },
     });
 
@@ -828,7 +828,7 @@ describe("a stored draft, and what mounting does to it", () => {
   });
 
   it("hands a stored draft back to its tab, and leaves it in storage", async () => {
-    writeDrafts({
+    storeDraft({
       DD2380: { ...EMPTY_REVIEW_DRAFT, message: "Half a thought" },
     });
 
@@ -850,7 +850,7 @@ describe("a stored draft, and what mounting does to it", () => {
    * exclusive ternary — so this test is the conditional, not the screens.
    */
   it("does not blank a draft when two panes mount in the same commit", async () => {
-    writeDrafts({
+    storeDraft({
       DD2380: { ...EMPTY_REVIEW_DRAFT, message: "Half a thought" },
     });
     const props = {
@@ -885,7 +885,7 @@ describe("a stored draft, and what mounting does to it", () => {
 describe("what the writer is told on the way back", () => {
   function comeBackSignedIn(stored?: string) {
     if (stored !== undefined) {
-      writeDrafts({ DD2380: { ...EMPTY_REVIEW_DRAFT, message: stored } });
+      storeDraft({ DD2380: { ...EMPTY_REVIEW_DRAFT, message: stored } });
     }
     markAwaitingSignIn("DD2380");
     useMe.mockReturnValue({
@@ -915,6 +915,15 @@ describe("what the writer is told on the way back", () => {
     expect(screen.queryByText(/came back untouched/)).not.toBeInTheDocument();
   });
 });
+
+/**
+ * A draft already in the browser when the pane mounts — another tab's, or this
+ * one's from before the sign-in. The empty baseline says "nothing synchronised
+ * yet", which is what a first write is.
+ */
+function storeDraft(drafts: Record<string, ReviewDraft>) {
+  writeDrafts(drafts, {});
+}
 
 /** The score tracks are range inputs behind the design's own bar. */
 function setScore(label: string, value: number) {
