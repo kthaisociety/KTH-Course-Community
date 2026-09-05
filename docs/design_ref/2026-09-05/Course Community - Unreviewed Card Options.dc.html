@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><meta name="design_doc_mode" content="canvas"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet"><link rel="stylesheet" href="cc-theme.css"><style>body{margin:0;background:var(--pg);color:var(--ink);font-family:Geist,system-ui,sans-serif;font-size:14px}a{color:var(--brand)}a:hover{color:#10386f}</style></helmet>
+
+<section style="padding:40px 44px 44px">
+<div style="display:flex;align-items:baseline;gap:10px;margin-bottom:6px">
+<span style="font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:var(--ink);color:var(--pg);border-radius:4px">1</span>
+<span style="font-size:13px;font-weight:600">Unreviewed courses — bullet list with the fast track on the right</span>
+</div>
+<div style="font-size:12.5px;color:var(--muted);max-width:620px">One component for My Page and Taken courses. Same data in all three: five courses with no review yet.</div>
+
+<div style="margin-top:26px;display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start">
+
+<div id="1a" style="flex:none;width:600px;display:flex;flex-direction:column;gap:9px;scroll-margin-top:16px">
+<div style="display:flex;align-items:baseline;gap:8px">
+<span style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:var(--pill);color:var(--ink);border-radius:5px">1a</span>
+<span style="font-size:11px;color:var(--muted)">Bulleted rows, one Review per course</span>
+</div>
+<div style="box-sizing:border-box;width:100%;border:1px solid var(--rule);border-radius:12px;background:var(--surface);padding:15px 16px 8px">
+<div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px">
+<div style="font-size:10.5px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--dim)">Still unreviewed</div>
+<div style="font-size:12px;color:var(--dim2)">{{ countLabel }}</div>
+</div>
+<div style="margin-top:10px">
+<sc-for list="{{ courses }}" as="c" hint-placeholder-count="5">
+<div style="display:flex;align-items:center;gap:11px;padding:9px 0;border-bottom:1px solid var(--rule)">
+<span style="flex:none;width:5px;height:5px;border-radius:50%;background:var(--rule3)"></span>
+<span style="flex:none;font:500 12px Geist Mono,ui-monospace,monospace;color:var(--brand)">{{ c.code }}</span>
+<span style="flex:1;min-width:0;font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ c.name }}</span>
+<span style="flex:none;font-size:12px;color:var(--dim2);font-variant-numeric:tabular-nums">{{ c.term }}</span>
+<div style="flex:none;display:flex;align-items:center;gap:6px;height:28px;padding:0 11px;border-radius:8px;border:1px solid var(--rule3);background:var(--surface);font-size:12px;font-weight:500;color:var(--brand);cursor:pointer" style-hover="border-color:var(--hov);background:var(--pill)">Review</div>
+</div>
+</sc-for>
+</div>
+<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 0 10px">
+<div style="font-size:12.5px;color:var(--muted)">Two minutes each, or run them back to back.</div>
+<div style="display:flex;align-items:center;gap:7px;height:32px;padding:0 13px;border-radius:8px;background:var(--btn);color:var(--btnFg);font-size:12.5px;font-weight:600;cursor:pointer" style-hover="opacity:.9">{{ fastTrackLabel }}</div>
+</div>
+</div>
+</div>
+
+<div id="1b" style="flex:none;width:600px;display:flex;flex-direction:column;gap:9px;scroll-margin-top:16px">
+<div style="display:flex;align-items:baseline;gap:8px">
+<span style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:var(--pill);color:var(--ink);border-radius:5px">1b</span>
+<span style="font-size:11px;color:var(--muted)">Plain bullets, one fast-track button beside the heading</span>
+</div>
+<div style="box-sizing:border-box;width:100%;border:1px solid var(--rule);border-radius:12px;background:var(--surface);padding:16px 17px 15px">
+<div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px 16px">
+<div style="min-width:200px;flex:1">
+<div style="font-size:15px;font-weight:600">{{ headline }}</div>
+<div style="margin-top:4px;font-size:12.5px;color:var(--muted)">Your reviews are what the next student reads.</div>
+</div>
+<div style="flex:none;display:flex;align-items:center;gap:8px;height:38px;padding:0 16px;border-radius:9px;background:var(--btn);color:var(--btnFg);font-size:13px;font-weight:600;cursor:pointer" style-hover="opacity:.9"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-8 8H4l2-3.2A8 8 0 1 1 21 12z"></path></svg>Open the fast track</div>
+</div>
+<div style="margin-top:13px;padding-top:13px;border-top:1px solid var(--rule);display:flex;flex-direction:column;gap:7px">
+<sc-for list="{{ courses }}" as="c" hint-placeholder-count="5">
+<div style="display:flex;align-items:center;gap:10px">
+<span style="flex:none;width:4px;height:4px;border-radius:50%;background:var(--brand);opacity:.5"></span>
+<span style="flex:none;font:500 12px Geist Mono,ui-monospace,monospace;color:var(--brand)">{{ c.code }}</span>
+<span style="flex:1;min-width:0;font-size:13px;color:var(--ink2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ c.name }}</span>
+<span style="flex:none;font-size:12px;font-weight:500;color:var(--brand);cursor:pointer" style-hover="text-decoration:underline">Review</span>
+</div>
+</sc-for>
+</div>
+</div>
+</div>
+
+<div id="1c" style="flex:none;width:600px;display:flex;flex-direction:column;gap:9px;scroll-margin-top:16px">
+<div style="display:flex;align-items:baseline;gap:8px">
+<span style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:var(--pill);color:var(--ink);border-radius:5px">1c</span>
+<span style="font-size:11px;color:var(--muted)">No card, hairline rows, arrow action</span>
+</div>
+<div style="box-sizing:border-box;width:100%">
+<div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding-bottom:9px">
+<div style="font-size:10.5px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--dim)">Still unreviewed · {{ pendingCount }}</div>
+<div style="display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:500;color:var(--brand);cursor:pointer" style-hover="text-decoration:underline">Fast track all<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13"></path><path d="m12.5 5.5 6.5 6.5-6.5 6.5"></path></svg></div>
+</div>
+<div style="border-top:1px solid var(--rule)">
+<sc-for list="{{ courses }}" as="c" hint-placeholder-count="5">
+<div style="display:flex;align-items:center;gap:12px;padding:11px 8px;border-bottom:1px solid var(--rule);cursor:pointer" style-hover="background:var(--surface)">
+<span style="flex:none;font:500 12px Geist Mono,ui-monospace,monospace;color:var(--brand);width:64px">{{ c.code }}</span>
+<span style="flex:1;min-width:0;font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ c.name }}</span>
+<span style="flex:none;font-size:12px;color:var(--dim2)">{{ c.term }}</span>
+<span style="flex:none;display:flex;align-items:center;gap:5px;font-size:12px;font-weight:500;color:var(--brand)">Review<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13"></path><path d="m12.5 5.5 6.5 6.5-6.5 6.5"></path></svg></span>
+</div>
+</sc-for>
+</div>
+</div>
+</div>
+
+</div>
+</section>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1360,&quot;height&quot;:620}}">
+/* Three treatments of the same list, drawn from the real store so the widths
+   and code lengths are honest. */
+const FALLBACK = [
+  { code: "DD2424", name: "Deep Learning in Data Science", term: "HT25" },
+  { code: "SF1918", name: "Probability and Statistics", term: "HT25" },
+  { code: "AK2030", name: "Theory and Methodology of Science", term: "VT26" },
+  { code: "DD1338", name: "Algorithms and Data Structures", term: "VT25" },
+  { code: "ME2053", name: "Project Management", term: "VT26" }
+];
+
+class Component extends DCLogic {
+  state = { courses: FALLBACK, taken: 12 };
+
+  componentDidMount() {
+    import("./cc-store.js").then((S) => {
+      const locale = "en";
+      const reviewed = {};
+      S.reviewsByUser("u1").forEach((r) => { reviewed[r.courseCode] = true; });
+      const rows = S.takenCourses("u1")
+        .filter((r) => !reviewed[r.courseCode])
+        .map((r) => {
+          const v = S.takenView(r, { locale });
+          return { code: r.courseCode, name: v.name || r.courseCode, term: S.termLabel(r.attendanceYear) };
+        })
+        .slice(0, 5);
+      if (rows.length) this.setState({ courses: rows, taken: S.takenCourses("u1").length });
+    });
+  }
+
+  renderVals() {
+    const n = this.state.courses.length;
+    return {
+      courses: this.state.courses,
+      pendingCount: n,
+      countLabel: n + " of " + this.state.taken + " courses",
+      headline: n === 1 ? "One course has no review yet" : n + " courses have no review yet",
+      fastTrackLabel: n === 1 ? "Fast track it" : "Fast track all " + n
+    };
+  }
+}
+
+</script>
+</body>
+</html>

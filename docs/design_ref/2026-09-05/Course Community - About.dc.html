@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet"><link rel="stylesheet" href="cc-theme.css"><style>body{background:var(--pg);color:var(--ink)}html,body{margin:0;height:100%;background:var(--pg);font-family:Geist,system-ui,sans-serif;color:var(--ink)}a{color:#1751a6}a:hover{color:#10386f}*{box-sizing:border-box}input,button,textarea{font-family:Geist,system-ui,sans-serif}@keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}</style></helmet>
+
+<div style="position:relative;display:flex;height:100vh;background:var(--pg);color:var(--ink);font-size:14px">
+<div style="position:absolute;top:0;left:0;right:0;height:66px;z-index:1;box-sizing:border-box;display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:0 28px;border-bottom:1px solid var(--rule);background:var(--pg)">
+<div onClick="{{ onTheme }}" role="button" tabIndex="0" title="{{ themeTitle }}" aria-label="{{ themeTitle }}" style="width:34px;height:34px;display:flex;align-items:center;justify-content:center;border-radius:8px;color:var(--chipInk);cursor:pointer" style-hover="background:rgba(125,145,175,.14)">
+<sc-if value="{{ notNight }}" hint-placeholder-val="{{ true }}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 14.5A8.5 8.5 0 1 1 9.5 3.5a7 7 0 0 0 11 11z"></path></svg></sc-if>
+<sc-if value="{{ night }}" hint-placeholder-val="{{ false }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"></circle><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M18.4 5.6 17 7M7 17l-1.4 1.4"></path></svg></sc-if>
+</div>
+</div>
+
+<div style="position:relative;z-index:2;box-sizing:border-box;width:236px;flex:none;display:flex;flex-direction:column;gap:6px;padding:14px 10px;background:var(--rail);color:#fff">
+<a href="Course Community - Landing.dc.html" style="display:flex;align-items:center;gap:10px;padding:6px 8px 14px;color:#fff;text-decoration:none">
+<img src="assets/ais-symbol-white.png" alt="KTH AI Society" style="height:34px;width:34px;object-fit:contain">
+<div style="width:1px;height:28px;background:rgba(255,255,255,.35)"></div>
+<div style="font-size:15px;font-weight:600;line-height:1.15">Course<br>Community</div>
+</a>
+<div style="display:flex;flex-direction:column;gap:2px;margin-top:14px">
+<a href="Course Community - Explore.dc.html" style="display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;background:transparent;font-weight:400;color:#fff;text-decoration:none" style-hover="background:rgba(255,255,255,.1)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><line x1="16.5" y1="16.5" x2="21" y2="21"></line></svg><span style="flex:1">Explore</span></a>
+<a href="Course Community - Saved.dc.html" style="display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;background:transparent;font-weight:400;color:#fff;text-decoration:none" style-hover="background:rgba(255,255,255,.1)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg><span style="flex:1">Saved courses</span></a>
+<a href="Course Community - My Page.dc.html" style="display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;background:transparent;font-weight:400;color:#fff;text-decoration:none" style-hover="background:rgba(255,255,255,.1)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"></circle><path d="M5.5 21a6.5 6.5 0 0 1 13 0"></path></svg><span style="flex:1">My Page</span></a>
+<a href="Course Community - Taken Courses.dc.html" style="display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;background:transparent;font-weight:400;color:#fff;text-decoration:none" style-hover="background:rgba(255,255,255,.1)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></svg><span style="flex:1">Taken courses</span></a>
+</div>
+<div style="margin-top:auto;display:flex;flex-direction:column;gap:2px">
+<div style="display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;background:rgba(255,255,255,.16);font-weight:600;color:#fff"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"></path><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"></path></svg>About &amp; contact</div>
+<sc-if value="{{ isMember }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;align-items:center;gap:10px;padding:10px;margin-top:8px;border-radius:8px;background:rgba(255,255,255,.1)">
+<div style="width:34px;height:34px;flex:none;border-radius:50%;background:#7ea6d8;color:#0d2f5e;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px">EL</div>
+<div style="flex:1;min-width:0;font-size:13px;font-weight:500">Elsa Lindqvist</div>
+<div onClick="{{ onSignOut }}" role="button" tabIndex="0" aria-label="Sign out" title="Sign out" style="flex:none;width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:7px;color:rgba(255,255,255,.75);cursor:pointer" style-hover="background:rgba(255,255,255,.16);color:#fff"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><path d="M16 17l5-5-5-5"></path><path d="M21 12H9"></path></svg></div>
+</div>
+</sc-if>
+<sc-if value="{{ isGuest }}" hint-placeholder-val="{{ true }}">
+<div style="margin-top:8px;padding-top:12px;border-top:1px solid rgba(255,255,255,.2)">
+<div style="font-size:11.5px;line-height:1.45;color:rgba(255,255,255,.78)">Browsing as a guest. Saving courses and posting reviews need an account.</div>
+<div onClick="{{ onSignUp }}" role="button" tabIndex="0" style="margin-top:10px;display:flex;align-items:center;justify-content:center;height:34px;border-radius:8px;background:#8bb3ef;color:#0a2449;font-size:13px;font-weight:600;cursor:pointer" style-hover="opacity:.9">Sign up</div>
+<div onClick="{{ onLogIn }}" role="button" tabIndex="0" style="margin-top:6px;display:flex;align-items:center;justify-content:center;height:34px;border-radius:8px;border:1px solid rgba(255,255,255,.4);font-size:13px;font-weight:500;color:#fff;cursor:pointer">Log in</div>
+</div>
+</sc-if>
+</div>
+</div>
+
+<div style="position:relative;flex:1;min-width:0;min-height:0;margin-top:66px;display:flex;flex-direction:column;overflow-y:auto;overflow-x:hidden">
+<div style="width:100%;max-width:{{ pageMaxWidth }};box-sizing:border-box;margin:0 auto;padding:0 {{ pageSidePadding }} 60px;display:flex;flex-direction:column">
+
+<dc-import name="Course Community - Page Header" title="About &amp; contact" subtitle="Course Community is built by KTH AI Society to help students pick courses using the reviews and experience of the students before them." hint-size="100%,90px"></dc-import>
+
+<div style="padding:0 28px">
+<div style="margin-top:30px;border:1px solid var(--rule);border-radius:12px;background:var(--surface);padding:20px 22px">
+<div style="display:flex;align-items:center;gap:10px">
+<div style="flex:none;width:34px;height:34px;border-radius:9px;background:var(--pill);display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style="color:var(--brand)"><path d="M12 2C6.48 2 2 6.58 2 12.25c0 4.53 2.87 8.37 6.84 9.73.5.1.68-.22.68-.49 0-.24-.01-1.05-.01-1.9-2.78.62-3.37-1.22-3.37-1.22-.45-1.18-1.11-1.49-1.11-1.49-.9-.64.07-.63.07-.63 1 .07 1.53 1.05 1.53 1.05.89 1.56 2.34 1.11 2.91.85.09-.66.34-1.11.62-1.36-2.22-.26-4.56-1.14-4.56-5.06 0-1.12.38-2.03 1.02-2.75-.1-.26-.44-1.31.1-2.73 0 0 .84-.28 2.75 1.05a9.3 9.3 0 0 1 5 0c1.9-1.33 2.74-1.05 2.74-1.05.55 1.42.21 2.47.1 2.73.65.72 1.02 1.63 1.02 2.75 0 3.93-2.35 4.8-4.58 5.05.36.32.68.95.68 1.92 0 1.39-.01 2.51-.01 2.85 0 .27.18.6.69.49A10.02 10.02 0 0 0 22 12.25C22 6.58 17.52 2 12 2z"></path></svg></div>
+<div>
+<div style="font-size:15px;font-weight:600">Open source, on GitHub</div>
+<div style="margin-top:2px;font-size:12.5px;color:var(--muted)">The code is out there. So are we.</div>
+</div>
+</div>
+<div style="margin-top:14px;font-size:13.5px;line-height:1.6;color:var(--ink2)">Every part of this — the reviews, the ratings, the way courses are matched — is open for anyone to read, fork, or improve. If something looks wrong or you'd rather build it differently, open an issue or send a pull request.</div>
+<a href="https://github.com" target="_blank" style="margin-top:14px;display:inline-flex;align-items:center;gap:8px;height:38px;padding:0 15px;border-radius:9px;border:1px solid var(--rule3);background:var(--pg);font-size:13px;font-weight:500;color:var(--ink);text-decoration:none" style-hover="border-color:var(--hov)"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.58 2 12.25c0 4.53 2.87 8.37 6.84 9.73.5.1.68-.22.68-.49 0-.24-.01-1.05-.01-1.9-2.78.62-3.37-1.22-3.37-1.22-.45-1.18-1.11-1.49-1.11-1.49-.9-.64.07-.63.07-.63 1 .07 1.53 1.05 1.53 1.05.89 1.56 2.34 1.11 2.91.85.09-.66.34-1.11.62-1.36-2.22-.26-4.56-1.14-4.56-5.06 0-1.12.38-2.03 1.02-2.75-.1-.26-.44-1.31.1-2.73 0 0 .84-.28 2.75 1.05a9.3 9.3 0 0 1 5 0c1.9-1.33 2.74-1.05 2.74-1.05.55 1.42.21 2.47.1 2.73.65.72 1.02 1.63 1.02 2.75 0 3.93-2.35 4.8-4.58 5.05.36.32.68.95.68 1.92 0 1.39-.01 2.51-.01 2.85 0 .27.18.6.69.49A10.02 10.02 0 0 0 22 12.25C22 6.58 17.52 2 12 2z"></path></svg>View the repository</a>
+</div>
+
+<div style="margin-top:26px">
+<dc-import name="Course Community - Contact Form" store-module="{{ workspaceStore }}" hint-size="100%,320px"></dc-import>
+</div>
+
+</div>
+
+</div>
+</div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:900},&quot;session&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;guest&quot;,&quot;options&quot;:[&quot;guest&quot;,&quot;member&quot;],&quot;tsType&quot;:&quot;string&quot;}}">
+let STORE = null;
+
+class Component extends DCLogic {
+  state = { signedIn: undefined };
+
+  componentDidMount() {
+    this.ccApplyTheme();
+    import("./cc-store.js").then((mod) => { STORE = mod; this.forceUpdate(); });
+  }
+
+  /* Theme choice is shared across the pages through one storage key. */
+  ccDark() {
+    if (this.state.ccNight !== undefined) return this.state.ccNight === true;
+    try { return window.localStorage.getItem("cc:theme") === "dark"; } catch (e) { return false; }
+  }
+
+  ccSetDark(next) {
+    document.documentElement.setAttribute("data-cc-theme", next ? "dark" : "light");
+    try { window.localStorage.setItem("cc:theme", next ? "dark" : "light"); } catch (e) { /* storage off */ }
+    this.setState({ ccNight: next });
+  }
+
+  renderVals() {
+    const s = this.state;
+    const night = this.ccDark();
+    const signedIn = s.signedIn !== undefined ? s.signedIn : this.props.session !== "guest";
+    const guest = !signedIn;
+    return {
+      night, notNight: !night,
+      themeTitle: night ? "Switch to day" : "Switch to night",
+      onTheme: () => this.ccSetDark(!this.ccDark()),
+      isGuest: guest, isMember: !guest,
+      onSignUp: () => this.setState({ signedIn: true }),
+      onLogIn: () => this.setState({ signedIn: true }),
+      onSignOut: () => this.setState({ signedIn: false }),
+      pageMaxWidth: STORE ? STORE.PAGE_MAX_WIDTH : "1216px",
+      pageSidePadding: STORE ? STORE.PAGE_SIDE_PADDING : "20px",
+      workspaceStore: STORE
+    };
+  }
+}
+
+</script>
+</body>
+</html>

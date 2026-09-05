@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 /**
  * The content column every page renders inside, beneath the shell's topbar.
  *
- * `docs/design_ref_new/cc-store.js` keeps the cap as one shared constant rather than a
+ * `docs/design_ref/2026-09-05/cc-store.js` keeps the cap as one shared constant rather than a
  * literal per artboard —
  *
  *   "Shared page-content cap. Every top-level page shell reads this instead of

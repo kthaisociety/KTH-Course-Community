@@ -38,7 +38,7 @@ const SKELETON_KEYS = ["s0", "s1", "s2"] as const;
 /**
  * The viewer's saved courses.
  *
- * From `docs/design_ref_new/Course Community - Saved.dc.html`. Four things
+ * From `docs/design_ref/2026-09-05/Course Community - Saved.dc.html`. Four things
  * about it are worth knowing before changing anything here.
  *
  * **It hosts the workspace pane, so its cards ramp.** The artboard imports the

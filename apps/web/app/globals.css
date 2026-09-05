@@ -43,7 +43,7 @@
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
 
-  /* Course Community design tokens — see `docs/design_ref_new/cc-theme.css`,
+  /* Course Community design tokens — see `docs/design_ref/2026-09-05/cc-theme.css`,
      which the `:root` and `.dark` blocks below mirror verbatim. */
   --color-cc-pg: var(--cc-pg);
   --color-cc-surface: var(--cc-surface);
@@ -95,7 +95,7 @@
 
 :root {
   /* Course Community — light palette, mirrored verbatim from
-     `docs/design_ref_new/cc-theme.css`. That file is the design's single
+     `docs/design_ref/2026-09-05/cc-theme.css`. That file is the design's single
      definition of both palettes, so nothing here is tuned locally: a colour
      change belongs in the design and arrives here as a re-mirror.
 

@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet"><link rel="stylesheet" href="cc-theme.css"><style>body{margin:0;background:var(--pg);color:var(--ink);font-family:Geist,system-ui,sans-serif;font-size:14px}a{color:var(--brand)}a:hover{color:#10386f}</style></helmet>
+
+<div style="min-height:100%;box-sizing:border-box;padding:0 0 60px;background:var(--pg);color:var(--ink)">
+
+<div style="display:flex;align-items:center;justify-content:space-between;gap:20px;height:66px;padding:0 32px;box-sizing:border-box;border-bottom:1px solid var(--rule);background:var(--pg)">
+<div style="display:flex;align-items:center;gap:10px">
+<img src="assets/ais-symbol-blue.png" alt="KTH AI Society" style="height:28px;width:28px;object-fit:contain">
+<div style="font-size:15px;font-weight:600;line-height:1.15">Course<br>Community</div>
+</div>
+<div onClick="{{ onTheme }}" role="button" tabIndex="0" title="{{ themeTitle }}" style="display:flex;align-items:center;gap:9px;height:34px;padding:0 13px;border-radius:8px;border:1px solid var(--rule3);background:var(--surface);font-size:13px;font-weight:500;color:var(--chipInk);cursor:pointer" style-hover="border-color:var(--hov)">{{ themeLabel }}</div>
+</div>
+
+<div style="max-width:1080px;margin:0 auto;padding:34px 32px 0">
+<h1 style="margin:0;font-size:28px;font-weight:600;letter-spacing:-.02em">Design system</h1>
+<div style="margin-top:7px;max-width:620px;font-size:13.5px;line-height:1.55;color:var(--muted)">Every colour below is a variable in <span style="font:500 12.5px Geist Mono,ui-monospace,monospace">cc-theme.css</span>. Pages read the variables inline and define nothing of their own.</div>
+
+<div style="margin-top:36px;font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--dim)">Surfaces</div>
+<div style="margin-top:12px;display:grid;grid-template-columns:repeat(auto-fill,minmax(196px,1fr));gap:12px">
+<sc-for list="{{ surfaces }}" as="s" hint-placeholder-count="6">
+<div style="border:1px solid var(--rule);border-radius:12px;background:var(--surface);overflow:hidden">
+<div style="height:58px;background:{{ s.value }};border-bottom:1px solid var(--rule)"></div>
+<div style="padding:11px 13px 12px">
+<div style="font:500 12.5px Geist Mono,ui-monospace,monospace;color:var(--ink)">{{ s.token }}</div>
+<div style="margin-top:4px;font-size:12px;color:var(--muted)">{{ s.use }}</div>
+</div>
+</div>
+</sc-for>
+</div>
+
+<div style="margin-top:34px;font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--dim)">Text</div>
+<div style="margin-top:12px;border:1px solid var(--rule);border-radius:12px;background:var(--surface);overflow:hidden">
+<sc-for list="{{ inks }}" as="k" hint-placeholder-count="6">
+<div style="display:flex;align-items:baseline;gap:16px;padding:12px 16px;border-bottom:1px solid var(--rule)">
+<div style="flex:none;width:96px;font:500 12.5px Geist Mono,ui-monospace,monospace;color:var(--dim2)">{{ k.token }}</div>
+<div style="flex:1;min-width:0;font-size:14.5px;color:{{ k.value }}">{{ k.sample }}</div>
+<div style="flex:none;font-size:12px;color:var(--dim2)">{{ k.use }}</div>
+</div>
+</sc-for>
+</div>
+
+<div style="margin-top:34px;font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--dim)">Lines</div>
+<div style="margin-top:12px;display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+<sc-for list="{{ rules }}" as="r" hint-placeholder-count="3">
+<div style="padding:15px 16px;border:1px solid {{ r.value }};border-radius:12px;background:var(--surface)">
+<div style="font:500 12.5px Geist Mono,ui-monospace,monospace">{{ r.token }}</div>
+<div style="margin-top:5px;font-size:12px;color:var(--muted)">{{ r.use }}</div>
+</div>
+</sc-for>
+</div>
+
+<div style="margin-top:34px;font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--dim)">Status tints</div>
+<div style="margin-top:12px;display:grid;grid-template-columns:repeat(auto-fill,minmax(196px,1fr));gap:12px">
+<sc-for list="{{ tints }}" as="t" hint-placeholder-count="6">
+<div style="border:1px solid var(--rule);border-radius:12px;background:var(--surface);overflow:hidden">
+<div style="height:58px;background:{{ t.value }};border-bottom:1px solid var(--rule)"></div>
+<div style="padding:11px 13px 12px">
+<div style="font:500 12.5px Geist Mono,ui-monospace,monospace;color:var(--ink)">{{ t.token }}</div>
+<div style="margin-top:4px;font-size:12px;color:var(--muted)">{{ t.use }}</div>
+</div>
+</div>
+</sc-for>
+</div>
+
+<div style="margin-top:34px;font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--dim)">Status banners</div>
+<div style="margin-top:12px;display:grid;grid-template-columns:repeat(auto-fill,minmax(196px,1fr));gap:12px">
+<sc-for list="{{ bannerTints }}" as="b" hint-placeholder-count="4">
+<div style="padding:13px 14px;border:1px solid {{ b.border }};border-radius:11px;background:{{ b.bg }}">
+<div style="font:500 12.5px Geist Mono,ui-monospace,monospace;color:{{ b.ink }}">{{ b.token }}</div>
+<div style="margin-top:4px;font-size:12px;color:var(--muted)">{{ b.use }}</div>
+</div>
+</sc-for>
+</div>
+
+<div style="margin-top:34px;font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--dim)">Checked state</div>
+<div style="margin-top:12px;padding:22px;border:1px solid var(--rule);border-radius:12px;background:var(--surface);display:flex;flex-wrap:wrap;gap:12px">
+<div style="display:flex;align-items:center;gap:9px;height:38px;padding:0 14px;border-radius:8px;background:var(--checkedTint);color:var(--brand);font-size:13px;font-weight:600">--checkedTint · Mark as taken, Save</div>
+<div style="display:flex;align-items:center;gap:9px;height:38px;padding:0 14px;border-radius:8px;background:var(--checkedHoverTint);color:var(--brand);font-size:13px;font-weight:600">--checkedHoverTint · hover</div>
+</div>
+
+<div style="margin-top:34px;font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--dim)">Status text &amp; buttons</div>
+<div style="margin-top:12px;padding:22px;border:1px solid var(--rule);border-radius:12px;background:var(--surface);display:flex;flex-wrap:wrap;align-items:center;gap:12px">
+<div style="display:flex;align-items:center;height:38px;padding:0 16px;border-radius:9px;background:var(--warnBtn);color:var(--warnBtnFg);font-size:13.5px;font-weight:600;cursor:pointer">Write a review</div>
+<div style="display:flex;align-items:center;height:38px;padding:0 16px;border-radius:9px;background:var(--success);color:var(--successFg);font-size:13.5px;font-weight:600">Success</div>
+<div style="display:flex;align-items:center;height:38px;padding:0 16px;border-radius:9px;background:var(--danger);color:var(--dangerFg);font-size:13.5px;font-weight:600">Danger</div>
+<div style="padding:3px 9px;border-radius:6px;background:var(--pill);color:var(--scoreWorkload);font-size:12.5px;font-weight:600">Workload score</div>
+</div>
+
+<div style="margin-top:34px;font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--dim)">Community graph nodes</div>
+<div style="margin-top:12px;padding:22px;border:1px solid var(--rule);border-radius:12px;background:var(--surface);display:flex;flex-wrap:wrap;gap:18px">
+<sc-for list="{{ nodes }}" as="n" hint-placeholder-count="6">
+<div style="display:flex;flex-direction:column;align-items:center;gap:7px">
+<div style="width:22px;height:22px;border-radius:50%;background:{{ n.value }}"></div>
+<div style="font:500 11.5px Geist Mono,ui-monospace,monospace;color:var(--dim)">{{ n.token }}</div>
+</div>
+</sc-for>
+</div>
+
+<div style="margin-top:34px;font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--dim)">Controls</div>
+<div style="margin-top:12px;padding:22px;border:1px solid var(--rule);border-radius:12px;background:var(--surface);display:flex;flex-wrap:wrap;align-items:center;gap:12px">
+<div style="display:flex;align-items:center;height:38px;padding:0 16px;border-radius:9px;background:var(--btn);color:var(--btnFg);font-size:13.5px;font-weight:600;cursor:pointer" style-hover="opacity:.88">Primary action</div>
+<div style="display:flex;align-items:center;height:38px;padding:0 15px;border-radius:9px;border:1px solid var(--rule3);background:var(--surface);font-size:13.5px;font-weight:500;color:var(--ink);cursor:pointer" style-hover="border-color:var(--hov)">Secondary</div>
+<div style="display:flex;align-items:center;height:38px;padding:0 15px;border-radius:9px;font-size:13.5px;font-weight:500;color:var(--brand);cursor:pointer" style-hover="background:var(--pill)">Quiet</div>
+<div style="display:flex;align-items:center;height:38px;padding:0 15px;border-radius:9px;background:var(--pill);font-size:13.5px;font-weight:500;color:var(--dim2);cursor:not-allowed">Disabled</div>
+<div style="height:28px;display:flex;align-items:center;padding:0 11px;border-radius:14px;border:1px solid var(--rule2);background:var(--surface);font-size:12.5px;color:var(--chipInk)">Chip</div>
+<div style="padding:3px 9px;border-radius:6px;background:var(--pill);color:var(--chipInk);font-size:11.5px">Pill · 34 reviews</div>
+<div style="display:flex;align-items:center;gap:10px;height:40px;padding:0 14px;border-radius:10px;border:1px solid var(--rule3);background:var(--surface);min-width:240px;font-size:14px;color:var(--dim)">Field placeholder</div>
+</div>
+
+<div style="margin-top:34px;font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--dim)">The sidebar darkens with the theme</div>
+<div style="margin-top:12px;display:flex;gap:0;border:1px solid var(--rule);border-radius:12px;overflow:hidden">
+<div style="width:236px;flex:none;padding:16px 12px;background:var(--rail);color:#fff">
+<div style="font-size:15px;font-weight:600;line-height:1.15">Course<br>Community</div>
+<div style="margin-top:16px;display:flex;flex-direction:column;gap:2px;font-size:14px">
+<div style="padding:9px 10px;border-radius:8px;background:rgba(255,255,255,.16);font-weight:600">Explore</div>
+<div style="padding:9px 10px;border-radius:8px;color:rgba(255,255,255,.82)">Saved courses</div>
+</div>
+</div>
+<div style="flex:1;padding:22px;background:var(--pg);color:var(--muted);font-size:13px;line-height:1.55">Page content sits on <span style="font:500 12.5px Geist Mono,ui-monospace,monospace;color:var(--ink)">--pg</span>; cards and menus sit on <span style="font:500 12.5px Geist Mono,ui-monospace,monospace;color:var(--ink)">--surface</span>.</div>
+</div>
+
+<div style="margin-top:34px;font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--dim)">Type</div>
+<div style="margin-top:12px;padding:22px;border:1px solid var(--rule);border-radius:12px;background:var(--surface);display:flex;flex-direction:column;gap:14px">
+<div style="font-size:28px;font-weight:600;letter-spacing:-.02em;line-height:1.15">Page title · Geist 600, 28/1.15, −.02em</div>
+<div style="font-size:19px;font-weight:600;line-height:1.25">Section title · 19/1.25</div>
+<div style="font-size:15px;font-weight:600">Card title · 15\u201317, 600</div>
+<div style="font-size:13.5px;line-height:1.55;color:var(--muted)">Body · 13.5/1.55 in --muted. Long-form copy stays under about 70 characters a line.</div>
+<div style="font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--dim)">Eyebrow · 11, 600, .09em, uppercase</div>
+<div style="font:500 13px Geist Mono,ui-monospace,monospace;color:var(--brand)">DD2380 · Geist Mono for codes</div>
+</div>
+</div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1120,&quot;height&quot;:1400}}">
+/* A live reading of cc-theme.css: every swatch renders the variable itself, so
+   this page cannot drift from the token file. */
+const SURFACES = [
+  ["--pg", "Page background"],
+  ["--surface", "Cards, menus, fields"],
+  ["--inset", "Recessed panel"],
+  ["--pill", "Chips, tracks, hover"],
+  ["--rail", "Sidebar background"],
+  ["--btn", "Filled button"]
+];
+const INKS = [
+  ["--ink", "Primary text", "Find the course you will be happy you took"],
+  ["--ink2", "Secondary text", "Assignments are graded on complexity"],
+  ["--muted", "Supporting copy", "Filter by school, credits or examination"],
+  ["--dim", "Labels and hints", "PDF from Ladok · up to 10 MB"],
+  ["--dim2", "Faintest text", "Read by KTH AI Society"],
+  ["--chipInk", "Text on a pill", "School EECS"],
+  ["--brand", "Links and brand", "Find your dot"]
+];
+const RULES = [
+  ["--rule", "Hairline between rows"],
+  ["--rule2", "Card border"],
+  ["--rule3", "Control border"]
+];
+const TINTS = [
+  ["--info", "Course details header tint"],
+  ["--infoSolid", "Opaque backing behind --info"],
+  ["--warn", "Review draft header tint"],
+  ["--warnSolid", "Opaque backing behind --warn"]
+];
+const NODES = ["--nodeAurora", "--nodeEmber", "--nodeFrost", "--nodeMoss", "--nodeSlate", "--nodeViolet"];
+const BANNERS = [
+  ["--successTint", "var(--successTintBorder)", "var(--successInk)", "Upload success banner"],
+  ["--dangerTint", "var(--dangerTintBorder)", "var(--dangerInk)", "Error banner"],
+  ["--warn", "var(--warnBorder)", "var(--warnInk)", "Review draft header"],
+  ["--info", "var(--rule2)", "var(--brand)", "Course details header"]
+];
+
+class Component extends DCLogic {
+  state = { dark: null };
+
+  dark() {
+    if (this.state.dark !== null) return this.state.dark;
+    try { return window.localStorage.getItem("cc:theme") === "dark"; } catch (e) { return false; }
+  }
+
+  apply(next) {
+    document.documentElement.setAttribute("data-cc-theme", next ? "dark" : "light");
+    try { window.localStorage.setItem("cc:theme", next ? "dark" : "light"); } catch (e) { /* storage off */ }
+  }
+
+  componentDidMount() {
+    this.apply(this.dark());
+  }
+
+  renderVals() {
+    const dark = this.dark();
+    return {
+      themeLabel: dark ? "Dark theme" : "Light theme",
+      themeTitle: dark ? "Switch to light" : "Switch to dark",
+      onTheme: () => { this.apply(!dark); this.setState({ dark: !dark }); },
+      surfaces: SURFACES.map((s) => ({ token: s[0], use: s[1], value: "var(" + s[0] + ")" })),
+      inks: INKS.map((k) => ({ token: k[0], use: k[1], sample: k[2], value: "var(" + k[0] + ")" })),
+      rules: RULES.map((r) => ({ token: r[0], use: r[1], value: "var(" + r[0] + ")" })),
+      tints: TINTS.map((t) => ({ token: t[0], use: t[1], value: "var(" + t[0] + ")" })),
+      nodes: NODES.map((n) => ({ token: n, value: "var(" + n + ")" })),
+      bannerTints: BANNERS.map((b) => ({ bg: "var(" + b[0] + ")", border: b[1], ink: b[2], token: b[0], use: b[3] }))
+    };
+  }
+}
+
+</script>
+</body>
+</html>

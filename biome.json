@@ -16,8 +16,7 @@
       "!build",
       "!migrations",
       "!drizzle",
-      "!docs/design",
-      "!docs/design_ref_new"
+      "!docs/design_ref"
     ]
   },
   "formatter": {

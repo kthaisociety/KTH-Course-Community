@@ -9,7 +9,7 @@
  * invent an academic fact about a real person.
  *
  * The points and the weighting are the design's own, from `gpaFor` in
- * `docs/design_ref_new/cc-store.js`.
+ * `docs/design_ref/2026-09-05/cc-store.js`.
  */
 
 /** Points per grade on KTH's A-F scale. `F` is absent deliberately — see below. */

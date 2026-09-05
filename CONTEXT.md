@@ -78,7 +78,11 @@ _Avoid_: transcript sync, Ladok scrape, upload (that is the file step, not this)
 
 **Collection**:
 A named, ordered group of one app user's saved courses. A course may only join a
-collection its owner has also saved.
+collection its owner has also saved. A collection is a **view over** saved
+courses, never a place they move to: joining one does not remove a course from
+Saved, and a course may belong to several at once. Saved lists every saved
+course, and the collection chips narrow that list rather than relocating out of
+it.
 _Avoid_: comparison, list, folder, group, playlist
 
 ### Reviews

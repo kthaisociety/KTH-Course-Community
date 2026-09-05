@@ -61,7 +61,7 @@ type OpenEditor = { review: EditableReview; courseCode: string };
 /**
  * My Page — the signed-in reader's own page, at `/profile`.
  *
- * From `docs/design_ref_new/Course Community - My Page.dc.html`, with its four
+ * From `docs/design_ref/2026-09-05/Course Community - My Page.dc.html`, with its four
  * tabs (Overview, Reviews, My dot, Settings) and the Mobile Preview's stacked
  * version of the same. Everything it shows is the viewer's own: `user.me` for
  * who they are, `taken.list` for their courses, `reviews.list` for what they

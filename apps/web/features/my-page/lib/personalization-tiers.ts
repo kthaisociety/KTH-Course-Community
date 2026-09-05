@@ -33,7 +33,7 @@
  * `mk(3, "Signal on click", …, "signalStyle")`, while `cc-store.js`'s
  * `TIER_AXES` constant is `{ 1: "color", 2: "signalStyle", 3: "style" }` — the
  * opposite pairing for 2 and 3. Both halves survive unchanged into the revised
- * `docs/design_ref_new/` export, so the revision did not settle it. The order
+ * `docs/design_ref/2026-09-05/` export, so the revision did not settle it. The order
  * below follows the rendered list, because that is what a reader of the
  * artboard sees and the schema is silent: `personalization_tier_earned` is one
  * number and no column says which axis a tier buys. Whoever writes that column

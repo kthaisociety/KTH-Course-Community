@@ -8,7 +8,7 @@ import { describe, expect, it } from "vitest";
  *
  * Two things are guarded here, and neither can be caught by rendering anything.
  *
- * **Parity.** `docs/design_ref_new/cc-theme.css` is the single definition of
+ * **Parity.** `docs/design_ref/2026-09-05/cc-theme.css` is the single definition of
  * both palettes; the `:root` and `.dark` blocks are a mirror of it. A mirror
  * nobody checks drifts, and #127 §2 exists because one did. So every `--cc-*`
  * token is compared value for value, in both themes and in both directions — a
@@ -34,7 +34,7 @@ const globals = readFileSync(
   "utf8",
 );
 const design = readFileSync(
-  path.resolve(here, "../../../../../docs/design_ref_new/cc-theme.css"),
+  path.resolve(here, "../../../../../docs/design_ref/2026-09-05/cc-theme.css"),
   "utf8",
 );
 
