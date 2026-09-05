@@ -182,6 +182,15 @@ export function ReviewerCard({
   onSave,
 }: Readonly<ReviewerCardProps>) {
   const examTrackRef = useRef<HTMLDivElement>(null);
+  /**
+   * The divider being dragged, with the bar's geometry and the draft as it was
+   * when the drag started. Only segments `index` and `index + 1` move, so that
+   * starting draft stays a correct base for every step — recomputing from the
+   * live one would compound rounding as the pointer moves.
+   */
+  const drag = useRef<{ index: number; rect: DOMRect; from: ReviewDraft }>(
+    null,
+  );
   const answered = isAnswered(draft);
   const cuts = dividerPositions(draft);
 
@@ -189,27 +198,29 @@ export function ReviewerCard({
     onDraftChange({ ...draft, ...changes });
   }
 
+  /**
+   * Pointer capture rather than listeners on `window`: the divider keeps
+   * receiving moves once the pointer leaves it, which is the whole reason a
+   * drag needs the document, and React tears the handlers down with the card.
+   * A window listener would outlive an unmount that happened mid-drag.
+   */
   function startDividerDrag(
-    event: React.PointerEvent<HTMLElement>,
+    event: React.PointerEvent<HTMLDivElement>,
     index: number,
   ) {
     const track = examTrackRef.current;
     if (!track) return;
     event.preventDefault();
-    const rect = track.getBoundingClientRect();
-    // Only segments `index` and `index + 1` move, so the draft captured here
-    // stays a correct base for every step of the drag.
-    const start = draft;
-    const move = (moveEvent: PointerEvent) => {
-      const percent = ((moveEvent.clientX - rect.left) / rect.width) * 100;
-      onDraftChange(moveDivider(start, index, percent));
-    };
-    const up = () => {
-      window.removeEventListener("pointermove", move);
-      window.removeEventListener("pointerup", up);
-    };
-    window.addEventListener("pointermove", move);
-    window.addEventListener("pointerup", up);
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+    drag.current = { index, rect: track.getBoundingClientRect(), from: draft };
+  }
+
+  function moveDividerDrag(event: React.PointerEvent<HTMLDivElement>) {
+    const current = drag.current;
+    if (current === null) return;
+    const percent =
+      ((event.clientX - current.rect.left) / current.rect.width) * 100;
+    onDraftChange(moveDivider(current.from, current.index, percent));
   }
 
   return (
@@ -314,6 +325,13 @@ export function ReviewerCard({
                 aria-valuemax={100 - MIN_SHARE}
                 aria-valuenow={cut}
                 onPointerDown={(event) => startDividerDrag(event, index)}
+                onPointerMove={moveDividerDrag}
+                onPointerUp={() => {
+                  drag.current = null;
+                }}
+                onPointerCancel={() => {
+                  drag.current = null;
+                }}
                 onKeyDown={(event) => {
                   if (event.key === "ArrowLeft") {
                     event.preventDefault();
