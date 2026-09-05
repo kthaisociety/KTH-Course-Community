@@ -89,8 +89,9 @@ beforeEach(() => {
   HTMLCanvasElement.prototype.getContext = vi.fn(
     () => recorder.ctx,
   ) as unknown as HTMLCanvasElement["getContext"];
-  // The hero measures its own box; jsdom reports zeroes, which the scene floors
-  // to its minimum rather than refusing to draw.
+  // The scene asks for `prefers-reduced-motion` before it builds itself, and
+  // jsdom's own `matchMedia` is only stood up by `vitest.setup.ts` when absent.
+  // Answering "no preference" keeps the pulse in scope for these tests.
   window.matchMedia = vi.fn().mockReturnValue({
     matches: false,
     addEventListener: vi.fn(),
