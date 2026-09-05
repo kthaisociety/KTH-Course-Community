@@ -43,8 +43,16 @@ export interface WorkspacePaneProps {
   /** Opening a review draft from the course being read, and vice versa. */
   onOpen: (courseCode: string, kind: OpenCourseKind) => void;
   /**
-   * Drop the tab strip. The mobile layout shows the pane as a full-screen
-   * sheet with one course in it, and puts the switcher in its own chrome.
+   * Drop the tab strip.
+   *
+   * Mobile sets it, and there is no switcher on that side to replace it: the
+   * Mobile Preview artboard stacks sheets and says so in its own note — "Sheets
+   * stack — open several, dismiss each with the × or by dragging it all the way
+   * down" — and every sheet it draws imports this pane with `hide-tabs`. So the
+   * open list is still the same list; only the top of the stack is on screen,
+   * and dismissing it reveals the one under it. `MobileWorkspaceSheetHost`
+   * passes a single entry for that reason, and `onActivate` has nothing to
+   * activate.
    */
   hideTabs?: boolean;
   className?: string;

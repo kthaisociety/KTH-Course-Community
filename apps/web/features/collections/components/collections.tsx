@@ -27,6 +27,25 @@ import { NewCollectionDialog } from "./new-collection-dialog";
 /** Names the compact variant's section by its own heading. */
 const COMPACT_HEADING_ID = "collections-section-heading";
 
+/**
+ * The line under the heading, in both variants.
+ *
+ * `Course Community - Collections.dc.html` reads "Group courses you want to
+ * compare." — and the "New collection" tile beside it reads "Group specific
+ * courses and compare them side by side." Neither is true: there is no
+ * comparison surface anywhere in the app, and #68's settled decision 1 is that
+ * there is no AI-comparison feature to build one for. #91 already dropped the
+ * promise from the tile; this is the same substitution finished, so the page
+ * does not head itself with a promise its own tile has stopped making. The
+ * wording is the tile's, so the two agree.
+ *
+ * It is a copy change against the visual authority, which is the narrow case
+ * `CLAUDE.md` allows: the design loses to the schema on what exists, and it is
+ * the smallest edit that leaves the artboard otherwise intact — same slot, same
+ * length, same voice.
+ */
+const SUBTITLE = "Group the courses you are considering together.";
+
 /** How long the artboard's confirmation strip stays up, in milliseconds. */
 const NOTE_LIFETIME = 3000;
 
@@ -518,9 +537,7 @@ export function Collections({
         >
           Collections
         </h2>
-        <div className="mt-1 text-[12.5px] text-cc-muted">
-          Group courses you want to compare.
-        </div>
+        <div className="mt-1 text-[12.5px] text-cc-muted">{SUBTITLE}</div>
         {body}
       </section>
     );
@@ -528,10 +545,7 @@ export function Collections({
 
   return (
     <PageColumn>
-      <PageHeader
-        title="Collections"
-        subtitle="Group courses you want to compare."
-      />
+      <PageHeader title="Collections" subtitle={SUBTITLE} />
       {body}
     </PageColumn>
   );

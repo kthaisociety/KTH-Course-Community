@@ -444,3 +444,22 @@ describe("a visitor", () => {
     expect(screen.queryByText(/AI/)).not.toBeInTheDocument();
   });
 });
+
+/*
+ * The artboard heads this page "Group courses you want to compare." and draws a
+ * "New collection" tile promising a side-by-side view. #68's settled decision 1
+ * is that neither exists, so the promise is gone from both — a collection is a
+ * named, ordered group of saved courses and nothing in the app puts two of them
+ * beside each other.
+ */
+describe("what the page promises", () => {
+  it("never offers to compare anything, as a page or as a section", () => {
+    setup();
+    const page = render(<Collections />);
+    expect(page.container.textContent).not.toMatch(/compar/i);
+    page.unmount();
+
+    const section = render(<Collections compact />);
+    expect(section.container.textContent).not.toMatch(/compar/i);
+  });
+});
