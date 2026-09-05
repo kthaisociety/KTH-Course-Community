@@ -136,8 +136,14 @@ export function Reviewer({
   const activeCode = activeIndex === -1 ? null : round.order[activeIndex];
   const remaining =
     activeIndex === -1 ? 0 : round.order.length - activeIndex - 1;
-  const outcomes = Object.values(round.done);
-  const savedCount = outcomes.filter((outcome) => outcome === "saved").length;
+  // Both counted across `order`, never across `done`. `done` is a map, and a
+  // map restored from a tab's storage can hold a code this round is not
+  // dealing — which would have the done screen report a course the reader
+  // never saw. The queue is what this round is; the map only says what
+  // happened to the courses in it.
+  const savedCount = round.order.filter(
+    (code) => round.done[code] === "saved",
+  ).length;
   const skippedCodes = round.order.filter(
     (code) => round.done[code] === "skipped",
   );

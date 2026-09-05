@@ -328,6 +328,36 @@ describe("a round a reload interrupted", () => {
     expect(screen.getByText("Card 1 of 1")).toBeInTheDocument();
   });
 
+  /**
+   * `done` is a map and the queue is a list, and nothing guarantees the map
+   * only mentions courses in the list. A round that counted across the map
+   * would tell the reader it reviewed a course they never saw.
+   */
+  it("counts only the courses this round is dealing", async () => {
+    render(
+      <Reviewer
+        queue={[QUEUE[0]]}
+        restored={{
+          queue: ["DD2424"],
+          done: { GHOST999: "saved", GONE111: "skipped" },
+          drafts: {},
+        }}
+        onClose={vi.fn()}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Skip for now" }));
+
+    expect(
+      screen.getByRole("heading", { name: "Nothing reviewed this round" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "The 1 you skipped are still marked unreviewed in your list — pick any of them up from there.",
+      ),
+    ).toBeInTheDocument();
+  });
+
   /** Nothing restored is a fresh round, whatever the tab happens to hold. */
   it("starts clean when no round is handed to it", async () => {
     const { unmount } = render(<Reviewer queue={QUEUE} onClose={vi.fn()} />);

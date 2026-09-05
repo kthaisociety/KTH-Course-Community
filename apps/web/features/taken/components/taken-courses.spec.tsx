@@ -28,6 +28,8 @@ const toastError = vi.fn();
 const toastSuccess = vi.fn();
 const routerReplace = vi.fn();
 const routerPush = vi.fn();
+/** The round the page hands the reviewer, so a test can see what it pruned. */
+const restoredProp = vi.fn();
 
 // One object, as Next's own `useRouter` returns: a fresh one every call would
 // make every effect that depends on the router run on every render, which is
@@ -71,18 +73,23 @@ vi.mock("@/features/reviews/components/review", () => ({
 vi.mock("@/features/reviews/components/reviewer", () => ({
   Reviewer: ({
     queue,
+    restored,
     onClose,
   }: {
     queue: Array<{ courseCode: string }>;
+    restored: unknown;
     onClose: () => void;
-  }) => (
-    <div data-testid="reviewer">
-      Reviewing {queue.map((course) => course.courseCode).join(", ")}
-      <button type="button" onClick={onClose}>
-        Close reviewer
-      </button>
-    </div>
-  ),
+  }) => {
+    restoredProp(restored);
+    return (
+      <div data-testid="reviewer">
+        Reviewing {queue.map((course) => course.courseCode).join(", ")}
+        <button type="button" onClick={onClose}>
+          Close reviewer
+        </button>
+      </div>
+    );
+  },
 }));
 vi.mock("@/features/search", () => ({
   useDebouncedQuery: (value: string) => [value, vi.fn()] as const,
@@ -826,6 +833,12 @@ describe("a round a reload interrupted", () => {
     );
   }
 
+  /** What the mocked reviewer was handed, as the page pruned it. */
+  function restoredSession() {
+    const raw = restoredProp.mock.calls.at(-1)?.[0];
+    return raw ?? null;
+  }
+
   function both() {
     takenList.mockReturnValue([
       takenCourse(),
@@ -909,6 +922,42 @@ describe("a round a reload interrupted", () => {
     expect(await screen.findByTestId("reviewer")).toHaveTextContent(
       "Reviewing DD1337, DD2380",
     );
+  });
+
+  /**
+   * The queue is pruned, so what the round remembers about courses that did
+   * not survive the prune must go with them — otherwise the reviewer is handed
+   * outcomes for cards it is not dealing.
+   */
+  it("leaves behind what it remembered about a course it dropped", async () => {
+    takenList.mockReturnValue([
+      takenCourse(),
+      takenCourse({ courseCode: "DD2380" }),
+    ]);
+    unreviewed.mockReturnValue({
+      courses: [takenCourse()],
+      isLoading: false,
+      isUnavailable: false,
+    });
+    sessionStorage.setItem(
+      "cc.taken.reviewer",
+      JSON.stringify({
+        queue: ["DD2380", "DD1337"],
+        done: { DD2380: "skipped" },
+        drafts: {
+          DD2380: { methods: [], shares: [], workloadScore: 9 },
+          DD1337: { methods: [], shares: [], workloadScore: 4 },
+        },
+      }),
+    );
+    render(<TakenCourses />);
+
+    await screen.findByTestId("reviewer");
+    expect(restoredSession()).toEqual({
+      queue: ["DD1337"],
+      done: {},
+      drafts: { DD1337: expect.objectContaining({ workloadScore: 4 }) },
+    });
   });
 
   it("forgets a round with no cards left to deal", async () => {

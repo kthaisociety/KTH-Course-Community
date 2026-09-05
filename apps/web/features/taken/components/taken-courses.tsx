@@ -74,6 +74,25 @@ function reviewerMeta(row: TakenRow): string | null {
   return parts.length > 0 ? parts.join(" · ") : null;
 }
 
+/**
+ * The entries of `byCode` whose key is one of `codes`, in no particular order.
+ *
+ * A stored round's `done` and `drafts` are maps, and a map can hold a course
+ * the pruned queue no longer contains — one reviewed elsewhere since, or
+ * whatever an older build left behind. Carrying those through would have the
+ * reviewer count a course the reader never saw.
+ */
+function pickByCode<T>(
+  byCode: Record<string, T>,
+  codes: readonly string[],
+): Record<string, T> {
+  const kept: Record<string, T> = {};
+  for (const code of codes) {
+    if (code in byCode) kept[code] = byCode[code];
+  }
+  return kept;
+}
+
 function importedSummary(added: number, filled: number): string {
   const parts: string[] = [];
   if (added > 0) {
@@ -285,7 +304,18 @@ export function TakenCourses() {
         (code) => session.done[code] === undefined,
       );
       if (hasCardsLeft) {
-        setRound({ queue, restored: { ...session, queue } });
+        // `done` and `drafts` are pruned to the same queue, so nothing the
+        // round is not dealing can be counted on its done screen or restored
+        // onto a card. The reviewer counts across the queue for the same
+        // reason; this stops the strays being written back to storage too.
+        setRound({
+          queue,
+          restored: {
+            queue,
+            done: pickByCode(session.done, queue),
+            drafts: pickByCode(session.drafts, queue),
+          },
+        });
         return;
       }
       clearReviewerSession();
