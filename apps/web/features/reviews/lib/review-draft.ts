@@ -55,7 +55,10 @@ export interface ReviewDraft {
   methods: ExaminationKey[];
   /** Whole percentages, parallel to `methods`, always adding up to 100. */
   shares: number[];
-  /** How theoretical the course was, 0–100. `null` until the reviewer answers. */
+  /**
+   * How theoretical the course was. The column takes 0–100; the card's track
+   * runs `APPROACH_MIN`–`APPROACH_MAX`. `null` until the reviewer answers.
+   */
   approachTheoryPercent: number | null;
   /** 1–10, as stored. `null` until answered — never 0, which is not on the scale. */
   workloadScore: number | null;
@@ -222,6 +225,19 @@ function clampScore(value: number): number {
 }
 
 /**
+ * Clamp the theory answer onto the track it was dragged along.
+ *
+ * The control cannot produce anything else, so this is about the values that do
+ * not come from the control: a draft restored from `sessionStorage`, which is
+ * whatever was in the tab. Sending an out-of-range percent would fail
+ * `reviewFormSchema` and tell the reviewer their review "is not finished",
+ * which is a confusing thing to say about an answer they did give.
+ */
+function clampApproach(value: number): number {
+  return Math.max(APPROACH_MIN, Math.min(APPROACH_MAX, Math.round(value)));
+}
+
+/**
  * The picked shares as the stored distribution: every key present, unpicked
  * methods at 0, the whole thing adding up to 100.
  *
@@ -272,7 +288,10 @@ export function toReviewFormData(draft: ReviewDraft): ReviewFormData | null {
 
   return {
     examinationDistribution: toExaminationDistribution(draft),
-    approachTheoryPercent: draft.approachTheoryPercent,
+    approachTheoryPercent:
+      draft.approachTheoryPercent === null
+        ? null
+        : clampApproach(draft.approachTheoryPercent),
     workloadScore: clampScore(draft.workloadScore),
     learningScore: clampScore(draft.learningScore),
     happyTook: draft.happyTook,

@@ -143,12 +143,26 @@ describe("what reaches the database", () => {
     expect(form?.learningScore).toBe(1);
   });
 
-  it("clamps a score that somehow left the scale rather than sending it", () => {
+  /**
+   * Nothing on the card can produce these. A draft restored from the tab's
+   * storage can, and it is better to send the nearest real answer than to tell
+   * the reviewer their finished review "is not finished".
+   */
+  it("clamps values that somehow left their scale rather than sending them", () => {
     const form = toReviewFormData(
-      answered({ workloadScore: 42, learningScore: 0 }),
+      answered({
+        workloadScore: 42,
+        learningScore: 0,
+        approachTheoryPercent: 400,
+      }),
     );
     expect(form?.workloadScore).toBe(10);
     expect(form?.learningScore).toBe(1);
+    expect(form?.approachTheoryPercent).toBe(95);
+    expect(
+      toReviewFormData(answered({ approachTheoryPercent: -20 }))
+        ?.approachTheoryPercent,
+    ).toBe(5);
   });
 
   it("has nothing to send until happy, workload and learning are answered", () => {
