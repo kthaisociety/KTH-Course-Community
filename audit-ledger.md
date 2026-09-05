@@ -1042,3 +1042,502 @@ rail still carrying no link to it — which is #68 decision 5's stated intent, s
 its absence from the rail is not an oversight. An id that is not the viewer's own
 reads as not-found rather than refused, because ownership is scoped in the query.
 **Confidence: high.**
+---
+
+# Route 5 — Taken courses (`/taken`), and the Quick Reviewer
+
+**Artboard:** `docs/design_ref_new/Course Community - Taken Courses.dc.html` (1550 lines).
+**Files inspected:** `apps/web/app/(service)/taken/page.tsx`,
+`features/taken/components/taken-courses.tsx`,
+`features/taken/components/taken-course-row.tsx`,
+`features/taken/components/add-taken-course-dialog.tsx`,
+`features/taken/components/transcript-drop-zone.tsx`,
+`features/taken/components/transcript-proposal.tsx`,
+`features/taken/api/transcript.ts`, `features/taken/lib/taken-rows.ts`,
+`features/reviews/components/reviewer.tsx`,
+`features/reviews/components/reviewer-card.tsx`,
+`features/reviews/lib/reviewer-session.ts`,
+`features/reviews/components/unreviewed-card.tsx`.
+
+## Control inventory
+
+| Control | Desktop | Mobile | Same handler? |
+|---|---|---|---|
+| Add course by hand | `AddTakenCourseDialog` → `add` | identical | yes |
+| Transcript drop zone / Choose a PDF | `uploadTranscript` | identical (file input) | yes |
+| "Looks right" (confirm import) | `confirmImport` | identical | yes |
+| Cancel import | clears `proposal` | identical | yes |
+| Row edit (grade/credits/attendance) | `update` | identical | yes |
+| Row remove | `remove` | identical | yes |
+| `UnreviewedCard` "Fast track all N" | `openReviewer()` | identical | yes |
+| `UnreviewedCard` per-course row | `openReviewer(courseCode)` | identical | yes — **contrast with M-01** |
+| Reviewer: Skip for now | `finish(code,"skipped")` | identical | yes |
+| Reviewer: save | `useAddReview` | identical | yes |
+| Reviewer: Try again after save error | `saveError` retry path | identical | yes |
+| Reviewer: Back to courses | `closeReviewer` | identical | yes |
+| Done: Go through the skipped ones | rebuilds `order` from skipped | identical | yes |
+
+## Findings
+
+### T-01 — the Quick Reviewer is built as the artboard draws it — **satisfied; #134 pre-audit finding 3 is closed**
+
+The pre-audit comment on #134 says *"Quick Reviewer is only partially
+implemented… TakenCourses renders the legacy Review dialog for `reviewQueue[0]`,
+and its own source comment explicitly says the bespoke card stack was
+intentionally not built."* Per the brief I verified against the code rather than
+trusting the issue, and **all of that has since landed**:
+
+- `features/reviews/components/reviewer.tsx` and `reviewer-card.tsx` exist and
+  are exported from the reviews barrel as *"The fast-track card stack"*.
+- `taken-courses.tsx:523` renders `<Reviewer …>`, replacing the list — the
+  artboard's `isReviewer` branch, a screen of the page rather than a dialog over
+  it. The legacy `Review` dialog is **not** rendered on this route.
+- Every element #68 decision 4 named is present: `Back to courses` (`:203`),
+  progress (`:209-218`), peeked cards behind the active one
+  (`PEEK_DEPTH`, `:241-248`), `Skip for now` (`:273`), the save-error row with
+  `Try again` (`saveError`, `:125`/`:165`), and the done screen with
+  `Back to my courses` (`:310`) and `Go through the skipped ones` (`:326`).
+- **One write path, two presentations**, as required: the reviewer maps a card
+  onto `ReviewFormData` and hands it to `useAddReview` — the same hook the
+  workspace pane's `ReviewDraftPanel` and the `Review` dialog use, and the one
+  place `reviewFormSchema` runs.
+- **My Page's deep link is honoured.** `/taken?review=1` is read on arrival and
+  `router.replace("/taken")` takes it back out, so a reload does not replay it.
+- `UnreviewedCard`'s old `/course/<code>?writeReview=1` link fallback is
+  **gone** — `unreviewed-card.tsx:41-45` records that there is deliberately no
+  link fallback because the route it pointed at is retired.
+
+**Confidence: high.**
+
+### T-02 — the stored round is pruned rather than trusted — **satisfied**
+
+Worth recording because it is the kind of correctness nobody would notice was
+missing. `sessionStorage` says what this tab was doing, not what is still true —
+the reader may have reviewed some of those courses in the workspace pane or in
+another tab since. `taken-courses.tsx:269-300` keeps a course in a restored
+round on exactly one of two grounds: it is still unreviewed, or *this round
+saved it* (which is why it is no longer unreviewed, and is what the progress row
+counts). A course this round **skipped** that has since been reviewed elsewhere
+is dropped, so the done screen cannot report it as "still unreviewed" or deal it
+again under "Go through the skipped ones". An interrupted round outranks the
+deep link, because it holds answers that were typed and never saved.
+**Confidence: high.**
+
+### T-03 — the arrival effect reads `window.location` rather than `useSearchParams` — **intentional deviation, sound**
+
+`app/(service)/taken/page.tsx` renders `<TakenCourses />` with **no `Suspense`
+boundary**, which would normally be a prerendering hazard. It is not one here:
+`taken-courses.tsx:232-236` deliberately reads `?review=1` off
+`window.location.search` inside an effect precisely so the route stays
+prerenderable without a boundary. It is a one-shot note from another page,
+consumed on arrival and never rendered from, so an effect is the honest place
+for it.
+
+I checked this rather than assuming, because a `useSearchParams` here would be a
+real build-time defect. It is correct as written. **Confidence: high.**
+
+### T-04 — the transcript never touches persistent storage — **satisfied**
+
+`transcript-drop-zone.tsx:28` records the rule and the code keeps it: the file
+is handed to `uploadTranscript` and never kept — not in state, not in a query
+cache, never in `localStorage`. Nothing is written until "Looks right", and
+`planTranscriptImport` adds courses that are new and fills fields that are empty
+but never overwrites a correction the reader made by hand. Course codes the
+catalogue does not have come back as `unmatched` and are **named** rather than
+invented, because `user_taken_courses.course_code` is a foreign key to
+`courses.code`. **Confidence: high** (read off the client; the parser itself is
+`server/**` and out of scope).
+
+---
+
+# Route 6 — My Page (`/profile`)
+
+**Artboard:** `docs/design_ref_new/Course Community - My Page.dc.html` (877 lines).
+**Files inspected:** `apps/web/app/(service)/profile/page.tsx`,
+`features/my-page/components/my-page.tsx`, `identity.tsx`, `stat-card.tsx`,
+`review-column.tsx`, `node-profile.tsx`, `account-settings.tsx`,
+`delete-review-dialog.tsx`, `features/my-page/hooks/use-average-preference.ts`,
+`features/my-page/lib/grade-average.ts`,
+`features/my-page/lib/personalization-tiers.ts`.
+
+## Control inventory
+
+| Control | Behaviour | Verdict |
+|---|---|---|
+| Four tabs (Overview / Reviews / My dot / Settings) | `role="tablist"`, `aria-selected`, roving `tabIndex`, arrow-key movement | satisfied — a real tablist, not a nav of links |
+| "Calculate my average" switch | `useAveragePreference`, per-account `localStorage` key | intentional deviation — M-03 |
+| Unreviewed card button | `router.push("/taken?review=1")` | satisfied |
+| Unreviewed card per-course row | `router.push("/taken?review=1")` | **defect — M-01** |
+| Edit a review | `Review` dialog | satisfied |
+| Delete a review | `DeleteReviewDialog` → `useRemoveReview` | satisfied — confirms before mutating |
+| Node palette | read-only, no writer | intentional deviation — M-04 |
+| Sign-in prompt when signed out | `/auth` link | satisfied |
+| "Explore" empty-state link | `/search` | satisfied |
+
+The tablist is worth calling out as satisfied: arrow-key movement with a roving
+`tabIndex` is the half of the tab pattern most often left out, and it is here
+(`my-page.tsx:219-224`, `onTabKeyDown`). The four sections have no URL of their
+own, which is why a tablist rather than links is the right control.
+
+## Findings
+
+### M-01 — a per-course row on My Page discards the course it names — **defect**
+
+**Severity: S2** — a control does something other than what it says.
+**Confidence: high.**
+
+`features/my-page/components/my-page.tsx:334-339`:
+
+```tsx
+<UnreviewedCard
+  courses={unreviewed.courses.map((course) => ({ code: course.courseCode }))}
+  onStart={() => router.push("/taken?review=1")}
+  onSelect={() => router.push("/taken?review=1")}
+/>
+```
+
+`UnreviewedCard`'s contract is `onSelect?: (courseCode: string) => void`,
+documented at `unreviewed-card.tsx:36-38` as *"Opens the reviewer on **this one
+course**."* My Page's handler takes no parameter and **throws the course away**.
+
+The other host honours it. `taken-courses.tsx:660` passes
+`onSelect={(courseCode) => openReviewer(courseCode)}`, and `openReviewer`
+(`:335-345`) puts that code at the *front* of the queue with the rest dealt
+behind it — the artboard's own behaviour.
+
+So the same card, in two places, does two different things. On My Page every row
+is indistinguishable from the button: a reader who clicks "DD2380" gets a round
+that starts at whichever course happens to be first in `unreviewed`. Nothing
+tells them their click was ignored.
+
+**Root cause:** the route contract `/taken?review=1` carries no course, so My
+Page has no way to express "start on this one" and silently degrades to "start
+on all". `taken-courses.tsx` only ever tests `get("review") === "1"`.
+
+**What the fix would be.** Two parts:
+
+1. Widen the contract. Either `/taken?review=<CODE>` (with `1` keeping today's
+   meaning of "no particular course"), or `/taken?review=1&start=<CODE>`. The
+   first is tidier; the second is more obviously backward compatible. **This is
+   a route-contract choice and I am escalating it** rather than picking one.
+2. In `taken-courses.tsx`'s arrival effect, carry the code through `pendingOpen`
+   to `openReviewer(code)`. The queue machinery already accepts a `startCode`,
+   so nothing below the effect changes.
+
+**Remaining risk if left:** low harm, high confusion. The reader still reaches a
+reviewer that can review the course; it just is not the one they asked for, and
+their skip/queue order is not what they expected.
+
+### M-02 — My Page's unreviewed rows show the course code twice — **defect, S3**
+
+**Confidence: high** on the rendering; **high** on the cause.
+
+`UnreviewedCard`'s row renders `{course.code}` (`unreviewed-card.tsx:75`) then
+`{course.name || course.code}` (`:78`), matching the artboard, whose row is
+`{{ c.code }}` then `{{ c.name }}` with `name: c.name || c.code` as the fallback
+(`Course Community - Unreviewed Card.dc.html:23-24`, `:50`).
+
+My Page passes `{ code: course.courseCode }` and **no `name`**, so every row
+falls back and reads `DD2380   DD2380`. Taken courses passes
+`name: names.get(course.courseCode)` and renders properly.
+
+**Root cause:** a genuine data gap, not just an oversight.
+`user_taken_courses` stores only a course code; the title lives on `courses` and
+is the screen's to look up. `taken-courses.tsx:160-166` does that lookup with
+`useCourseSummaries(courseCodes, …)`. My Page's `useUnreviewedTakenCourses()`
+returns `TakenCourse[]` and does no summary lookup, so My Page has no titles to
+hand over.
+
+**What the fix would be:** call `useCourseSummaries` on
+`unreviewed.courses.map(c => c.courseCode)` in My Page and build the same
+`names` map, exactly as Taken courses does — or, better, move the lookup into
+`useUnreviewedTakenCourses` so both hosts get names for free and neither has to
+remember. The second is the deeper fix and the one I would recommend, since the
+current split is what let the two hosts diverge in the first place.
+
+The artboard's fallback means this degrades to something readable rather than
+broken, which is why it is S3 and not S2.
+
+### M-03 — "Calculate my average" lives in `localStorage` — **intentional deviation, documented, product decision open**
+
+**Confidence: high.**
+
+`useAveragePreference` keys on `cc:myPage:showAverage:${userId}` — scoped to the
+account, not the origin, so two people sharing a browser get their own answer.
+The hook is careful in every way that matters: it starts at the default on both
+server and first client render and settles in an effect (so hydration matches),
+it resets to the default before reading (so signing in as somebody else does not
+leave the previous account's answer on screen), and both reads and writes are
+wrapped because storage throws outright in a private window.
+
+The deviation is that **it does not sync across devices**, and #127's own "Not in
+scope" section names *"the 'Calculate my average' preference wanting a `users`
+column"* as schema-track work. The page says so out loud rather than implying
+otherwise, which is the correct handling of a limitation.
+
+Recorded as an intentional deviation with a **standing server dependency**, not
+a defect. It is the one piece of state on the page with nowhere to live.
+
+### M-04 — the personalization tiers are all locked, and the design contradicts itself — **product decision required**
+
+**Severity: S3.** **Confidence: high.**
+
+Two separate things here, and both are honest in the code:
+
+**(a) Every account is at tier 0.** Nothing in `server/` writes
+`users.personalization_tier_earned`, so all three appearance axes render as
+locked and the `unlockHint` copy describes intended rules rather than a mechanism
+that runs. `node-profile.tsx:33-47` says this plainly, and the revised
+`cc-store.js` agrees from the other side: *"Tier 0 accounts keep the default
+look; only personalized nodes carry a row."* Correct — nothing is invented.
+Server work, out of scope, recorded.
+
+**(b) The design disagrees with itself about which tier buys which axis, and the
+revision did not settle it.** From `personalization-tiers.ts:33-42`:
+
+- The My Page artboard's rendered list builds `mk(2, "Dot style", …, "style")`
+  and `mk(3, "Signal on click", …, "signalStyle")`.
+- `cc-store.js`'s `TIER_AXES` constant is `{ 1: "color", 2: "signalStyle",
+  3: "style" }` — **the opposite pairing for 2 and 3**.
+
+I confirmed both halves survive unchanged into the `docs/design_ref_new/` export,
+so this is not stale: the revised design still contradicts itself. The code
+follows the *rendered list*, on the grounds that it is what a reader of the
+artboard sees, and the schema is silent —
+`personalization_tier_earned` is one number and no column says which axis a tier
+buys.
+
+**Escalated to the product owner.** This cannot be resolved by matching the
+artboard, because the artboard says both things. Whoever writes that column
+settles it, and until then the choice made here should be recorded as
+provisional rather than as design conformance.
+
+### M-05 — "Dormant" collapses into "Locked" — **intentional deviation, documented**
+
+The artboard has a third badge for a tier that was earned and has since decayed.
+Telling dormant from locked needs the *earned* tier beside the *effective* one,
+and `graph.effectiveTier` returns a single number. Rather than guess, the two
+collapse into "Locked", and nothing anywhere is phrased as having lost a tier —
+which is right, because `personalization_tier_earned` is never lowered, so a row
+reading "you lost this" would assert something the database never records.
+**Satisfied as a deviation.** **Confidence: high.**
+
+### M-06 — the tab count pill is withheld while the list is unknown — **satisfied**
+
+The Reviews tab's count is derived from `reviews.list`, and the code refuses to
+render it on any terms the panel itself would not accept: an empty list is both
+what the query holds in flight and what it may still hold from an earlier read
+once it has failed, so a confident "0" beside "Your page did not load" would
+state a total the page has just said it does not have. This is the same
+"render only data the real contracts provide" discipline as E-01, applied to a
+number rather than a pager. **Confidence: high.**
+
+---
+
+# Surface — course cards
+
+**Artboard:** `docs/design_ref_new/Course Community - Course Card.dc.html` (290 lines).
+**Files inspected:** `features/courses/components/course-card.tsx`,
+`course-card-item.tsx`, `course-item-skeleton.tsx`,
+`features/courses/hooks/use-course-card.ts`,
+`features/courses/lib/course-card-model.ts`, `card-geometry.ts`,
+`collection-order.ts`, `apps/web/types/course-card.ts`,
+`apps/web/data/course-card-sample.ts`.
+
+## Control inventory
+
+| Control | Handler | Signed-out |
+|---|---|---|
+| Card body / title → open | `onOpen` → `workspace.open(code,"details")` | works (browsing is open) |
+| "Write a review" | `c.onReview` | opens a review tab; auth is asked at publish |
+| Save (split button, `action="save"`) | `c.onSave` | `onRequestAuth("save")` |
+| Collection picker (▾ or standalone) | `c.onPicker` | picker shows a sign-in prompt |
+| "New collection" inside picker | `c.onNewCollection` → inline draft field | signed-in only |
+| Mark as taken | taken picker | `onRequestAuth` |
+| Remove (Saved / Collections) | `onRemove`, named by `removeLabel` | n/a |
+
+`geo.showLabel` plus a `@max-[440px]` container query drops every button label at
+the narrow end, keeping the icon. The accessible name is the *same string* as the
+visible label in each case — `course-card.tsx:399-405` carries the note that a
+visible label the accessible name does not contain is unreachable by voice
+control (WCAG 2.5.3), and that the label cannot be the only name because the
+container query hides it. That is a genuinely well-handled responsive
+accessibility case and I record it as satisfied.
+
+## Findings
+
+### CC-01 — `notCreating` is written and never read — **defect, S4; deferred item 7 confirmed**
+
+**Confidence: high.**
+
+`apps/web/types/course-card.ts:131` declares `notCreating: boolean`,
+`features/courses/lib/course-card-model.ts:247` computes `notCreating: !creating`,
+and `apps/web/data/course-card-sample.ts:116` sets `notCreating: true`. I grepped
+the whole of `apps/web` — those three lines are the **only** occurrences. Nothing
+reads it.
+
+**Root cause:** it is the artboard's own field. The design's template engine has
+no `else` branch, so it needs a negated boolean to draw the other half of a
+conditional; JSX has a ternary and does not. The field came across in the
+"extract verbatim" pass and never acquired a reader.
+
+**What the fix would be:** delete all three lines. Typecheck-verifiable and
+zero-risk — a required field with no readers cannot break a consumer. Note that
+`card-geometry.spec.ts` and `course-card.spec.tsx` assert against `SAMPLE_*`
+literals, so the fixture line goes with the type or the type stops matching.
+
+### CC-02 — "Write a review" renders unconditionally while `onReview` is optional — **defect, S4; deferred item 7 confirmed**
+
+**Confidence: high** on the code; **high** that no consumer trips it today.
+
+`use-course-card.ts:34` declares `onReview?: () => void` and
+`types/course-card.ts:145` carries it through as optional, but
+`course-card.tsx:333-346` renders the button with no guard:
+
+```tsx
+<button type="button" onClick={c.onReview} title="Write a review" …>
+```
+
+A consumer that omits `onReview` gets a fully-styled, focusable button that does
+nothing when clicked — the inert-control class #134 asks about.
+
+**Why it does not bite today:** all four consumers pass one — `explore.tsx:200`,
+`saved.tsx:309`, `collection-detail.tsx:240` and `collections.tsx:435`. So this
+is a latent contract defect, not a live inert control, and I am not overstating
+it.
+
+**What the fix would be:** make the prop required, which is the honest reading —
+every surface that shows a course card wants a review path, and there is now only
+one place a review can be written from a card. Failing that, guard the render
+(`{c.onReview ? <button …/> : null}`) so the optionality means something. The
+first is better: an optional prop that every consumer supplies is a type that
+lies. Contrast `onRemove`/`removeLabel`, which *are* conditional and *are*
+guarded — so the pattern already exists in this file and this one control does
+not follow it.
+
+### CC-03 — the fixture is test-only, and its divergences are deliberate — **satisfied; "no production mock data" holds**
+
+**Confidence: high.**
+
+#134's acceptance criteria include *"no production mock data is restored"*. I
+traced `apps/web/data/course-card-sample.ts`: its only importers are
+`features/courses/components/course-card.spec.tsx` and
+`features/courses/lib/card-geometry.spec.ts`. It is **never imported by a shipped
+screen**, and the file says so.
+
+Its header documents five known divergences from the schema as "do not fix them
+here", each correct: the 1-5 scores predate the 1-10 decision and the *mapper*
+converts; `keywords`/`summary` render empty for the reasons #97 settled;
+`prereqCourses.inCatalog` is display-only; and the artboard's `comparisons`
+family is renamed. One of those is worth pulling out:
+
+`course-card-sample.ts:104` still carries the artboard's literal
+`"1.2k students have taken this course · click to mark as taken"`. That is
+**correct** — it is a verbatim extraction of the artboard's own string, and
+`course-card-model.ts:161` is the shipped code, which says
+`${formatCount(takenCount)} members have taken this course`. #97's correction 2
+(members, never students — `user_taken_courses` counts app users, not KTH
+enrolment) is implemented in the mapper and held by two tests
+(`course-card-model.spec.ts:146`, `course-card.spec.tsx:305`). A reader never
+sees "students".
+
+I also confirmed the three mock routes #68 §5 ordered deleted are gone:
+`app/(service)/reviews`, `app/editor-00` and `app/(public)/newsletter` (the four
+hardcoded fake newsletter issues behind a no-op subscribe form) do not exist.
+`page-title.spec.ts:42` asserts it.
+
+---
+
+# Surface — reviews
+
+**Artboards:** `Course Community - Review Card.dc.html`,
+`Course Community - Review Card Options.dc.html`,
+`Course Community - Unreviewed Card.dc.html`,
+`Course Community - Unreviewed Card Options.dc.html`.
+**Files inspected:** `features/reviews/components/review.tsx`, `review-card.tsx`,
+`review-list.tsx`, `reviewer.tsx`, `reviewer-card.tsx`, `unreviewed-card.tsx`,
+`features/reviews/hooks/*`, `features/reviews/lib/*`,
+`features/workspace/components/review-draft-panel.tsx`,
+`features/workspace/components/course-details-panel.tsx`.
+
+## Findings
+
+### R-01 — one validator, one write path, three presentations — **satisfied**
+
+`reviewFormSchema` runs in exactly one place, reached by `useAddReview` /
+`useEditReview`. Three surfaces present a review draft — the workspace pane's
+`ReviewDraftPanel`, the fast-track `Reviewer`, and the `Review` dialog — and all
+three funnel through those hooks. The reviews barrel's own header states the
+rule and refuses to export anything that would let a surface reach past them:
+*"a surface reaching past them would be a review written without
+`reviewFormSchema` having seen it, which is the one thing this feature exists to
+prevent."* **Confidence: high.**
+
+### R-02 — vote controls are absent rather than inert when signed out — **satisfied, with a consistency note**
+
+`review-list.tsx:74-76` passes `onVote` only when `userId` is set, and
+`review-card.tsx:183` renders the up/down buttons only when `onVote` is defined.
+The score still shows. `useReviewVotes` additionally returns early on `!userId`,
+so there are two independent guards over a `protectedProcedure`. No inert
+control. **Confidence: high.**
+
+**The consistency note, recorded not filed.** Everywhere else on a card a
+signed-out action *prompts* — Save and Mark-as-taken call
+`onRequestAuth(reason)` and open `AuthReasonDialog`. Voting instead vanishes, so
+a visitor is never told that voting exists or that an account would unlock it.
+`review-card.tsx:36-38` states this as deliberate — *"there is nothing to click
+that cannot work"* — and that is a defensible principle; it is simply the
+opposite principle from the one the course card applies two components away.
+Not a defect, and I am not filing it; recorded because "is this control
+consistent with its neighbours" is inside #134's scope and a reader would notice.
+
+### R-03 — the reviews barrel still drags a CSS pipeline behind it — **defect, S4; deferred item 6 confirmed, partially mitigated**
+
+**Confidence: high.**
+
+The chain is real: `features/reviews/index.ts` exports `Review` →
+`review.tsx:5` imports `RichTextEditor` from `@/components/RichEditor` → that
+imports a Lexical theme and its stylesheet. Any module in the `logic` vitest
+project (`environment: "node"`, no DOM, no CSS pipeline —
+`vitest.config.ts:20-26`) that imports the barrel pulls all of it in.
+
+**The mitigation that exists.** `features/workspace/lib/review-draft.ts:1-17` is
+"the one place in this repo that reaches past a feature barrel", importing
+`@/features/reviews/lib/review-draft` directly, with a comment giving exactly
+this reason and noting that the *type* still comes through the barrel because
+types are erased. I verified the seam holds: that is the **only** `features/*/lib/`
+or `lib/` module importing `@/features/reviews`, and it imports only a type.
+
+**Why it is still a finding.** The mitigation is a documented exception at one
+call site, not a fix to the cause. The barrel still exports a component that
+pulls a stylesheet, so the next pure module that needs `toReviewFormData` or
+`ReviewDraft` will import the barrel — the obvious thing to do, and what the
+repo's own conventions tell it to do — and only discover the problem when the
+`logic` project fails to parse CSS.
+
+**What the fix would be:** the deeper repair is to stop the barrel being the
+only door. Either split a `features/reviews/model` entry point that exports the
+pure lib surface with no component imports, or lift `review-draft.ts` and
+`review-form-schema.ts` out from behind the component barrel. Both are
+structural and belong in a fix pass, not here.
+
+### R-04 — the `seminars` colour is chosen and justified — **satisfied**
+
+#68 left the sixth examination colour to the implementing agent, with two
+constraints. `features/reviews/lib/examination-palette.ts:23-52` picks
+`seminars: "#4a7c2f"` — *"a deep moss green: green is the only region of the
+wheel none of the other five occupy"* — with white ink, and records that white
+reaches **4.98:1** on that fill. Blue, amber, teal, purple and slate are the
+taken regions, and moss green is unambiguous against all five in a stacked bar.
+Both constraints met, and the reasoning is written down where the next person
+will find it. **Confidence: high** on the choice; I did not independently
+recompute the contrast ratio.
+
+### R-05 — six examination keys, not the design's five — **satisfied**
+
+`cc-store.js` declares five `EXAMINATION_KEYS`; `apps/web/types/review.ts`
+declares six, including `seminars`. #68 settled that the schema wins and
+`seminars` stays. It is in the schema, the types, the review form and the
+palette. The Swedish label `seminarier` is recorded for whoever adds an i18n
+layer, and — correctly — **no i18n layer was built to satisfy it**.
+**Confidence: high.**
