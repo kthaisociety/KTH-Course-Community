@@ -15,6 +15,14 @@ export type SearchHit = {
  * has nothing to absorb: what is asked for is what is fetched. The department
  * filter needs no window at all — it is a SQL predicate below, so every row the
  * query returns already satisfies it.
+ *
+ * The service now asks for a window that covers every page up to the one it is
+ * serving, plus one row of lookahead (#148). That is still `size` meaning
+ * `size` — it is a bigger number, not an inflated one — and it works only
+ * because this query is *totally* ordered: the three-way bucket, then
+ * `ts_rank`, then `courses.code ASC`. A LIMIT over a total order returns a
+ * prefix, so a wider window returns a superset that begins with the narrower
+ * one, and page 2 holds the same rows however deep the fetch went.
  */
 export async function searchByKeyword(
   query: string,
@@ -80,6 +88,27 @@ export async function searchByKeyword(
   }));
 }
 
+/**
+ * Nearest neighbours by cosine distance — and, on ties, by course code.
+ *
+ * The tiebreak is not cosmetic. Distance alone is not a total order: two
+ * courses at the identical distance may come back in either order between two
+ * executions of this query, because nothing in the plan is obliged to break the
+ * tie the same way twice. Under a LIMIT that is invisible — the set is the
+ * same, only shuffled. Under pagination it is a bug: the service pages by
+ * slicing one ordered prefix (#148), so a pair that swaps between the fetch for
+ * page 2 and the fetch for page 3 puts one course on both pages and the other
+ * on neither.
+ *
+ * Identical distances are not exotic here. Courses that share an ingested
+ * description — a course re-established under a new code, a round duplicated
+ * across schools — embed to the same vector and so sit at exactly the same
+ * distance from every query.
+ *
+ * `courses.code` is the primary key, so appending it makes the order total, and
+ * total is what makes a LIMIT a stable prefix. `searchByKeyword` above already
+ * ends this way for the same reason.
+ */
 export async function searchByEmbedding(
   embedding: number[],
   limit: number,
@@ -104,7 +133,9 @@ export async function searchByEmbedding(
           ON ${schema.courseExplore.courseCode} = ${schema.courses.code}
         CROSS JOIN q
         WHERE ${whereSql}
-        ORDER BY ${schema.courseExplore.embedding} <=> q.v
+        ORDER BY
+          ${schema.courseExplore.embedding} <=> q.v,
+          ${schema.courses.code} ASC
         LIMIT ${limit}
       `);
 

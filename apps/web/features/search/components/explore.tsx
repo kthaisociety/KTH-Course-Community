@@ -2,7 +2,7 @@
 
 import { RotateCcw, Search as SearchIcon, TriangleAlert } from "lucide-react";
 import type { ReactNode } from "react";
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { AuthReasonDialog } from "@/features/auth";
 import { CourseCardItem, courseCardGeometry } from "@/features/courses";
 import { PageColumn, PageHeader, useSearchBarArrival } from "@/features/shell";
@@ -37,17 +37,25 @@ import { useExplore } from "../hooks/use-explore";
  *
  * ## Where it departs from the artboard, and why
  *
- * - The artboard's **pager** (lines 263-265) is not built, and stays unbuilt by
- *   decision: it is **#148**. `search.courses` accepts a `page` input and
- *   ignores it, and returns `total: results.length` — the count of what it just
- *   returned. A pager over that would invent pages that do not exist, which is
- *   the same error class as scoring an unreviewed course 0%. The real fix is a
- *   `COUNT` query and an honoured offset in the search domain, which is server
- *   work; nothing here should grow a pager over the contract as it stands.
- *   Removing the minimum-rating filter cleared one of the three reasons that
- *   count could not be told truthfully; the other two — a union of two rankings
- *   with no natural count, and a semantic path with no cutoff — are structural
- *   and still there. `server/search/service.ts` carries the detail.
+ * - The artboard's **pager** is built (#148), and turns pages without ever
+ *   claiming how many there are. `search.courses` used to accept a `page` and
+ *   drop it, and to report `total: results.length` — the size of the page it
+ *   had just built. A pager over that would have invented pages, which is the
+ *   same error class as scoring an unreviewed course 0%, so it stayed unbuilt.
+ *   The fix was not the `COUNT` that was assumed: a de-duplicated union of a
+ *   keyword ranking and a semantic one has no count to take, and the semantic
+ *   leg matches every course with an embedding at some distance, so there is
+ *   nothing to count *up to*. What a prev/next control asks is only "is there
+ *   another page", and the server answers it with one extra row. `total` is
+ *   gone rather than corrected; `hasMore` replaced it.
+ *   `server/search/service.ts` carries the reasoning.
+ * - The artboard's pager **labels the page it is on** (line 264,
+ *   `pageLabel: "Page N of M"`, line 1289) and this keeps that label, minus the
+ *   `of M`. Dropping only the half the data cannot support is the smallest edit
+ *   that leaves the control the artboard drew — three items centred with a
+ *   14px gap — intact, and "Page 3" asserts nothing about a total. It is also
+ *   what makes the deep end legible: without a number, a reader who followed a
+ *   link to a page past the cap has no way to see where they landed.
  * - The artboard's **filter row does not exist** at all; its search block is the
  *   field alone. One filter is built here anyway — **school** — in the
  *   artboard's own control vocabulary. It earns the deviation by filtering in
@@ -87,8 +95,23 @@ export function Explore() {
   const barRef = useRef<HTMLFormElement>(null);
   useSearchBarArrival(barRef, containerRef);
 
-  const { results, hasQuery, isLoading, isError } = explore;
-  const showEmpty = hasQuery && !isLoading && !isError && results.length === 0;
+  const { results, hasQuery, isLoading, isError, page } = explore;
+  const isEmpty = hasQuery && !isLoading && !isError && results.length === 0;
+  // An empty *first* page means nothing matched. An empty later one means the
+  // ranking ran out behind a `?page=` that was ahead of it, which is a
+  // different thing to say and a different way out.
+  const showEmpty = isEmpty && page === 1;
+  const showPastEnd = isEmpty && page > 1;
+
+  // A turned page starts at the top of the column, not wherever the last one
+  // was scrolled to. The column scrolls, not the document, so `scroll: false`
+  // on the router write is not what does this — and setting `scrollTop`
+  // touches no state, so it cannot feed the render loop this page has been
+  // bitten by three times.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the page changing is the event
+  useEffect(() => {
+    if (resultsRef.current) resultsRef.current.scrollTop = 0;
+  }, [page]);
 
   return (
     <PageColumn
@@ -187,6 +210,25 @@ export function Explore() {
               </Panel>
             ) : null}
 
+            {showPastEnd ? (
+              <Panel dashed>
+                <div className="font-semibold text-[14.5px]">
+                  Nothing on page {page}
+                </div>
+                <div className="mt-[5px] text-[13px] text-cc-muted">
+                  The results for “{explore.query}” run out before this page.{" "}
+                  <button
+                    type="button"
+                    onClick={explore.onFirstPage}
+                    className="cursor-pointer font-medium text-cc-brand hover:underline"
+                  >
+                    Back to the first page
+                  </button>
+                  .
+                </div>
+              </Panel>
+            ) : null}
+
             {!hasQuery && !isError ? (
               <StartHere onSuggest={explore.onSuggestQuery} />
             ) : null}
@@ -205,6 +247,8 @@ export function Explore() {
                 onRequestAuth={explore.setAuthReason}
               />
             ))}
+
+            <Pager explore={explore} />
           </div>
         </div>
 
@@ -266,6 +310,72 @@ function resultsLabel(explore: ReturnType<typeof useExplore>): string {
   const count = explore.results.length;
   if (count === 0) return `No courses for “${explore.query}”`;
   return `Showing ${count} course${count === 1 ? "" : "s"} for “${explore.query}”`;
+}
+
+const PAGER_BUTTON_CLASS =
+  "flex h-[34px] items-center rounded-[8px] border border-cc-rule3 bg-cc-surface px-3.5 font-medium text-[12.5px] enabled:cursor-pointer enabled:text-cc-ink enabled:hover:border-cc-hov disabled:cursor-not-allowed disabled:text-cc-dim2";
+
+/**
+ * The artboard's pager: Previous, the page it is on, Next.
+ *
+ * `Course Community - Explore.dc.html:261-267` draws exactly this — a 34px
+ * pill either side of a `--muted` label, centred with a 14px gap, each pill
+ * `--ink` when it can be used and `--dim2` when it cannot. Two things here are
+ * not literal transcriptions of it:
+ *
+ * - **The label loses its "of M".** The artboard's store computes
+ *   `"Page " + (page + 1) + " of " + pageCount` (line 1289) because its mock
+ *   store is the whole catalogue and can count it. The server cannot: one page
+ *   of a de-duplicated union of a keyword ranking and a semantic one has no
+ *   total behind it, and the semantic leg matches every course with an
+ *   embedding at some distance, so there is nothing to count up to. Removing
+ *   the half that asserts a total and keeping the half that does not is the
+ *   smallest edit that leaves the control intact — the alternative, deleting
+ *   the label, would leave two buttons where the artboard draws three items and
+ *   would take with it the only thing that tells a reader how deep they are.
+ * - **The pills are `<button>`s, not the artboard's `role="button"` divs.**
+ *   Disabled is the whole state model of this control, and `disabled` on a real
+ *   button is the only version of it that reaches the keyboard and the
+ *   accessibility tree. The artboard's own vocabulary is preserved: it is what
+ *   the pill looks like that is the design, not which element carries it.
+ *
+ * Shown when `explore.hasPager` — the artboard's `pageCount > 1` translated
+ * into what the data supports. See `use-explore.ts`.
+ */
+function Pager({ explore }: { explore: ReturnType<typeof useExplore> }) {
+  if (!explore.hasPager) return null;
+
+  return (
+    <nav
+      aria-label="Search results pages"
+      className="flex items-center justify-center gap-3.5 pt-1.5 pb-1"
+    >
+      <button
+        type="button"
+        onClick={explore.onPrevPage}
+        disabled={!explore.canPrevPage}
+        className={PAGER_BUTTON_CLASS}
+      >
+        ← Previous
+      </button>
+      {/* `aria-live`: the buttons keep focus across a turn, so without it a
+          screen reader is told nothing about the page having changed. */}
+      <span
+        aria-live="polite"
+        className="text-[12.5px] text-cc-muted tabular-nums"
+      >
+        Page {explore.page}
+      </span>
+      <button
+        type="button"
+        onClick={explore.onNextPage}
+        disabled={!explore.canNextPage}
+        className={PAGER_BUTTON_CLASS}
+      >
+        Next →
+      </button>
+    </nav>
+  );
 }
 
 /** The artboard's boxed message, dashed for an empty set and solid otherwise. */
