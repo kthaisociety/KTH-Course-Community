@@ -281,6 +281,62 @@ describe("pushClear", () => {
       expect(clearAt(out.x, out.y, wide, RADIUS)).toBe(1);
     });
 
+    /**
+     * The same collapse, in the shape where the *outward* ray cannot help.
+     *
+     * `TALL` is deep enough that no outward exit exists inside `MAX_PUSH`, so
+     * the first version of this fix fell through to the axis walls and mapped
+     * three nodes sharing an `x` onto the single point `(400, 235.999999)` —
+     * reported on #187 by review, reproduced here before it was fixed.
+     *
+     * The ray still has an answer: a few pixels *back towards the anchor* is
+     * outside the block. Marching inward as well as outward finds it, and
+     * because inward stops at the origin and never crosses it, distinct
+     * bearings stay distinct points.
+     */
+    it("finds the inward exit when the outward ray is over budget", () => {
+      const tall: Rect[] = [{ x: 100, y: 250, w: 800, h: 300 }];
+      const origin = { x: 500, y: 200 };
+      const column = [280, 300, 320].map((y) => ({ x: 400, y }));
+      const key = (p: { x: number; y: number }) => `${p.x},${p.y}`;
+
+      const axis = column.map((p) => pushClear(p.x, p.y, tall, RADIUS));
+      expect(new Set(axis.map(key)).size).toBe(1);
+
+      const radial = column.map((p) =>
+        pushClear(p.x, p.y, tall, RADIUS, origin),
+      );
+      expect(new Set(radial.map(key)).size).toBe(column.length);
+      for (const [i, out] of radial.entries()) {
+        expect(clearAt(out.x, out.y, tall, RADIUS)).toBe(1);
+        expect(moved(out, column[i])).toBeLessThanOrEqual(MAX_PUSH);
+      }
+    });
+
+    /**
+     * Inward is bounded by the distance to the origin, so a point can never be
+     * pushed through the anchor and out the other side. Without that bound two
+     * nodes on opposite bearings could cross and meet, which is the collapse
+     * this whole function exists to avoid.
+     */
+    it("never pushes a point past the origin", () => {
+      const tall: Rect[] = [{ x: 100, y: 250, w: 800, h: 300 }];
+      const origin = { x: 500, y: 200 };
+      for (let x = 150; x <= 850; x += 25) {
+        for (let y = 260; y <= 540; y += 20) {
+          const out = pushClear(x, y, tall, RADIUS, origin);
+          if (out.x === x && out.y === y) continue;
+          // Same side of the origin on both axes, so the bearing never flipped.
+          const beforeX = Math.sign(x - origin.x);
+          const beforeY = Math.sign(y - origin.y);
+          const afterX = Math.sign(out.x - origin.x);
+          const afterY = Math.sign(out.y - origin.y);
+          if (beforeX !== 0) expect(afterX).not.toBe(-beforeX);
+          if (beforeY !== 0) expect(afterY).not.toBe(-beforeY);
+        }
+      }
+    });
+
     it("gives up rather than teleport, exactly as the axis push does", () => {
       const wall: Rect[] = [{ x: 0, y: 0, w: 1200, h: 600 }];
       const inside = { x: 600, y: 300 };

@@ -43,7 +43,11 @@ type Props = {
  * built a near-verbatim copy instead — same 440px shell, same scrim, same button
  * pair, differing only in the eyebrow and a computed body, both of which
  * {@link ConfirmRequest} already models. Five more screens then wanted it. So it
- * is here, and `RemoveTakenCourseDialog` is gone.
+ * is here.
+ *
+ * `RemoveTakenCourseDialog` still exists and is still worth having — it is now
+ * only the thing that decides what to ask, because `bodyFor(row)` and its two
+ * documented deviations are real. It is the duplicated *shell* that is gone.
  *
  * It is not a vendored shadcn primitive and does not pretend to be one; it is
  * app UI that more than one feature needs and no single feature owns, which is
