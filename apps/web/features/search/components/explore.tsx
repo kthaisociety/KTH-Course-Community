@@ -37,7 +37,7 @@ import { useExplore } from "../hooks/use-explore";
  *
  * ## Where it departs from the artboard, and why
  *
- * - The artboard's **pager** (lines 260-266) is not built, and stays unbuilt by
+ * - The artboard's **pager** (lines 263-265) is not built, and stays unbuilt by
  *   decision: it is **#148**. `search.courses` accepts a `page` input and
  *   ignores it, and returns `total: results.length` — the count of what it just
  *   returned. A pager over that would invent pages that do not exist, which is
