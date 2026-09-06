@@ -1460,4 +1460,30 @@ describe("a transcript left behind on a shared browser", () => {
 
     expect(await screen.findByText("1 course read")).toBeInTheDocument();
   });
+
+  /**
+   * The token is single-use, so a claim destroys the record even when the
+   * sign-in behind it did not produce a session. Otherwise a failed sign-in
+   * would leave a second still-valid claim in the browser for the next person
+   * to arrive with that URL.
+   */
+  it("spends the record even when the sign-in did not take", async () => {
+    const handoff = arriveFromSignIn();
+    me.mockReturnValue({ isLoading: false, isAuthenticated: false });
+    render(<TakenCourses />);
+
+    // The reader still gets their own parse back on screen …
+    expect(await screen.findByText("1 course read")).toBeInTheDocument();
+    // … but nothing is left in the browser for a second claim.
+    expect(readGuestProposal(handoff)).toBeNull();
+  });
+
+  it("spends it on a claim by an account too", async () => {
+    const handoff = arriveFromSignIn();
+    me.mockReturnValue({ isLoading: false, isAuthenticated: true });
+    render(<TakenCourses />);
+
+    await screen.findByText("1 course read");
+    expect(readGuestProposal(handoff)).toBeNull();
+  });
 });

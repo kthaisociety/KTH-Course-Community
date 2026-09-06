@@ -342,12 +342,14 @@ export function TakenCourses() {
    * too: it was the step that let a second reader launder a first reader's rows
    * into their own account.
    *
-   * Waits for the session to be known, because whether there is one decides
-   * both halves of what happens: an account **claims** the record, which is
-   * what clears it, while a reader who came back still signed out is shown
-   * their own parse again and the record stays for the sign-in they were part
-   * way through. Either way it is one shot, guarded by a ref — a second read
-   * after the claim would only ever say "no".
+   * **Spent on the first read, either way.** The token is single-use: whoever
+   * presents a matching one gets the rows and the record is destroyed, session
+   * or no session. Waiting for the session to be known still matters, because
+   * it decides what the reader is *shown* — an account gets the resumed
+   * preview, a reader whose sign-in did not take gets their own parse back and
+   * can ask for the account again, which writes a fresh record under a fresh
+   * token. Guarded by a ref as well, so Strict Mode's mount replay cannot spend
+   * it twice.
    *
    * **What it does not do is confirm on its own.** The artboard finishes the
    * write the moment the account appears; this page puts the reader back on the
@@ -364,11 +366,14 @@ export function TakenCourses() {
 
     const held = readGuestProposal(arrivedWithHandoff.current);
     if (held === null) return;
-    // Claimed: it has done its job and has no business outliving the sign-in.
-    if (isAuthenticated) {
-      clearGuestProposal();
-      pendingHandoff.current = null;
-    }
+    // Claimed, and claimed *once*: a token that has been spent is spent whether
+    // or not the sign-in behind it produced a session. Keeping the record alive
+    // for a failed sign-in would leave a second, still-valid claim sitting in
+    // this browser — the exact thing the token exists to prevent — and it buys
+    // nothing, because the rows are in React state below and pressing "Sign in
+    // to keep this list" again writes a fresh record under a fresh token.
+    clearGuestProposal();
+    pendingHandoff.current = null;
     setProposal(held.proposal);
     setIncludeGrades(held.includeGrades);
     setIsResumed(isAuthenticated);
