@@ -8,14 +8,13 @@ export type SearchCourses = RouterOutputs["search"]["courses"];
 /**
  * Explore's filter state, in the units the procedures take.
  *
- * `minRatingStars` is deliberately named for its scale. The dropdown asks for a
- * minimum in stars, 1-5, and `search/service.ts` converts that to the 1-10 scale
- * learning scores are stored on — so the browser sends stars and never a score.
- * Sending 8 here would mean eight stars, and zod would reject it.
+ * School is the only filter. A minimum-rating threshold used to live here too;
+ * it was in no artboard and has been removed — see `server/search/service.ts`
+ * for what went and why. An old `?rating=` link is simply not read any more, so
+ * it lands on unfiltered results rather than on an error.
  */
 export type ExploreFilters = {
   department?: string;
-  minRatingStars?: number;
 };
 
 /** Exactly the input `search.courses` takes, from a query and Explore's filters. */
@@ -23,15 +22,10 @@ export function toSearchCoursesInput(query: string, filters: ExploreFilters) {
   return {
     q: query,
     department: filters.department || undefined,
-    minRating: filters.minRatingStars,
   };
 }
 
-export function useSearchCourses(input: {
-  q: string;
-  department?: string;
-  minRating?: number;
-}) {
+export function useSearchCourses(input: { q: string; department?: string }) {
   const trpc = useTRPC();
   return useQuery(
     trpc.search.courses.queryOptions(input, {

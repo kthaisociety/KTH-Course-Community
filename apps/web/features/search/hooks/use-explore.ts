@@ -23,37 +23,6 @@ import {
 } from "../api/queries";
 import { useDebouncedQuery } from "./use-debounced-query";
 
-/** The lowest and highest thresholds the rating dropdown offers, in stars. */
-const MIN_RATING_STARS = 1;
-export const MAX_RATING_STARS = 5;
-
-/**
- * Every threshold the dropdown offers.
- *
- * The control renders this and `readStars` below accepts exactly it, so the two
- * cannot drift into a filter the reader can pick and the page then discards.
- */
-export const RATING_STAR_OPTIONS = Array.from(
-  { length: MAX_RATING_STARS - MIN_RATING_STARS + 1 },
-  (_, index) => MIN_RATING_STARS + index,
-);
-
-/**
- * A star threshold as the URL can carry it, or `null` for "any rating".
- *
- * The URL is typed by hand as often as it is clicked, and `search.courses`
- * rejects anything outside 1-5, so an unusable value is dropped here rather than
- * turned into a failed request the reader cannot explain.
- */
-function readStars(raw: string | null): number | null {
-  const stars = Number(raw);
-  return Number.isInteger(stars) &&
-    stars >= MIN_RATING_STARS &&
-    stars <= MAX_RATING_STARS
-    ? stars
-    : null;
-}
-
 export interface ExploreOptions {
   /**
    * Where a course named by `?open=` is sent. Explore hands it to the workspace
@@ -82,8 +51,9 @@ export interface ExploreOptions {
  * adopts it. Without that, the mirror would win every argument and quietly
  * undo a Back the moment the reader pressed it.
  *
- * The filters need none of this: each is one discrete click with nothing to keep
- * up with, so the URL simply drives them, and Back undoes a filter for free.
+ * The school filter needs none of this: it is one discrete click with nothing to
+ * keep up with, so the URL simply drives it, and Back undoes a filter for free.
+ * It is also the only filter left; `department` below says what went and why.
  *
  * What the two paths *do* share is `setParams`, and they write through it at
  * genuinely independent moments — see `issuedParams` for why a write cannot
@@ -115,8 +85,20 @@ export function useExplore({ onOpenCourse }: ExploreOptions = {}) {
   /** The last `?q=` this hook wrote. Anything else in the URL came from outside. */
   const writtenQuery = useRef(urlQuery);
 
+  /**
+   * School, the only filter.
+   *
+   * `?rating=` used to be read here too, into a minimum-star threshold. The
+   * artboard drew no filter row at all, so that control was invented; it is
+   * gone, along with the post-fetch filtering in `server/search/service.ts`
+   * that made it quietly return short pages.
+   *
+   * Nothing replaces the read, and nothing strips the parameter: an old shared
+   * `?rating=4` link is simply a parameter this page does not look at. It opens
+   * on unfiltered results, with no error and no warning — a link someone sent
+   * last month should still work, just without a filter that no longer exists.
+   */
   const department = searchParams.get("department") ?? "";
-  const minRatingStars = readStars(searchParams.get("rating"));
 
   const liveParams = searchParams.toString();
 
@@ -236,7 +218,6 @@ export function useExplore({ onOpenCourse }: ExploreOptions = {}) {
 
   const filters: ExploreFilters = {
     department: department || undefined,
-    minRatingStars: minRatingStars ?? undefined,
   };
 
   const search = useSearchCourses(toSearchCoursesInput(query, filters));
@@ -279,14 +260,8 @@ export function useExplore({ onOpenCourse }: ExploreOptions = {}) {
     [setParams],
   );
 
-  const onMinRatingChange = useCallback(
-    (stars: number | null) =>
-      setParams({ rating: stars ? String(stars) : null }),
-    [setParams],
-  );
-
   const onClearFilters = useCallback(
-    () => setParams({ department: null, rating: null }),
+    () => setParams({ department: null }),
     [setParams],
   );
 
@@ -309,12 +284,10 @@ export function useExplore({ onOpenCourse }: ExploreOptions = {}) {
     onRetry: () => void search.refetch(),
 
     department,
-    minRatingStars,
     departments: departments.data?.departments ?? [],
     onDepartmentChange,
-    onMinRatingChange,
     onClearFilters,
-    hasFilters: Boolean(department) || minRatingStars !== null,
+    hasFilters: Boolean(department),
 
     authReason,
     setAuthReason,

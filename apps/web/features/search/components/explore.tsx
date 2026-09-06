@@ -13,11 +13,7 @@ import {
   useWorkspacePresentation,
   WorkspacePaneHost,
 } from "@/features/workspace";
-import {
-  MAX_RATING_STARS,
-  RATING_STAR_OPTIONS,
-  useExplore,
-} from "../hooks/use-explore";
+import { useExplore } from "../hooks/use-explore";
 
 /**
  * Explore: the search-and-browse workspace, and the app's front door to the
@@ -48,9 +44,17 @@ import {
  *   the same error class as scoring an unreviewed course 0%. The real fix is a
  *   `COUNT` query and an honoured offset in the search domain, which is server
  *   work; nothing here should grow a pager over the contract as it stands.
+ *   Removing the minimum-rating filter cleared one of the three reasons that
+ *   count could not be told truthfully; the other two — a union of two rankings
+ *   with no natural count, and a semantic path with no cutoff — are structural
+ *   and still there. `server/search/service.ts` carries the detail.
  * - The artboard's **filter row does not exist** at all; its search block is the
- *   field alone. #89 requires filters, so they are built here in the artboard's
- *   own control vocabulary.
+ *   field alone. One filter is built here anyway — **school** — in the
+ *   artboard's own control vocabulary. It earns the deviation by filtering in
+ *   SQL, so it is cheap, exact, and does not distort the result count. A
+ *   minimum-rating dropdown was built beside it for #89 and has since been
+ *   removed: it had no design behind it and could only be applied after the
+ *   query, which made searches silently return short.
  * - The artboard narrows its **search bar** by 236px while tabs are open
  *   (`searchBarMargin`, line 1351) so the field stays centred over the results
  *   rather than over the whole row. Not built: the bar is centred inside a
@@ -243,10 +247,15 @@ export function Explore() {
  *
  * The artboard says "12 courses match “x”", counting the whole catalogue behind
  * its own mock store. The server cannot answer that question: `search.courses`
- * returns one page and reports `total` as the length of that page, and its
- * department and rating filters run *after* the fetch, so the set it returns can
- * be shorter than the set that matches (#74). "Showing" is the smallest edit
- * that keeps the sentence true.
+ * returns one page and reports `total` as the length of that page, and that
+ * page is a de-duplicated union of a keyword ranking and a semantic one, which
+ * has no count short of running both unbounded (#74). "Showing" is the smallest
+ * edit that keeps the sentence true.
+ *
+ * The rating filter used to be a third reason — it thresholded rows *after* the
+ * fetch, so the page could come back shorter than the window it was cut from.
+ * It is gone, and the sentence is no less true for it: the school filter runs
+ * in SQL and removes nothing after the fact.
  */
 function resultsLabel(explore: ReturnType<typeof useExplore>): string {
   if (explore.isError) return "Catalogue unavailable";
@@ -402,18 +411,19 @@ const SELECT_CLASS =
   "h-[34px] cursor-pointer rounded-[8px] border border-cc-rule3 bg-cc-surface px-2.5 font-medium text-[12.5px] text-cc-chip-ink hover:border-cc-hov focus-visible:outline-cc-brand";
 
 /**
- * The department and rating filters.
+ * The school filter, and the only filter.
  *
- * The artboard draws no filter row, so these follow its own control vocabulary —
+ * The artboard draws no filter row, so this follows its own control vocabulary —
  * a 34px pill in `--cc-surface` over `--cc-rule3` — rather than inventing a
- * treatment. They are native selects: the row is two one-click choices, and a
+ * treatment. It is a native select: the row is one one-click choice, and a
  * native control is keyboard- and screen-reader-correct on every platform
  * without a portal.
  *
- * The rating threshold is sent in **stars**. `search/service.ts` converts it to
- * the 1-10 scale learning scores are stored on, and it thresholds the learning
- * mean alone — workload is not a verdict, so averaging it in would rank a
- * punishing course like a rewarding one (#67).
+ * A "Minimum rating" select stood beside it until it was removed. It was in no
+ * artboard, and unlike school it could not be pushed into SQL — the scores live
+ * in the reviews domain — so it was applied after the query over an inflated
+ * window, and a search could come back short with nothing saying so. School
+ * stays because `department ILIKE` runs in the query itself.
  */
 function Filters({ explore }: { explore: ReturnType<typeof useExplore> }) {
   return (
@@ -433,25 +443,6 @@ function Filters({ explore }: { explore: ReturnType<typeof useExplore> }) {
         {explore.departments.map((department) => (
           <option key={department} value={department}>
             {department}
-          </option>
-        ))}
-      </select>
-
-      <select
-        aria-label="Minimum rating"
-        title="How much reviewers said they learned, in stars"
-        value={explore.minRatingStars ?? ""}
-        onChange={(event) =>
-          explore.onMinRatingChange(
-            event.target.value ? Number(event.target.value) : null,
-          )
-        }
-        className={SELECT_CLASS}
-      >
-        <option value="">Any rating</option>
-        {RATING_STAR_OPTIONS.map((stars) => (
-          <option key={stars} value={stars}>
-            {stars === MAX_RATING_STARS ? `${stars} stars` : `${stars}+ stars`}
           </option>
         ))}
       </select>

@@ -7,15 +7,22 @@ export type SearchHit = {
   score: number | null;
 };
 
+/**
+ * `size` is the LIMIT, exactly. It used to be inflated to `size * 5` whenever a
+ * minimum-rating filter was set, because the service thresholded ratings in
+ * application code after the query and needed a window wide enough to survive
+ * that pass. The rating filter is gone (it was in no artboard), so the window
+ * has nothing to absorb: what is asked for is what is fetched. The department
+ * filter needs no window at all — it is a SQL predicate below, so every row the
+ * query returns already satisfies it.
+ */
 export async function searchByKeyword(
   query: string,
   size: number,
   departmentFilter: string | null,
-  hasMinRatingFilter: boolean,
 ): Promise<SearchHit[]> {
   const normalizedQuery = query.trim();
   const queryUpper = normalizedQuery.toUpperCase();
-  const fetchSize = hasMinRatingFilter ? size * 5 : size;
   const textPattern = `%${normalizedQuery}%`;
   const codePrefix = `${queryUpper}%`;
   const codeContains = `%${queryUpper}%`;
@@ -64,7 +71,7 @@ export async function searchByKeyword(
           ELSE 0
         END DESC,
         ${schema.courses.code} ASC
-      LIMIT ${fetchSize}
+      LIMIT ${size}
     `);
 
   return (result.rows as Array<{ code: string }>).map((r) => ({
