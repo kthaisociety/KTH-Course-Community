@@ -159,6 +159,14 @@ draws **signals** travelling along it, which ADR 0006 settles as a deliberate
 dramatisation and not a claim about the data.
 _Avoid_: friendship, connection, follow, link, relationship
 
+**Graph window**:
+The bounded slice of the **community graph** a surface draws: a limited set of
+nodes and the **backbone edges** that run between them. A member's window is
+centred on their own node and is the one place "neighbourhood" means; a
+visitor's is centred on the community origin. It is derived per read and never
+stored, and an edge with one end outside it is not part of it.
+_Avoid_: viewport, camera, subgraph, cluster
+
 **Node profile**:
 A node's appearance, stored separately from graph topology.
 _Avoid_: avatar, skin, theme
@@ -178,9 +186,11 @@ the style; the edge carries the signal.
 _Avoid_: signal type, trail, effect
 
 **Burst**:
-The fan of signals a node sends along every one of its **backbone edges** at
-once, because somebody clicked it. Every node bursts; the tier decides only what
-its signals look like, never whether they go.
+The fan of signals a node sends at once, along every **backbone edge** it has
+within the drawn **graph window**, because somebody clicked it. A node near the
+window's rim is attached to nodes outside it; those edges are not part of the
+window and the burst does not reach them. Every node bursts; the tier decides
+only what its signals look like, never whether they go.
 _Avoid_: explosion, broadcast, emit, ripple
 
 **Personalization tier**:
