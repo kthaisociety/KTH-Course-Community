@@ -32,6 +32,14 @@ export interface ExploreOptions {
   onOpenCourse?: (request: OpenCourseRequest) => void;
 }
 
+/** `?page=` as the hook reads it: a positive integer, or the first page. */
+function pageFromParam(raw: string | null): number {
+  if (!raw) return 1;
+  const parsed = Number(raw);
+  if (!Number.isSafeInteger(parsed) || parsed < 1) return 1;
+  return parsed;
+}
+
 /**
  * Everything Explore renders, and everything a click on it does.
  *
@@ -54,6 +62,13 @@ export interface ExploreOptions {
  * The school filter needs none of this: it is one discrete click with nothing to
  * keep up with, so the URL simply drives it, and Back undoes a filter for free.
  * It is also the only filter left; `department` below says what went and why.
+ *
+ * `?page=` is driven the same way, and is the one write here that *pushes*
+ * rather than replaces, because turning a page is a navigation the reader
+ * expects Back to undo. It is also the one piece of state this hook does not
+ * have the last word on: the server caps how deep Explore may page and says
+ * which page it served, so `requestedPage` below is what was asked for and
+ * `page` is what was answered.
  *
  * What the two paths *do* share is `setParams`, and they write through it at
  * genuinely independent moments — see `issuedParams` for why a write cannot
@@ -100,6 +115,24 @@ export function useExplore({ onOpenCourse }: ExploreOptions = {}) {
    */
   const department = searchParams.get("department") ?? "";
 
+  /**
+   * The page asked for, which is not necessarily the page that comes back.
+   *
+   * Only the shape is checked here — a positive integer, anything else is page
+   * one — because how *deep* Explore may page is the server's rule, not this
+   * hook's. `server/search/service.ts` caps the depth (the semantic leg has no
+   * relevance floor, so there is no honest bottom to page to) and echoes the
+   * page it actually served. A hand-typed `?page=99` therefore lands on the
+   * last page that exists, with the pager reading from the served page rather
+   * than from the number in the address bar.
+   *
+   * Nothing rewrites `?page=` to match. An effect that corrected the URL from
+   * the response would be an effect writing the very state it reads, which is
+   * how the last three render loops in this repo started; the reader's next
+   * click writes a truthful number and the stale one is gone.
+   */
+  const requestedPage = pageFromParam(searchParams.get("page"));
+
   const liveParams = searchParams.toString();
 
   /**
@@ -124,7 +157,10 @@ export function useExplore({ onOpenCourse }: ExploreOptions = {}) {
   }, [liveParams]);
 
   const setParams = useCallback(
-    (patch: Record<string, string | null>) => {
+    (
+      patch: Record<string, string | null>,
+      options?: { history?: "push" | "replace" },
+    ) => {
       const next = new URLSearchParams(issuedParams.current ?? liveParams);
       for (const [key, value] of Object.entries(patch)) {
         if (value) next.set(key, value);
@@ -132,18 +168,26 @@ export function useExplore({ onOpenCourse }: ExploreOptions = {}) {
       }
       const queryString = next.toString();
       issuedParams.current = queryString;
-      router.replace(queryString ? `${pathname}?${queryString}` : pathname, {
-        scroll: false,
-      });
+      const href = queryString ? `${pathname}?${queryString}` : pathname;
+      // Everything on this page rewrites the URL it is already on — a search
+      // grown a character at a time must not leave twelve entries in the
+      // reader's history. Paging is the exception, and goes through the same
+      // writer rather than a second `router.replace` of its own, because two
+      // independent writers on one query string is the race `issuedParams`
+      // exists to prevent. See `onNextPage` for why it pushes.
+      if (options?.history === "push") router.push(href, { scroll: false });
+      else router.replace(href, { scroll: false });
     },
     [router, pathname, liveParams],
   );
 
-  // What was searched here goes into the URL.
+  // What was searched here goes into the URL. A new search starts at the first
+  // page: page 3 of "graphs" is not page 3 of "compilers", and carrying the
+  // number across would open the new search on an empty column.
   useEffect(() => {
     if (writtenQuery.current === query) return;
     writtenQuery.current = query;
-    setParams({ q: query || null });
+    setParams({ q: query || null, page: null });
   }, [query, setParams]);
 
   // And what arrives in the URL from anywhere else comes back into the field.
@@ -220,10 +264,55 @@ export function useExplore({ onOpenCourse }: ExploreOptions = {}) {
     department: department || undefined,
   };
 
-  const search = useSearchCourses(toSearchCoursesInput(query, filters));
+  const search = useSearchCourses(
+    toSearchCoursesInput(query, filters, requestedPage),
+  );
   const departments = useDepartments();
 
+  /**
+   * The reply, but only when it is a reply to *this* request.
+   *
+   * `keepPreviousData` keeps the previous page mounted while the next one
+   * loads, which is what stops the column flashing empty on every keystroke and
+   * on every page turn. The rows are the point of that; `page` and `hasMore`
+   * are not — they describe the request that produced them, so reading them off
+   * a placeholder would say "page 1, no more" for the whole of the flight to
+   * page 2 and flip the pager's buttons twice on the way.
+   */
+  const settled = search.isPlaceholderData ? undefined : search.data;
+
   const results: CourseSummary[] = query ? (search.data?.results ?? []) : [];
+
+  /**
+   * The page on screen: the one the server says it served, and the requested
+   * one only while the answer is still in flight.
+   *
+   * They agree on every ordinary turn, and differ exactly when `?page=` was
+   * past the depth cap — which is the case the echo exists for.
+   */
+  const page = settled?.page ?? requestedPage;
+  const hasMore = settled?.hasMore ?? false;
+
+  const goToPage = useCallback(
+    (next: number) => {
+      // `push`, not `replace`: turning a page is a deliberate navigation and
+      // the reader expects Back to undo it, unlike a search grown a keystroke
+      // at a time. Page one drops the parameter rather than writing `page=1`,
+      // so the shared link for a first page is the one it always was.
+      setParams({ page: next > 1 ? String(next) : null }, { history: "push" });
+    },
+    [setParams],
+  );
+
+  const onPrevPage = useCallback(() => {
+    if (page > 1) goToPage(page - 1);
+  }, [page, goToPage]);
+
+  const onNextPage = useCallback(() => {
+    if (hasMore) goToPage(page + 1);
+  }, [page, hasMore, goToPage]);
+
+  const onFirstPage = useCallback(() => goToPage(1), [goToPage]);
 
   // A fresh array every render, which costs nothing: react-query hashes a query
   // key by its contents, so the same codes are the same query.
@@ -255,13 +344,16 @@ export function useExplore({ onOpenCourse }: ExploreOptions = {}) {
     [setDebouncedField],
   );
 
+  // Both reset to the first page for the same reason the query mirror does:
+  // narrowing to one school shortens the ranking, so page 3 of the unfiltered
+  // search is very often past the end of the filtered one.
   const onDepartmentChange = useCallback(
-    (value: string) => setParams({ department: value || null }),
+    (value: string) => setParams({ department: value || null, page: null }),
     [setParams],
   );
 
   const onClearFilters = useCallback(
-    () => setParams({ department: null }),
+    () => setParams({ department: null, page: null }),
     [setParams],
   );
 
@@ -282,6 +374,27 @@ export function useExplore({ onOpenCourse }: ExploreOptions = {}) {
     isLoading: search.isFetching,
     isError: search.isError,
     onRetry: () => void search.refetch(),
+
+    page,
+    /**
+     * Whether the pager is drawn at all.
+     *
+     * The artboard shows it when `pageCount > 1`, which it can ask because its
+     * mock store *is* the catalogue. There is no page count here and there
+     * cannot be one, so this is that condition translated into what the data
+     * supports: the control appears exactly when it can do something — when
+     * there is a page after this one, or one before it.
+     *
+     * Never over the start-here panel or the error panel, though. A bare
+     * `?page=3` with nothing searched, or a page whose request failed, has no
+     * page to go back to — only a number in the address bar.
+     */
+    hasPager: query.length > 0 && !search.isError && (hasMore || page > 1),
+    canPrevPage: page > 1,
+    canNextPage: hasMore,
+    onPrevPage,
+    onNextPage,
+    onFirstPage,
 
     department,
     departments: departments.data?.departments ?? [],

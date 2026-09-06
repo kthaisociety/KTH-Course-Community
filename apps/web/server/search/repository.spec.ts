@@ -2,7 +2,7 @@ import type { SQL } from "drizzle-orm";
 import { PgDialect } from "drizzle-orm/pg-core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { db } from "../db";
-import { searchByKeyword } from "./repository";
+import { searchByEmbedding, searchByKeyword } from "./repository";
 
 vi.mock("../db", () => ({
   db: {
@@ -44,5 +44,40 @@ describe("searchByKeyword", () => {
     const limitIndex = Number(text.match(/limit \$(\d+)/i)?.[1]);
     expect(limitIndex).toBeGreaterThan(0);
     expect(params[limitIndex - 1]).toBe(10);
+  });
+});
+
+describe("searchByEmbedding", () => {
+  beforeEach(() => {
+    vi.mocked(db.execute).mockReset();
+    vi.mocked(db.execute).mockResolvedValue({ rows: [] } as never);
+  });
+
+  /**
+   * Distance alone is not a total order, and an ORDER BY that is not total
+   * promises nothing: two rows at the identical distance may come back in
+   * either order between two executions. Under a plain LIMIT that is
+   * invisible. Under paging it is a bug — the service pages by slicing one
+   * ordered prefix, so a pair that swaps between the fetch for page 2 and the
+   * fetch for page 3 puts one course on both pages and the other on neither.
+   *
+   * Appending the primary key makes the order total, which is what turns a
+   * LIMIT into a stable prefix. This asserts the tiebreak is there *and* that
+   * it comes after the distance — the difference between a tiebreak and an
+   * alphabetical search, and what keeps the HNSW index providing the ordering
+   * with only the ties sorted above it.
+   */
+  it("breaks distance ties on the course code, so a prefix is stable", async () => {
+    await searchByEmbedding([0.1, 0.2], 10, null);
+
+    const query = vi.mocked(db.execute).mock.calls[0]?.[0] as SQL | undefined;
+    const text = new PgDialect().sqlToQuery(query as SQL).sql.toLowerCase();
+
+    const orderBy = text.slice(text.lastIndexOf("order by"));
+    expect(orderBy).toContain("<=>");
+    expect(orderBy).toContain('"courses"."code" asc');
+    expect(orderBy.indexOf("<=>")).toBeLessThan(
+      orderBy.indexOf('"courses"."code" asc'),
+    );
   });
 });

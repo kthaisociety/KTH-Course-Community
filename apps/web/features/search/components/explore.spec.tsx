@@ -111,8 +111,27 @@ function searchState(over: Record<string, unknown> = {}) {
 }
 
 function results(...courses: CourseSummary[]) {
+  return pageOf({ courses });
+}
+
+/**
+ * A reply from `search.courses` as it is shaped now: which page was served, and
+ * whether another follows. There is no `total` — the server cannot count a
+ * de-duplicated union of a keyword ranking and a semantic one, and #148 removed
+ * the `total: results.length` that pretended otherwise.
+ */
+function pageOf(
+  data: { courses?: CourseSummary[]; page?: number; hasMore?: boolean },
+  over: Record<string, unknown> = {},
+) {
   return searchState({
-    data: { results: courses, total: courses.length, page: 1, pageSize: 10 },
+    data: {
+      results: data.courses ?? [],
+      page: data.page ?? 1,
+      pageSize: 20,
+      hasMore: data.hasMore ?? false,
+    },
+    ...over,
   });
 }
 
@@ -673,6 +692,317 @@ describe("Explore", () => {
 
       expect(badge).toHaveClass("bg-cc-danger-tint", "text-cc-danger-ink");
       expect(badge.className).not.toContain("color-mix");
+    });
+  });
+
+  /**
+   * The artboard's pager, built on a lookahead rather than a count (#148).
+   *
+   * The whole contract is `hasMore` plus the page the server says it served.
+   * There is no total — one page of a de-duplicated union of a keyword ranking
+   * and a semantic one has no count behind it — so every assertion here is
+   * about *whether there is another page*, never about how many there are.
+   */
+  describe("the pager", () => {
+    // Exact names: the artboard's arrows are decoration and are hidden from
+    // the accessibility tree, so the buttons are announced "Previous" and
+    // "Next" rather than "left arrow Previous".
+    const NEXT = { name: "Next" } as const;
+    const PREVIOUS = { name: "Previous" } as const;
+
+    function pager() {
+      return screen.queryByRole("navigation", {
+        name: "Search results pages",
+      });
+    }
+
+    beforeEach(() => {
+      search = "q=graphs";
+    });
+
+    it("is not drawn when there is only one page", () => {
+      useSearchCourses.mockReturnValue(
+        pageOf({ courses: [course("DD2380", "AI")], hasMore: false }),
+      );
+      render(<Explore />);
+
+      expect(pager()).not.toBeInTheDocument();
+    });
+
+    it("appears as soon as a page follows this one", () => {
+      useSearchCourses.mockReturnValue(
+        pageOf({ courses: [course("DD2380", "AI")], hasMore: true }),
+      );
+      render(<Explore />);
+
+      expect(pager()).toBeVisible();
+      expect(screen.getByText("Page 1")).toBeVisible();
+      expect(screen.getByRole("button", PREVIOUS)).toBeDisabled();
+      expect(screen.getByRole("button", NEXT)).toBeEnabled();
+    });
+
+    // A last page still needs the control, or there is no way back off it.
+    it("stays on a last page, with only the way back live", () => {
+      search = "q=graphs&page=2";
+      useSearchCourses.mockReturnValue(
+        pageOf({ courses: [course("DD2380", "AI")], page: 2, hasMore: false }),
+      );
+      render(<Explore />);
+
+      expect(screen.getByText("Page 2")).toBeVisible();
+      expect(screen.getByRole("button", PREVIOUS)).toBeEnabled();
+      expect(screen.getByRole("button", NEXT)).toBeDisabled();
+    });
+
+    // `push`, not `replace`: turning a page is a navigation, and Back must undo
+    // it — unlike a search grown one keystroke at a time.
+    it("turns the page by pushing it into the URL", async () => {
+      useSearchCourses.mockReturnValue(
+        pageOf({ courses: [course("DD2380", "AI")], hasMore: true }),
+      );
+      render(<Explore />);
+
+      await userEvent.click(screen.getByRole("button", NEXT));
+
+      expect(push).toHaveBeenCalledWith("/search?q=graphs&page=2", {
+        scroll: false,
+      });
+      expect(replace).not.toHaveBeenCalled();
+    });
+
+    it("drops the parameter entirely on the way back to the first page", async () => {
+      search = "q=graphs&page=2";
+      useSearchCourses.mockReturnValue(
+        pageOf({ courses: [course("DD2380", "AI")], page: 2, hasMore: false }),
+      );
+      render(<Explore />);
+
+      await userEvent.click(screen.getByRole("button", PREVIOUS));
+
+      expect(push).toHaveBeenCalledWith("/search?q=graphs", { scroll: false });
+    });
+
+    it("asks the server for the page the URL names", () => {
+      search = "q=graphs&page=3";
+      useSearchCourses.mockReturnValue(
+        pageOf({ courses: [course("DD2380", "AI")], page: 3, hasMore: true }),
+      );
+      render(<Explore />);
+
+      expect(useSearchCourses).toHaveBeenLastCalledWith({
+        q: "graphs",
+        department: undefined,
+        page: 3,
+      });
+    });
+
+    /**
+     * The first page sends no `page` at all. react-query hashes a key by its
+     * contents, so `{ q }` and `{ q, page: 1 }` would be two keys for one
+     * answer — and Taken courses reuses this hook without paging at all.
+     */
+    it("sends no page for the first one, so the key is the unpaged one", () => {
+      useSearchCourses.mockReturnValue(pageOf({ hasMore: true }));
+      render(<Explore />);
+
+      const input = useSearchCourses.mock.calls.at(-1)?.[0] as {
+        page?: number;
+      };
+      expect(input.page).toBeUndefined();
+    });
+
+    /**
+     * `?page=` past the server's depth cap. The server clamps and says which
+     * page it served; the pager reads that rather than the address bar, so the
+     * reader is told where they actually are.
+     *
+     * Nothing corrects the URL. An effect writing the state it reads is how the
+     * last three render loops in this page started, and the reader's next click
+     * writes a truthful number anyway.
+     */
+    it("names the page the server served, not the one the URL asked for", () => {
+      search = "q=graphs&page=99";
+      useSearchCourses.mockReturnValue(
+        pageOf({ courses: [course("DD2380", "AI")], page: 5, hasMore: false }),
+      );
+      render(<Explore />);
+
+      expect(screen.getByText("Page 5")).toBeVisible();
+      expect(screen.queryByText("Page 99")).not.toBeInTheDocument();
+      expect(push).not.toHaveBeenCalled();
+      expect(replace).not.toHaveBeenCalled();
+    });
+
+    it("steps back from a clamped page onto the one before it", async () => {
+      search = "q=graphs&page=99";
+      useSearchCourses.mockReturnValue(
+        pageOf({ courses: [course("DD2380", "AI")], page: 5, hasMore: false }),
+      );
+      render(<Explore />);
+
+      await userEvent.click(screen.getByRole("button", PREVIOUS));
+
+      expect(push).toHaveBeenCalledWith("/search?q=graphs&page=4", {
+        scroll: false,
+      });
+    });
+
+    /**
+     * `keepPreviousData` keeps the previous page's rows on screen while the
+     * next page loads, which is what stops the column flashing empty. Its
+     * `page` and `hasMore` describe that *previous* request, so reading them
+     * here would label the flight to page 2 "Page 1" and flip both buttons
+     * twice on the way.
+     */
+    it("does not take the page number off a stale reply mid-flight", () => {
+      search = "q=graphs&page=2";
+      useSearchCourses.mockReturnValue(
+        pageOf(
+          { courses: [course("DD2380", "AI")], page: 1, hasMore: true },
+          { isPlaceholderData: true },
+        ),
+      );
+      render(<Explore />);
+
+      expect(screen.getByText("Page 2")).toBeVisible();
+      expect(screen.queryByText("Page 1")).not.toBeInTheDocument();
+    });
+
+    // An empty first page means nothing matched. An empty later one means the
+    // ranking ran out behind the page that was asked for, which is a different
+    // sentence and a different way out.
+    it("says a page is past the end rather than that nothing matched", async () => {
+      search = "q=graphs&page=3";
+      useSearchCourses.mockReturnValue(
+        pageOf({ courses: [], page: 3, hasMore: false }),
+      );
+      render(<Explore />);
+
+      expect(screen.getByText("Nothing on page 3")).toBeVisible();
+      expect(
+        screen.queryByText("No courses match “graphs”"),
+      ).not.toBeInTheDocument();
+
+      await userEvent.click(
+        screen.getByRole("button", { name: "Back to the first page" }),
+      );
+      expect(push).toHaveBeenCalledWith("/search?q=graphs", { scroll: false });
+    });
+
+    // The live region and the panel are one message in two places; they must
+    // not disagree about what happened.
+    it("tells the live region the same thing the panel says", () => {
+      search = "q=graphs&page=3";
+      useSearchCourses.mockReturnValue(
+        pageOf({ courses: [], page: 3, hasMore: false }),
+      );
+      render(<Explore />);
+
+      expect(
+        screen.getByText("No courses on page 3 for \u201Cgraphs\u201D"),
+      ).toBeVisible();
+    });
+
+    it("still says nothing matched on an empty first page", () => {
+      useSearchCourses.mockReturnValue(pageOf({ courses: [] }));
+      render(<Explore />);
+
+      expect(screen.getByText("No courses match “graphs”")).toBeVisible();
+      expect(screen.queryByText(/^Nothing on page/)).not.toBeInTheDocument();
+    });
+
+    // Narrowing to one school shortens the ranking, so page 3 of the unfiltered
+    // search is very often past the end of the filtered one.
+    it("returns to the first page when the school changes", async () => {
+      search = "q=graphs&page=3";
+      useSearchCourses.mockReturnValue(
+        pageOf({ courses: [course("DD2380", "AI")], page: 3, hasMore: true }),
+      );
+      render(<Explore />);
+
+      await userEvent.selectOptions(screen.getByLabelText("School"), "EECS");
+
+      expect(replace).toHaveBeenLastCalledWith(
+        "/search?q=graphs&department=EECS",
+        { scroll: false },
+      );
+    });
+
+    it("returns to the first page when the search changes", async () => {
+      search = "q=graphs&page=3";
+      useSearchCourses.mockReturnValue(
+        pageOf({ courses: [course("DD2380", "AI")], page: 3, hasMore: true }),
+      );
+      render(<Explore />);
+
+      await userEvent.type(screen.getByLabelText("Search courses"), " theory");
+
+      await waitFor(() =>
+        expect(replace).toHaveBeenLastCalledWith("/search?q=graphs+theory", {
+          scroll: false,
+        }),
+      );
+    });
+
+    /**
+     * The page now lives in the URL, and the URL is what `setParams` is rebuilt
+     * from. An effect that wrote it back on mount would be a loop with fuel —
+     * three have shipped in this repo. Nothing here writes on arrival, under a
+     * Strict Mode double mount included.
+     */
+    it("writes nothing to the URL merely by opening on a deep page", () => {
+      search = "q=graphs&page=3";
+      useSearchCourses.mockReturnValue(
+        pageOf({ courses: [course("DD2380", "AI")], page: 3, hasMore: true }),
+      );
+      render(<Explore />);
+
+      expect(push).not.toHaveBeenCalled();
+      expect(replace).not.toHaveBeenCalled();
+    });
+
+    // A `?page=` with nothing searched has no page to go back to, only a
+    // number in the address bar. The start-here panel is what that moment is
+    // for, and a pager over it would offer to leave a search nobody has run.
+    it("is not drawn over the start-here panel", () => {
+      search = "page=3";
+      useSearchCourses.mockReturnValue(pageOf({ hasMore: true }));
+      render(<Explore />);
+
+      expect(screen.getByText("Search the KTH catalogue")).toBeVisible();
+      expect(pager()).not.toBeInTheDocument();
+    });
+
+    // Nor over the error panel: the last good answer is still in `data`, and
+    // paging off it would ask for a page of a search that just failed.
+    it("is not drawn when the catalogue did not answer", () => {
+      search = "q=graphs&page=2";
+      useSearchCourses.mockReturnValue(
+        pageOf(
+          { courses: [course("DD2380", "AI")], page: 2, hasMore: true },
+          { isError: true },
+        ),
+      );
+      render(<Explore />);
+
+      expect(
+        screen.getByText("The course catalogue did not answer"),
+      ).toBeVisible();
+      expect(pager()).not.toBeInTheDocument();
+    });
+
+    it("ignores a ?page= that is not a page", () => {
+      search = "q=graphs&page=not-a-number";
+      useSearchCourses.mockReturnValue(
+        pageOf({ courses: [course("DD2380", "AI")], hasMore: true }),
+      );
+      render(<Explore />);
+
+      const input = useSearchCourses.mock.calls.at(-1)?.[0] as {
+        page?: number;
+      };
+      expect(input.page).toBeUndefined();
+      expect(screen.getByText("Page 1")).toBeVisible();
     });
   });
 
