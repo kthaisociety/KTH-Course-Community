@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet"><link rel="stylesheet" href="cc-theme.css"><style>body{background:var(--pg);color:var(--ink)}html,body{margin:0;height:100%;background:var(--pg);font-family:Geist,system-ui,sans-serif;color:var(--ink)}a{color:#1751a6}a:hover{color:#10386f}*{box-sizing:border-box}input,button,textarea{font-family:Geist,system-ui,sans-serif}@keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}@keyframes pulse{0%,100%{opacity:.45}50%{opacity:1}}</style></helmet>
+
+<div style="position:relative;display:flex;height:100vh;background:var(--pg);color:var(--ink);font-size:14px">
+<div data-cc-topbar="1" data-cc-fade="1" style="position:absolute;top:0;left:0;right:0;height:66px;z-index:1;box-sizing:border-box;display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:0 28px;border-bottom:1px solid var(--rule);background:var(--pg)">
+<div onClick="{{ onTheme }}" role="button" tabIndex="0" title="{{ themeTitle }}" aria-label="{{ themeTitle }}" style="width:34px;height:34px;display:flex;align-items:center;justify-content:center;border-radius:8px;color:var(--chipInk);cursor:pointer" style-hover="background:rgba(125,145,175,.14)">
+<sc-if value="{{ notNight }}" hint-placeholder-val="{{ true }}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 14.5A8.5 8.5 0 1 1 9.5 3.5a7 7 0 0 0 11 11z"></path></svg></sc-if>
+<sc-if value="{{ night }}" hint-placeholder-val="{{ false }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"></circle><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M18.4 5.6 17 7M7 17l-1.4 1.4"></path></svg></sc-if>
+</div>
+</div>
+
+
+<div data-cc-sidebar="1" data-cc-fade="1" style="position:relative;z-index:2;box-sizing:border-box;width:236px;flex:none;display:flex;flex-direction:column;gap:6px;padding:14px 10px;background:var(--rail);color:#fff">
+<a href="Course Community - Landing.dc.html" style="display:flex;align-items:center;gap:10px;padding:6px 8px 14px;color:#fff;text-decoration:none">
+<img src="assets/ais-symbol-white.png" alt="KTH AI Society" style="height:34px;width:34px;object-fit:contain">
+<div style="width:1px;height:28px;background:rgba(255,255,255,.35)"></div>
+<div style="font-size:15px;font-weight:600;line-height:1.15">Course<br>Community</div>
+</a>
+<div style="display:flex;flex-direction:column;gap:2px;margin-top:14px">
+<a href="Course Community - Explore.dc.html" style="display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;background:transparent;font-weight:400;color:#fff;text-decoration:none" style-hover="background:rgba(255,255,255,.1)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><line x1="16.5" y1="16.5" x2="21" y2="21"></line></svg><span style="flex:1">Explore</span></a>
+<a href="Course Community - Saved.dc.html" style="display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;background:transparent;font-weight:400;color:#fff;text-decoration:none" style-hover="background:rgba(255,255,255,.1)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg><span style="flex:1">Saved courses</span><sc-if value="{{ hasSavedCount }}" hint-placeholder-val="{{ true }}"><span style="padding:1px 7px;border-radius:9px;background:rgba(255,255,255,.22);font-size:11.5px;font-weight:600">{{ savedCountLabel }}</span></sc-if></a>
+<a href="Course Community - My Page.dc.html" style="display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;background:rgba(255,255,255,.16);font-weight:600;color:#fff;text-decoration:none" style-hover="background:rgba(255,255,255,.1)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"></circle><path d="M5.5 21a6.5 6.5 0 0 1 13 0"></path></svg><span style="flex:1">My Page</span></a>
+<a href="Course Community - Taken Courses.dc.html" style="display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;background:transparent;font-weight:400;color:#fff;text-decoration:none" style-hover="background:rgba(255,255,255,.1)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></svg><span style="flex:1">Taken courses</span></a>
+</div>
+<div style="margin-top:auto;display:flex;flex-direction:column;gap:2px">
+<a href="Course Community - About.dc.html" style="display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;color:rgba(255,255,255,.82);text-decoration:none" style-hover="background:rgba(255,255,255,.1)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"></path><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"></path></svg>About &amp; contact</a>
+<sc-if value="{{ isMember }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;align-items:center;gap:10px;padding:10px;margin-top:8px;border-radius:8px;background:rgba(255,255,255,.1)">
+<div style="width:34px;height:34px;flex:none;border-radius:50%;background:#7ea6d8;color:#0d2f5e;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px">EL</div>
+<div style="flex:1;min-width:0;font-size:13px;font-weight:500">Elsa Lindqvist</div>
+<div onClick="{{ onSignOut }}" role="button" tabIndex="0" aria-label="Sign out" title="Sign out" style="flex:none;width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:7px;color:rgba(255,255,255,.75);cursor:pointer" style-hover="background:rgba(255,255,255,.16);color:#fff"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><path d="M16 17l5-5-5-5"></path><path d="M21 12H9"></path></svg></div>
+</div>
+</sc-if>
+<sc-if value="{{ isGuest }}" hint-placeholder-val="{{ true }}">
+<div style="margin-top:8px;padding-top:12px;border-top:1px solid rgba(255,255,255,.2)">
+<div style="font-size:11.5px;line-height:1.45;color:rgba(255,255,255,.78)">Browsing as a guest. Saving courses and posting reviews need an account.</div>
+<div onClick="{{ onSignUp }}" role="button" tabIndex="0" style="margin-top:10px;display:flex;align-items:center;justify-content:center;height:34px;border-radius:8px;background:#8bb3ef;color:#0a2449;font-size:13px;font-weight:600;cursor:pointer" style-hover="opacity:.9">Sign up</div>
+<div onClick="{{ onLogIn }}" role="button" tabIndex="0" style="margin-top:6px;display:flex;align-items:center;justify-content:center;height:34px;border-radius:8px;border:1px solid rgba(255,255,255,.4);font-size:13px;font-weight:500;color:#fff;cursor:pointer">Log in</div>
+</div>
+</sc-if>
+</div>
+</div>
+
+<div style="position:relative;flex:1;min-width:0;min-height:0;margin-top:{{ paneTop }};display:flex;flex-direction:column;overflow-y:auto;overflow-x:hidden">
+<div style="width:100%;max-width:{{ pageMaxWidth }};box-sizing:border-box;margin:0 auto;padding:0 {{ pageSidePadding }};display:flex;flex-direction:column">
+<dc-import name="Course Community - Page Header" title="My Page" subtitle="Private to you." hint-size="100%,90px"></dc-import>
+
+<div style="padding:0 20px">
+<sc-if value="{{ signedIn }}" hint-placeholder-val="{{ false }}">
+<div style="padding:18px 0 0">
+<div style="display:flex;align-items:flex-end;justify-content:space-between;gap:24px">
+<div style="min-width:0">
+<div style="font-size:19px;font-weight:600;line-height:1.25">Elsa Lindqvist</div>
+<div style="margin-top:8px;font-size:13.5px;color:var(--muted)">{{ profileLine }}</div>
+</div>
+</div>
+<div style="margin-top:20px;display:flex;gap:4px;border-bottom:1px solid var(--rule)">
+<sc-for list="{{ tabs }}" as="t" hint-placeholder-count="4">
+<div onClick="{{ t.onClick }}" style="display:flex;align-items:center;gap:8px;padding:0 13px;height:40px;border-bottom:2px solid {{ t.line }};color:{{ t.fg }};font-size:13.5px;font-weight:{{ t.weight }};cursor:pointer" style-hover="color:var(--ink)">{{ t.label }}<span style="padding:1px 7px;border-radius:999px;background:{{ t.pillBg }};color:{{ t.pillFg }};font-size:11.5px;font-weight:600;font-variant-numeric:tabular-nums">{{ t.count }}</span></div>
+</sc-for>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ signedOut }}" hint-placeholder-val="{{ true }}">
+<div style="flex:1;display:flex;flex-direction:column">
+<div style="padding:18px 0 0">
+<div style="max-width:520px;padding:16px 17px;border:1px solid var(--rule2);border-radius:11px;background:var(--surface)">
+<div style="display:flex;align-items:center;gap:8px">
+<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--dim)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10.5" width="16" height="10.5" rx="2.5"></rect><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"></path></svg>
+<div style="font-size:13.5px;font-weight:600">Sign in to see your page</div>
+</div>
+<div style="margin-top:6px;font-size:12.5px;line-height:1.5;color:var(--muted)">Your course list, reviews and average stay private to you and sync across devices.</div>
+<div style="margin-top:11px;display:flex;gap:7px">
+<div onClick="{{ onSignIn }}" role="button" tabIndex="0" style="display:flex;align-items:center;justify-content:center;height:32px;padding:0 14px;border-radius:8px;background:var(--btn);color:var(--btnFg);font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap" style-hover="background:var(--btn)">Sign up</div>
+<div onClick="{{ onSignIn }}" role="button" tabIndex="0" style="display:flex;align-items:center;justify-content:center;height:32px;padding:0 14px;border-radius:8px;border:1px solid var(--rule3);background:var(--surface);font-size:12.5px;font-weight:500;color:var(--brand);cursor:pointer;white-space:nowrap" style-hover="border-color:var(--hov)">Log in</div>
+</div>
+</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isLoading }}" hint-placeholder-val="{{ false }}">
+<div style="flex:1;padding:22px 0 0;display:flex;flex-direction:column;gap:16px">
+<div style="display:flex;flex-direction:column;gap:16px">
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
+<sc-for list="{{ skeletonRows }}" as="k" hint-placeholder-count="4">
+<div style="border:1px solid var(--rule);border-radius:12px;background:var(--surface);padding:16px 17px">
+<div style="height:11px;width:70%;border-radius:4px;background:var(--pill);animation:pulse 1.2s ease-in-out infinite"></div>
+<div style="margin-top:12px;height:22px;width:46%;border-radius:5px;background:#eae6da;animation:pulse 1.2s ease-in-out infinite"></div>
+</div>
+</sc-for>
+</div>
+<div style="border:1px solid var(--rule);border-radius:12px;background:var(--surface);overflow:hidden">
+<sc-for list="{{ skeletonRows }}" as="k" hint-placeholder-count="5">
+<div style="display:flex;align-items:center;gap:14px;padding:15px 16px;border-bottom:1px solid #f4f2ea">
+<div style="width:70px;height:11px;flex:none;border-radius:4px;background:var(--pill);animation:pulse 1.2s ease-in-out infinite"></div>
+<div style="height:11px;width:{{ k.w }};border-radius:4px;background:var(--pill);animation:pulse 1.2s ease-in-out infinite"></div>
+</div>
+</sc-for>
+</div>
+</div>
+<div style="border:1px solid var(--rule);border-radius:12px;background:var(--surface);padding:16px 17px 15px">
+<div style="height:11px;width:52%;border-radius:4px;background:var(--pill);animation:pulse 1.2s ease-in-out infinite"></div>
+<div style="margin-top:14px;height:11px;width:88%;border-radius:4px;background:var(--pill);animation:pulse 1.2s ease-in-out infinite"></div>
+<div style="margin-top:9px;height:11px;width:76%;border-radius:4px;background:var(--pill);animation:pulse 1.2s ease-in-out infinite"></div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isError }}" hint-placeholder-val="{{ false }}">
+<div style="flex:1;padding:22px 0 0;display:flex;justify-content:center;align-items:flex-start">
+<div style="width:100%;max-width:560px;border:1px solid #f0d7cf;border-radius:14px;background:var(--surface);padding:26px 24px 22px;animation:rise .2s ease-out">
+<div style="display:flex;align-items:center;gap:10px">
+<span style="width:26px;height:26px;border-radius:50%;background:#fbeceb;display:flex;align-items:center;justify-content:center"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#a3452a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8v5"></path><path d="M12 16.5h.01"></path></svg></span>
+<div style="font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:#a3452a">Could not load</div>
+</div>
+<div style="margin-top:12px;font-size:20px;font-weight:600;line-height:1.25">{{ errorTitle }}</div>
+<div style="margin-top:8px;font-size:13.5px;line-height:1.55;color:var(--muted);text-wrap:pretty">{{ errorBody }}</div>
+<div style="margin-top:18px;display:flex;align-items:center;gap:10px">
+<div onClick="{{ onRetry }}" style="display:flex;align-items:center;gap:8px;height:40px;padding:0 17px;border-radius:9px;background:var(--btn);color:var(--btnFg);font-size:13.5px;font-weight:600;cursor:pointer" style-hover="background:var(--btn)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.6-5.9"></path><path d="M20 4v4h-4"></path></svg>Try again</div>
+<a href="Course Community - Explore.dc.html" style="display:flex;align-items:center;height:40px;padding:0 15px;border-radius:9px;border:1px solid var(--rule3);background:var(--surface);font-size:13px;font-weight:500;color:var(--chipInk);text-decoration:none" style-hover="border-color:var(--hov)">Browse courses instead</a>
+</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isOverview }}" hint-placeholder-val="{{ true }}">
+<div style="flex:1;padding:22px 0 0;display:flex;flex-direction:column;gap:16px">
+<div style="display:flex;flex-direction:column;gap:16px">
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
+<div style="border:1px solid var(--rule);border-radius:12px;background:var(--surface);padding:16px 17px">
+<div style="font-size:11.5px;font-weight:500;color:var(--dim)">Completed courses</div>
+<div style="margin-top:7px;font-size:28px;font-weight:600;letter-spacing:-.02em;font-variant-numeric:tabular-nums">{{ courseCount }}</div>
+<div style="margin-top:5px;font-size:12px;color:var(--dim2)">{{ courseNote }}</div>
+</div>
+<div style="border:1px solid var(--rule);border-radius:12px;background:var(--surface);padding:16px 17px">
+<div style="font-size:11.5px;font-weight:500;color:var(--dim)">Credits earned</div>
+<div style="margin-top:7px;font-size:28px;font-weight:600;letter-spacing:-.02em;font-variant-numeric:tabular-nums">{{ credits }} <span style="font-size:15px;font-weight:500;color:var(--dim)">hp</span></div>
+<div style="margin-top:5px;font-size:12px;color:var(--dim2)">{{ creditRange }}</div>
+</div>
+<div style="border:1px solid var(--rule);border-radius:12px;background:var(--surface);padding:16px 17px">
+<div style="font-size:11.5px;font-weight:500;color:var(--dim)">Written reviews</div>
+<div style="margin-top:7px;font-size:28px;font-weight:600;letter-spacing:-.02em;font-variant-numeric:tabular-nums">{{ mineCount }}</div>
+<div style="margin-top:5px;font-size:12px;color:var(--dim2)">{{ likesNote }}</div>
+</div>
+<div style="border:1px solid {{ avgCardBorder }};border-radius:12px;background:{{ avgCardBg }};padding:16px 17px">
+<div style="font-size:11.5px;font-weight:500;color:var(--dim)">Average grade</div>
+<div style="margin-top:7px;font-size:28px;font-weight:600;letter-spacing:-.02em;color:{{ avgCardInk }};font-variant-numeric:tabular-nums">{{ avgCardValue }}</div>
+<div style="margin-top:5px;font-size:12px;color:var(--dim2)">{{ avgCardNote }}</div>
+</div>
+</div>
+
+<dc-import name="Course Community - Unreviewed Card" courses="{{ unreviewedCourses }}" total="{{ takenTotal }}" on-start="{{ onStartReviewer }}" hint-size="100%,320px"></dc-import>
+</div>
+
+</div>
+</sc-if>
+
+<sc-if value="{{ isMine }}" hint-placeholder-val="{{ false }}">
+<div style="flex:1;padding:22px 0 0;display:grid;grid-template-columns:1fr 1px 1fr;gap:24px">
+
+<div>
+<div style="font-size:12px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--dim);margin-bottom:10px">Your reviews</div>
+<sc-if value="{{ hasMine }}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;flex-direction:column;gap:14px">
+<sc-for list="{{ mine }}" as="r" hint-placeholder-count="4">
+<dc-import name="Course Community - Review Card" review="{{ r }}" hint-size="100%,150px"></dc-import>
+</sc-for>
+</div>
+</sc-if>
+<sc-if value="{{ noMine }}" hint-placeholder-val="{{ false }}">
+<div style="border:1px dashed var(--rule3);border-radius:12px;background:var(--surface);padding:44px 20px;text-align:center">
+<div style="font-size:16px;font-weight:600">Nothing written yet</div>
+<div style="margin-top:7px;max-width:420px;margin-left:auto;margin-right:auto;font-size:13px;line-height:1.5;color:var(--muted)">Reviews you publish land here, with how many students found them helpful.</div>
+<div onClick="{{ onGoTranscript }}" style="margin-top:16px;display:inline-flex;align-items:center;height:40px;padding:0 17px;border-radius:9px;background:var(--btn);color:var(--btnFg);font-size:13.5px;font-weight:600;cursor:pointer">Open the quick reviewer</div>
+</div>
+</sc-if>
+</div>
+
+<div style="background:var(--rule)"></div>
+
+<div>
+<div style="font-size:12px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--dim);margin-bottom:10px">Liked reviews</div>
+<sc-if value="{{ hasLiked }}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;flex-direction:column;gap:14px">
+<sc-for list="{{ liked }}" as="r" hint-placeholder-count="4">
+<dc-import name="Course Community - Review Card" review="{{ r }}" hint-size="100%,150px"></dc-import>
+</sc-for>
+</div>
+</sc-if>
+<sc-if value="{{ noLiked }}" hint-placeholder-val="{{ false }}">
+<div style="border:1px dashed var(--rule3);border-radius:12px;background:var(--surface);padding:44px 20px;text-align:center">
+<div style="font-size:16px;font-weight:600">No liked reviews</div>
+<div style="margin-top:7px;max-width:420px;margin-left:auto;margin-right:auto;font-size:13px;line-height:1.5;color:var(--muted)">Marking a review helpful on a course page keeps it here, so you can find it again.</div>
+</div>
+</sc-if>
+</div>
+
+</div>
+</sc-if>
+
+<sc-if value="{{ isDetail }}" hint-placeholder-val="{{ false }}">
+<div style="flex:1;padding:20px 0 0;display:flex;justify-content:center">
+<div style="width:100%;max-width:760px;animation:rise .2s ease-out">
+<div onClick="{{ onCloseDetail }}" style="display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:500;color:var(--brand);cursor:pointer" style-hover="text-decoration:underline"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1751a6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H6"></path><path d="m11.5 5.5-6.5 6.5 6.5 6.5"></path></svg>{{ backLabel }}</div>
+
+<div style="margin-top:14px;border:1px solid #e4dfd0;border-radius:14px;background:var(--surface);overflow:hidden">
+<div style="padding:20px 22px 18px;background:#fdf7ea;border-bottom:1px solid #f0e6d2">
+<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px">
+<div style="min-width:0">
+<div style="font:500 12.5px Geist Mono,ui-monospace,monospace;color:var(--brand)">{{ detail.code }}</div>
+<div style="margin-top:7px;font-size:21px;font-weight:600;line-height:1.25">{{ detail.name }}</div>
+<div style="margin-top:6px;font-size:12.5px;color:var(--dim)">{{ detail.meta }}</div>
+</div>
+<div style="flex:none;display:flex;align-items:center;gap:8px">
+<div style="display:flex;align-items:center;gap:7px;padding:5px 11px;border-radius:999px;background:var(--surface);border:1px solid #f0e6d2;font-size:12px;font-weight:600;color:#6b4c0d"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6b4c0d" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M7 21h10a2 2 0 0 0 2-1.6l1.2-6A1.6 1.6 0 0 0 18.6 11H14V6a2.5 2.5 0 0 0-4.8-1L7 11"></path><rect x="3" y="11" width="4" height="10" rx="1"></rect></svg>{{ detail.likes }} helpful</div>
+</div>
+</div>
+</div>
+
+<div style="padding:18px 22px 20px;display:flex;flex-direction:column;gap:14px">
+
+<div style="border:1px solid var(--rule);border-radius:12px;background:var(--pg);padding:15px 16px 14px">
+<div style="font-size:10.5px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--dim)">Format</div>
+<div style="margin-top:6px;display:flex;align-items:baseline;justify-content:space-between;gap:10px">
+<div style="font-size:14.5px;font-weight:600">How it was examined</div>
+<div style="flex:none;padding:2px 9px;border-radius:999px;background:var(--pill);color:var(--brand);font-size:12px;font-weight:600;font-variant-numeric:tabular-nums">{{ detail.examSplit }}</div>
+</div>
+<sc-if value="{{ detailHasExam }}" hint-placeholder-val="{{ true }}">
+<div style="margin-top:11px;display:flex;height:38px;border-radius:8px;overflow:hidden;background:#eae6da">
+<sc-for list="{{ detailExam }}" as="s" hint-placeholder-count="3">
+<div style="width:{{ s.width }};background:{{ s.color }};display:flex;align-items:center;justify-content:center;color:{{ s.ink }};font-size:12px;font-weight:600;overflow:hidden;white-space:nowrap">{{ s.label }}</div>
+</sc-for>
+</div>
+</sc-if>
+<sc-if value="{{ detailNoExam }}" hint-placeholder-val="{{ false }}">
+<div style="margin-top:11px;display:flex;align-items:center;gap:9px;height:38px;padding:0 13px;border-radius:8px;border:1px dashed #cfc9b8;background:var(--surface);font-size:12.5px;color:var(--dim)">{{ detailUnknownNote }}</div>
+</sc-if>
+<div style="height:1px;margin:14px 0;background:#eae6da"></div>
+<div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px">
+<div style="font-size:14.5px;font-weight:600">The approach</div>
+<div style="flex:none;padding:2px 9px;border-radius:999px;background:var(--pill);color:var(--brand);font-size:12px;font-weight:600;font-variant-numeric:tabular-nums">{{ detail.theoryLabel }}</div>
+</div>
+<sc-if value="{{ detailHasTheory }}" hint-placeholder-val="{{ true }}">
+<div style="margin-top:11px;display:flex;height:38px;border-radius:8px;overflow:hidden;background:#eae6da">
+<div style="width:{{ detail.theoryW1 }};background:var(--btn);display:flex;align-items:center;padding-left:11px;color:var(--btnFg);font-size:12px;font-weight:600;overflow:hidden;white-space:nowrap">Theoretical</div>
+<div style="width:{{ detail.theoryW2 }};background:#cfe0f2;display:flex;align-items:center;justify-content:flex-end;padding-right:11px;color:var(--brand);font-size:12px;font-weight:600;overflow:hidden;white-space:nowrap">Applied</div>
+</div>
+</sc-if>
+<sc-if value="{{ detailNoTheory }}" hint-placeholder-val="{{ false }}">
+<div style="margin-top:11px;display:flex;align-items:center;gap:9px;height:38px;padding:0 13px;border-radius:8px;border:1px dashed #cfc9b8;background:var(--surface);font-size:12.5px;color:var(--dim)">{{ detailUnknownNote }}</div>
+</sc-if>
+</div>
+
+<div style="border:1px solid var(--rule);border-radius:12px;background:var(--pg);padding:15px 16px 14px">
+<div style="font-size:10.5px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--dim);margin-bottom:12px">Course profile</div>
+<sc-for list="{{ detailMeters }}" as="m" hint-placeholder-count="2">
+<div style="margin-bottom:14px">
+<div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:9px"><div style="font-size:14.5px;font-weight:600">{{ m.label }}</div><div style="flex:none;padding:2px 9px;border-radius:999px;background:var(--pill);color:var(--brand);font-size:12px;font-weight:600;font-variant-numeric:tabular-nums">{{ m.value }}</div></div>
+<div style="height:8px;width:100%;border-radius:4px;background:#eae6da;overflow:hidden"><div style="height:100%;width:{{ m.width }};background:var(--btn)"></div></div>
+<div style="display:flex;justify-content:space-between;font-size:11.5px;color:var(--muted);margin-top:5px"><span>{{ m.lo }}</span><span>{{ m.hi }}</span></div>
+</div>
+</sc-for>
+</div>
+
+<div style="border:1px solid var(--rule);border-radius:12px;background:var(--pg);padding:15px 16px 14px">
+<div style="display:flex;align-items:center;gap:10px">
+<span style="width:9px;height:9px;flex:none;border-radius:50%;background:{{ detail.happyDot }}"></span>
+<div style="font-size:14.5px;font-weight:600;color:{{ detail.happyFg }}">{{ detail.happyHeadline }}</div>
+</div>
+<div style="margin-top:12px;font-size:14px;line-height:1.6;color:var(--ink2);text-wrap:pretty">{{ detail.text }}</div>
+</div>
+
+</div>
+
+<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 22px;border-top:1px solid var(--rule);background:var(--surface)">
+<div style="font-size:12px;color:var(--dim2)">{{ detail.footNote }}</div>
+<div style="display:flex;gap:9px">
+<sc-if value="{{ detailIsMine }}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;gap:9px">
+<div onClick="{{ onAskDeleteReview }}" style="display:flex;align-items:center;height:38px;padding:0 14px;border-radius:9px;border:1px solid var(--rule3);background:var(--surface);font-size:13px;font-weight:500;color:var(--chipInk);cursor:pointer" style-hover="border-color:#c96a4a;color:#c96a4a">Delete review</div>
+<div style="display:flex;align-items:center;gap:8px;height:38px;padding:0 16px;border-radius:9px;background:var(--btn);color:var(--btnFg);font-size:13px;font-weight:600;cursor:pointer" style-hover="background:var(--btn)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"></path></svg>Edit review</div>
+</div>
+</sc-if>
+<sc-if value="{{ detailIsLiked }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;gap:9px">
+<div onClick="{{ onUnlikeDetail }}" style="display:flex;align-items:center;height:38px;padding:0 14px;border-radius:9px;border:1px solid var(--rule3);background:var(--surface);font-size:13px;font-weight:500;color:var(--chipInk);cursor:pointer" style-hover="border-color:var(--hov)">Remove from liked</div>
+<div style="display:flex;align-items:center;height:38px;padding:0 16px;border-radius:9px;background:var(--btn);color:var(--btnFg);font-size:13px;font-weight:600;cursor:pointer" style-hover="background:var(--btn)">Open course page</div>
+</div>
+</sc-if>
+</div>
+</div>
+</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isSettings }}" hint-placeholder-val="{{ false }}">
+<div style="flex:1;padding:22px 0 0;display:flex;flex-direction:column;gap:14px">
+<div style="border:1px solid var(--rule);border-radius:12px;background:var(--surface);padding:16px 17px 15px">
+<div style="font-size:10.5px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--dim)">What others see</div>
+<div style="margin-top:10px;display:flex;flex-direction:column;gap:10px">
+<div style="display:flex;gap:9px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1751a6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none;margin-top:2px"><path d="M20 6 9 17l-5-5"></path></svg><div style="font-size:12.5px;line-height:1.5;color:var(--ink2)">Your reviews, under {{ shownAs }}.</div></div>
+<div style="display:flex;gap:9px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--dim)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none;margin-top:2px"><path d="M5 12h14"></path></svg><div style="font-size:12.5px;line-height:1.5;color:var(--ink2)">Never your grades, your average or your course list.</div></div>
+</div>
+</div>
+
+
+<div style="border:1px solid var(--rule);border-radius:12px;background:var(--surface);overflow:hidden">
+<div style="padding:16px 18px 14px;border-bottom:1px solid #f2efe6">
+<div style="font-size:15.5px;font-weight:600">GPA and grades</div>
+<div style="margin-top:5px;font-size:13px;line-height:1.5;color:var(--muted)">Grades are private to you in every case. These two switches decide whether they are stored at all, and whether an average is worked out from them.</div>
+</div>
+<div onClick="{{ onToggleStore }}" style="display:flex;align-items:flex-start;gap:13px;padding:16px 18px;border-bottom:1px solid #f4f2ea;cursor:pointer" style-hover="background:var(--pg)">
+<div style="flex:none;width:42px;height:24px;border-radius:99px;background:{{ storeTrack }};padding:3px;display:flex;justify-content:{{ storeJustify }};transition:background .16s ease-out"><div style="width:18px;height:18px;border-radius:50%;background:var(--surface);box-shadow:0 1px 2px rgba(20,30,45,.28)"></div></div>
+<div style="flex:1;min-width:0">
+<div style="font-size:14px;font-weight:600">Store grades from my transcript</div>
+<div style="margin-top:4px;font-size:12.5px;line-height:1.5;color:var(--muted)">{{ storeHint }}</div>
+</div>
+</div>
+<div onClick="{{ onToggleAvg }}" style="display:flex;align-items:flex-start;gap:13px;padding:16px 18px;cursor:{{ avgCursor }};opacity:{{ avgOpacity }}" style-hover="background:var(--pg)">
+<div style="flex:none;width:42px;height:24px;border-radius:99px;background:{{ avgTrack }};padding:3px;display:flex;justify-content:{{ avgJustify }};transition:background .16s ease-out"><div style="width:18px;height:18px;border-radius:50%;background:var(--surface);box-shadow:0 1px 2px rgba(20,30,45,.28)"></div></div>
+<div style="flex:1;min-width:0">
+<div style="font-size:14px;font-weight:600">Calculate my average</div>
+<div style="margin-top:4px;font-size:12.5px;line-height:1.5;color:var(--muted)">{{ avgHint }}</div>
+</div>
+<sc-if value="{{ showAvg }}" hint-placeholder-val="{{ true }}">
+<div style="flex:none;font-size:19px;font-weight:600;color:var(--brand);font-variant-numeric:tabular-nums">{{ avgLabel }}</div>
+</sc-if>
+</div>
+</div>
+
+
+<div style="border:1px solid var(--rule);border-radius:12px;background:var(--surface);padding:16px 18px;display:flex;align-items:center;justify-content:space-between;gap:16px">
+<div style="min-width:0">
+<div style="font-size:14px;font-weight:600">Delete my account</div>
+<div style="margin-top:4px;font-size:12.5px;line-height:1.5;color:var(--muted)">Removes your course list, grades and drafts. Published reviews stay up, unsigned.</div>
+</div>
+<div style="flex:none;display:flex;align-items:center;height:38px;padding:0 14px;border-radius:9px;border:1px solid #e0cdc4;background:var(--surface);font-size:13px;font-weight:500;color:#c96a4a;cursor:pointer" style-hover="background:#fdf3ef">Delete account</div>
+</div>
+
+<div style="margin-top:8px;padding-top:16px;border-top:1px solid var(--rule)">
+<div style="display:flex;align-items:baseline;gap:8px;font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--dim2)">Who runs this service</div>
+<div style="margin-top:8px;font-size:12.5px;line-height:1.6;color:var(--dim2);max-width:640px;text-wrap:pretty">Course Community is built and run by KTH AI Society, a student organisation. It is not an official KTH service. Credits, grades and averages are your own entries from a transcript you uploaded — for the official record, use Ladok. Reviews are the opinions of individual students, and courses change between rounds.</div>
+<div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:16px;font-size:12.5px;font-weight:500">
+<a href="#terms">Terms of use</a>
+<a href="#privacy">What we store about you</a>
+<a href="#contact">Contact KTH AI Society</a>
+</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isDot }}" hint-placeholder-val="{{ false }}">
+<div style="flex:1;padding:22px 0 0;display:flex;flex-direction:column;gap:14px">
+
+<div style="border:1px solid var(--rule);border-radius:12px;background:var(--surface);padding:16px 17px 15px">
+<div style="font-size:15.5px;font-weight:600">Your node on the landing page</div>
+<div style="margin-top:5px;font-size:13px;line-height:1.5;color:var(--muted)">Review courses to unlock how your dot looks in the network. Go quiet for a while and it settles back to default.</div>
+</div>
+
+<div style="border:1px solid var(--rule);border-radius:12px;background:var(--surface);overflow:hidden">
+<sc-for list="{{ dotTiers }}" as="tier" hint-placeholder-count="3">
+<div style="padding:16px 18px;border-bottom:{{ tier.divider }}">
+<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
+<div style="display:flex;align-items:flex-start;gap:10px">
+<sc-if value="{{ tier.locked }}" hint-placeholder-val="{{ true }}">
+<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--dim2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none;margin-top:2px"><rect x="4" y="10.5" width="16" height="10.5" rx="2.5"></rect><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"></path></svg>
+</sc-if>
+<div>
+<div style="font-size:14.5px;font-weight:600;color:{{ tier.titleColor }}">{{ tier.title }}</div>
+<div style="margin-top:4px;font-size:12.5px;line-height:1.5;color:var(--muted)">{{ tier.hint }}</div>
+</div>
+</div>
+<span style="flex:none;padding:3px 9px;border-radius:999px;background:{{ tier.badgeBg }};color:{{ tier.badgeFg }};font-size:11px;font-weight:600;white-space:nowrap">{{ tier.badgeLabel }}</span>
+</div>
+<sc-if value="{{ tier.unlocked }}" hint-placeholder-val="{{ false }}">
+<div style="margin-top:12px;margin-left:25px;display:flex;flex-wrap:wrap;gap:8px">
+<sc-for list="{{ tier.options }}" as="o" hint-placeholder-count="3">
+<div onClick="{{ o.onClick }}" role="button" tabIndex="0" style="display:flex;align-items:center;gap:8px;height:36px;padding:0 13px;border-radius:9px;border:1px solid {{ o.border }};background:{{ o.bg }};color:{{ o.fg }};font-size:13px;font-weight:{{ o.weight }};cursor:pointer;text-transform:capitalize" style-hover="border-color:var(--brand)">{{ o.swatch }}{{ o.label }}</div>
+</sc-for>
+</div>
+</sc-if>
+<sc-if value="{{ tier.lockedNote }}" hint-placeholder-val="{{ false }}">
+<div style="margin-top:6px;margin-left:25px;font-size:12.5px;color:var(--dim)">{{ tier.lockedNote }}</div>
+</sc-if>
+</div>
+</sc-for>
+</div>
+
+</div>
+</sc-if>
+
+<div style="padding:22px 0 26px;display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--dim2)">
+<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--dim2)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-5"></path><path d="M12 8h.01"></path></svg>
+Course Community is run by KTH AI Society, a student organisation. Credits, grades and any average shown here are your own entries — not an official KTH record.
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+<sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}">
+<div style="position:fixed;left:50%;bottom:26px;transform:translateX(-50%);z-index:80;display:flex;align-items:center;gap:14px;padding:11px 14px;border-radius:10px;background:#16202b;color:#fff;box-shadow:0 10px 30px rgba(20,30,45,.28);animation:rise .18s ease-out">
+<div style="font-size:13px">{{ toastText }}</div>
+<sc-if value="{{ canUndo }}" hint-placeholder-val="{{ false }}">
+<div onClick="{{ onUndo }}" style="font-size:13px;font-weight:600;color:#9dbfe4;cursor:pointer" style-hover="text-decoration:underline">Undo</div>
+</sc-if>
+<sc-if value="{{ noUndo }}" hint-placeholder-val="{{ true }}">
+<div onClick="{{ onDismissToast }}" style="font-size:13px;font-weight:600;color:#9dbfe4;cursor:pointer" style-hover="text-decoration:underline">Dismiss</div>
+</sc-if>
+</div>
+</sc-if>
+
+<sc-if value="{{ confirmOpen }}" hint-placeholder-val="{{ false }}">
+<div onClick="{{ onCancelConfirm }}" style="position:fixed;inset:0;z-index:70;display:flex;align-items:center;justify-content:center;padding:28px;background:rgba(20,30,45,.34)">
+<div onClick="{{ stopClick }}" style="width:440px;border-radius:14px;background:var(--surface);box-shadow:0 18px 48px rgba(20,30,45,.24);padding:22px;animation:rise .18s ease-out">
+<div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--brand)">{{ confirmEyebrow }}</div>
+<div style="margin-top:8px;font-size:19px;font-weight:600;line-height:1.3">{{ confirmTitle }}</div>
+<div style="margin-top:9px;font-size:13.5px;line-height:1.55;color:var(--muted)">{{ confirmBody }}</div>
+<div style="margin-top:18px;display:flex;justify-content:flex-end;gap:9px">
+<div onClick="{{ onCancelConfirm }}" style="display:flex;align-items:center;height:38px;padding:0 14px;border-radius:9px;border:1px solid var(--rule3);background:var(--surface);font-size:13px;font-weight:500;color:var(--chipInk);cursor:pointer" style-hover="border-color:var(--hov)">{{ confirmCancelLabel }}</div>
+<div onClick="{{ onConfirmDelete }}" style="display:flex;align-items:center;height:38px;padding:0 16px;border-radius:9px;background:#c96a4a;color:#fff;font-size:13px;font-weight:600;cursor:pointer" style-hover="background:#b25b3d">{{ confirmActionLabel }}</div>
+</div>
+</div>
+</div>
+</sc-if>
+
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:900},&quot;session&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;member&quot;,&quot;options&quot;:[&quot;guest&quot;,&quot;member&quot;],&quot;tsType&quot;:&quot;\&quot;guest\&quot; | \&quot;member\&quot;&quot;,&quot;section&quot;:&quot;Session&quot;},&quot;scenario&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;populated&quot;,&quot;options&quot;:[&quot;populated&quot;,&quot;empty&quot;,&quot;loading&quot;,&quot;error&quot;,&quot;edge-case&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Prototype state&quot;},&quot;view&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;overview&quot;,&quot;options&quot;:[&quot;overview&quot;,&quot;reviews&quot;,&quot;liked&quot;,&quot;settings&quot;,&quot;review-detail&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Prototype state&quot;},&quot;reviewState&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;idle&quot;,&quot;options&quot;:[&quot;idle&quot;,&quot;editing&quot;,&quot;saving&quot;,&quot;saved&quot;,&quot;failed&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Prototype state&quot;},&quot;dotTier&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;account&quot;,&quot;options&quot;:[&quot;account&quot;,&quot;0&quot;,&quot;1&quot;,&quot;2&quot;,&quot;3&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Prototype state&quot;},&quot;locale&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;en&quot;,&quot;options&quot;:[&quot;en&quot;,&quot;sv&quot;],&quot;tsType&quot;:&quot;\&quot;en\&quot; | \&quot;sv\&quot;&quot;,&quot;section&quot;:&quot;Prototype state&quot;}}">
+/* This page keeps no course or review facts of its own. Everything is derived
+   from the shared store through selectors. */
+let STORE = null;
+const ME = "u1";
+const VIEWS = ["overview", "reviews", "dot", "settings"];
+
+const rv = (r, locale) => STORE.reviewView(r, { locale, userId: ME });
+const myReviews = (locale) => STORE.reviewsByUser(ME).map((r) => rv(r, locale));
+const otherReviews = (locale) => STORE.reviews.filter((r) => r.userId !== ME).map((r) => rv(r, locale));
+
+class Component extends DCLogic {
+  /* Theme choice is shared across the pages through one storage key. */
+  ccDark() {
+    if (this.state.ccNight !== undefined) return this.state.ccNight === true;
+    try { return window.localStorage.getItem("cc:theme") === "dark"; } catch (e) { return false; }
+  }
+
+  ccSetDark(next) {
+    document.documentElement.setAttribute("data-cc-theme", next ? "dark" : "light");
+    try { window.localStorage.setItem("cc:theme", next ? "dark" : "light"); } catch (e) { /* storage off */ }
+    this.setState({ ccNight: next });
+  }
+
+  ccApplyTheme() {
+    document.documentElement.setAttribute("data-cc-theme", this.ccDark() ? "dark" : "light");
+  }
+
+  /** Published by Explore and Saved, which own the list; this page only shows it. */
+  savedCount() {
+    try {
+      const n = parseInt(window.localStorage.getItem("cc:savedBadge"), 10);
+      return isNaN(n) ? 0 : n;
+    } catch (e) { return 0; }
+  }
+
+  state = {
+    signedIn: false,
+    view: "overview",
+    open: null,
+    avg: true,
+    confirm: null,
+    liked: [],
+    toast: null,
+    // Scenario-driven data conditions. Never mixed into the session.
+    empty: false,
+    loading: false,
+    error: false,
+    reviewPhase: "idle"
+  };
+
+  /* Shared axes: session (guest | member) and scenario (populated | empty |
+     loading | error | edge-case). Which tab is open is navigation, so it is a
+     page substate (`view`), not part of the site-wide scenario. */
+  harnessKey() {
+    return [this.props.session, this.props.scenario, this.props.view, this.props.reviewState, this.props.dotTier].join("|");
+  }
+
+  pose() {
+    const h = STORE.resolveHarness(this.props);
+    const want = this.props.view;
+    const base = {
+      signedIn: h.isMember,
+      view: VIEWS.indexOf(want) >= 0 ? want : "overview",
+      open: null, confirm: null, toast: null,
+      liked: STORE.likedReviewIds(ME),
+      empty: false, loading: false, error: false,
+      reviewPhase: this.props.reviewState || "idle"
+    };
+    if (h.isGuest) return { ...base, signedIn: false };
+    if (h.isLoading) return { ...base, loading: true };
+    if (h.isError) return { ...base, error: true };
+    if (h.isEmpty) return { ...base, empty: true, liked: [] };
+    if (h.isEdgeCase) {
+      // A review where the student did not remember the examination split:
+      // examinationDistribution and approachTheoryPercent are both null.
+      const sparse = STORE.reviewsByUser(ME).find((r) => r.examinationDistribution == null);
+      return { ...base, view: "reviews", open: sparse ? { from: "mine", id: sparse.id } : null };
+    }
+    if (want === "review-detail") {
+      const first = STORE.reviewsByUser(ME)[0];
+      return { ...base, view: "reviews", open: first ? { from: "mine", id: first.id } : null };
+    }
+    return base;
+  }
+
+  componentDidMount() {
+    this.ccApplyTheme();
+    import("./cc-store.js").then((mod) => {
+      STORE = mod;
+      this.seenHarness = this.harnessKey();
+      this.setState(this.pose());
+    });
+  }
+
+  componentDidUpdate() {
+    if (!STORE) return;
+    if (this.harnessKey() !== this.seenHarness) {
+      this.seenHarness = this.harnessKey();
+      this.setState(this.pose());
+    }
+  }
+
+  meta(r) {
+    return r.startTerm + " · published " + r.createdAtLabel;
+  }
+
+  detailFor(open) {
+    const raw = STORE.reviews.find((x) => x.id === open.id);
+    return raw ? rv(raw, this.props.locale === "sv" ? "sv" : "en") : null;
+  }
+
+  listRow(r, from) {
+    const happy = r.happyTook;
+    return {
+      id: r.id, code: r.courseCode, name: r.name, term: r.startTerm,
+      date: r.createdAtLabel, likes: r.helpfulCount, author: r.author,
+      message: r.message, workloadScore: r.workloadScore, happyTook: happy,
+      excerpt: r.message.length > 108 ? r.message.slice(0, 105).replace(/[,;\s]+$/, "") + "…" : r.message,
+      happyLabel: happy === true ? "Happy I took it" : happy === false ? "Not really" : "Not answered",
+      happyFg: happy === true ? "#1c6b60" : happy === false ? "#8a6a1e" : "#8a857a",
+      happyDot: happy === true ? "#2f9e8e" : happy === false ? "#dfa53c" : "#cfc9b8",
+      onOpen: () => this.setState({ open: { from, id: r.id } }),
+      onUnlike: from === "liked" ? (e) => { e.stopPropagation(); this.unlike(r.id); } : null
+    };
+  }
+
+  unlike(id) {
+    const before = this.state.liked;
+    const r = this.detailFor({ id });
+    const next = before.filter((i) => i !== id);
+    STORE.setLikedReviewIds(ME, next);
+    this.setState({
+      liked: next,
+      open: null,
+      toast: { text: "Removed " + (r ? r.courseCode : "review") + " from liked reviews", undo: before }
+    });
+  }
+
+  renderVals() {
+    const importedAt = STORE
+      ? (STORE.takenCourses("u1").map((r) => r.transcriptImportedAt).filter(Boolean).sort().slice(-1)[0] || null)
+      : null;
+    const lastRead = importedAt && STORE ? STORE.formatDate(importedAt) : null;
+    const s = this.state;
+    const locale = this.props.locale === "sv" ? "sv" : "en";
+    if (!STORE) return { isGuest: false, isMember: false, paneTop: "66px", isLoading: true };
+
+    const mineAll = s.empty ? [] : myReviews(locale);
+    const othersAll = s.empty ? [] : otherReviews(locale);
+    const mine = mineAll.map((r) => this.listRow(r, "mine"));
+    const liked = othersAll.filter((r) => s.liked.indexOf(r.id) >= 0).map((r) => this.listRow(r, "liked"));
+    const totalLikes = mineAll.reduce((acc, r) => acc + r.helpfulCount, 0);
+
+    const taken = s.empty ? [] : STORE.takenCourses(ME);
+    // No separate "are grades stored" flag — it's just whether any row has one.
+    const hasStoredGrades = taken.some((t) => t.grade != null);
+    const credits = taken.reduce((acc, t) => acc + (t.earnedCredits || 0), 0);
+    const years = taken.map((t) => t.attendanceYear).filter(Boolean).sort();
+    const gpa = STORE.gpaFor(ME);
+    const average = gpa.average;
+
+    const reviewedCodes = mineAll.map((r) => r.courseCode);
+    const unreviewed = taken
+      .filter((t) => t.courseCode && reviewedCodes.indexOf(t.courseCode) < 0)
+      .map((t) => {
+        const v = STORE.takenView(t, { locale });
+        return { code: t.courseCode, name: v.name };
+      });
+
+    const open = s.open;
+    const d = open ? this.detailFor(open) : null;
+    const busy = s.loading || s.error;
+    const avgAllowed = hasStoredGrades && s.avg && average != null;
+    const segments = d ? STORE.examinationSegments(d.examination, locale) : [];
+
+    const tabDefs = [
+      ["Overview", "", "overview"],
+      ["Reviews", String(mine.length + liked.length), "reviews"],
+      ["My dot", "", "dot"],
+      ["Settings", "", "settings"]
+    ];
+
+    return {
+      night: this.ccDark(),
+      notNight: !this.ccDark(),
+      themeTitle: this.ccDark() ? "Switch to light mode" : "Switch to dark mode",
+      onTheme: () => this.ccSetDark(!this.ccDark()),
+      paneTop: "66px",
+      handleLine: "reviews signed " + (STORE.userName(ME) || "your account name"),
+      // `users` carries a required name and no programme, year or anonymity flag.
+      profileLine: "At KTH since " + (years.length ? STORE.termLabel(years[0]) : "—")
+        + " · reviews signed " + (STORE.userName(ME) || "your account name"),
+      shownAs: STORE.userName(ME) || "your account name",
+
+      tabs: tabDefs.map(([label, count, key]) => {
+        const active = s.view === key;
+        const on = active && !open;
+        return {
+          label, count,
+          line: active ? "var(--brand)" : "transparent",
+          fg: active ? "var(--ink)" : "var(--dim)",
+          weight: active ? "600" : "500",
+          pillBg: count === "" ? "transparent" : "var(--pill)",
+          pillFg: count === "" ? "transparent" : active ? "var(--brand)" : "var(--dim)",
+          onClick: () => this.setState({ view: key, open: null })
+        };
+      }),
+
+      signedIn: s.signedIn,
+      signedOut: !s.signedIn,
+      isMember: s.signedIn,
+      isGuest: !s.signedIn,
+      pageMaxWidth: STORE.PAGE_MAX_WIDTH,
+      pageSidePadding: STORE.PAGE_SIDE_PADDING,
+      onLogIn: () => this.setState({ signedIn: true }),
+      onSignUp: () => this.setState({ signedIn: true }),
+      hasSavedCount: this.savedCount() > 0,
+      savedCountLabel: String(this.savedCount()),
+      onSignIn: () => this.setState({ signedIn: true }),
+      onSignOut: () => this.setState({ signedIn: false, open: null, toast: null }),
+
+      isLoading: s.signedIn && s.loading,
+      isError: s.signedIn && s.error,
+      isOverview: s.signedIn && !busy && s.view === "overview" && !open,
+      isMine: s.signedIn && !busy && s.view === "reviews" && !open,
+      isLiked: s.signedIn && !busy && s.view === "reviews" && !open,
+      isSettings: s.signedIn && !busy && s.view === "settings" && !open,
+      isDot: s.signedIn && !busy && s.view === "dot" && !open,
+      dotTiers: (() => {
+        const forced = this.props.dotTier != null && this.props.dotTier !== "account" ? parseInt(this.props.dotTier, 10) : null;
+        const realAx = STORE.tierAxes(ME);
+        const ax = forced == null ? realAx : { unlocked: [1,2,3].filter((n) => n <= forced).map((n) => STORE.TIER_AXES[n]), dormant: [] };
+        const picks = STORE.personalizationPicks(ME);
+        const pick = (axis, v) => { STORE.setPersonalization(ME, { [axis]: v }); this.forceUpdate(); };
+        const OPTS = { color: STORE.DOT_COLORS, style: STORE.DOT_STYLES, signalStyle: STORE.DOT_SIGNALS };
+        const mk = (n, title, hint, lockedNote, axis) => {
+          const unlocked = ax.unlocked.indexOf(axis) >= 0;
+          const dormant = ax.dormant.indexOf(axis) >= 0;
+          const options = OPTS[axis];
+          const current = picks[axis] || options[0];
+          const brighten = (hex) => {
+            const n2 = parseInt(hex.slice(1), 16);
+            const r = (n2 >> 16) & 255, g = (n2 >> 8) & 255, b = n2 & 255;
+            const mix = (c) => Math.round(c + (255 - c) * 0.82);
+            return "rgb(" + mix(r) + "," + mix(g) + "," + mix(b) + ")";
+          };
+          return {
+            title: unlocked ? title : "Unknown", hint, unlocked, locked: !unlocked,
+            titleColor: unlocked ? "var(--ink)" : "var(--dim)",
+            lockedNote: "",
+            badgeLabel: unlocked ? "Unlocked" : dormant ? "Dormant" : "Locked",
+            badgeBg: unlocked ? "var(--pill)" : "var(--pg)",
+            badgeFg: unlocked ? "var(--brand)" : "var(--dim)",
+            options: unlocked ? options.map((opt) => {
+              const on = opt === current;
+              const isDefaultBlue = axis === "color" && opt === options[0];
+              const brightBg = axis === "color" && !isDefaultBlue ? brighten(opt) : "var(--pill)";
+              return {
+                label: opt, weight: on ? "600" : "500",
+                border: on ? "var(--brand)" : "var(--rule3)",
+                bg: on ? brightBg : "var(--surface)",
+                fg: on ? "var(--brand)" : "var(--ink)",
+                swatch: n === 1 ? React.createElement("span", { style: { width: 13, height: 13, borderRadius: "50%", background: opt, flex: "none" } }) : null,
+                onClick: () => pick(axis, opt)
+              };
+            }) : []
+          };
+        };
+        const list = [
+          mk(1, "Dot color", "Unlocks once you have written 5 reviews.", "Write 5 reviews to unlock a color for your dot.", "color"),
+          mk(2, "Dot style", "Unlocks once your uploaded transcript is fully reviewed.", "Upload your transcript and review everything in it to unlock a style.", "style"),
+          mk(3, "Signal on click", "Unlocks once you have referred friends to Course Community.", "Refer friends to unlock a signal that goes out from your node.", "signalStyle")
+        ];
+        return list.map((t, i) => ({ ...t, divider: i < list.length - 1 ? "1px solid #f2efe6" : "none" }));
+      })(),
+      isDetail: s.signedIn && !busy && Boolean(open) && Boolean(d),
+      onRetry: () => this.setState(this.pose()),
+      errorTitle: "Your page did not load",
+      errorBody: "The request for your courses and reviews timed out. Nothing is lost — this is a read, so nothing of yours was changed.",
+      skeletonRows: [1, 2, 3, 4, 5].map((n) => ({ w: (92 - n * 7) + "%" })),
+
+      courseCount: taken.length,
+      // The date the transcript was last read, from user_taken_courses.transcript_imported_at.
+      courseNote: taken.length ? "read from your transcript " + (lastRead || "") : "no transcript imported yet",
+      credits: credits.toFixed(1),
+      creditRange: years.length
+        ? STORE.termLabel(years[0]) + " – " + STORE.termLabel(years[years.length - 1])
+        : "—",
+      mineCount: mine.length,
+      likesNote: totalLikes + " students found them helpful",
+      hasMine: mine.length > 0,
+      noMine: mine.length === 0,
+      hasLiked: liked.length > 0,
+      noLiked: liked.length === 0,
+      mine,
+      liked,
+
+
+      showAvg: avgAllowed,
+      avgLabel: average == null ? "—" : average.toFixed(1),
+      avgCardValue: avgAllowed ? average.toFixed(1) : "—",
+      avgCardInk: avgAllowed ? "var(--brand)" : "var(--dim2)",
+      avgCardBg: avgAllowed ? "var(--info)" : "var(--surface)",
+      avgCardBorder: avgAllowed ? "var(--rule2)" : "var(--rule)",
+      avgCardNote: !hasStoredGrades
+        ? "no grades stored"
+        : avgAllowed ? "credit-weighted, A–F only · yours alone" : "not calculated",
+
+      onToggleAvg: () => { if (hasStoredGrades) this.setState({ avg: !s.avg }); },
+      avgTrack: hasStoredGrades && s.avg ? "#1751a6" : "#cfc9b8",
+      avgJustify: hasStoredGrades && s.avg ? "flex-end" : "flex-start",
+      avgCursor: hasStoredGrades ? "pointer" : "not-allowed",
+      avgOpacity: hasStoredGrades ? "1" : "0.55",
+      avgHint: hasStoredGrades
+        ? "A credit-weighted average over your A–F courses, shown on My Page. Pass/fail courses are left out."
+        : "Unavailable while no grades are stored.",
+
+      onToggleStore: () => {
+        if (hasStoredGrades) this.setState({ confirm: "grades" });
+        else this.setState({ toast: { text: "Grade storage switched on — upload your transcript to fill the grades in", undo: null } });
+      },
+      storeTrack: hasStoredGrades ? "#1751a6" : "#cfc9b8",
+      storeJustify: hasStoredGrades ? "flex-end" : "flex-start",
+      storeHint: hasStoredGrades
+        ? "Grades read from your transcript are kept with your course list. Only you ever see them."
+        : "Grade columns are skipped when a transcript is read, and nothing is kept. Credits, names and terms are unaffected.",
+
+      confirmOpen: Boolean(s.confirm),
+      confirmEyebrow: s.confirm === "review" ? "Reviews" : "Grades",
+      confirmTitle: s.confirm === "review" ? "Delete this review?" : "Delete the grades already stored?",
+      confirmBody: s.confirm === "review"
+        ? "This removes your review — scores, workload split and write-up — from the course. It stops counting toward that course's review total right away."
+        : "Turning this off removes every grade read from your transcript, and your average with it. Course names, credits and terms stay. To get grades back you upload the transcript again with grade reading switched on.",
+      confirmCancelLabel: s.confirm === "review" ? "Keep review" : "Keep my grades",
+      confirmActionLabel: s.confirm === "review" ? "Delete review" : "Delete grades",
+      onCancelConfirm: () => this.setState({ confirm: null }),
+      onConfirmDelete: () => {
+        if (s.confirm === "review") {
+          const id = open && open.id;
+          const i = STORE.reviews.findIndex((r) => r.id === id);
+          if (i >= 0) STORE.reviews.splice(i, 1);
+          this.setState({ confirm: null, open: null, toast: { text: "Review deleted", undo: null } });
+          return;
+        }
+        // Clearing storage means clearing the real column on every taken row —
+        // not a local flag — so it actually leaves once the user confirms.
+        taken.forEach((row) => { if (row.grade != null) STORE.setTakenOverride(ME, row.courseCode, { grade: null }); });
+        this.setState({
+          confirm: null, avg: false,
+          toast: { text: "Grades deleted from your account", undo: null }
+        });
+      },
+      stopClick: (e) => e.stopPropagation(),
+
+
+      unreviewedLine: unreviewed.length
+        ? unreviewed.length + (unreviewed.length === 1 ? " completed course has" : " completed courses have")
+          + " no review yet. Each one is a card in the quick reviewer."
+        : "Every completed course in your list has a review.",
+      unreviewedCourses: unreviewed.map((u) => {
+        const card = STORE.catalogCardView(u.code, { locale: locale });
+        return {
+          code: u.code,
+          name: card ? card.title : u.name,
+          meta: card ? card.meta : u.code,
+          onClick: () => { window.location.href = "Course Community - Taken Courses.dc.html?review=1"; }
+        };
+      }),
+      takenTotal: taken.length,
+
+      backLabel: open && open.from === "mine" ? "Back to my reviews" : "Back to liked reviews",
+      onCloseDetail: () => this.setState({ open: null }),
+      detailIsMine: Boolean(open) && open.from === "mine",
+      detailIsLiked: Boolean(open) && open.from === "liked",
+      detail: d ? {
+        code: d.courseCode, name: d.name, likes: d.helpfulCount,
+        meta: open.from === "mine"
+          ? this.meta(d)
+          : d.startTerm + " · " + d.author + " · " + d.createdAtLabel,
+        examSplit: segments.length ? segments.map((x) => x.percent + "%").join(" / ") : "Not recorded",
+        theoryLabel: d.theoryPercent == null ? "Not recorded" : d.theoryPercent + " / " + (100 - d.theoryPercent),
+        theoryW1: d.theoryPercent == null ? "0%" : d.theoryPercent + "%",
+        theoryW2: d.theoryPercent == null ? "0%" : (100 - d.theoryPercent) + "%",
+        happyHeadline: d.happyTook === true
+          ? "Happy to have taken it"
+          : d.happyTook === false ? "Would not take it again" : "Did not answer whether it was worth it",
+        happyFg: d.happyTook === true ? "#1c6b60" : d.happyTook === false ? "#8a6a1e" : "#6b6355",
+        happyDot: d.happyTook === true ? "#2f9e8e" : d.happyTook === false ? "#dfa53c" : "#cfc9b8",
+        text: d.message,
+        footNote: open.from === "mine"
+          ? "Published " + d.createdAtLabel + " as " + (STORE.userName(ME) || "your account name")
+          : "Written by " + d.author
+      } : {},
+      detailHasExam: Boolean(d) && segments.length > 0,
+      detailNoExam: Boolean(d) && segments.length === 0,
+      detailHasTheory: Boolean(d) && d.theoryPercent != null,
+      detailNoTheory: Boolean(d) && d.theoryPercent == null,
+      // Not-remembered answers stay null; nothing is drawn as a zero.
+      detailUnknownNote: "The student chose “I don’t remember” — nothing is estimated in its place.",
+      detailExam: segments.map((x) => ({
+        label: x.percent >= 18 ? x.label + " " + x.percent + "%" : x.percent + "%",
+        width: x.percent + "%", color: x.color, ink: x.ink
+      })),
+      detailMeters: d ? [
+        { label: "How demanding it was", value: d.workloadScore + " / 10",
+          width: d.workloadScore * 10 + "%", lo: "Not at all", hi: "Very" },
+        { label: "How much was learned", value: d.learningScore + " / 10",
+          width: d.learningScore * 10 + "%", lo: "Nothing new", hi: "Transformative" }
+      ] : [],
+      onAskDeleteReview: () => this.setState({ confirm: "review" }),
+      onUnlikeDetail: () => { if (d) this.unlike(d.id); },
+
+      onGoSettings: () => this.setState({ view: "settings", open: null }),
+      onGoTranscript: () => { window.location.href = "Course Community - Taken Courses.dc.html"; },
+      // The reviewer is offered here, so it opens from here.
+      onStartReviewer: () => { window.location.href = "Course Community - Taken Courses.dc.html?review=1"; },
+
+      hasToast: Boolean(s.toast),
+      toastText: s.toast ? s.toast.text : "",
+      canUndo: Boolean(s.toast && s.toast.undo),
+      noUndo: Boolean(s.toast) && !(s.toast && s.toast.undo),
+      onDismissToast: () => this.setState({ toast: null }),
+      onUndo: () => {
+        const restored = s.toast && s.toast.undo ? s.toast.undo : s.liked;
+        STORE.setLikedReviewIds(ME, restored);
+        this.setState({ liked: restored, toast: null });
+      }
+    };
+  }
+}
+
+</script>
+</body>
+</html>

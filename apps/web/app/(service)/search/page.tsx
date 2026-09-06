@@ -1,10 +1,10 @@
 import { Suspense } from "react";
-import { Search } from "@/features/search/components/search";
+import { Explore } from "@/features/search/components/explore";
 
 export default function Page() {
   return (
     <Suspense fallback={null}>
-      <Search />
+      <Explore />
     </Suspense>
   );
 }

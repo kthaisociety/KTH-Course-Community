@@ -1,67 +1,25 @@
-import { MessageSquare, Users } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Item,
-  ItemContent,
-  ItemDescription,
-  ItemMedia,
-  ItemTitle,
-} from "@/components/ui/item";
+import { PageColumn, PageHeader } from "@/features/shell";
 import { FeedbackForm } from "./feedback-form";
 
+/**
+ * `/contact` — the Feedback form on its own route.
+ *
+ * The design has no separate contact page: `Course Community - Contact Form
+ * .dc.html` is a section the About artboard imports, and the rail's only link is
+ * "About & contact". This route predates the design and stays, so it renders the
+ * same form with the section's own two lines promoted into the shell's
+ * `PageHeader` rather than repeating them as a second heading.
+ */
 export function Contact() {
   return (
-    <div className="min-h-screen bg-background">
-      <main className="container mx-auto px-6 py-12 pt-32">
-        <div className="mx-auto max-w-4xl">
-          <div className="mb-12 text-center">
-            <h1 className="mb-4 text-4xl font-bold text-foreground md:text-5xl">
-              Get in Touch
-            </h1>
-            <p className="mx-auto max-w-2xl text-lg text-muted-foreground">
-              Have questions about Course Community? Want to share feedback or
-              suggest improvements? We'd love to hear from you!
-            </p>
-          </div>
-
-          <div className="mb-12 grid gap-6 md:grid-cols-2">
-            <Item variant="outline">
-              <ItemMedia variant="icon">
-                <Users />
-              </ItemMedia>
-              <ItemContent>
-                <ItemTitle>About Us</ItemTitle>
-                <ItemDescription>
-                  We're a team of KTH students dedicated to helping fellow
-                  students make informed course decisions.
-                </ItemDescription>
-              </ItemContent>
-            </Item>
-
-            <Item variant="outline">
-              <ItemMedia variant="icon">
-                <MessageSquare />
-              </ItemMedia>
-              <ItemContent>
-                <ItemTitle>Share Your Feedback</ItemTitle>
-                <ItemDescription>
-                  Your feedback helps us improve Course Community for all KTH
-                  students. Let us know below!
-                </ItemDescription>
-              </ItemContent>
-            </Item>
-          </div>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Send us a Message</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <FeedbackForm />
-            </CardContent>
-          </Card>
-        </div>
-      </main>
-    </div>
+    <PageColumn>
+      <PageHeader
+        title="Get in touch"
+        subtitle="Bug, idea, or just want to say hi — we read everything."
+      />
+      <div className="px-7">
+        <FeedbackForm />
+      </div>
+    </PageColumn>
   );
 }

@@ -1,14 +1,11 @@
 import { getAuth } from "@/server/auth";
+import { capRequestBody, isRequestBodyTooLarge } from "@/server/http/body-cap";
 import { TranscriptParseError } from "@/server/ingest/transcript/parse";
 import {
   extractTranscriptText,
   TranscriptBusyError,
 } from "@/server/ingest/transcript/pdf-text";
 import { buildTranscriptProposal } from "@/server/ingest/transcript/service";
-import {
-  capRequestBody,
-  isTranscriptTooLarge,
-} from "@/server/ingest/transcript/upload";
 
 export const runtime = "nodejs";
 
@@ -38,7 +35,7 @@ export async function POST(request: Request) {
   try {
     formData = await capRequestBody(request, MAX_BYTES).formData();
   } catch (error) {
-    if (isTranscriptTooLarge(error)) {
+    if (isRequestBodyTooLarge(error)) {
       return Response.json({ message: TOO_LARGE }, { status: 413 });
     }
     return Response.json(

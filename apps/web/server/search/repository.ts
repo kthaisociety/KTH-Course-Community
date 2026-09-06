@@ -7,15 +7,30 @@ export type SearchHit = {
   score: number | null;
 };
 
+/**
+ * `size` is the LIMIT, exactly. It used to be inflated to `size * 5` whenever a
+ * minimum-rating filter was set, because the service thresholded ratings in
+ * application code after the query and needed a window wide enough to survive
+ * that pass. The rating filter is gone (it was in no artboard), so the window
+ * has nothing to absorb: what is asked for is what is fetched. The department
+ * filter needs no window at all — it is a SQL predicate below, so every row the
+ * query returns already satisfies it.
+ *
+ * The service now asks for a window that covers every page up to the one it is
+ * serving, plus one row of lookahead (#148). That is still `size` meaning
+ * `size` — it is a bigger number, not an inflated one — and it works only
+ * because this query is *totally* ordered: the three-way bucket, then
+ * `ts_rank`, then `courses.code ASC`. A LIMIT over a total order returns a
+ * prefix, so a wider window returns a superset that begins with the narrower
+ * one, and page 2 holds the same rows however deep the fetch went.
+ */
 export async function searchByKeyword(
   query: string,
   size: number,
   departmentFilter: string | null,
-  hasMinRatingFilter: boolean,
 ): Promise<SearchHit[]> {
   const normalizedQuery = query.trim();
   const queryUpper = normalizedQuery.toUpperCase();
-  const fetchSize = hasMinRatingFilter ? size * 5 : size;
   const textPattern = `%${normalizedQuery}%`;
   const codePrefix = `${queryUpper}%`;
   const codeContains = `%${queryUpper}%`;
@@ -64,7 +79,7 @@ export async function searchByKeyword(
           ELSE 0
         END DESC,
         ${schema.courses.code} ASC
-      LIMIT ${fetchSize}
+      LIMIT ${size}
     `);
 
   return (result.rows as Array<{ code: string }>).map((r) => ({
@@ -73,6 +88,32 @@ export async function searchByKeyword(
   }));
 }
 
+/**
+ * Nearest neighbours by cosine distance — and, on ties, by course code.
+ *
+ * The tiebreak is not cosmetic. Distance alone is not a total order, and an
+ * ORDER BY that is not total obliges the executor to nothing: two rows at the
+ * identical distance may come back in either order between two executions of
+ * the same query. Under a plain LIMIT that is invisible — the same set, only
+ * shuffled. Under pagination it is a bug: the service pages by slicing one
+ * ordered prefix (#148), so a pair that swaps between the fetch for page 2 and
+ * the fetch for page 3 puts one course on both pages and the other on neither.
+ *
+ * `courses.code` is the primary key, so appending it makes the order total, and
+ * total is what makes a LIMIT a stable prefix. `searchByKeyword` above already
+ * ends this way for the same reason. The distance stays the leading key, so the
+ * HNSW index still provides the ordering and only the ties above it are sorted;
+ * the second key does not turn this into an alphabetical search.
+ *
+ * What it does *not* buy is exactness, and the comment would be dishonest
+ * without saying so. `course_explore_embedding_idx` is HNSW — approximate by
+ * construction, with a search list pgvector widens as the LIMIT grows — so a
+ * 61-row fetch is not *formally* guaranteed to begin with the same rows as a
+ * 21-row one, however reliably it does at this catalogue size. The tiebreak
+ * removes the one source of drift that is entirely ours. What bounds the rest
+ * is that this leg only ever supplies the tail: the service puts the exact
+ * keyword ranking first and appends these behind it.
+ */
 export async function searchByEmbedding(
   embedding: number[],
   limit: number,
@@ -97,7 +138,9 @@ export async function searchByEmbedding(
           ON ${schema.courseExplore.courseCode} = ${schema.courses.code}
         CROSS JOIN q
         WHERE ${whereSql}
-        ORDER BY ${schema.courseExplore.embedding} <=> q.v
+        ORDER BY
+          ${schema.courseExplore.embedding} <=> q.v,
+          ${schema.courses.code} ASC
         LIMIT ${limit}
       `);
 

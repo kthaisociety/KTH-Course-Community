@@ -6,9 +6,9 @@ import { useSessionData } from "@/features/auth";
 import type { ReviewVoteType } from "@/types";
 import { useVoteOnReview } from "../api/mutations";
 
-export function useReviewVotes(courseCode: string) {
+export function useReviewVotes() {
   const { userId } = useSessionData();
-  const voteMutation = useVoteOnReview(courseCode);
+  const voteMutation = useVoteOnReview();
 
   const vote = useCallback(
     async (reviewId: string, voteType: ReviewVoteType) => {

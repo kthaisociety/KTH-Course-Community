@@ -21,6 +21,7 @@
     "rm:web": "bun remove --filter=kth-course-community-web",
     "docker:web:build": "bun run --filter kth-course-community-web build",
     "ingest": "bun run --filter kth-course-community-web ingest",
+    "backfill:tiers": "bun run --filter kth-course-community-web backfill:tiers",
     "db:push": "bun run --filter kth-course-community-web db:push",
     "db:generate": "bun run --filter kth-course-community-web db:generate",
     "db:migrate": "bun run --filter kth-course-community-web db:migrate",

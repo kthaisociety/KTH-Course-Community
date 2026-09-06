@@ -8,29 +8,26 @@
  */
 
 /**
- * The node colour palette. The server stores a **name**; the client maps names
- * onto its `--cc-*` tokens, so the palette can be re-skinned without a data
- * migration. This is the one place the list lives.
+ * The appearance vocabulary lives in `./appearance.ts` — the palette, the two
+ * shape axes, the unconfigured state, and which tier unlocks each of them. It
+ * is re-exported here because placement writes the unconfigured state on join
+ * and every existing importer of these names came through this module.
+ *
+ * **Nobody is assigned a colour.** Placement used to hash every app user onto a
+ * palette name, which gave everyone a colour nobody chose, and a node profile is
+ * personalisation: a colour is chosen, never dealt out. `graph.setAppearance` is
+ * the only writer of a chosen value, and it is driven by a member clicking one.
  */
-export const NODE_COLORS = [
-  "aurora",
-  "ember",
-  "frost",
-  "moss",
-  "slate",
-  "violet",
-] as const;
-
-export type NodeColor = (typeof NODE_COLORS)[number];
-
-/**
- * `node_style` and `node_signal_style` are Postgres enums that today declare
- * exactly one value. Adding values needs an `ALTER TYPE` migration, and node
- * appearance is being redesigned wholesale, so placement writes the only value
- * there is.
- */
-export const DEFAULT_NODE_STYLE = "default" as const;
-export const DEFAULT_NODE_SIGNAL_STYLE = "default" as const;
+export {
+  DEFAULT_NODE_COLOR,
+  DEFAULT_NODE_SIGNAL_STYLE,
+  DEFAULT_NODE_STYLE,
+  NODE_COLORS,
+  type NodeColor,
+  type StoredNodeColor,
+  type StoredNodeSignalStyle,
+  type StoredNodeStyle,
+} from "./appearance";
 
 /** A joining node takes roughly three to five anchors. */
 export const MIN_ANCHORS = 3;
@@ -55,16 +52,11 @@ const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
  */
 const ANGLE_JITTER = 0.08;
 
-/** Deterministic node colour for an app user. */
-export function pickNodeColor(userId: string): NodeColor {
-  return NODE_COLORS[hashUserId(userId) % NODE_COLORS.length];
-}
-
 /** Deterministic anchor count for an app user, within `[MIN_ANCHORS, MAX_ANCHORS]`. */
 export function chooseAnchorCount(userId: string): number {
   const span = MAX_ANCHORS - MIN_ANCHORS + 1;
-  // A different slice of the hash than pickNodeColor uses, so colour and anchor
-  // count are not correlated.
+  // Salted, so anchor count and world position are drawn from different slices
+  // of the hash and cannot correlate.
   return MIN_ANCHORS + (hashUserId(`anchors:${userId}`) % span);
 }
 

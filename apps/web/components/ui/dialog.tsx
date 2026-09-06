@@ -38,7 +38,29 @@ function DialogOverlay({
     <DialogPrimitive.Overlay
       data-slot="dialog-overlay"
       className={cn(
-        "fixed inset-0 isolate z-50 bg-black/10 duration-100 supports-backdrop-filter:backdrop-blur-xs data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
+        /*
+          The artboards' modal scrim, as the default rather than as an override
+          each dialog remembers to pass.
+
+          `rgba(20,30,45,.34)` is what all eight artboards that draw a modal use
+          — Collections, Explore, Landing, My Page, Saved, Saved copy, Taken
+          Courses and Workspace Pane. It was shadcn's blurred `bg-black/10` here,
+          and six dialogs each carried an `overlayClassName` to get back to the
+          design; four of those six had copied Landing's one-off
+          `rgba(14,26,44,.34)` by mistake, which is how a single scrim became
+          four values in the app. A default nobody has to remember is what stops
+          that recurring.
+
+          Flat, with no blur: what is behind a dialog is the thing the dialog is
+          about, and it has to stay readable while the reader decides. Every one
+          of those six overrides had already turned the blur off.
+
+          Two scrims legitimately differ and still say so at the call site: the
+          mobile drawer is `rgba(20,30,45,.4)` (`Mobile Preview.dc.html:242`) and
+          Find your dot is `rgba(14,26,44,.34)`, dropping to `.08` while the dot
+          is revealing (`Landing.dc.html:164,1493`).
+        */
+        "fixed inset-0 isolate z-50 bg-[rgba(20,30,45,0.34)] duration-100 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
         className,
       )}
       {...props}
@@ -63,7 +85,27 @@ function DialogContent({
       <DialogPrimitive.Content
         data-slot="dialog-content"
         className={cn(
-          "fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl bg-popover p-4 text-sm text-popover-foreground ring-1 ring-foreground/10 duration-100 outline-none sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+          /*
+            `max-w-[calc(100%-2rem)]` is the phone guard, and it is the only
+            opinion this primitive has about width. There used to be an
+            `sm:max-w-sm` beside it, and it was a trap (#178).
+
+            tailwind-merge keeps `sm:max-w-*` and plain `max-w-*` in different
+            groups, so neither a caller's `w-[440px]` nor its `max-w-4xl`
+            replaced it: from the `sm` breakpoint up the dialog rendered at
+            384px, whatever it had asked for. Nothing errored and no test failed,
+            so it only showed up if someone measured — and two dialogs were wrong
+            on screen for it while two more carried an `sm:max-w-[440px]` to work
+            around a clamp that is invisible from the call site.
+
+            So a caller now states its own width and gets it. A caller that wants
+            a *cap* rather than a width overrides this class and takes the phone
+            guard with it, so it should state both at once —
+            `max-w-[min(56rem,calc(100vw-2rem))]`, the way `Review` does. The two
+            callers that were happy at 384px, `CommandDialog` and the editor's
+            `useEditorModal`, now say `sm:max-w-sm` for themselves.
+          */
+          "fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl bg-popover p-4 text-sm text-popover-foreground ring-1 ring-foreground/10 duration-100 outline-none data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
           className,
         )}
         {...props}

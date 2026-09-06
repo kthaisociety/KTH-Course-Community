@@ -10,11 +10,13 @@
     "includes": [
       "**",
       "!node_modules",
+      "!.claude",
       "!.next",
       "!dist",
       "!build",
       "!migrations",
-      "!drizzle"
+      "!drizzle",
+      "!docs/design_ref"
     ]
   },
   "formatter": {

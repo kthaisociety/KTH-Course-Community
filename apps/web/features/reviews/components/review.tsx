@@ -1,8 +1,7 @@
 "use client";
 
 import { useForm } from "@tanstack/react-form";
-import { useEffect, useState } from "react";
-import { z } from "zod";
+import { useEffect, useMemo, useState } from "react";
 import { RichTextEditor } from "@/components/RichEditor";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -31,16 +30,15 @@ import { Slider } from "@/components/ui/slider";
 import { Spinner } from "@/components/ui/spinner";
 import { Switch } from "@/components/ui/switch";
 import { useMe } from "@/features/auth";
-import type { ExaminationDistribution } from "@/types";
+import type { ExaminationDistribution, Review as ReviewModel } from "@/types";
 import {
   EXAMINATION_DISTRIBUTION_KEYS,
   EXAMINATION_DISTRIBUTION_LABELS,
-  examinationDistributionSchema,
   MAX_REVIEW_SCORE,
-  percentSchema,
-  reviewScoreSchema,
 } from "@/types";
 import { useAddReview } from "../hooks/use-add-review";
+import { useEditReview } from "../hooks/use-edit-review";
+import { reviewFormSchema } from "../lib/review-form-schema";
 
 export type ReviewFormData = {
   happyTook: boolean;
@@ -62,23 +60,7 @@ const EMPTY_DISTRIBUTION: ExaminationDistribution = {
   other: 0,
 };
 
-// The form shares the wire contract from `@/types` and adds only what is
-// specific to writing a review in a dialog: a message that is not just markup.
-const formSchema = z.object({
-  happyTook: z.boolean(),
-  message: z
-    .string()
-    .refine(
-      (html) => html.replace(/<[^>]*>/g, "").trim().length > 0,
-      "Write a review.",
-    ),
-  examinationDistribution: examinationDistributionSchema.nullable(),
-  approachTheoryPercent: percentSchema.nullable(),
-  workloadScore: reviewScoreSchema,
-  learningScore: reviewScoreSchema,
-});
-
-const defaultValues: ReviewFormData = {
+const emptyValues: ReviewFormData = {
   happyTook: false,
   message: "",
   examinationDistribution: null,
@@ -87,25 +69,108 @@ const defaultValues: ReviewFormData = {
   learningScore: 0,
 };
 
+/** A published review being rewritten, as the form needs to see it. */
+export type EditableReview = ReviewFormData & { id: string };
+
+/**
+ * A stored review as the editor takes it.
+ *
+ * The form needs a string, so a review with no message opens empty — and goes
+ * back as `null`, because the dialog only asks for prose when publishing a
+ * first review and the hooks store an untyped-in editor as nothing written.
+ *
+ * It lives beside `EditableReview` rather than beside either list that offers
+ * editing: a course page's `ReviewList` and My Page's own reviews both open the
+ * same dialog, and two copies of this would be two chances for them to open it
+ * differently.
+ */
+export function toEditableReview(review: ReviewModel): EditableReview {
+  return {
+    id: review.id,
+    happyTook: review.happyTook,
+    message: review.message ?? "",
+    examinationDistribution: review.examinationDistribution,
+    approachTheoryPercent: review.approachTheoryPercent,
+    workloadScore: review.workloadScore,
+    learningScore: review.learningScore,
+  };
+}
+
 type ReviewProps = {
   courseCode: string;
   openOnLoad?: boolean;
+  /**
+   * The review being rewritten. Given one, the dialog edits rather than
+   * creates: it opens with that review's answers, has no trigger button of its
+   * own, and submits to `reviews.update`. The parent mounts it fresh (a `key`
+   * on the review id) because the form and the rich-text editor both read
+   * their starting values once.
+   *
+   * Only a review's author is offered this, and the server enforces that
+   * independently — an id belonging to someone else is refused there.
+   */
+  editing?: EditableReview;
+  /**
+   * Renders no trigger button of its own, leaving the opening to `openOnLoad`.
+   *
+   * Taken courses (#92) walks a queue of unreviewed courses and mounts one of
+   * these per course; the row the reader clicked is the trigger, so a second
+   * "Add Review" button sitting under the list would open a dialog that is
+   * already open. `editing` implies this — a review being rewritten is opened
+   * from its own card.
+   */
+  triggerless?: boolean;
+  /**
+   * Called whenever the dialog closes, whether the review was published or
+   * abandoned.
+   *
+   * Required alongside `editing`, where the parent owns the open state, and
+   * alongside `triggerless`, where the parent is what decides whether anything
+   * opens next.
+   */
+  onClose?: () => void;
 };
 
 export function Review({
   courseCode,
   openOnLoad = false,
+  editing,
+  triggerless = false,
+  onClose,
 }: Readonly<ReviewProps>) {
   const { userId, isLoading } = useMe();
   const addReview = useAddReview();
-  const [dialogIsOpen, setDialogIsOpen] = useState(openOnLoad);
+  const editReview = useEditReview();
+  const [dialogIsOpen, setDialogIsOpen] = useState(
+    openOnLoad || Boolean(editing),
+  );
+  // Prose is required to publish a first review, not to keep one. A review
+  // already stored with no message is a valid row, and its author has to be
+  // able to correct a score without inventing text to go with it.
+  const isEditing = Boolean(editing);
+  const formSchema = useMemo(
+    () => reviewFormSchema({ requireMessage: !isEditing }),
+    [isEditing],
+  );
   const form = useForm({
-    defaultValues,
+    defaultValues: editing
+      ? {
+          happyTook: editing.happyTook,
+          message: editing.message,
+          examinationDistribution: editing.examinationDistribution,
+          approachTheoryPercent: editing.approachTheoryPercent,
+          workloadScore: editing.workloadScore,
+          learningScore: editing.learningScore,
+        }
+      : emptyValues,
     validators: { onSubmit: formSchema },
     onSubmit: async ({ value }) => {
-      const success = await addReview(courseCode, value);
+      const success = editing
+        ? await editReview(editing.id, value)
+        : await addReview(courseCode, value);
       if (success) {
         setDialogIsOpen(false);
+        onClose?.();
         form.reset();
       }
     },
@@ -127,19 +192,44 @@ export function Review({
         open={dialogIsOpen}
         onOpenChange={(open) => {
           setDialogIsOpen(open);
-          if (!open) form.reset();
+          if (!open) {
+            form.reset();
+            onClose?.();
+          }
         }}
       >
-        <DialogTrigger asChild>
-          <Button className="flex-1" type="button" aria-label="Add review">
-            Add Review
-          </Button>
-        </DialogTrigger>
-        <DialogContent className="max-h-[100vh] max-w-4xl min-w-3xl overflow-y-auto">
+        {editing || triggerless ? null : (
+          <DialogTrigger asChild>
+            <Button className="flex-1" type="button" aria-label="Add review">
+              Add Review
+            </Button>
+          </DialogTrigger>
+        )}
+        {/*
+          The width is one `max-w-*` that already carries its own viewport
+          guard. It used to be `max-w-4xl min-w-3xl`, and the floor was the bug
+          (#165): `min-w-3xl` is 768px, min-width beats max-width in CSS, and it
+          therefore beat `DialogContent`'s own `max-w-[calc(100%-2rem)]` too — so
+          on any phone the dialog was wider than the screen and the page scrolled
+          sideways. This is reachable: it is the edit-review dialog, opened from
+          My Page.
+
+          `w-full` is what supplies the floor now, and it cannot fight the
+          viewport the way a fixed `min-w-*` could: the element is `fixed`, so it
+          takes the whole viewport and the `min()` caps it — 896px wherever there
+          is room for 896px, and the viewport less a 1rem gutter wherever there
+          is not. Both halves of the cap are stated here because a plain
+          `max-w-*` replaces the primitive's guard rather than joining it.
+        */}
+        <DialogContent className="scrollbar-subtle max-h-[100vh] w-full max-w-[min(56rem,calc(100vw-2rem))] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Share Your Experience</DialogTitle>
+            <DialogTitle>
+              {editing ? "Edit your review" : "Share Your Experience"}
+            </DialogTitle>
             <DialogDescription>
-              Help other students by sharing your thoughts about this course.
+              {editing
+                ? "Change anything you like. Your review replaces the one already published."
+                : "Help other students by sharing your thoughts about this course."}
             </DialogDescription>
           </DialogHeader>
 
@@ -375,6 +465,7 @@ export function Review({
                     return (
                       <Field data-invalid={isInvalid}>
                         <RichTextEditor
+                          initialHtml={editing?.message}
                           onContentChange={(content) =>
                             field.handleChange(content)
                           }
@@ -412,7 +503,7 @@ export function Review({
                     disabled={isSubmitting}
                   >
                     {isSubmitting ? <Spinner data-icon="inline-start" /> : null}
-                    Submit Review
+                    {editing ? "Save changes" : "Submit Review"}
                   </Button>
                 </>
               )}
