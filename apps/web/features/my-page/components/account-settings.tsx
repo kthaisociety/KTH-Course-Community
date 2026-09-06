@@ -5,19 +5,43 @@ import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+  ConfirmDialog,
+  type ConfirmRequest,
+} from "@/components/ui/confirm-dialog";
 import { Switch } from "@/components/ui/switch";
 import { useLogout } from "@/features/auth";
 import { useClearStoredGrades, useDeleteAccount } from "../api/mutations";
 import type { TakenCourse } from "../api/queries";
+
+/**
+ * The two questions this section can ask, keyed by the state that asks them.
+ *
+ * Hoisted because `confirming` already names which one is open, so a lookup is
+ * the whole of the branching — and because the account question is the most
+ * destructive in the app and its wording should be readable without stepping
+ * through JSX to find it.
+ *
+ * Both are deliberate deviations from the artboard, which removes and then
+ * offers a note: `user.delete` cascades across taken courses, collections,
+ * reviews and votes, and clearing grades drops every value read from a
+ * transcript. Neither has an undo to offer once it has run (#155).
+ */
+const CONFIRMATIONS: Record<"grades" | "account", ConfirmRequest> = {
+  grades: {
+    eyebrow: "Grades",
+    title: "Delete the grades already stored?",
+    body: "Turning this off removes every grade read from your transcript, and your average with it. Course names, credits and terms stay. To get grades back you upload the transcript again with grade reading switched on.",
+    cancelLabel: "Keep my grades",
+    actionLabel: "Delete grades",
+  },
+  account: {
+    eyebrow: "Account",
+    title: "Delete your account?",
+    body: "Your course list, grades, collections and the reviews you published are removed with it. This cannot be undone.",
+    cancelLabel: "Keep my account",
+    actionLabel: "Delete account",
+  },
+};
 
 type Props = {
   /** The viewer's taken courses — the rows the grade switch actually acts on. */
@@ -239,66 +263,14 @@ export function AccountSettings({
         </div>
       </div>
 
-      <AlertDialog
-        open={confirming === "grades"}
-        onOpenChange={(open) => {
-          if (!open) setConfirming(null);
+      <ConfirmDialog
+        request={confirming ? CONFIRMATIONS[confirming] : null}
+        onCancel={() => setConfirming(null)}
+        onConfirm={() => {
+          if (confirming === "grades") void handleClearGrades();
+          if (confirming === "account") void handleDeleteAccount();
         }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              Delete the grades already stored?
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              Turning this off removes every grade read from your transcript,
-              and your average with it. Course names, credits and terms stay. To
-              get grades back you upload the transcript again with grade reading
-              switched on.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Keep my grades</AlertDialogCancel>
-            <AlertDialogAction
-              variant="destructive"
-              onClick={() => void handleClearGrades()}
-            >
-              Delete grades
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/*
-        The dialog comes *before* the deletion, never after it: `user.delete`
-        cascades across taken courses, collections, reviews and votes, and there
-        is no undo to offer once it has run.
-      */}
-      <AlertDialog
-        open={confirming === "account"}
-        onOpenChange={(open) => {
-          if (!open) setConfirming(null);
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete your account?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Your course list, grades, collections and the reviews you
-              published are removed with it. This cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Keep my account</AlertDialogCancel>
-            <AlertDialogAction
-              variant="destructive"
-              onClick={() => void handleDeleteAccount()}
-            >
-              Delete account
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      />
     </div>
   );
 }

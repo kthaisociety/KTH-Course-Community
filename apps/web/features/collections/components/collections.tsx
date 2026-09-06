@@ -4,6 +4,7 @@ import { Check, Lock, Plus } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { type AuthReason, AuthReasonDialog, useMe } from "@/features/auth";
 import {
   addableCourseCodes,
@@ -23,7 +24,6 @@ import type { CardGeometry } from "@/types";
 import { CollectionChip } from "./collection-chip";
 import { CollectionDetail, type SavedCourse } from "./collection-detail";
 import { CollectionTile } from "./collection-tile";
-import { ConfirmDialog } from "./confirm-dialog";
 import { EmptyPanel } from "./empty-panel";
 import { NewCollectionDialog } from "./new-collection-dialog";
 

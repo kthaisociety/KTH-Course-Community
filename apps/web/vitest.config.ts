@@ -33,7 +33,11 @@ export default defineConfig({
         test: {
           name: "ui",
           environment: "jsdom",
-          include: ["features/**/*.spec.tsx"],
+          // `components/**` is here because `components/ui/confirm-dialog.tsx`
+          // is app UI with real behaviour to test, not a vendored shadcn
+          // primitive: it moved up from `features/collections/` when a third
+          // screen needed it, and its suite has to move with it.
+          include: ["features/**/*.spec.tsx", "components/**/*.spec.tsx"],
           setupFiles: ["./vitest.setup.ts"],
         },
       },

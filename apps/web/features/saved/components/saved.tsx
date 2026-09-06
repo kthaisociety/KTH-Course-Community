@@ -3,13 +3,14 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   type AuthReason,
   AuthReasonDialog,
   useMe,
   useRequireSession,
 } from "@/features/auth";
-import { Collections, ConfirmDialog } from "@/features/collections";
+import { Collections } from "@/features/collections";
 import {
   CourseCardItem,
   courseCardGeometry,
