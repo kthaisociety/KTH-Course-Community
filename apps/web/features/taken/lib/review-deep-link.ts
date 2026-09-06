@@ -3,15 +3,15 @@
  *
  * My Page has no reviewer of its own — `/taken` owns the queue — so the only
  * thing it can say about a course the reader picked is what it puts in the URL.
- * The parameter used to be the bare flag `1`, which could say "open the
- * reviewer" and nothing else, so a row and the "Fast track all N" button
- * deep-linked to the very same place and the named course was discarded.
+ * The parameter therefore carries a course code, not just a flag: with only the
+ * flag, a row and the "Fast track all N" button deep-link to the same place and
+ * the named course is discarded.
  */
 
 /**
- * `review=1` — the original contract. It still means what it always meant: open
- * the reviewer, on no particular course. Kept so a link somebody bookmarked,
- * or a tab left open across this deploy, still lands where it used to.
+ * `review=1` — open the reviewer, on no particular course. It is also the older
+ * spelling of this parameter, so it stays understood: a bookmarked link or a
+ * long-open tab still lands where it expects to.
  */
 export const REVIEW_ALL = "1";
 

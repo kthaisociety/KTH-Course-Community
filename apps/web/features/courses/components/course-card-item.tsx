@@ -10,7 +10,9 @@ import type { CardGeometry } from "@/types";
 type Props = UseCourseCardOptions & {
   /**
    * The screen's, because the collapse ramp belongs to whatever owns the
-   * column's width: Explore interpolates it, Saved and Collections pin an end.
+   * column's width. See `features/courses/lib/card-geometry.ts`; do not name
+   * the screens that ramp and the screens that pin here, because that list has
+   * already drifted.
    */
   geo: CardGeometry;
   /** Opens the picker upwards, for a card near the bottom of a page. */

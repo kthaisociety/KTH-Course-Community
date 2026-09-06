@@ -41,8 +41,8 @@ export { CourseCard } from "./components/course-card";
 export { CourseCardItem } from "./components/course-card-item";
 export type { UseCourseCardOptions } from "./hooks/use-course-card";
 /**
- * The collapse ramp. The parent owns it: Explore interpolates from its results
- * column, Saved and Collections pin an end.
+ * The collapse ramp. The parent owns it — a screen that measures its column
+ * interpolates, one that cannot pins an end. See `lib/card-geometry.ts`.
  */
 export {
   CARD_RAMP_CEILING,
