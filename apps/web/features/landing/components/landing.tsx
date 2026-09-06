@@ -363,12 +363,22 @@ export function Landing() {
         className="relative min-h-[480px] lg:min-h-[400px] lg:flex-1 overflow-hidden"
       >
         {/* The graph clears with everything else. It is the backdrop the bar is
-            leaving, and a still canvas sitting behind a page that has faded out
-            would be the last thing on screen when the route swaps. */}
+            leaving, and a canvas sitting behind a page that has faded out would
+            be the last thing on screen when the route swaps.
+
+            It takes the pointer now: clicking a node bursts a signal out along
+            every backbone edge that node has inside the drawn graph window
+            (ADR 0006), so the canvas cannot be `pointer-events-none`. What
+            keeps the copy winning is the layer below rather than a listener
+            with a denylist — see the note there.
+
+            `aria-hidden` stays, and covers the canvas too. A burst conveys
+            nothing, changes nothing and leads nowhere; `hero-network.tsx` says
+            why at length. */}
         <motion.div
           variants={HERO_EXIT}
           aria-hidden
-          className="pointer-events-none absolute inset-0 z-0"
+          className="absolute inset-0 z-0"
         >
           {/*
             Find your dot only labels a node that is already on the canvas. The
@@ -382,8 +392,28 @@ export function Landing() {
           />
         </motion.div>
 
-        <div className="relative z-[1] flex min-h-[480px] lg:h-full lg:min-h-0 flex-col items-center justify-center px-4 @lg:px-7">
-          <div className="flex w-full max-w-[720px] flex-col items-center text-center">
+        {/*
+          The copy sits above the graph, and only the copy does.
+
+          Both wrappers are `pointer-events-none` and every `data-hero-clear`
+          block below is `pointer-events-auto`, which makes one rule out of two
+          things that were already true separately: **what the keep-out reserves
+          keeps the pointer, and everything else is canvas.** The search bar, the
+          chips, Find your dot and the header all win the hit they always won —
+          they are inside the blocks the graph is already forbidden to draw on —
+          and the gaps between them, which is where the nodes actually are, reach
+          the canvas.
+
+          Without this the layer is a full-bleed transparent div over the whole
+          hero and no click ever reaches a node. The alternative the artboard
+          reaches for — `onDocDown` (:1443), a capture-phase document listener
+          with a hand-maintained denylist of selectors — is deliberately not
+          ported: a list of things that must not be clicked has to be edited
+          every time this page grows a control, and forgetting is a dead button
+          rather than a failing build.
+        */}
+        <div className="pointer-events-none relative z-[1] flex min-h-[480px] lg:h-full lg:min-h-0 flex-col items-center justify-center px-4 @lg:px-7">
+          <div className="pointer-events-none flex w-full max-w-[720px] flex-col items-center text-center">
             {/* The artboard's 70px, and it is load-bearing: it grows the
                 centred column at the top, which is what sits the hero copy
                 where the artboard has it rather than 64px higher.
@@ -396,7 +426,7 @@ export function Landing() {
             <motion.p
               variants={HERO_EXIT}
               data-hero-clear
-              className="mt-[70px] @lg:mt-[58px] mb-0 font-semibold text-[11px] text-cc-dim uppercase tracking-[0.09em]"
+              className="pointer-events-auto mt-[70px] @lg:mt-[58px] mb-0 font-semibold text-[11px] text-cc-dim uppercase tracking-[0.09em]"
             >
               Run by students at KTH
             </motion.p>
@@ -404,7 +434,7 @@ export function Landing() {
               variants={HERO_EXIT}
               onAnimationComplete={onExitComplete}
               data-hero-clear
-              className="mt-3.5 text-balance font-semibold text-[30px] @lg:text-[44px] leading-[1.08] tracking-[-0.025em]"
+              className="pointer-events-auto mt-3.5 text-balance font-semibold text-[30px] @lg:text-[44px] leading-[1.08] tracking-[-0.025em]"
             >
               Find the Course You Will Be Happy You Took
             </motion.h1>
@@ -441,7 +471,7 @@ export function Landing() {
                 event.preventDefault();
                 submitSearch(query);
               }}
-              className="mt-4 @lg:mt-[31px] flex h-[42px] w-full @lg:max-w-[560px] items-center gap-2.5 rounded-[10px] border border-cc-rule3 bg-cc-surface px-3.5"
+              className="pointer-events-auto mt-4 @lg:mt-[31px] flex h-[42px] w-full @lg:max-w-[560px] items-center gap-2.5 rounded-[10px] border border-cc-rule3 bg-cc-surface px-3.5"
             >
               <Search
                 size={16}
@@ -462,7 +492,7 @@ export function Landing() {
             <motion.div
               variants={HERO_EXIT}
               data-hero-clear
-              className="mt-6 @lg:mt-[36px] flex flex-wrap items-center justify-center gap-[7px]"
+              className="pointer-events-auto mt-6 @lg:mt-[36px] flex flex-wrap items-center justify-center gap-[7px]"
             >
               <span className="text-[12px] text-cc-dim">Try</span>
               {TRY.map((term) => (
@@ -482,7 +512,7 @@ export function Landing() {
             <motion.p
               variants={HERO_EXIT}
               data-hero-clear
-              className="mt-5 flex items-center gap-1.5 text-[12.5px] text-cc-dim"
+              className="pointer-events-auto mt-5 flex items-center gap-1.5 text-[12.5px] text-cc-dim"
             >
               <span>Already a member?</span>
               <button

@@ -1,21 +1,26 @@
-import { render } from "@testing-library/react";
+import { fireEvent, render } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { GraphWindow } from "../api/queries";
 import { NODE_RADIUS } from "../lib/neighbourhood-view";
 import { HeroNetwork } from "./hero-network";
 
 /**
- * What the hero canvas repaints for.
+ * What the hero canvas repaints for, and what it refuses to run a loop for.
  *
- * The scene is the real community graph, and a graph of stored world positions
- * does not move — so this canvas is painted on demand rather than 60 times a
- * second, and the pulse on a labelled node is the only thing that ever runs a
- * frame loop. That is the right shape, but it moves the burden: every input
- * `draw()` reads now needs an explicit trigger, and an input without one leaves
- * stale pixels on screen indefinitely rather than for 16ms.
+ * This file used to argue that "a graph of stored world positions does not
+ * move — so this canvas is painted on demand rather than 60 times a second".
+ * **ADR 0006 reverses that.** Nodes drift, signals travel, and the loop is
+ * real; what bounds it is now four gates rather than an empty scene, and those
+ * gates are what these tests hold. `hero-signals.spec.ts` holds the model the
+ * loop drives; this file holds the canvas around it.
  *
- * These tests are that checklist, executable. Each one names an input and
- * asserts that changing it repaints.
+ * The repaint checklist below survives the reversal and still earns its keep,
+ * because every gate closing lands the canvas back in exactly the old
+ * situation: a paused hero, a hidden tab, a hero scrolled off screen and — for
+ * as long as somebody's machine asks for it — reduced motion, where no frame is
+ * ever run at all. An input without an explicit repaint leaves stale pixels
+ * there indefinitely rather than for 16ms, which is what the reported theme bug
+ * was. Each test names an input and asserts that changing it repaints.
  */
 
 /**
@@ -147,6 +152,8 @@ const WINDOW: GraphWindow = {
 let recorder: ReturnType<typeof recordingContext>;
 /** The callback the scene hands to its ResizeObserver, so a test can fire it. */
 let onResize: (() => void) | null;
+/** The callback the scene hands to its IntersectionObserver, likewise. */
+let onIntersect: ((entries: { isIntersecting: boolean }[]) => void) | null;
 /** Resolves the stand-in `document.fonts.ready`, on the test's cue. */
 let loadFonts: () => void;
 let realGetContext: HTMLCanvasElement["getContext"];
@@ -155,6 +162,7 @@ let realMatchMedia: typeof window.matchMedia;
 beforeEach(() => {
   recorder = recordingContext();
   onResize = null;
+  onIntersect = null;
   realGetContext = HTMLCanvasElement.prototype.getContext;
   realMatchMedia = window.matchMedia;
   // jsdom has no ResizeObserver, and the scene prefers one over the window
@@ -164,6 +172,20 @@ beforeEach(() => {
     class {
       constructor(callback: () => void) {
         onResize = callback;
+      }
+      observe() {}
+      disconnect() {}
+    },
+  );
+  // The hero stops its loop when it scrolls out of view, and jsdom has no
+  // IntersectionObserver — so standing one up is what lets that gate be driven
+  // rather than assumed. Absent one, `onScreen` stays true; that is the
+  // fallback, and it is what every other test here runs under.
+  vi.stubGlobal(
+    "IntersectionObserver",
+    class {
+      constructor(callback: (entries: { isIntersecting: boolean }[]) => void) {
+        onIntersect = callback;
       }
       observe() {}
       disconnect() {}
@@ -194,6 +216,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  Reflect.deleteProperty(HTMLCanvasElement.prototype, "getBoundingClientRect");
   document.documentElement.className = "";
   document.documentElement.removeAttribute("data-cc-theme");
   document.documentElement.removeAttribute("style");
@@ -204,6 +227,78 @@ afterEach(() => {
 
 /** Let a MutationObserver callback, which runs as a microtask, land. */
 const settle = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
+
+/**
+ * Ask for stillness — **before** the scene is built.
+ *
+ * `prefersReducedMotion()` is read once at mount and then only re-read when the
+ * media query fires a change, so a test that flips this after rendering is
+ * testing the change listener rather than the preference.
+ */
+function preferReducedMotion() {
+  window.matchMedia = vi.fn().mockReturnValue({
+    matches: true,
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+  }) as unknown as typeof window.matchMedia;
+}
+
+/**
+ * A hand-cranked `requestAnimationFrame`, so a test can run frames one at a
+ * time and know exactly how much time passed in each.
+ *
+ * The loop re-requests itself every frame, so `step` always drives the most
+ * recent callback. The clock is the test's, not the machine's: the scene clamps
+ * a frame to 50ms, so 20ms a step is an ordinary frame rather than a catch-up.
+ */
+function frameClock() {
+  const pending: FrameRequestCallback[] = [];
+  let now = 1000;
+  const request = vi
+    .spyOn(window, "requestAnimationFrame")
+    .mockImplementation((callback) => {
+      pending.push(callback);
+      return pending.length;
+    });
+  const cancel = vi
+    .spyOn(window, "cancelAnimationFrame")
+    .mockImplementation(() => {});
+  vi.spyOn(performance, "now").mockImplementation(() => now);
+  return {
+    request,
+    cancel,
+    get frames() {
+      return pending.length;
+    },
+    step(ms = 20) {
+      now += ms;
+      pending[pending.length - 1]?.(now);
+    },
+    restore() {
+      request.mockRestore();
+      cancel.mockRestore();
+      vi.mocked(performance.now).mockRestore();
+    },
+  };
+}
+
+/** The canvas has a real box, so a pointer event has somewhere to land. */
+function giveCanvasABox(width = 320, height = 220) {
+  HTMLCanvasElement.prototype.getBoundingClientRect = vi.fn(
+    () =>
+      ({
+        left: 0,
+        top: 0,
+        right: width,
+        bottom: height,
+        width,
+        height,
+        x: 0,
+        y: 0,
+        toJSON: () => ({}),
+      }) as DOMRect,
+  );
+}
 
 describe("HeroNetwork repaints when", () => {
   // The reported bug. Every colour is a `--cc-*` token resolved at draw time,
@@ -537,7 +632,18 @@ describe("HeroNetwork draws a node's appearance", () => {
     expect(paths).toHaveLength(1);
   });
 
+  /**
+   * The three still marks, which are now the **reduced-motion** form.
+   *
+   * A machine that has asked for stillness gets no drift, no travelling signal
+   * and no frame loop — but a member who spent a whole transcript on tier 3
+   * still has to be shown what they picked, so the style is drawn as a mark
+   * around the node. Everything under here therefore asks for reduced motion
+   * first; on an ordinary machine these same three styles are wakes behind a
+   * moving head instead, which is `hero-signals.spec.ts`'s subject.
+   */
   it("draws concentric rings, all wider than the node, for the fade signal", () => {
+    preferReducedMotion();
     const rings = paintOnce(windowOf({ signalStyle: "fade" })).filter(
       (path) => path.stroked && path.arcs.length === 1,
     );
@@ -550,6 +656,7 @@ describe("HeroNetwork draws a node's appearance", () => {
   });
 
   it("draws a broken ring for the dashed signal, and leaves no pattern behind", () => {
+    preferReducedMotion();
     const dashed = paintOnce(windowOf({ signalStyle: "dashed" })).filter(
       (path) => path.dash.length > 0,
     );
@@ -566,6 +673,7 @@ describe("HeroNetwork draws a node's appearance", () => {
    * across it. A node to the right of centre must trail off to the right.
    */
   it("trails a comet outward, away from the centre of the frame", () => {
+    preferReducedMotion();
     const segments = paintOnce({
       centre: { x: 0, y: 0 },
       nodes: [node({ id: "n", ...CLEAR_RIGHT, signalStyle: "comet" })],
@@ -591,15 +699,16 @@ describe("HeroNetwork draws a node's appearance", () => {
   });
 
   /**
-   * The whole canvas rests on painting when an input changes rather than 60
-   * times a second, and a signal is the obvious place to break that. Nothing
-   * added here animates: a scene with every signal style on it and no label
-   * must not arm a frame loop.
+   * The reversal, asserted.
+   *
+   * This test used to be "never starts a frame loop for a signal, however many
+   * are on screen", and it was the load-bearing statement of the old design.
+   * ADR 0006 reverses it: the field drifts and signals travel, so the loop runs
+   * with no label, no click and nobody having asked for anything. What replaces
+   * the old guarantee is the four gates below.
    */
-  it("never starts a frame loop for a signal, however many are on screen", () => {
-    const frame = vi
-      .spyOn(window, "requestAnimationFrame")
-      .mockReturnValue(1 as unknown as number);
+  it("runs a frame loop for the drifting graph window, label or no label", () => {
+    const clock = frameClock();
     try {
       render(
         <HeroNetwork
@@ -616,16 +725,58 @@ describe("HeroNetwork draws a node's appearance", () => {
         />,
       );
 
-      expect(frame).not.toHaveBeenCalled();
+      expect(clock.request).toHaveBeenCalled();
     } finally {
-      frame.mockRestore();
+      clock.restore();
+    }
+  });
+
+  /**
+   * The gate that has to hold hardest, because it is the one somebody asked
+   * for. Reduced motion is not a dimmer switch here: no drift, no travelling
+   * signal, no frame at all — the three still marks and nothing else.
+   */
+  it("runs no frame at all when the machine has asked for stillness", () => {
+    preferReducedMotion();
+    const clock = frameClock();
+    try {
+      render(<HeroNetwork window={WINDOW} labelled={true} />);
+
+      expect(clock.request).not.toHaveBeenCalled();
+    } finally {
+      clock.restore();
+    }
+  });
+
+  /**
+   * The gate the old paint-on-demand canvas never needed.
+   *
+   * The landing page is taller than its hero, so a reader down among the
+   * sections would otherwise pay sixty frames a second for a graph window
+   * nobody can see.
+   */
+  it("stops the loop once the hero has scrolled out of view, and resumes", () => {
+    const clock = frameClock();
+    try {
+      render(<HeroNetwork window={WINDOW} labelled={false} />);
+      expect(onIntersect).toBeTypeOf("function");
+
+      onIntersect?.([{ isIntersecting: false }]);
+      expect(clock.cancel).toHaveBeenCalled();
+
+      clock.request.mockClear();
+      onIntersect?.([{ isIntersecting: true }]);
+      expect(clock.request).toHaveBeenCalled();
+    } finally {
+      clock.restore();
     }
   });
 
   // The column is free text and the enums may grow. A name this build has never
-  // heard of draws as an ordinary node rather than dropping somebody out of a
-  // neighbourhood or throwing on their behalf.
+  // heard of draws as an ordinary node rather than dropping somebody out of the
+  // graph window or throwing on their behalf.
   it("draws an unknown style or signal as a plain unconfigured node", () => {
+    preferReducedMotion();
     const paths = paintOnce(
       windowOf({ style: "hexagon", signalStyle: "fireworks" }),
     );
@@ -634,5 +785,118 @@ describe("HeroNetwork draws a node's appearance", () => {
       paths.filter((path) => path.filled && path.arcs.length === 1),
     ).toHaveLength(1);
     expect(paths.filter((path) => path.stroked)).toHaveLength(0);
+  });
+});
+
+/**
+ * The canvas takes the pointer now.
+ *
+ * `landing.tsx` makes the copy layer transparent to the pointer everywhere the
+ * keep-out does not reserve, so a click in the gaps between the copy blocks
+ * reaches a node. Nothing here writes a row, changes any state or navigates —
+ * a **burst** is decoration a visitor asked for — which is also why the canvas
+ * stays `aria-hidden`.
+ */
+describe("HeroNetwork under the pointer", () => {
+  /**
+   * Where a node actually landed, read back off the recorder.
+   *
+   * The projection's anchor is a function of the frame and the measured copy,
+   * so hard-coding a screen position here would be asserting the anchor search
+   * rather than the hit test. An ordinary node is the one path with a single
+   * arc at exactly `NODE_RADIUS`, which is a thing the recorder already knows.
+   */
+  function drawnNodes() {
+    return recorder.paths
+      .filter(
+        (path) => path.arcs.length === 1 && path.arcs[0].r === NODE_RADIUS,
+      )
+      .map((path) => path.arcs[0]);
+  }
+
+  /** Two nodes clear of the copy, and the backbone edge between them. */
+  const WITH_EDGE: GraphWindow = {
+    centre: { x: 0, y: 0 },
+    nodes: [
+      node({ id: "a", ...CLEAR_LEFT }),
+      node({ id: "b", x: -260, y: 120 }),
+    ],
+    edges: [{ fromId: "a", toId: "b" }],
+  };
+
+  it("offers a pointer cursor over a node and takes it back off open space", () => {
+    giveCanvasABox();
+    const { getByTestId } = render(
+      <HeroNetwork window={WITH_EDGE} labelled={false} />,
+    );
+    const canvas = getByTestId("hero-network");
+    const dots = drawnNodes();
+    expect(dots.length).toBeGreaterThan(0);
+
+    fireEvent.pointerMove(canvas, { clientX: dots[0].x, clientY: dots[0].y });
+    expect(canvas.style.cursor).toBe("pointer");
+
+    // Well outside the hit radius of anything, and back to the default cursor.
+    fireEvent.pointerMove(canvas, {
+      clientX: dots[0].x + 120,
+      clientY: dots[0].y + 90,
+    });
+    expect(canvas.style.cursor).toBe("");
+  });
+
+  /**
+   * Nothing about the dots is advertised as clickable on a machine that asked
+   * for stillness, because on that machine they are not: the click path is off
+   * with the rest of the motion.
+   */
+  it("advertises nothing when the machine has asked for stillness", () => {
+    preferReducedMotion();
+    giveCanvasABox();
+    const { getByTestId } = render(
+      <HeroNetwork window={WITH_EDGE} labelled={false} />,
+    );
+    const canvas = getByTestId("hero-network");
+    const dots = drawnNodes();
+    expect(dots.length).toBeGreaterThan(0);
+
+    fireEvent.pointerMove(canvas, { clientX: dots[0].x, clientY: dots[0].y });
+
+    expect(canvas.style.cursor).toBe("");
+  });
+
+  /**
+   * The whole feature, end to end: a click on a dot puts light on the wire.
+   *
+   * A burst arm leaves at `p = 0` and the envelope is zero there, so this pumps
+   * frames rather than asserting on the click itself — a signal that appeared
+   * fully formed at its sender's own centre would be the bug this catches.
+   * `hero-signals.spec.ts` holds what the arms are; this holds that the click
+   * reaches them at all.
+   */
+  it("bursts light along the graph window's edges when a node is clicked", () => {
+    giveCanvasABox();
+    const clock = frameClock();
+    try {
+      const { getByTestId } = render(
+        <HeroNetwork window={WITH_EDGE} labelled={false} />,
+      );
+      const canvas = getByTestId("hero-network");
+      const dots = drawnNodes();
+      expect(dots.length).toBeGreaterThan(0);
+
+      fireEvent.pointerDown(canvas, { clientX: dots[0].x, clientY: dots[0].y });
+
+      recorder.paths.length = 0;
+      for (let i = 0; i < 40; i++) clock.step();
+
+      // A halo disc: filled, one arc, and wider than any node on the canvas.
+      const halo = recorder.paths.filter(
+        (path) =>
+          path.filled && path.arcs.length === 1 && path.arcs[0].r > NODE_RADIUS,
+      );
+      expect(halo.length).toBeGreaterThan(0);
+    } finally {
+      clock.restore();
+    }
   });
 });

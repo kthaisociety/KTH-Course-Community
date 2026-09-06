@@ -4,6 +4,16 @@ import { useEffect, useRef } from "react";
 import type { GraphWindow } from "../api/queries";
 import { fallbackRects, type Rect, SAFETY } from "../lib/hero-keepout";
 import {
+  advanceField,
+  burstAt,
+  createField,
+  type FieldNode,
+  hitTest,
+  type Signal,
+  signalPaint,
+  syncField,
+} from "../lib/hero-signals";
+import {
   FALLBACK_NODE_COLOR_VAR,
   type GraphWindowView,
   NO_SIGNAL,
@@ -11,6 +21,7 @@ import {
   NODE_RADIUS,
   projectGraphWindow,
   type ScreenNode,
+  VISIBLE,
 } from "../lib/neighbourhood-view";
 
 /**
@@ -22,35 +33,53 @@ import {
  * something a person should have to ask to see, so there is one thing on this
  * canvas now — a bounded window on the stored graph:
  *
- * - a member sees their own neighbourhood, centred on their own node;
- * - a visitor sees a window centred on the community origin, with no "You".
+ * - a member's **graph window** is their own neighbourhood, centred on their
+ *   own node;
+ * - a visitor's is centred on the community origin, with no "You".
  *
  * **Find your dot** no longer swaps anything. The graph is already on screen;
  * the flow only labels the viewer's own node, and the reveal is the pulse and
- * the label appearing. Nothing else changes, which is also what the artboard
- * does: "the graph never moves: the dot grows and pulses in place".
+ * the label appearing. The graph does not rearrange itself for it — the
+ * artboard's words at :814, *"the graph never moves: the dot grows and pulses
+ * in place"* — so the labelled node is also the one node that stops drifting
+ * while the label is up.
  *
- * The graph is still. Real world positions must not appear to wander, and no
- * signal travels along a line, because a **backbone edge records placement
- * history and is not a friendship** — animating a recommendation along one
- * would give it a social meaning the data does not have. The only motion on
- * this canvas is the pulse on the labelled node, so the frame loop runs only
- * while that pulse is on screen and the scene is otherwise drawn once.
+ * **The graph is alive, and that is a decision rather than a default.** Nodes
+ * drift inside a ±5px box around where the projection put them, signals travel
+ * along backbone edges, and a click fans one out along every backbone edge that
+ * node has inside the drawn graph window.
+ * The previous version of this file argued the opposite at length — that a
+ * signal along a **backbone edge** would give it "a social meaning the data
+ * does not have", and that a travelling signal would mean a frame loop that
+ * never stops — and **ADR 0006 reverses both**. The edge is still not a
+ * friendship, in the data or in `CONTEXT.md`; what the canvas asserts is only
+ * that this is a community and things move through it, which is true, and the
+ * still version of this hero made its most expensive feature indistinguishable
+ * from a background image. The frame loop is real, and it is bounded by gates
+ * rather than by having nothing to draw: it runs only while the hero is on
+ * screen, un-paused, un-hidden, and motion is allowed. That is a weaker
+ * guarantee than "painted once" and it is the price the ADR names.
  *
- * **Node appearance is drawn, and none of it animates.** A node draws its
- * `style` as a shape and its `signalStyle` as a mark around that shape. A signal
- * is *ongoing* — `CONTEXT.md` — so it is painted on every frame a node is
- * painted, unlike the **pulse**, which is a one-shot reveal on the viewer's own
- * node and the only thing here that moves. Drawing a signal in motion would mean
- * a frame loop that never stops, which is the one property of this canvas the
- * whole design rests on; the trail is therefore rendered rather than played, and
- * the geometry below says what each style looks like standing still.
+ * **Node appearance is drawn, and the third axis is the thing that moves.** A
+ * node draws its `style` as a shape and its `signalStyle` as the wake its
+ * signals leave — the third and last **personalization tier**, and the only
+ * axis a member reaches by reviewing their entire transcript. Every node
+ * signals; the tier picks the style and never whether it goes. The standing
+ * still marks below (`FADE_RINGS`, `COMET_SEGMENTS`, `DASHED_RING`) are kept as
+ * the **reduced-motion** form of the same three styles, so a member who chose
+ * one still sees what they chose on a machine that has asked for stillness.
+ *
+ * The model — drift, spawn, relay, burst, trail geometry — lives in
+ * `hero-signals.ts` as a pure function of the view and the elapsed time, seeded
+ * from node and edge identity with no `Math.random()` anywhere. This file
+ * measures, projects, paints, and owns the gates.
  *
  * Everything the projection derives — the scale, the anchor, the screen
- * coordinates, the keep-out push — is thrown away on the next resize. None of it
- * is ever sent back. The measuring below is what the derivation is a function
- * of: one padded rect per rendered content block, per line for a text block, so
- * a resize or a font swap re-derives rather than drifts.
+ * coordinates, the keep-out push — is thrown away on the next resize. None of
+ * it is ever sent back, and neither is a pixel of the drift. The measuring
+ * below is what the derivation is a function of: one padded rect per rendered
+ * content block, per line for a text block, so a resize or a font swap
+ * re-derives rather than drifts.
  */
 
 /** `PAL.dotA` and `PAL.lineA` from the Landing artboard's palette. */
@@ -68,21 +97,8 @@ const EDGE_ALPHA = 0.26;
  */
 const DIAMOND_REACH = Math.sqrt(Math.PI / 2);
 
-/** How much fainter than its node a signal is drawn. */
+/** How much fainter than its node a standing-still signal mark is drawn. */
 const SIGNAL_ALPHA = 0.5;
-
-/**
- * The clearance below which a thing is not painted at all.
- *
- * `pushClear` places nodes clear of the copy, so this is 1 for everything on an
- * ordinary frame and the threshold never fires. It fires where the push gave
- * up — a hero whose copy reaches past every edge has nowhere to put anybody —
- * and there it is the whole of the keep-out. **Everything painted on this
- * canvas has to pass it**, the reveal included: the reveal is a bigger mark
- * than the node it replaces, so a labelled viewer exempted from the check would
- * put more ink over the headline than the dot the check just removed.
- */
-const VISIBLE = 0.02;
 
 /**
  * `fade`: concentric rings, each fainter and wider than the last — a trail that
@@ -126,14 +142,22 @@ type Scene = {
   labelled: boolean;
   /** The page is handing itself over to Explore; nothing on this canvas moves. */
   paused: boolean;
+  /** The hero is on screen. Assumed true where there is no IntersectionObserver. */
+  onScreen: boolean;
   window: GraphWindow | null;
   view: GraphWindowView | null;
+  /** Drift and signals: the only mutable state on this canvas. */
+  field: ReturnType<typeof createField>;
+  /** The viewer's node id, so the loop can hold it still while it is labelled. */
+  viewerId: string | null;
+  /** The cursor last written to the canvas, so it is written only on a change. */
+  cursor: string;
   /**
-   * Start and stop the pulse loop. They close over the frame callback, so the
+   * Start and stop the frame loop. They close over the frame callback, so the
    * effect that builds it hands them back here for the props effects to use.
    */
-  startPulse?: () => void;
-  stopPulse?: () => void;
+  startLoop?: () => void;
+  stopLoop?: () => void;
 };
 
 /**
@@ -223,6 +247,12 @@ function nodeColour(palette: Palette, colorVar: string) {
  * Called on every relayout and whenever a read answers, so the projection is
  * always a function of the current frame — which is why it can be thrown away
  * and why none of it is ever persisted.
+ *
+ * The field is pointed at the result rather than rebuilt from it: **reproject,
+ * do not reset**. A resize keeps every node's wander and every signal's
+ * progress, because the people did not change; a refetch mints new ids and so
+ * clears, because different ids are different people-slots. `syncField` is
+ * where both of those fall out of one rule.
  */
 function refreshView(scene: Scene) {
   const measured = measureRects(scene.root, scene.canvas);
@@ -235,6 +265,9 @@ function refreshView(scene: Scene) {
         keepOut,
       })
     : null;
+  syncField(scene.field, scene.view, keepOut, scene.w);
+  scene.viewerId =
+    scene.field.nodes.find((node) => node.node.isViewer)?.node.id ?? null;
 }
 
 function resize(scene: Scene) {
@@ -251,8 +284,17 @@ function resize(scene: Scene) {
   scene.canvas.height = Math.round(h * dpr);
 }
 
+/**
+ * One frame.
+ *
+ * Everything is drawn from the **field** rather than from the view, including
+ * under reduced motion — there the field is simply never advanced, so every
+ * node sits exactly on the home the projection gave it and every edge keeps the
+ * clearance the projection sampled. One set of loops, one set of coordinates,
+ * and no second code path that only runs on somebody else's machine.
+ */
 function draw(scene: Scene) {
-  const { ctx, view } = scene;
+  const { ctx, view, field } = scene;
   ctx.setTransform(scene.dpr, 0, 0, scene.dpr, 0, 0);
   ctx.clearRect(0, 0, scene.w, scene.h);
   // Nobody has joined yet, or the read has not answered. An empty community
@@ -266,33 +308,40 @@ function draw(scene: Scene) {
   // a node, each multiplied by how clear of the copy it landed.
   ctx.strokeStyle = palette.line;
   ctx.lineWidth = 1;
-  for (const edge of view.edges) {
+  for (const edge of field.edges) {
     if (edge.clearance <= VISIBLE) continue;
     ctx.globalAlpha = EDGE_ALPHA * edge.clearance;
     ctx.beginPath();
-    ctx.moveTo(edge.from.screenX, edge.from.screenY);
-    ctx.lineTo(edge.to.screenX, edge.to.screenY);
+    ctx.moveTo(edge.from.x, edge.from.y);
+    ctx.lineTo(edge.to.x, edge.to.y);
     ctx.stroke();
   }
 
   // Signals go under the nodes, so a trail never sits on top of the dot it
   // belongs to. Two passes rather than one interleaved loop, because a node
   // drawn after its own signal would still be drawn before the *next* node's.
-  for (const node of view.nodes) {
-    if (node.clearance <= VISIBLE || node.signalStyle === NO_SIGNAL) continue;
-    drawSignal(scene, palette, node);
+  if (scene.reduced) {
+    for (const node of field.nodes) {
+      if (node.clearance <= VISIBLE || node.node.signalStyle === NO_SIGNAL)
+        continue;
+      drawSignalMark(scene, palette, node);
+    }
+  } else {
+    for (const signal of field.signals) {
+      drawSignal(scene, palette, signal);
+    }
   }
 
-  for (const node of view.nodes) {
+  for (const node of field.nodes) {
     if (node.clearance <= VISIBLE) continue;
     ctx.globalAlpha = NODE_ALPHA * node.clearance;
-    ctx.fillStyle = nodeColour(palette, node.colorVar);
+    ctx.fillStyle = nodeColour(palette, node.node.colorVar);
     ctx.strokeStyle = ctx.fillStyle;
-    drawNodeShape(ctx, node.screenX, node.screenY, NODE_RADIUS, node.style);
+    drawNodeShape(ctx, node.x, node.y, NODE_RADIUS, node.node.style);
   }
 
   if (scene.labelled) {
-    const you = view.nodes.find((node) => node.isViewer);
+    const you = field.nodes.find((node) => node.node.isViewer);
     // The same gate as every other mark. Their node is normally pushed clear
     // and this passes; when the copy left the push nowhere to go it does not,
     // and the reveal goes with the dot rather than being drawn over the
@@ -355,74 +404,111 @@ function drawNodeShape(
 }
 
 /**
- * The signal a node carries, drawn standing still.
+ * A signal in flight, in the wake its sender's `signalStyle` chose.
  *
- * **It does not move, and that is deliberate.** A signal is ongoing rather than
- * one-shot, so it is painted every time its node is painted — but this canvas
- * paints on demand, and a signal that animated would mean a frame loop running
- * for as long as anybody has the landing page open. `hero-network.spec.tsx` is
- * written as the checklist of what triggers a repaint precisely because there is
- * no such loop, and the pulse on the viewer's own node remains the only motion
- * here.
+ * `hero-signals.ts` has already decided everything: where the head is, how
+ * bright it is, how far the wake runs, and what shape it is. This traces the
+ * result. The one decision left here is the colour, and it is the **sending
+ * node's** — the signal is theirs, so it draws in the colour their dot draws
+ * in and no other.
  *
- * `comet` needs a direction, and the only one available is geometric: the trail
- * points away from the middle of the frame. That is stable across repaints, it
- * costs no per-node state, and it leans every trail outward — away from the hero
- * copy, which sits in the middle — rather than across it. A node exactly on the
- * centre has no outward direction and falls back to a fixed diagonal.
+ * `signalPaint` folds the edge's clearance into every alpha it returns, so this
+ * needs no clearance check of its own: a signal running under the copy arrives
+ * already faded to nothing, and one under a copy the push could not clear
+ * arrives at zero and is not returned at all.
+ */
+function drawSignal(scene: Scene, palette: Palette, signal: Signal) {
+  const { ctx } = scene;
+  const paint = signalPaint(scene.field, signal, { dim: scene.labelled });
+  if (!paint) return;
+  const colour = nodeColour(palette, paint.colorVar);
+
+  ctx.fillStyle = colour;
+  ctx.strokeStyle = colour;
+  for (const disc of paint.halo) {
+    ctx.globalAlpha = disc.alpha;
+    ctx.beginPath();
+    ctx.arc(disc.x, disc.y, disc.radius, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  if (paint.dash) ctx.setLineDash?.(paint.dash);
+  ctx.lineCap = "round";
+  for (const stroke of paint.strokes) {
+    ctx.globalAlpha = stroke.alpha;
+    ctx.lineWidth = stroke.width;
+    ctx.beginPath();
+    ctx.moveTo(stroke.fromX, stroke.fromY);
+    ctx.lineTo(stroke.toX, stroke.toY);
+    ctx.stroke();
+  }
+  ctx.lineCap = "butt";
+  // Every later stroke on this frame — the next signal's, an edge, the pulse
+  // ring — is solid, so the pattern is cleared here rather than trusted to be
+  // reset by whoever comes next.
+  if (paint.dash) ctx.setLineDash?.([]);
+
+  ctx.lineWidth = 1;
+  for (const ring of paint.rings) {
+    ctx.globalAlpha = ring.alpha;
+    ctx.beginPath();
+    ctx.arc(ring.x, ring.y, ring.radius, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+}
+
+/**
+ * The **reduced-motion** form of a node's signal style: the same wake, standing
+ * still.
  *
- * The middle of the **frame**, deliberately, and no longer `view.centre`. Those
- * were the same point while the projection was centred on the viewport; now that
+ * A machine that has asked for stillness gets no drift, no travelling signals
+ * and no frame loop — but a member who spent their whole transcript on tier 3
+ * still has to be able to see what they picked, so the style is drawn as a mark
+ * around the node instead. It is the better answer than the export's, which
+ * drops to two anonymous glows on two arbitrary nodes (:892-898) and shows
+ * nobody their own choice.
+ *
+ * `comet` needs a direction, and the only one available standing still is
+ * geometric: the trail points away from the middle of the frame. That is stable
+ * across repaints, it costs no per-node state, and it leans every trail
+ * outward — away from the hero copy, which sits in the middle — rather than
+ * across it. A node exactly on the centre has no outward direction and falls
+ * back to a fixed diagonal.
+ *
+ * The middle of the **frame**, deliberately, and not `view.centre`. Those were
+ * the same point while the projection was centred on the viewport; now that
  * `pickViewportCentre` anchors the graph clear of the copy they are not, and it
  * is the frame the copy sits in the middle of. Aiming at the anchor instead
  * would point the trail of every node below it straight back through the
- * headline. `pushClear` rotates a trail as it moves the node it belongs to,
- * which is right for the same reason: it points away from where the node ended
- * up rather than from where the projection first put it.
+ * headline.
  *
- * One knock-on from the push worth naming: `clearance` is 1 for every node the
- * push placed, so a signal beside the copy is drawn at full strength where it
- * used to be dimmed towards nothing. That is the fix working rather than a
- * regression — the copy is protected by 14px of distance now instead of by
- * dimness — and the margins hold: the longest mark here is `comet`, at
- * `5.4 * NODE_RADIUS` = 21.6px, so it reaches at most 7.6px into a padded rect
- * and stops about 17px short of the text `SAFETY` is padding.
+ * The margins hold: the longest mark here is `comet`, at `5.4 * NODE_RADIUS` =
+ * 21.6px, so it reaches at most 7.6px into a padded rect and stops about 17px
+ * short of the text `SAFETY` is padding.
  */
-function drawSignal(scene: Scene, palette: Palette, node: ScreenNode) {
+function drawSignalMark(scene: Scene, palette: Palette, node: FieldNode) {
   const { ctx } = scene;
-  const colour = nodeColour(palette, node.colorVar);
+  const colour = nodeColour(palette, node.node.colorVar);
   const base = NODE_ALPHA * node.clearance * SIGNAL_ALPHA;
   ctx.strokeStyle = colour;
 
-  if (node.signalStyle === "fade") {
+  if (node.node.signalStyle === "fade") {
     for (const ring of FADE_RINGS) {
       ctx.globalAlpha = base * ring.alpha;
       ctx.lineWidth = 1;
       ctx.beginPath();
-      ctx.arc(
-        node.screenX,
-        node.screenY,
-        NODE_RADIUS * ring.reach,
-        0,
-        Math.PI * 2,
-      );
+      ctx.arc(node.x, node.y, NODE_RADIUS * ring.reach, 0, Math.PI * 2);
       ctx.stroke();
     }
     return;
   }
 
-  if (node.signalStyle === "dashed") {
+  if (node.node.signalStyle === "dashed") {
     ctx.globalAlpha = base * DASHED_RING.alpha;
     ctx.lineWidth = DASHED_RING.width;
     ctx.setLineDash?.(DASHED_RING.dash);
     ctx.beginPath();
-    ctx.arc(
-      node.screenX,
-      node.screenY,
-      NODE_RADIUS * DASHED_RING.reach,
-      0,
-      Math.PI * 2,
-    );
+    ctx.arc(node.x, node.y, NODE_RADIUS * DASHED_RING.reach, 0, Math.PI * 2);
     ctx.stroke();
     // Every later stroke on this frame — the next node's, the pulse ring — is
     // solid, so the pattern is cleared here rather than trusted to be reset.
@@ -430,8 +516,8 @@ function drawSignal(scene: Scene, palette: Palette, node: ScreenNode) {
     return;
   }
 
-  const dx = node.screenX - scene.w / 2;
-  const dy = node.screenY - scene.h / 2;
+  const dx = node.x - scene.w / 2;
+  const dy = node.y - scene.h / 2;
   const length = Math.hypot(dx, dy);
   const ux = length > 0.5 ? dx / length : Math.SQRT1_2;
   const uy = length > 0.5 ? dy / length : -Math.SQRT1_2;
@@ -441,12 +527,12 @@ function drawSignal(scene: Scene, palette: Palette, node: ScreenNode) {
     ctx.lineWidth = segment.width;
     ctx.beginPath();
     ctx.moveTo(
-      node.screenX + ux * NODE_RADIUS * segment.from,
-      node.screenY + uy * NODE_RADIUS * segment.from,
+      node.x + ux * NODE_RADIUS * segment.from,
+      node.y + uy * NODE_RADIUS * segment.from,
     );
     ctx.lineTo(
-      node.screenX + ux * NODE_RADIUS * segment.to,
-      node.screenY + uy * NODE_RADIUS * segment.to,
+      node.x + ux * NODE_RADIUS * segment.to,
+      node.y + uy * NODE_RADIUS * segment.to,
     );
     ctx.stroke();
   }
@@ -456,13 +542,15 @@ function drawSignal(scene: Scene, palette: Palette, node: ScreenNode) {
 /**
  * The viewer's own node, once **Find your dot** has found it: a restrained
  * pulse and a small label, no fanfare — and drawn exactly where the node
- * already was. The reveal adds a label to the graph; it does not rearrange it.
+ * already was. The reveal adds a label to the graph; it does not rearrange it,
+ * and the loop holds this one node still for as long as the label is up so that
+ * the label is not attached to something that is wandering out from under it.
  */
-function drawYou(scene: Scene, palette: Palette, you: ScreenNode) {
+function drawYou(scene: Scene, palette: Palette, you: FieldNode) {
   const { ctx } = scene;
-  const x = you.screenX;
-  const y = you.screenY;
-  const colour = nodeColour(palette, you.colorVar);
+  const x = you.x;
+  const y = you.y;
+  const colour = nodeColour(palette, you.node.colorVar);
 
   if (!scene.reduced) {
     const phase = (scene.pulse % 1.9) / 1.9;
@@ -480,7 +568,7 @@ function drawYou(scene: Scene, palette: Palette, you: ScreenNode) {
   ctx.strokeStyle = colour;
   // The reveal enlarges the node the member already has; it does not swap it
   // for a generic dot. Somebody who chose a diamond is looking for a diamond.
-  drawNodeShape(ctx, x, y, 7.5, you.style);
+  drawNodeShape(ctx, x, y, 7.5, you.node.style);
   ctx.globalAlpha = 0.5;
   ctx.strokeStyle = colour;
   ctx.lineWidth = 1;
@@ -504,24 +592,47 @@ function drawYou(scene: Scene, palette: Palette, you: ScreenNode) {
   ctx.fillText(label, lx + 7, ly + 10);
 }
 
+/**
+ * Where a pointer event landed, in canvas pixels, or `null` if the canvas has
+ * no box to measure against.
+ *
+ * The canvas is laid out at CSS size and backed at `dpr`, so the ratio is
+ * between the rendered box and `scene.w`/`scene.h` — the same conversion the
+ * export does at :1428 — and not the device pixel ratio, which the transform
+ * has already accounted for.
+ */
+function pointerPoint(
+  scene: Scene,
+  event: { clientX: number; clientY: number },
+) {
+  const box = scene.canvas.getBoundingClientRect();
+  if (!box.width || !box.height) return null;
+  return {
+    x: ((event.clientX - box.left) * scene.w) / box.width,
+    y: ((event.clientY - box.top) * scene.h) / box.height,
+  };
+}
+
 type Props = {
   /**
-   * The bounded window to draw: the member's own neighbourhood, or the public
-   * one. `null` only while the first read is still in flight.
+   * The **graph window** to draw: the member's own neighbourhood, or the
+   * public one. `null` only while the first read is still in flight.
    */
   window: GraphWindow | null;
   /**
    * **Find your dot** has located the viewer's node. The graph is unaffected —
-   * this adds the pulse and the label and nothing else.
+   * this adds the pulse and the label, holds that one node still, and fades the
+   * rest of the traffic back so the label is what the eye goes to.
    */
   labelled: boolean;
   /**
    * The landing is leaving for Explore.
    *
    * Competing motion is the biggest tell in a shared-element transition, so for
-   * the length of it the only thing moving is the layout. The pulse is the only
-   * animation this canvas ever runs, and it stops here — the scene keeps its
-   * last painted frame and fades out with the rest of the hero.
+   * the length of it the only thing moving is the layout. The whole loop stops
+   * here — drift, signals and pulse alike — and the scene keeps its last
+   * painted frame and fades out with the rest of the hero. Clicks stop landing
+   * too: a burst fired into a page that is leaving is motion nobody asked for.
    */
   paused?: boolean;
 };
@@ -555,8 +666,12 @@ export function HeroNetwork({
       last: 0,
       labelled: false,
       paused: false,
+      onScreen: true,
       window: null,
       view: null,
+      field: createField(),
+      viewerId: null,
+      cursor: "",
     };
     sceneRef.current = scene;
     resize(scene);
@@ -564,16 +679,27 @@ export function HeroNetwork({
     draw(scene);
 
     /**
-     * The pulse, and only the pulse.
+     * The frame loop, and its four gates.
      *
-     * A graph of stored positions does not move, so there is nothing to animate
-     * until a node is labelled: the scene is painted once and left alone. This
-     * loop starts when the label appears and stops when it goes, rather than
-     * burning a frame every 16ms to redraw an identical picture.
+     * The scene is no longer painted on demand: nodes drift and signals travel,
+     * so this runs continuously — but only while **all** of the hero being on
+     * screen, the page not handing itself to Explore, the tab not hidden, and
+     * motion being allowed. ADR 0006 names that trade explicitly: a loop
+     * bounded by gates rather than by having nothing to draw is a weaker
+     * guarantee than "painted once", and it is the price of a hero that is not
+     * a background image.
+     *
+     * The pulse folds in rather than keeping its own bookkeeping. It advances
+     * only while a label is up, so its phase is still measured from the moment
+     * the label appeared and not from mount.
      */
     const tick = (ts: number) => {
-      scene.pulse += Math.max(0, Math.min(0.05, (ts - scene.last) / 1000));
+      const dt = Math.max(0, Math.min(0.05, (ts - scene.last) / 1000));
       scene.last = ts;
+      if (scene.labelled) scene.pulse += dt;
+      advanceField(scene.field, dt, {
+        holdId: scene.labelled ? scene.viewerId : null,
+      });
       draw(scene);
       scene.raf = requestAnimationFrame(tick);
     };
@@ -583,15 +709,19 @@ export function HeroNetwork({
       scene.raf = 0;
     };
     const start = () => {
-      if (scene.raf || !scene.labelled || scene.reduced || scene.paused) return;
-      // A hidden tab has nothing to animate for, and the label appearing while
-      // one is hidden must not arm a loop nothing will see.
+      if (scene.raf || scene.reduced || scene.paused || !scene.onScreen) return;
+      // A hidden tab has nothing to animate for, and a gate opening while one
+      // is hidden must not arm a loop nothing will see.
       if (document.hidden) return;
       scene.last = performance.now();
       scene.raf = requestAnimationFrame(tick);
     };
-    scene.startPulse = start;
-    scene.stopPulse = stop;
+    scene.startLoop = start;
+    scene.stopLoop = stop;
+    // Deliberately not started here. The `paused` and `labelled` effects below
+    // run immediately after this one on mount and each ends in a `startLoop()`
+    // that re-checks every gate, so arming it here as well would start a loop
+    // for a hero that mounted already paused and then cancel it a tick later.
 
     const relayout = () => {
       resize(scene);
@@ -608,6 +738,26 @@ export function HeroNetwork({
     const onWindowResize = () => relayout();
     if (!observer) window.addEventListener("resize", onWindowResize);
 
+    /**
+     * The hero scrolling out of view stops the loop.
+     *
+     * This is the gate the old paint-on-demand canvas did not need and the new
+     * one does: the landing page is taller than the hero, so a reader who has
+     * scrolled to the sections below would otherwise be paying 60 frames a
+     * second for a graph nobody can see. Where there is no `IntersectionObserver`
+     * — jsdom, and browsers old enough that the rest of this page has bigger
+     * problems — `onScreen` stays true and the other three gates still hold.
+     */
+    const watcher =
+      typeof IntersectionObserver === "function"
+        ? new IntersectionObserver((entries) => {
+            scene.onScreen = entries.some((entry) => entry.isIntersecting);
+            if (scene.onScreen) start();
+            else stop();
+          })
+        : null;
+    watcher?.observe(canvas);
+
     // A hidden tab has nothing to animate for. Browsers throttle rAF there, but
     // stopping outright means no work at all rather than less of it.
     const onVisibility = () => {
@@ -621,9 +771,11 @@ export function HeroNetwork({
      *
      * Every colour on this canvas is a `--cc-*` token resolved at draw time, so
      * the palette is an input to the frame exactly like the data and the size
-     * are. Pixels already rasterised do not re-resolve a custom property, and
-     * the scene is otherwise painted once and left alone, so without this the
-     * graph keeps its old colours until something else happens to redraw it.
+     * are. The loop covers this while it is running, but every one of its four
+     * gates is a state in which the scene is still on screen and still has to
+     * be right — a paused hero mid-transition, a hero the reader has scrolled
+     * back to, and above all a reduced-motion machine, which never runs a frame
+     * at all and would otherwise keep its old colours forever.
      *
      * The root element is watched rather than `next-themes`' `resolvedTheme`,
      * and the difference is not a preference. `ThemeProvider` applies the theme
@@ -642,8 +794,8 @@ export function HeroNetwork({
      * attribute and `next-themes` defaults to `data-theme` — so a filter here
      * would be a second place that has to be edited in step with
      * `app/layout.tsx`, and forgetting would leave stale pixels rather than a
-     * failing build. Root attributes change rarely enough that redrawing a
-     * still scene for one is cheaper than getting the filter wrong.
+     * failing build. Root attributes change rarely enough that redrawing for
+     * one is cheaper than getting the filter wrong.
      */
     const themeWatcher = new MutationObserver(() => draw(scene));
     themeWatcher.observe(document.documentElement, { attributes: true });
@@ -654,8 +806,8 @@ export function HeroNetwork({
      * The keep-out is measured off the rendered text — `getClientRects()` per
      * line — so it is measured against whatever font was in place at the time.
      * A fallback face swapping to Geist reflows those lines without necessarily
-     * resizing the section, so the `ResizeObserver` need not fire and the fade
-     * would go on protecting copy that has moved.
+     * resizing the section, so the `ResizeObserver` need not fire and the
+     * keep-out would go on protecting copy that has moved.
      *
      * `fonts.ready` cannot be cancelled, so the flag is the only teardown there
      * is: a hero unmounted during a slow font load would otherwise re-measure a
@@ -685,6 +837,7 @@ export function HeroNetwork({
       stop();
       themeWatcher.disconnect();
       observer?.disconnect();
+      watcher?.disconnect();
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("resize", onWindowResize);
       media?.removeEventListener?.("change", onMedia);
@@ -705,30 +858,76 @@ export function HeroNetwork({
     if (!scene) return;
     scene.paused = paused;
     // `start` re-checks every reason not to run, so this is a resume request
-    // rather than an assertion that the pulse should be on.
-    if (paused) scene.stopPulse?.();
-    else scene.startPulse?.();
+    // rather than an assertion that the loop should be on.
+    if (paused) scene.stopLoop?.();
+    else scene.startLoop?.();
   }, [paused]);
 
   useEffect(() => {
     const scene = sceneRef.current;
     if (!scene) return;
     scene.labelled = labelled;
-    if (labelled) {
-      scene.pulse = 0;
-      scene.startPulse?.();
-    } else {
-      scene.stopPulse?.();
-    }
+    // The phase is measured from the label appearing, not from mount.
+    if (labelled) scene.pulse = 0;
+    scene.startLoop?.();
     draw(scene);
   }, [labelled]);
+
+  /** The cursor is the only thing that advertises the dots as clickable. */
+  const setCursor = (scene: Scene, want: string) => {
+    if (scene.cursor === want) return;
+    scene.cursor = want;
+    scene.canvas.style.cursor = want;
+  };
+
+  const nodeUnder = (
+    scene: Scene,
+    event: { clientX: number; clientY: number },
+  ) => {
+    const at = pointerPoint(scene, event);
+    return at ? hitTest(scene.field, at.x, at.y) : null;
+  };
 
   return (
     <canvas
       ref={canvasRef}
+      /**
+       * **Deliberately hidden from assistive technology, and not an oversight.**
+       *
+       * A burst conveys no information, changes no state, writes no row and
+       * leads nowhere; there is no equivalent to offer because there is nothing
+       * to be equivalent to. Exposing it would mean up to 150 focusable dots in
+       * front of the search bar — the one control on this page that everybody
+       * needs — which makes the page materially worse for exactly the people
+       * the exposure would be for. The export reaches the same place by
+       * default: its `onVizKey` (:1452) is an empty stub. Everything this
+       * canvas draws is decoration for a graph whose meaning is elsewhere, so
+       * please do not "fix" this.
+       */
       aria-hidden
       className="block size-full"
       data-testid="hero-network"
+      onPointerMove={(event) => {
+        const scene = sceneRef.current;
+        if (!scene || scene.reduced || scene.paused) return;
+        setCursor(scene, nodeUnder(scene, event) ? "pointer" : "");
+      }}
+      onPointerLeave={() => {
+        const scene = sceneRef.current;
+        if (scene) setCursor(scene, "");
+      }}
+      onPointerDown={(event) => {
+        const scene = sceneRef.current;
+        if (!scene || scene.reduced || scene.paused) return;
+        // The primary button only. A right-click is on its way to a context
+        // menu and a middle-click to a paste; neither is somebody asking the
+        // graph for anything. Touch and pen both report 0 here.
+        if (event.button !== 0) return;
+        const hit = nodeUnder(scene, event);
+        // Its own node bursts like any other, and that is the best discovery
+        // moment this feature has: the page has just pointed at your dot.
+        if (hit) burstAt(scene.field, hit);
+      }}
     />
   );
 }
