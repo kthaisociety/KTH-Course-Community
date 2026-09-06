@@ -28,21 +28,15 @@ function AlertDialogPortal({
 }
 
 /**
- * Nothing imports this file any more.
+ * A vendored shadcn primitive with no consumer: the app's delete confirmations
+ * are {@link import("./confirm-dialog").ConfirmDialog}, which is built on
+ * `Dialog`.
  *
- * Its four consumers were the app's delete confirmations, and they moved to
- * {@link import("./confirm-dialog").ConfirmDialog} — the artboard's own
- * confirmation — which is built on `Dialog`. That also leaves the
- * `overlayClassName` prop #178 added here without a caller.
- *
- * It is kept rather than deleted because "which vendored shadcn primitives
- * should this repo still carry" is one question about 37 files, not a decision
- * to take one file at a time; see the follow-up issue. If it does come back
- * into use, note the width trap recorded on `ConfirmDialog`:
- * `data-[size=default]:sm:max-w-sm` below sits in a different tailwind-merge
- * group from a plain `max-w-*`, so a caller asking for a width wider than 384px
- * silently does not get it. That is the same trap #178 removed from
- * `DialogContent` and it is still here.
+ * If it does come back into use, note the width trap recorded on
+ * `ConfirmDialog`: `data-[size=default]:sm:max-w-sm` below sits in a different
+ * tailwind-merge group from a plain `max-w-*`, so a caller asking for a width
+ * wider than 384px silently does not get it. `DialogContent` no longer carries
+ * that clamp; this still does.
  */
 function AlertDialogOverlay({
   className,
@@ -74,13 +68,12 @@ function AlertDialogContent({
    * Restyle the scrim — e.g. to drop the blur when what is behind must stay
    * legible, which is the usual reason to reach for it.
    *
-   * Parity with {@link DialogContent}, which has had this prop all along.
-   * Without it this primitive rendered an overlay no caller could reach, and
-   * #178 records what that cost: the two confirmations that needed the
-   * artboard's own scrim were built on `Dialog` instead, purely because only
-   * `Dialog` let them at it. Which primitive a confirmation uses should follow
-   * from whether the question is destructive enough to want `alertdialog`
-   * semantics, not from which one happens to expose a prop.
+   * Parity with {@link DialogContent}. Without it this primitive renders an
+   * overlay no caller can reach, and a confirmation that needs the artboard's
+   * own scrim is pushed onto `Dialog` purely because only `Dialog` lets it at
+   * one. Which primitive a confirmation uses should follow from whether the
+   * question is destructive enough to want `alertdialog` semantics, not from
+   * which one happens to expose a prop.
    */
   overlayClassName?: string;
 }) {

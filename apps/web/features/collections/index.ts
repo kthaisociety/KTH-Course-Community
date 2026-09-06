@@ -13,14 +13,6 @@
 
 export { Collections } from "./components/collections";
 /*
- * `ConfirmDialog` used to be exported from here, because Saved asks the same
- * question about the same object — unsaving a course cascades it out of every
- * collection it was in, so it is destructive in exactly the way deleting a
- * collection is.
- *
- * That export said what would end it: *"when a third screen needs it, it belongs
- * in `components/ui/` instead."* Seven screens now ask a confirmation, so it is
- * `@/components/ui/confirm-dialog` and Saved imports it directly. Nothing
- * collection-shaped is exported twice, which is why this note replaces the
- * export rather than a re-export standing in for it.
+ * `ConfirmDialog` is `@/components/ui/confirm-dialog`, not a re-export from
+ * here: seven screens ask a confirmation and no feature owns it.
  */

@@ -29,9 +29,8 @@ export function useEditorModal(): [
     return (
       <Dialog open={true} onOpenChange={onClose}>
         {/*
-          384px, stated rather than inherited: `DialogContent` used to clamp
-          every dialog to it and no longer does. This modal is one of the
-          two that were happy with the clamp, so it keeps it explicitly.
+          384px, stated rather than inherited: `DialogContent` has no width
+          opinion of its own, so a caller that wants one says so.
         */}
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>

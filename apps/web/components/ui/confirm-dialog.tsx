@@ -37,21 +37,14 @@ type Props = {
  *
  * ## Why it lives here
  *
- * It was `features/collections/components/confirm-dialog.tsx`, and the barrel
- * that exported it said what would move it: *"when a third screen needs it, it
- * belongs in `components/ui/` instead."* Taken courses was the third screen and
- * built a near-verbatim copy instead — same 440px shell, same scrim, same button
- * pair, differing only in the eyebrow and a computed body, both of which
- * {@link ConfirmRequest} already models. Five more screens then wanted it. So it
- * is here.
+ * Seven screens ask a confirmation, and they differ only in the eyebrow and the
+ * body — which is what {@link ConfirmRequest} models. So the shell is one
+ * component. It is not a vendored shadcn primitive and does not pretend to be
+ * one; it is app UI that more than one feature needs and no single feature
+ * owns, which is the case `components/ui/` exists for.
  *
- * `RemoveTakenCourseDialog` still exists and is still worth having — it is now
- * only the thing that decides what to ask, because `bodyFor(row)` and its two
- * documented deviations are real. It is the duplicated *shell* that is gone.
- *
- * It is not a vendored shadcn primitive and does not pretend to be one; it is
- * app UI that more than one feature needs and no single feature owns, which is
- * the case `components/ui/` exists for.
+ * A wrapper like `RemoveTakenCourseDialog` is still worth having where it
+ * decides *what* to ask. It is the duplicated shell that must not come back.
  *
  * ## Why this exists rather than `components/ui/alert-dialog`
  *
@@ -61,10 +54,8 @@ type Props = {
  * hands its buttons to `Button`'s variants and clamps its own width:
  * `data-[size=default]:sm:max-w-sm` sits in a different tailwind-merge group
  * from a plain `max-w-*`, so a caller asking for 440px silently gets 384px from
- * the `sm` breakpoint up. That is the exact trap #178 took out of
- * `DialogContent`; it is still in `AlertDialogContent`, and removing it is a
- * change to a shared primitive that belongs in its own PR rather than riding
- * along with this one.
+ * the `sm` breakpoint up. `DialogContent` no longer carries that clamp;
+ * `AlertDialogContent` still does.
  *
  * So the shell is `Dialog`, and the semantics are restored by hand:
  * `role="alertdialog"` is what tells a screen reader this is a question that
@@ -106,12 +97,12 @@ export function ConfirmDialog({ request, onCancel, onConfirm }: Props) {
             `cc-theme` because the dialog is portalled to the body and would
             otherwise leave the subtree that defines the `--cc-*` tokens.
 
-            There used to be an `sm:max-w-[440px]` here too, to defeat an
-            `sm:max-w-sm` the primitive carried in its own base classes — a plain
-            `max-w-*` sits in a different tailwind-merge group and so did not
-            replace it. #178 took that clamp out of the primitive, which is where
-            the problem was, so the override is gone: `w-[440px]` now means
-            440px, and `max-w-[calc(100vw-2rem)]` is the only thing narrowing it.
+            No `sm:max-w-*` here, and none needed: `DialogContent` carries no
+            width of its own beyond the phone guard, so `w-[440px]` means 440px
+            and `max-w-[calc(100vw-2rem)]` is the only thing narrowing it. If a
+            responsive clamp ever comes back to the primitive, a plain `max-w-*`
+            here will not defeat it — tailwind-merge keeps the two in different
+            groups.
           */
           className="cc-theme w-[440px] max-w-[calc(100vw-2rem)] gap-0 rounded-[14px] bg-cc-surface p-[22px] text-cc-ink shadow-[0_18px_48px_rgba(20,30,45,0.24)] ring-0"
         >

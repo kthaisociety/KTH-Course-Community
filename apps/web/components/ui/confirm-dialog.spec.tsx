@@ -78,11 +78,9 @@ describe("ConfirmDialog", () => {
     open();
     const classes = widthClasses();
 
-    // `My Page.dc.html` draws the confirmation at `width:440px`. This
-    // component used to state that twice — `w-[440px]` plus an
-    // `sm:max-w-[440px]` — because `DialogContent` carried an `sm:max-w-sm` that
-    // a plain width could not merge away. #178 removed the clamp, so the second
-    // statement went with it; this asserts the first one is now enough.
+    // `My Page.dc.html` draws the confirmation at `width:440px`, and stating it
+    // once has to be enough: a second `sm:max-w-[440px]` would only be needed if
+    // `DialogContent` carried a clamp a plain width could not merge away.
     expect(classes).toContain("w-[440px]");
     expect(classes.filter((name) => name.startsWith("sm:max-w-"))).toEqual([]);
     expect(classes.filter((name) => name.startsWith("max-w-"))).toEqual([

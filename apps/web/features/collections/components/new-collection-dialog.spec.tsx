@@ -7,9 +7,9 @@ import { NewCollectionDialog } from "./new-collection-dialog";
  *
  * jsdom computes no layout and there is no Tailwind stylesheet at test time, so
  * the class list is what a test can hold. It is the right surface anyway: the
- * string is `cn`'s output, and #178 was a `cn` bug — `DialogContent` carried an
- * `sm:max-w-sm`, tailwind-merge keeps that in a different group from a plain
- * `max-w-*` or a `w-*`, and so the caller's width did not replace it.
+ * string is `cn`'s output, and the failure this guards is a `cn` failure: a
+ * `sm:max-w-*` on `DialogContent` sits in a different tailwind-merge group from
+ * a plain `max-w-*` or a `w-*`, so the caller's width would not replace it.
  */
 function widthClasses() {
   const content = document.querySelector('[data-slot="dialog-content"]');
@@ -42,13 +42,11 @@ describe("NewCollectionDialog", () => {
     open();
     const classes = widthClasses();
 
-    // `Collections.dc.html` draws this dialog at `width:440px`. It rendered
-    // at 384px until #178, because the primitive's `sm:max-w-sm` outlived this
-    // `w-[440px]` from the `sm` breakpoint up.
+    // `Collections.dc.html` draws this dialog at `width:440px`.
     expect(classes).toContain("w-[440px]");
 
-    // Nothing narrows it above `sm` any more. The one cap left is the artboard's
-    // own gutter, which only bites below 472px.
+    // Nothing narrows it above `sm`. The one cap is the artboard's own gutter,
+    // which only bites below 472px.
     expect(classes.filter((name) => name.startsWith("sm:max-w-"))).toEqual([]);
     expect(classes.filter((name) => name.startsWith("max-w-"))).toEqual([
       "max-w-[calc(100vw-2rem)]",

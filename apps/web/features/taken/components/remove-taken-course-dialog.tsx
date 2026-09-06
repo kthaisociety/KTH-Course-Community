@@ -35,16 +35,12 @@ function bodyFor(row: TakenRow): string {
  * Confirming the removal of a taken course.
  *
  * The dialog itself is {@link ConfirmDialog} — this only decides what it asks.
- * It used to render its own copy of that component: the same 440px shell at a
- * 14px radius, the same scrim, the same 38px button pair, differing only in the
- * eyebrow and the computed body, which is exactly what {@link ConfirmRequest}
- * models. The barrel that used to export `ConfirmDialog` had already named the
- * rule this broke — *"when a third screen needs it, it belongs in
- * `components/ui/`"* — and this was the third screen.
+ * Do not give it a shell of its own: the 440px frame, the scrim and the button
+ * pair belong to the shared component, and the eyebrow and body are what
+ * {@link ConfirmRequest} models.
  *
  * Two deliberate departures from
- * `docs/design_ref/2026-09-06/Course Community - My Page.dc.html`, both
- * recorded on the PR that made them.
+ * `docs/design_ref/2026-09-06/Course Community - My Page.dc.html`.
  *
  * **It confirms before the write, not after.** The artboard removes on the click
  * and offers a note; #155 settled that destructive actions confirm first, and of
