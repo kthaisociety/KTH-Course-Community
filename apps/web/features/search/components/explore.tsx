@@ -308,7 +308,14 @@ function resultsLabel(explore: ReturnType<typeof useExplore>): string {
   // `StartHere` says what this column is for instead of repeating it.
   if (!explore.hasQuery) return "";
   const count = explore.results.length;
-  if (count === 0) return `No courses for “${explore.query}”`;
+  // An empty page that is not the first has not failed to match anything — the
+  // ranking ran out behind the page that was asked for, and the live region has
+  // to say the same thing the panel below it does.
+  if (count === 0) {
+    return explore.page > 1
+      ? `No courses on page ${explore.page} for “${explore.query}”`
+      : `No courses for “${explore.query}”`;
+  }
   return `Showing ${count} course${count === 1 ? "" : "s"} for “${explore.query}”`;
 }
 

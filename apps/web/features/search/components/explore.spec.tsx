@@ -886,6 +886,20 @@ describe("Explore", () => {
       expect(push).toHaveBeenCalledWith("/search?q=graphs", { scroll: false });
     });
 
+    // The live region and the panel are one message in two places; they must
+    // not disagree about what happened.
+    it("tells the live region the same thing the panel says", () => {
+      search = "q=graphs&page=3";
+      useSearchCourses.mockReturnValue(
+        pageOf({ courses: [], page: 3, hasMore: false }),
+      );
+      render(<Explore />);
+
+      expect(
+        screen.getByText("No courses on page 3 for \u201Cgraphs\u201D"),
+      ).toBeVisible();
+    });
+
     it("still says nothing matched on an empty first page", () => {
       useSearchCourses.mockReturnValue(pageOf({ courses: [] }));
       render(<Explore />);
