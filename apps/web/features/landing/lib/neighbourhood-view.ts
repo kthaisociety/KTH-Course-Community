@@ -45,6 +45,19 @@
  * port rather than a liberty. Issue #68 settled the opposite — "the centre is
  * the viewport centre", "keep-out may only fade nodes" — and both of those are
  * superseded here on the product owner's instruction.
+ *
+ * **What is projected here no longer has to be where a node is drawn.** ADR
+ * 0006 brings back the artboard's drift: every node wanders inside a ±5px box
+ * around the position derived below, and `hero-signals.ts` owns that wander as
+ * an overlay keyed on node id. This file's output is the **home** it wanders
+ * around, and stays a pure projection — the drift never writes back into a
+ * `ScreenNode`, so a reprojection re-homes a node without having to unpick
+ * where it had got to. The one thing drift may not do is change a node's
+ * position *relative to its neighbours*, which is why the artboard's min-gap
+ * separation pass is deliberately not ported: the promise the two paragraphs
+ * above make is that a returning member recognises the shape of their own
+ * neighbourhood, and a pass that eases close pairs apart is a pass that
+ * reshapes it.
  */
 
 import {
@@ -254,6 +267,23 @@ export const VIEW_SCALE = 0.72;
 
 /** Drawn radius of an ordinary node, in px. A dot is cleared by its edge. */
 export const NODE_RADIUS = 4;
+
+/**
+ * The clearance below which a thing is not painted at all.
+ *
+ * `pushClear` places nodes clear of the copy, so this is 1 for everything on an
+ * ordinary frame and the threshold never fires. It fires where the push gave
+ * up — a hero whose copy reaches past every edge has nowhere to put anybody —
+ * and there it is the whole of the keep-out. **Everything painted on this
+ * canvas has to pass it**: the reveal, which is a bigger mark than the node it
+ * replaces; a **signal**, which is why `hero-signals.ts` multiplies one by its
+ * edge's clearance and will not spawn ambient traffic below this; and the hit
+ * test, because a node nobody can see is not a node anybody can click.
+ *
+ * It lives here rather than in the canvas because it is a statement about the
+ * projection's `clearance`, and there are now three consumers of it.
+ */
+export const VISIBLE = 0.02;
 
 /** How coarse the anchor search is, per axis. */
 const ANCHOR_STEPS = 12;
