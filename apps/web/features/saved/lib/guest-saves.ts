@@ -92,7 +92,14 @@ export function readGuestSaves(): readonly string[] {
   return next;
 }
 
-/** Replaces the stored list and tells this tab's readers. */
+/**
+ * Replaces the stored list outright and tells this tab's readers.
+ *
+ * A blind set: it does not look at what is there. Seeding a browser — which is
+ * what the tests do with it — is the honest use. Anything that means "change
+ * the list" goes through `mutate` instead, so it cannot overwrite a save
+ * another tab made in between.
+ */
 export function writeGuestSaves(codes: readonly string[]): void {
   const next = Object.freeze([...new Set(codes)]);
   cache = next.length ? next : EMPTY;
@@ -116,20 +123,61 @@ export function writeGuestSaves(codes: readonly string[]): void {
   for (const listener of listeners) listener();
 }
 
-/** Adds or removes one code, and answers with the list that resulted. */
-export function setGuestSave(
-  courseCode: string,
-  saved: boolean,
-): readonly string[] {
-  const current = readGuestSaves();
-  const next = saved
-    ? current.includes(courseCode)
-      ? current
-      : [...current, courseCode]
-    : current.filter((code) => code !== courseCode);
-  if (same(current, next)) return current;
-  writeGuestSaves(next);
-  return readGuestSaves();
+/** The lock every change to the list is taken under. */
+const GUEST_SAVES_LOCK = "kth-cc:saved-courses:write";
+
+/**
+ * Changes the list, without clobbering what another tab changed meanwhile.
+ *
+ * Every mutation is a read-modify-write over one shared `localStorage` key, and
+ * nothing in the web platform makes those two operations one: there is no
+ * compare-and-swap and no transaction. So two tabs mutating at once can lose
+ * whichever read first — the second write is computed from a list that no
+ * longer exists by the time it lands.
+ *
+ * The window is narrow. `readGuestSaves` goes to storage on every call, so the
+ * value being modified is never stale by more than the few statements between
+ * the read and the write; there is no waiting inside it. But narrow is not
+ * none, and the write that loses is somebody's saved course.
+ *
+ * `navigator.locks` is the platform's answer and a genuine cross-tab mutex, so
+ * the whole read-modify-write is taken under one. Where it is missing — older
+ * browsers, and jsdom, which is why the fallback is what every other test in
+ * this file exercises — the mutation still runs, unserialised, which is exactly
+ * where this code stood before.
+ *
+ * Callers see none of it: every mutation returns `void`, so taking the lock
+ * asynchronously changes nothing for them. Reads are deliberately not locked —
+ * `useSyncExternalStore` needs a snapshot now, and a read that loses a race
+ * merely repaints.
+ */
+function mutate(change: (current: readonly string[]) => readonly string[]) {
+  const apply = () => {
+    const current = readGuestSaves();
+    const next = change(current);
+    if (same(current, next)) return;
+    writeGuestSaves(next);
+  };
+
+  const locks = globalThis.navigator?.locks;
+  if (!locks) {
+    apply();
+    return;
+  }
+  // Failure to take the lock must not lose the change: a rejected request
+  // still leaves the reader expecting their save to have happened.
+  void locks.request(GUEST_SAVES_LOCK, apply).catch(apply);
+}
+
+/** Adds or removes one code. */
+export function setGuestSave(courseCode: string, saved: boolean): void {
+  mutate((current) =>
+    saved
+      ? current.includes(courseCode)
+        ? current
+        : [...current, courseCode]
+      : current.filter((code) => code !== courseCode),
+  );
 }
 
 /**
@@ -149,16 +197,13 @@ export function setGuestSave(
  * having written it to the account, which is the one way this feature can lose
  * a course outright.
  *
- * So the removal re-reads storage and subtracts, rather than assuming storage
- * still says what it said before the awaits.
+ * So the removal subtracts from storage as `mutate` re-reads it, rather than
+ * assuming storage still says what it said before the awaits.
  */
 export function retireGuestSaves(codes: readonly string[]): void {
   if (!codes.length) return;
   const retired = new Set(codes);
-  const current = readGuestSaves();
-  const kept = current.filter((code) => !retired.has(code));
-  if (kept.length === current.length) return;
-  writeGuestSaves(kept);
+  mutate((current) => current.filter((code) => !retired.has(code)));
 }
 
 /** `useSyncExternalStore`'s subscribe half. */

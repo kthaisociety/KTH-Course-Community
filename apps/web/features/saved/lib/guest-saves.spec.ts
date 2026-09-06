@@ -205,6 +205,85 @@ describe("the guest saves store", () => {
     });
   });
 
+  /**
+   * Every mutation is a read-modify-write over one shared key. Two of those
+   * interleaving lose whichever read first, and the loss that matters is a
+   * save — a lost retirement just leaves a course to be offered again.
+   */
+  describe("concurrent tabs", () => {
+    /**
+     * A mutation modifies storage, not the snapshot this tab last handed out,
+     * so a write another tab has already committed survives it. This holds
+     * because `readGuestSaves` goes to storage on every call and keeps `cache`
+     * only for reference identity — worth pinning down, since the whole
+     * feature rests on it.
+     */
+    it("modifies what storage says, not what this tab last read", () => {
+      writeGuestSaves(["DD2380"]);
+      readGuestSaves();
+
+      // The other tab's write, with no `storage` event delivered yet.
+      window.localStorage.setItem(
+        GUEST_SAVES_KEY,
+        JSON.stringify(["DD2380", "DD1337"]),
+      );
+
+      setGuestSave("DD2421", true);
+
+      expect(readGuestSaves()).toEqual(["DD2380", "DD1337", "DD2421"]);
+    });
+
+    it("keeps a concurrent save while retiring imported codes", () => {
+      writeGuestSaves(["DD2380"]);
+      readGuestSaves();
+
+      window.localStorage.setItem(
+        GUEST_SAVES_KEY,
+        JSON.stringify(["DD2380", "DD1337"]),
+      );
+
+      retireGuestSaves(["DD2380"]);
+
+      expect(readGuestSaves()).toEqual(["DD1337"]);
+    });
+
+    /**
+     * The narrow window: the read and the write are two operations and nothing
+     * in `localStorage` makes them one. `navigator.locks` is the platform's
+     * mutex for it. jsdom has none, so the lock is stubbed here — which is
+     * also the only way to exercise the locked path at all, since every other
+     * test in this file runs the fallback.
+     */
+    it("takes a cross-tab lock when the platform has one", async () => {
+      const held: string[] = [];
+      const request = vi.fn(
+        async (name: string, callback: () => void | Promise<void>) => {
+          held.push(name);
+          await callback();
+        },
+      );
+      vi.stubGlobal("navigator", { locks: { request } });
+
+      setGuestSave("DD2380", true);
+      await vi.waitFor(() => expect(readGuestSaves()).toEqual(["DD2380"]));
+
+      expect(held).toEqual(["kth-cc:saved-courses:write"]);
+      vi.unstubAllGlobals();
+    });
+
+    // A lock that cannot be taken is not a reason to drop somebody's save.
+    it("still writes when the lock cannot be taken", async () => {
+      vi.stubGlobal("navigator", {
+        locks: { request: () => Promise.reject(new Error("no lock")) },
+      });
+
+      setGuestSave("DD2380", true);
+      await vi.waitFor(() => expect(readGuestSaves()).toEqual(["DD2380"]));
+
+      vi.unstubAllGlobals();
+    });
+  });
+
   describe("subscribers", () => {
     it("hears about a write in this tab", () => {
       const onChange = vi.fn();
