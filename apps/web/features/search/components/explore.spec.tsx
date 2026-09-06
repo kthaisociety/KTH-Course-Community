@@ -12,6 +12,7 @@ import {
   SEARCH_MORPH_KEY,
   stashSearchBarHandoff,
 } from "@/features/shell/lib/search-morph";
+import { WORKSPACE_COLUMN_FROM } from "@/features/workspace";
 import type { CourseSummary } from "@/types";
 import { Explore } from "./explore";
 
@@ -1117,14 +1118,47 @@ describe("Explore", () => {
     /**
      * 236px is the rail's width, so a right margin of it on a centred row puts
      * the bar on the viewport's centre line instead of the centre of the column
-     * beside the rail. Gated to `@3xl` because that is where the rail itself
-     * appears — below it there is nothing to compensate for.
+     * beside the rail.
      */
-    it("shifts left by the rail's width, only where there is a rail", () => {
+    it("shifts left by the rail's width", () => {
       render(<Explore />);
 
       expect(block()).toHaveClass("@3xl:mr-[236px]");
       expect(block()).not.toHaveClass("mr-[236px]");
+    });
+
+    /**
+     * The gate is the **pane's** threshold, not the rail's, and the difference
+     * is a whole rail width of viewport.
+     *
+     * `AppShell` names its own container and draws the rail at `@3xl/shell`, so
+     * the rail arrives at a 768px viewport. Every `@3xl:` here is unqualified
+     * and resolves against `PageColumn`'s container, which the rail has already
+     * narrowed — so this block turns over at roughly a 1004px viewport instead.
+     * That is the right one: it is the same query `WorkspacePaneHost` gates its
+     * column on, the same box `useWorkspacePresentation` measures against
+     * `WORKSPACE_COLUMN_FROM`, and the same query Saved reserves its space on.
+     * Those four have to agree or the two tab strips part company, which is the
+     * defect this block exists to fix.
+     *
+     * Asserted as the *absence* of the shell-scoped variant as well as the
+     * presence of the plain one, because the two read almost identically and
+     * swapping them is a one-character edit. It is also not merely cosmetic:
+     * built against `@3xl/shell` and measured, the search field collapsed to
+     * 0px at an 800px viewport and 33px at 1003px, because the correction takes
+     * 236px out of a column the rail has already taken 236px out of.
+     */
+    it("turns over on the pane's threshold, not the rail's", () => {
+      render(<Explore />);
+
+      expect(WORKSPACE_COLUMN_FROM).toBe(768);
+      for (const shellScoped of [
+        "@3xl/shell:mr-[236px]",
+        "@3xl/shell:flex-row",
+        "@3xl/shell:h-[var(--cc-search-block-h)]",
+      ]) {
+        expect(block()).not.toHaveClass(shellScoped);
+      }
     });
 
     /**

@@ -69,13 +69,47 @@ import { useExplore } from "../hooks/use-explore";
  *   unconditionally rather than only while tabs are open, so the bar has one
  *   resting position instead of sliding 118px sideways the moment a reader
  *   opens their first tab — and the landing hand-off aims at that position. And
- *   it is gated to `@3xl`, matching the rail's own `hidden @3xl/shell:block`,
- *   because below that there is no rail to compensate for.
+ *   it is gated on `@3xl`, which is **not** the width the rail appears at. See
+ *   the note below, because the two are easy to conflate and one of them is
+ *   unaffordable.
  * - **The search block is one row, 74px tall, and the height is a token.**
  *   `--cc-search-block-h` in `globals.css` is what Explore spends here and what
  *   Saved reserves above its own row, so the two pages' tab strips start at the
  *   same height. The school filter sits beside the bar rather than under it,
  *   which is what gets the block from 118px down to the artboard's own 74.
+ *
+ * ## `@3xl` here is the pane's threshold, not the rail's
+ *
+ * There are two container queries in play and they are **not** the same width.
+ * `AppShell` names its own container (`@container/shell`) and draws the rail at
+ * `@3xl/shell`, so the rail appears once the *viewport* reaches 768px. Every
+ * `@3xl:` on this page is unqualified, so it resolves against `PageColumn`'s
+ * own unnamed `@container` — which sits inside the shell, after the rail has
+ * taken its 236px. That threshold is therefore reached at roughly a 1004px
+ * viewport, and between 768 and 1003 the rail is up while this block is still
+ * stacked and the bar is still centred on the content column.
+ *
+ * That gap is deliberate, and the unqualified variant is the correct one.
+ *
+ * **It is the threshold that matters.** `WorkspacePaneHost` gates its column on
+ * the same unqualified `@3xl`, `useWorkspacePresentation` measures the same
+ * `PageColumn` box against `WORKSPACE_COLUMN_FROM`, and Saved reserves its
+ * matching space on the same query. Those are the conditions that decide
+ * whether there are two tab strips to level at all, which is the whole point.
+ * Moving this block onto `@3xl/shell` would desynchronise it from all three and
+ * from Saved, and the strips would part company again between 1004 and 1024.
+ *
+ * **And the rail's threshold is unaffordable.** Measured, by building the
+ * shell-scoped version and reading the boxes back: at an 800px viewport the row
+ * has 328px to work with once the 236px correction is taken out of a content
+ * column the rail has already narrowed, and the search field collapses to
+ * **0px** wide; at 1003px it is **33px**, with the school select overflowing the
+ * row. Applying the correction where the rail appears destroys the control it
+ * is meant to position.
+ *
+ * Nothing regresses in that band: the bar is centred on the content column
+ * there, which is exactly where it sat before this change, and there is no tab
+ * strip beneath it to be out of step with.
  * - The artboard's **shared-element handoff from the landing hero** (its
  *   `pickUpSharedBar()`) *is* built, and is the one place in the app
  *   authorised to improve on the artboard rather than match it.
@@ -141,13 +175,17 @@ export function Explore() {
         — at the height both pages measure their tab strips from. `mr-[236px]`
         is the rail-width correction argued at the top of this file.
 
-        All of it is gated to `@3xl`, the same width the rail appears at, the
-        pane becomes a column and Saved reserves its matching space. Below it the
-        block keeps the two-row stack it has always had, and that is not a
-        compromise: there is no rail to correct for, no tab strip to line up
-        with, and a phone measured with the row forced on it put the search field
-        at 128px to keep a filter beside it. Nothing above @3xl reads the narrow
-        end, so the two layouts do not have to agree.
+        All of it is gated on the unqualified `@3xl` — `PageColumn`'s container,
+        which is where the pane becomes a column and where Saved reserves its
+        matching space. That is deliberately *not* the width the rail appears at;
+        the header note on this component has the measurements for why the rail's
+        own threshold cannot be used here.
+
+        Below it the block keeps the two-row stack it has always had, and that is
+        not a compromise: there is no tab strip to line up with, and a phone
+        measured with the row forced on it put the search field at 128px to keep
+        a filter beside it. Nothing above `@3xl` reads the narrow end, so the two
+        layouts do not have to agree.
       */}
       <search className="flex shrink-0 flex-col items-center gap-2.5 px-6 pt-[18px] pb-3.5 @3xl:mr-[236px] @3xl:h-[var(--cc-search-block-h)] @3xl:flex-row @3xl:gap-3 @3xl:pt-0 @3xl:pb-0">
         {/*

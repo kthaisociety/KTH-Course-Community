@@ -937,5 +937,19 @@ describe("Saved", { timeout: 20_000 }, () => {
 
       expect(row()).not.toHaveClass("pt-[var(--cc-search-block-h)]");
     });
+
+    /**
+     * The same query Explore spends its block on — unqualified, so it resolves
+     * against `PageColumn` rather than against the shell's named container. The
+     * rail's `@3xl/shell` is a whole rail width of viewport away from this one,
+     * and a reservation made on that threshold would part company with Explore
+     * between roughly 1004 and 1024px. See `explore.tsx` for the measurements.
+     */
+    it("reserves on the pane's threshold, not the rail's", () => {
+      saved("DD2380");
+      render(<Saved />);
+
+      expect(row()).not.toHaveClass("@3xl/shell:pt-[var(--cc-search-block-h)]");
+    });
   });
 });
