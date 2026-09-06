@@ -60,6 +60,8 @@
   --checkedHoverTint: rgba(23, 81, 166, .14);
   --focus: #1751a6;
   --focusRing: rgba(23, 81, 166, .25);
+  --railFocus: #ffffff;
+  --railFocusRing: rgba(255, 255, 255, .35);
 }
 
 [data-cc-theme="dark"] {
@@ -111,6 +113,8 @@
   --checkedHoverTint: rgba(142, 194, 255, .32);
   --focus: #8bb3ef;
   --focusRing: rgba(139, 179, 239, .3);
+  --railFocus: #8bb3ef;
+  --railFocusRing: rgba(139, 179, 239, .3);
 }
 
 /* Colour changes cross-fade; nothing else about a page animates from here. */
@@ -127,4 +131,14 @@ input::placeholder { color: var(--dim); }
   outline: 2px solid var(--focus) !important;
   outline-offset: 2px !important;
   box-shadow: 0 0 0 4px var(--focusRing) !important;
+}
+
+/* The rail is painted in brand blue itself, so any --focus-family token
+   resolves to the same colour as its background and vanishes — same failure
+   as the on-rail --btn case. Anything focusable inside [data-cc-sidebar] gets
+   the on-rail pair instead. */
+[data-cc-theme] [data-cc-sidebar] :focus-visible {
+  outline: 2px solid var(--railFocus) !important;
+  outline-offset: 2px !important;
+  box-shadow: 0 0 0 4px var(--railFocusRing) !important;
 }

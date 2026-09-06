@@ -240,7 +240,7 @@
 
 <sc-if value="{{ drawerOpen }}" hint-placeholder-val="{{ false }}">
 <div onClick="{{ onCloseDrawer }}" style="position:absolute;inset:0;z-index:40;background:rgba(20,30,45,.4)"></div>
-<div style="position:absolute;top:0;left:0;bottom:0;z-index:41;width:250px;box-sizing:border-box;display:flex;flex-direction:column;gap:6px;padding:56px 12px 16px;background:var(--rail);color:#fff;animation:slideIn .18s ease-out">
+<div data-cc-sidebar="1" style="position:absolute;top:0;left:0;bottom:0;z-index:41;width:250px;box-sizing:border-box;display:flex;flex-direction:column;gap:6px;padding:56px 12px 16px;background:var(--rail);color:#fff;animation:slideIn .18s ease-out">
 <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 8px 16px">
 <div onClick="{{ onGoLanding }}" role="button" tabIndex="0" style="display:flex;align-items:center;gap:9px;cursor:pointer">
 <img src="assets/ais-symbol-white.png" alt="KTH AI Society" style="height:28px;width:28px;object-fit:contain">
