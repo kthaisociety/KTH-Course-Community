@@ -47,7 +47,8 @@ const SAVED_HEADING_ID = "saved-courses-heading";
  * `geo` from what the pane leaves of the row exactly as Explore
  * does. So the geometry is measured here rather than pinned: with no tab open
  * the column is wide and the ramp lands on its expanded end, and with a tab
- * open the cards collapse instead of overflowing a column that just lost 504px.
+ * open the cards collapse instead of overflowing a column that just lost the
+ * pane's width and the gap beside it.
  * Pinning either end here — as a page with no pane to yield to could — is what
  * the artboard's interpolation replaces.
  *
@@ -89,13 +90,21 @@ const SAVED_HEADING_ID = "saved-courses-heading";
  * ## Where else it departs from the artboard
  *
  * The artboard keeps the collections strip *above* the row the pane sits in,
- * and shortens it by a flat 236px while tabs are open (`savedTopMargin`, line
- * 961). Here the strip is inside the column the pane already narrows, which
- * does the same job exactly rather than approximately — and, decisively, keeps
- * an open collection's detail scrollable. A fixed-height block above a row that
- * owns the page's only scroll would clip a long collection instead.
- * `resultsMax` is computed by the artboard and never read by its
- * markup, so there is nothing to follow.
+ * and gives it a flat `margin-right: 236px` while tabs are open
+ * (`savedTopMargin`, despite the name). 236px is the rail's width, not the
+ * pane's, so it is the same shift the Explore artboard applies to its search
+ * bar rather than a measurement of what the pane takes away.
+ *
+ * Here the strip is inside the column the pane already narrows, so it loses the
+ * pane's width and the gap — `PANE_DEFAULT + WORKSPACE_GAP`, 522px by default
+ * and moving as the reader drags — rather than a flat 236px. **That is a
+ * different amount, deliberately.** It tracks the pane instead of approximating
+ * it, and, decisively, it keeps an open collection's detail scrollable: a
+ * fixed-height block above a row that owns the page's only scroll would clip a
+ * long collection instead.
+ *
+ * `resultsMax` is computed by the artboard and never read by its markup, so
+ * there is nothing to follow.
  */
 type Props = {
   /**

@@ -57,11 +57,11 @@ import { useExplore } from "../hooks/use-explore";
  *   SQL, so it is cheap, exact, and does not distort the result count. A filter
  *   that cannot be expressed in SQL does not belong beside it — see
  *   `server/search/service.ts`.
- * - The artboard narrows its **search bar** by 236px while tabs are open
- *   (`searchBarMargin`) so the field stays centred over the results
- *   rather than over the whole row. Not built: the bar is centred inside a
- *   `max-w-[560px]` box that is already narrower than the results column at
- *   every width the pane can open at, so the correction has nothing to correct.
+ * - The artboard shifts its **search bar** left by 236px while tabs are open
+ *   (`searchBarMargin`). 236px is the rail's width, so what the shift does is
+ *   put the bar on the viewport's centre line rather than on the centre of the
+ *   column beside the rail. Not built here: the bar stays centred in the
+ *   content column at every width.
  * - The artboard's **shared-element handoff from the landing hero** (its
  *   `pickUpSharedBar()`) *is* built, and is the one place in the app
  *   authorised to improve on the artboard rather than match it.
