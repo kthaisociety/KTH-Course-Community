@@ -214,7 +214,7 @@ function AxisOptions({
               aria-pressed={selected}
               disabled={isSaving}
               onClick={() => onChoose({ [row.key]: option })}
-              className={`flex h-9 items-center gap-2 rounded-[9px] border bg-cc-surface px-[13px] text-[13px] capitalize transition-colors hover:border-cc-brand disabled:cursor-not-allowed disabled:opacity-60 ${
+              className={`cursor-pointer flex h-9 items-center gap-2 rounded-[9px] border bg-cc-surface px-[13px] text-[13px] capitalize transition-colors hover:border-cc-brand disabled:cursor-not-allowed disabled:opacity-60 ${
                 selected
                   ? "border-cc-brand font-semibold text-cc-brand"
                   : "border-cc-rule3 text-cc-ink"

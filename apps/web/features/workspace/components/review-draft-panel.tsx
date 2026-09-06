@@ -435,7 +435,7 @@ export function ReviewDraftPanel({
                   disabled={examDisabled}
                   onClick={() => update(toggleMethod(draft, key))}
                   className={cn(
-                    "flex h-[30px] items-center gap-1.5 rounded-[15px] border px-[11px] text-[12.5px] disabled:opacity-40",
+                    "flex h-[30px] cursor-pointer items-center gap-1.5 rounded-[15px] border px-[11px] text-[12.5px] disabled:cursor-not-allowed disabled:opacity-40",
                     picked
                       ? "border-cc-brand bg-cc-pill text-cc-ink"
                       : "border-cc-rule3 bg-cc-surface text-cc-muted hover:border-cc-brand",
@@ -656,7 +656,7 @@ export function ReviewDraftPanel({
                   aria-pressed={picked}
                   onClick={() => patch({ happyTook: option.value })}
                   className={cn(
-                    "flex h-10 flex-1 items-center justify-center gap-[7px] rounded-[9px] border text-[13.5px] hover:border-cc-brand",
+                    "flex h-10 flex-1 cursor-pointer items-center justify-center gap-[7px] rounded-[9px] border text-[13.5px] hover:border-cc-brand",
                     picked
                       ? "border-cc-brand bg-cc-pill font-semibold text-cc-brand"
                       : "border-cc-rule3 bg-cc-surface font-medium text-cc-chip-ink",
@@ -695,7 +695,7 @@ export function ReviewDraftPanel({
                       : starter,
                   })
                 }
-                className="flex h-7 items-center rounded-[14px] border border-cc-hov border-dashed bg-cc-pill px-[11px] font-medium text-[11.5px] text-cc-brand"
+                className="cursor-pointer flex h-7 items-center rounded-[14px] border border-cc-hov border-dashed bg-cc-pill px-[11px] font-medium text-[11.5px] text-cc-brand"
               >
                 {label}
               </button>
@@ -798,10 +798,15 @@ export function ReviewDraftPanel({
             }
             onClick={publish}
             className={cn(
-              "flex h-9 items-center rounded-[8px] px-4 font-semibold text-[13px]",
+              // `disabled:cursor-not-allowed` and not a bare `cursor-not-allowed`
+              // on the unpublishable branch alone: publishing, an existing
+              // review and a still-loading session all disable this button
+              // while the draft itself is publishable, and those states want the
+              // same cursor the incomplete draft gets.
+              "flex h-9 cursor-pointer items-center rounded-[8px] px-4 font-semibold text-[13px] disabled:cursor-not-allowed",
               publishable
                 ? "bg-cc-warn-btn text-cc-warn-btn-fg"
-                : "cursor-not-allowed bg-cc-pill text-cc-dim",
+                : "bg-cc-pill text-cc-dim",
             )}
           >
             {justPublished

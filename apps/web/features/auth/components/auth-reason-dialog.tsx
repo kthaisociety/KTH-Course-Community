@@ -122,7 +122,7 @@ export function AuthReasonDialog({
             onClick={onClose}
             title="Close"
             aria-label="Close"
-            className="flex size-[26px] items-center justify-center rounded-[7px] text-[17px] text-cc-dim leading-none hover:bg-cc-pill"
+            className="cursor-pointer flex size-[26px] items-center justify-center rounded-[7px] text-[17px] text-cc-dim leading-none hover:bg-cc-pill"
           >
             ×
           </button>
@@ -140,7 +140,7 @@ export function AuthReasonDialog({
             type="button"
             disabled={pending !== null}
             onClick={() => signInWith("google")}
-            className="flex h-[42px] items-center justify-center gap-2 rounded-[9px] bg-cc-btn font-semibold text-[13.5px] text-cc-btn-fg hover:opacity-[0.88] disabled:opacity-60 [&>svg]:size-4 [&>svg]:shrink-0"
+            className="cursor-pointer flex h-[42px] items-center justify-center gap-2 rounded-[9px] bg-cc-btn font-semibold text-[13.5px] text-cc-btn-fg hover:opacity-[0.88] disabled:opacity-60 [&>svg]:size-4 [&>svg]:shrink-0"
           >
             {pending === "google" ? <Spinner /> : <GoogleIcon />}
             Continue with Google
@@ -149,7 +149,7 @@ export function AuthReasonDialog({
             type="button"
             disabled={pending !== null}
             onClick={() => signInWith("github")}
-            className="flex h-[42px] items-center justify-center gap-2 rounded-[9px] border border-cc-rule3 bg-cc-surface font-medium text-[13.5px] text-cc-ink hover:border-cc-hov disabled:opacity-60 [&>svg]:size-4 [&>svg]:shrink-0"
+            className="cursor-pointer flex h-[42px] items-center justify-center gap-2 rounded-[9px] border border-cc-rule3 bg-cc-surface font-medium text-[13.5px] text-cc-ink hover:border-cc-hov disabled:opacity-60 [&>svg]:size-4 [&>svg]:shrink-0"
           >
             {pending === "github" ? <Spinner /> : <GithubIcon />}
             Continue with GitHub
@@ -158,7 +158,7 @@ export function AuthReasonDialog({
             type="button"
             disabled={pending !== null}
             onClick={() => router.push(authHref(destination()))}
-            className="flex h-[42px] items-center justify-center rounded-[9px] border border-cc-rule3 bg-cc-surface font-medium text-[13.5px] text-cc-ink hover:border-cc-hov disabled:opacity-60"
+            className="cursor-pointer flex h-[42px] items-center justify-center rounded-[9px] border border-cc-rule3 bg-cc-surface font-medium text-[13.5px] text-cc-ink hover:border-cc-hov disabled:opacity-60"
           >
             Continue with email
           </button>
@@ -169,7 +169,7 @@ export function AuthReasonDialog({
           onClick={() =>
             onReasonChange(reason === "log-in" ? "sign-up" : "log-in")
           }
-          className="mt-3.5 text-center font-medium text-[12.5px] text-cc-brand hover:underline"
+          className="cursor-pointer mt-3.5 text-center font-medium text-[12.5px] text-cc-brand hover:underline"
         >
           {reason === "log-in"
             ? "New here? Sign up instead"
@@ -178,7 +178,7 @@ export function AuthReasonDialog({
         <button
           type="button"
           onClick={onClose}
-          className="mt-2 text-center text-[12.5px] text-cc-dim hover:text-cc-brand"
+          className="cursor-pointer mt-2 text-center text-[12.5px] text-cc-dim hover:text-cc-brand"
         >
           {copy.cancel}
         </button>

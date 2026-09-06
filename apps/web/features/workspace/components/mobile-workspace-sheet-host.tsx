@@ -87,7 +87,7 @@ export function MobileWorkspaceSheetHost({
             }}
             onPointerUp={finishDrag}
             onPointerCancel={resetDrag}
-            className="absolute inset-x-0 top-0 h-3 cursor-grab touch-none active:cursor-grabbing"
+            className="cursor-pointer absolute inset-x-0 top-0 h-3 cursor-grab touch-none active:cursor-grabbing"
           >
             <span className="mx-auto block h-1 w-9 rounded-full bg-cc-rule3" />
           </button>
@@ -98,7 +98,7 @@ export function MobileWorkspaceSheetHost({
             type="button"
             aria-label={`Close ${openCourseLabel(activeEntry)}`}
             onClick={dismiss}
-            className="absolute top-2 right-2 flex size-[30px] items-center justify-center rounded-[8px] bg-cc-surface text-cc-dim shadow-[0_1px_3px_rgba(20,30,45,0.15)] hover:bg-cc-pill"
+            className="cursor-pointer absolute top-2 right-2 flex size-[30px] items-center justify-center rounded-[8px] bg-cc-surface text-cc-dim shadow-[0_1px_3px_rgba(20,30,45,0.15)] hover:bg-cc-pill"
           >
             <X size={16} aria-hidden />
           </button>

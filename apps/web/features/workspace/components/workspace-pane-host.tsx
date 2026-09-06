@@ -223,7 +223,7 @@ function WorkspaceResizeHandle({
         window.addEventListener("pointerup", finish, { once: true });
         window.addEventListener("pointercancel", finish, { once: true });
       }}
-      className="-left-[14px] absolute top-0 hidden h-full w-[11px] cursor-col-resize items-center justify-center @3xl:flex"
+      className="cursor-pointer -left-[14px] absolute top-0 hidden h-full w-[11px] cursor-col-resize items-center justify-center @3xl:flex"
     >
       <span
         aria-hidden

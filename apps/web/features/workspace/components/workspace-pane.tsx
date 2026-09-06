@@ -273,7 +273,7 @@ export function WorkspacePane({
                     title={label}
                     onClick={() => onActivate(entry.id)}
                     className={cn(
-                      "flex h-[34px] w-full items-center gap-[7px] rounded-t-[9px] border border-cc-rule3 border-b-0 text-[12.5px]",
+                      "flex h-[34px] w-full cursor-pointer items-center gap-[7px] rounded-t-[9px] border border-cc-rule3 border-b-0 text-[12.5px]",
                       layout.tier === "tight"
                         ? "justify-center px-0"
                         : "justify-start px-[9px]",
@@ -308,7 +308,7 @@ export function WorkspacePane({
                       title="Close pane"
                       aria-label={`Close ${label}`}
                       onClick={() => onClose(entry.id)}
-                      className="-translate-y-1/2 absolute top-1/2 right-1 flex size-5 items-center justify-center rounded-[5px] text-[15px] text-cc-dim leading-none hover:bg-cc-pill"
+                      className="cursor-pointer -translate-y-1/2 absolute top-1/2 right-1 flex size-5 items-center justify-center rounded-[5px] text-[15px] text-cc-dim leading-none hover:bg-cc-pill"
                     >
                       ×
                     </button>
