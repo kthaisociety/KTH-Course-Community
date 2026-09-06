@@ -29,6 +29,18 @@ export { ReviewList } from "./components/review-list";
 /** The fast-track card stack, and the shape of one course in its queue. */
 export { Reviewer, type ReviewerProps } from "./components/reviewer";
 export type { ReviewerCardCourse } from "./components/reviewer-card";
+/**
+ * The score controls, exported because the workspace pane draws the same 1-10
+ * score the reviewer card does. They were two near-verbatim copies that had
+ * drifted three ways, one of them a dark-theme-only wrong fill colour; see
+ * `components/score-controls.tsx` for what each divergence was.
+ */
+export {
+  APPLIED_FILL,
+  ScoreSlider,
+  UNSET_FILL,
+  ValuePill,
+} from "./components/score-controls";
 /** The prompt for taken courses with no review — Taken courses and My Page. */
 export {
   UnreviewedCard,

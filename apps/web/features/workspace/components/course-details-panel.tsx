@@ -4,6 +4,7 @@ import { useCallback, useRef, useState } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCourseDetails, useCourseSummaries } from "@/features/courses";
 import {
+  APPLIED_FILL,
   examinationSegments,
   ReviewList,
   useReviewList,
@@ -13,7 +14,7 @@ import { sanitizeCourseHtml } from "@/lib/sanitize-html";
 import { cn } from "@/lib/utils";
 import type { CourseReviewStats } from "@/types";
 import { EXAMINATION_DISTRIBUTION_LABELS, MAX_REVIEW_SCORE } from "@/types";
-import { APPLIED_FILL, Kicker } from "./pane-parts";
+import { Kicker } from "./pane-parts";
 
 function Figure({ label, value }: { label: string; value: string }) {
   return (
