@@ -57,7 +57,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <SheetContent
           side="left"
           showCloseButton={false}
-          overlayClassName="bg-black/40 supports-backdrop-filter:backdrop-blur-none"
+          overlayClassName="bg-[rgba(20,30,45,0.4)] supports-backdrop-filter:backdrop-blur-none"
           className="w-[250px] max-w-[85vw] gap-0 border-none bg-cc-rail p-0 sm:max-w-[250px]"
         >
           <SheetTitle className="sr-only">Menu</SheetTitle>

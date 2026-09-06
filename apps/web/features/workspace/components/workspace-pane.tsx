@@ -222,7 +222,20 @@ export function WorkspacePane({
             </DropdownMenuTrigger>
             <DropdownMenuContent
               align="start"
-              className="scrollbar-subtle cc-theme max-h-[222px] w-[262px] overflow-y-auto border-cc-rule2 bg-cc-surface p-[5px] text-cc-ink"
+              /*
+                A real border and the artboard's own shadow, matching the five
+                other popovers in the app.
+
+                This carried `border-cc-rule2` with no width utility, and
+                Tailwind v4's preflight sets `border: 0` on everything — so the
+                colour named a border that never painted, and the visible edge
+                was `DropdownMenuContent`'s stock `ring-1 ring-foreground/10`.
+                It also inherited shadcn's `shadow-md`. The collection chip,
+                tile and detail menus and both course-card popovers all state
+                `border border-cc-rule2` with `shadow-[0_8px_24px_rgba(20,30,45,.14)]`;
+                this was the one outlier.
+              */
+              className="scrollbar-subtle cc-theme max-h-[222px] w-[262px] overflow-y-auto border border-cc-rule2 bg-cc-surface p-[5px] text-cc-ink shadow-[0_8px_24px_rgba(20,30,45,0.14)]"
             >
               {openCourses.map((entry) => (
                 <DropdownMenuItem

@@ -35,7 +35,10 @@ function AlertDialogOverlay({
     <AlertDialogPrimitive.Overlay
       data-slot="alert-dialog-overlay"
       className={cn(
-        "fixed inset-0 z-50 bg-black/10 duration-100 supports-backdrop-filter:backdrop-blur-xs data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
+        // The artboards' modal scrim, flat and unblurred. See
+        // {@link DialogOverlay} for why it is the default and which two scrims
+        // legitimately differ from it.
+        "fixed inset-0 z-50 bg-[rgba(20,30,45,0.34)] duration-100 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
         className,
       )}
       {...props}

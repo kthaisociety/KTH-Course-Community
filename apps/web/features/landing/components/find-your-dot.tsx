@@ -144,7 +144,7 @@ export function FindYourDot({ open, status, onClose, onRetry }: Props) {
           revealing ? "bg-[rgba(14,26,44,0.08)]" : "bg-[rgba(14,26,44,0.34)]",
         )}
         className={cn(
-          "cc-theme w-[396px] max-w-[calc(100vw-2rem)] gap-0 rounded-[14px] border border-cc-rule2 bg-cc-surface p-6 text-cc-ink shadow-[0_20px_56px_rgba(14,26,44,0.26)] sm:max-w-[396px]",
+          "cc-theme w-[396px] max-w-[calc(100vw-2rem)] gap-0 rounded-[14px] border border-cc-rule2 bg-cc-surface p-6 text-cc-ink shadow-[0_20px_56px_rgba(14,26,44,0.26)]",
           revealing && "top-auto bottom-9 translate-y-0",
         )}
       >

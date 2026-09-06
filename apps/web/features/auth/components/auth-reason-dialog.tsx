@@ -110,8 +110,7 @@ export function AuthReasonDialog({
     <Dialog open={reason !== null} onOpenChange={(open) => !open && onClose()}>
       <DialogContent
         showCloseButton={false}
-        overlayClassName="bg-[rgba(14,26,44,0.34)] supports-backdrop-filter:backdrop-blur-none"
-        className="cc-theme w-[400px] max-w-[calc(100vw-2rem)] gap-0 rounded-[14px] border-cc-rule2 bg-cc-surface p-6 text-cc-ink shadow-[0_18px_48px_rgba(20,30,45,0.26)]"
+        className="cc-theme w-[400px] max-w-[calc(100vw-2rem)] gap-0 rounded-[14px] bg-cc-surface p-6 text-cc-ink shadow-[0_18px_48px_rgba(20,30,45,0.26)]"
       >
         <div className="flex items-center justify-between gap-3">
           <span className="font-semibold text-[11px] text-cc-brand uppercase tracking-[0.06em]">

@@ -70,8 +70,7 @@ export function RemoveTakenCourseDialog({ row, onCancel, onConfirm }: Props) {
     >
       <DialogContent
         showCloseButton={false}
-        overlayClassName="bg-[rgba(20,30,45,0.34)] supports-backdrop-filter:backdrop-blur-none"
-        className="cc-theme w-[440px] max-w-[calc(100vw-2rem)] gap-0 rounded-[14px] bg-cc-surface p-[22px] text-cc-ink shadow-[0_18px_48px_rgba(20,30,45,0.24)] ring-0 sm:max-w-[440px]"
+        className="cc-theme w-[440px] max-w-[calc(100vw-2rem)] gap-0 rounded-[14px] bg-cc-surface p-[22px] text-cc-ink shadow-[0_18px_48px_rgba(20,30,45,0.24)] ring-0"
       >
         <p className="m-0 font-semibold text-[11px] text-cc-brand uppercase tracking-[0.06em]">
           Taken courses

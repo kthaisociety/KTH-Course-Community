@@ -38,7 +38,29 @@ function DialogOverlay({
     <DialogPrimitive.Overlay
       data-slot="dialog-overlay"
       className={cn(
-        "fixed inset-0 isolate z-50 bg-black/10 duration-100 supports-backdrop-filter:backdrop-blur-xs data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
+        /*
+          The artboards' modal scrim, as the default rather than as an override
+          each dialog remembers to pass.
+
+          `rgba(20,30,45,.34)` is what all eight artboards that draw a modal use
+          — Collections, Explore, Landing, My Page, Saved, Saved copy, Taken
+          Courses and Workspace Pane. It was shadcn's blurred `bg-black/10` here,
+          and six dialogs each carried an `overlayClassName` to get back to the
+          design; four of those six had copied Landing's one-off
+          `rgba(14,26,44,.34)` by mistake, which is how a single scrim became
+          four values in the app. A default nobody has to remember is what stops
+          that recurring.
+
+          Flat, with no blur: what is behind a dialog is the thing the dialog is
+          about, and it has to stay readable while the reader decides. Every one
+          of those six overrides had already turned the blur off.
+
+          Two scrims legitimately differ and still say so at the call site: the
+          mobile drawer is `rgba(20,30,45,.4)` (`Mobile Preview.dc.html:242`) and
+          Find your dot is `rgba(14,26,44,.34)`, dropping to `.08` while the dot
+          is revealing (`Landing.dc.html:164,1493`).
+        */
+        "fixed inset-0 isolate z-50 bg-[rgba(20,30,45,0.34)] duration-100 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
         className,
       )}
       {...props}

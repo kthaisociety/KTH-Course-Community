@@ -75,12 +75,6 @@ export function ConfirmDialog({ request, onCancel, onConfirm }: Props) {
         <DialogContent
           showCloseButton={false}
           /*
-            The artboard's own scrim, and no blur under it: what is behind a
-            confirmation is the thing being confirmed about, and it has to stay
-            readable while the reader decides.
-          */
-          overlayClassName="bg-[rgba(20,30,45,0.34)] supports-backdrop-filter:backdrop-blur-none"
-          /*
             `cc-theme` because the dialog is portalled to the body and would
             otherwise leave the subtree that defines the `--cc-*` tokens.
 
