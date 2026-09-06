@@ -20,29 +20,20 @@ export function Kicker({ children }: { children: ReactNode }) {
 /**
  * The applied end of a theory/applied bar.
  *
- * The design draws it as a fixed pale blue (`#9dbfe4`) that no `--cc-*` token
- * carries, so it is derived from the brand fill rather than invented — the
- * same substitution rule the course card's workload bar took in #86.
+ * This was a `color-mix` of `--cc-btn` over `--cc-surface` — the substitution
+ * #86 settled for a design colour with no token, kept when #127 §1 removed the
+ * other two derivations because those had a real token to swap to and this one
+ * did not. #173 named it: `--cc-applied` in `globals.css` carries a value per
+ * theme, the light one being the artboard's own literal and the dark one chosen
+ * for the dark page rather than mixed for it. The reasoning lives with the
+ * token, which is where a colour's reasoning belongs.
  *
- * ## Why this `color-mix` stays, when #127 §1 removed the others
- *
- * That rule is "no derivation where a real token exists", and here none does.
- * Re-checked against the 2026-09-05 export: `cc-theme.css` contains no
- * `9dbfe4` and names no token for it, while
- * `Course Community - Workspace Pane.dc.html:115` writes the hex inline for
- * this very segment — and again at `:274`, as the dashed border on the draft's
- * starter pills. So it is a small pale blue the design reuses without ever
- * having named, not a token this file failed to find. Pinning the hex is the
- * one thing that would be wrong: it is a light-mode value, and on the dark page
- * it is a bar that reads as brighter than the brand it is meant to sit under.
- *
- * The derivation is therefore the substitution, not a shortcut past a token.
- * Naming it is worth doing and is not this file's to do — `globals.css` owns
- * both halves of the mirror, and a token would want a dark value chosen for the
- * dark page rather than mixed for it. Filed as #173; until then this constant
- * is the single place the mix is written, and
- * `features/reviews/components/reviewer-card.tsx` carries the one copy that has
- * escaped it.
+ * The constant stays, because what it is for has not changed. A course being
+ * read and a review being written draw the same bar in two files, and the token
+ * alone would not stop one of them reaching for `--cc-hov` next time. It is now
+ * a name for the token rather than a name for a mix, so the copy in
+ * `features/reviews/components/reviewer-card.tsx` — which drew the same bar and
+ * had drifted out of here already — is harmless where it is not identical:
+ * both spell the one token.
  */
-export const APPLIED_FILL =
-  "color-mix(in srgb, var(--cc-btn) 40%, var(--cc-surface))";
+export const APPLIED_FILL = "var(--cc-applied)";

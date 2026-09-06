@@ -1,5 +1,3 @@
-import type { ExaminationKey } from "@/features/reviews/lib/review-draft";
-import { EXAMINATION_DISTRIBUTION_KEYS } from "@/types";
 import {
   EMPTY_WORKSPACE,
   type OpenCourse,
@@ -7,6 +5,7 @@ import {
   type Workspace,
 } from "./open-courses";
 import {
+  decodeReviewDraft,
   EMPTY_REVIEW_DRAFT,
   isUntouched,
   type ReviewDraft,
@@ -50,8 +49,15 @@ import {
  * so anything that does not match the shape is dropped rather than trusted. But
  * "dropped" is narrower than it looks: the pane writes its state back over
  * storage, so anything this file refuses to decode is deleted a keystroke later.
- * A draft therefore salvages what it can — see `toDraft` — instead of failing
- * whole.
+ * A draft therefore salvages what it can, instead of failing whole.
+ *
+ * The salvaging is `decodeReviewDraft`'s, in `./review-draft.ts`, which extends
+ * `features/reviews/lib/review-draft.ts`'s decoder with the pane's two flags.
+ * This file used to hold a second hand-written copy of it, and the fast-track
+ * reviewer a third; #166 is what they cost. The three refusals left in this file
+ * are its own and none of them is a field: an entry that is not an object, one
+ * with no `savedAt`, and one whose stamp has expired. Those are deliberate, and
+ * the last of them is the whole point of the stamp.
  */
 
 const WORKSPACE_KEY = "cc.workspace.open";
@@ -150,68 +156,6 @@ export function writeWorkspace(workspace: Workspace): void {
   write("session", WORKSPACE_KEY, workspace);
 }
 
-function isExaminationKey(value: unknown): value is ExaminationKey {
-  return (EXAMINATION_DISTRIBUTION_KEYS as readonly unknown[]).includes(value);
-}
-
-/** The examination split as `ReviewDraft` holds it: two parallel arrays. */
-type ExaminationSplit = Pick<ReviewDraft, "methods" | "shares">;
-
-/**
- * The stored examination split, or no split at all.
- *
- * `methods` and `shares` are parallel, always add up to 100, and name methods
- * *this* build knows about. A stored `"quiz"` from a build that offered one used
- * to be cast straight into `ExaminationKey[]` and reach the bar as a segment
- * with no colour and no label; a length mismatch used to reach `moveDivider` as
- * arithmetic over `undefined`.
- *
- * Anything that fails drops the split and **nothing else**. This check used to
- * reject the whole draft, and since the pane writes its state back over storage
- * on the next keystroke, a draft rejected here was a draft permanently deleted —
- * the write-up and the scores went with the one bad field. A split we cannot
- * read is a question left unanswered; the rest of the review is still the
- * writer's work and there is no reason to burn it.
- */
-function toExaminationSplit(value: Record<string, unknown>): ExaminationSplit {
-  const none: ExaminationSplit = { methods: [], shares: [] };
-
-  const { methods, shares } = value;
-  if (!Array.isArray(methods) || !Array.isArray(shares)) return none;
-  if (methods.length !== shares.length || methods.length === 0) return none;
-
-  const named = methods.filter(isExaminationKey);
-  if (named.length !== methods.length) return none;
-  if (new Set(named).size !== named.length) return none;
-
-  const sizes = shares.filter(
-    (share): share is number => typeof share === "number" && share > 0,
-  );
-  if (sizes.length !== shares.length) return none;
-  if (sizes.reduce((total, share) => total + share, 0) !== 100) return none;
-
-  return { methods: named, shares: sizes };
-}
-
-function toDraft(value: unknown): ReviewDraft | null {
-  if (!isRecord(value)) return null;
-
-  const score = (candidate: unknown) =>
-    typeof candidate === "number" ? candidate : null;
-
-  return {
-    ...EMPTY_REVIEW_DRAFT,
-    ...toExaminationSplit(value),
-    examinationForgotten: value.examinationForgotten === true,
-    approachTheoryPercent: score(value.approachTheoryPercent),
-    approachForgotten: value.approachForgotten === true,
-    workloadScore: score(value.workloadScore),
-    learningScore: score(value.learningScore),
-    happyTook: typeof value.happyTook === "boolean" ? value.happyTook : null,
-    message: typeof value.message === "string" ? value.message : "",
-  };
-}
-
 /** One course's draft with the clock reading that decides when to forget it. */
 interface StoredDraft {
   savedAt: number;
@@ -233,7 +177,7 @@ function decodeStoredDrafts(): Record<string, StoredDraft> {
     const { savedAt } = entry;
     if (typeof savedAt !== "number" || !Number.isFinite(savedAt)) continue;
     if (savedAt < oldest) continue;
-    const draft = toDraft(entry.draft);
+    const draft = decodeReviewDraft(entry.draft);
     if (draft) stored[courseCode] = { savedAt, draft };
   }
   return stored;
@@ -273,7 +217,7 @@ function adoptLegacyDrafts(
   const merged: Record<string, StoredDraft> = { ...stored };
   for (const [courseCode, candidate] of Object.entries(legacy)) {
     if (courseCode in merged) continue;
-    const draft = toDraft(candidate);
+    const draft = decodeReviewDraft(candidate);
     if (!draft || isUntouched(draft)) continue;
     merged[courseCode] = { savedAt: now, draft };
   }
@@ -306,8 +250,8 @@ export function readDrafts(): Record<string, ReviewDraft> {
  * Never stamping would be worse: a draft edited daily would expire mid-edit.
  *
  * Field by field rather than by serialising: both sides are small, and the two
- * come from different places — one from `toDraft`, one from the panel's
- * spreads — so their key order is not something to bet a comparison on.
+ * come from different places — one from `decodeReviewDraft`, one from the
+ * panel's spreads — so their key order is not something to bet a comparison on.
  */
 function sameDraft(a: ReviewDraft, b: ReviewDraft): boolean {
   return (

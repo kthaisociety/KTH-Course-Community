@@ -80,6 +80,155 @@ export const EMPTY_REVIEW_DRAFT: ReviewDraft = {
   message: "",
 };
 
+/* ── Reading a draft back out of a browser ────────────────────────────────────
+ *
+ * Two screens keep an unpublished draft in the browser and read it back on the
+ * next page load: the workspace pane, in `localStorage`, and the fast-track
+ * reviewer, in its tab's `sessionStorage`. Until #166 each had written its own
+ * decoder, field by field, and the two had drifted — first by four lines, then
+ * by what a malformed record *means*. One salvaged, the other rejected. This is
+ * the one decoder both now go through.
+ *
+ * ## Why it does not spread `EMPTY_REVIEW_DRAFT`
+ *
+ * Both old copies started `{ ...EMPTY_REVIEW_DRAFT, ... }` and then set the
+ * fields they knew about. That spread is what made the duplication dangerous
+ * rather than merely untidy: it makes the result structurally complete whether
+ * or not the decoder has heard of every field, so a field added to `ReviewDraft`
+ * compiles in both copies, passes the type checker in both copies, and comes
+ * back as its empty value on the next reload — silently, and delayed until
+ * someone reloads.
+ *
+ * The object literal below therefore names every field and defaults none of
+ * them. Adding a field to `ReviewDraft` now fails to compile *here*, in the one
+ * place that has to learn about it. Do not reintroduce the spread — and if
+ * somebody does, `review-draft.spec.ts` round-trips an exhaustive fixture whose
+ * every field differs from the empty draft, which catches the same mistake at
+ * runtime. The fixture is typed `ReviewDraft`, so a new field forces a new value
+ * into it rather than being quietly omitted from the test too.
+ *
+ * ## Salvage, not reject — and only one of them exists
+ *
+ * A field that cannot be read is dropped; the rest of the draft comes back. The
+ * only thing that yields "no draft" is a value that is not an object at all,
+ * because there is nothing in a string to salvage.
+ *
+ * That is not a preference. Both screens mirror their state straight back over
+ * storage — the workspace pane on the effect #180 rebuilt, the reviewer on
+ * `useEffect(… , [round])` in `reviewer.tsx`, which fires on the mount that
+ * follows the restore — so a draft this function refuses is a draft *deleted*,
+ * within a commit, permanently. Rejecting a whole draft over one unreadable
+ * field burns the write-up and the scores to avoid drawing a bar wrong.
+ *
+ * `reviewer-session.ts` used to reject, on the reading that a half-understood
+ * *round* is worse than none. The round-level check is real and it stays in
+ * that file — an absent or empty queue is still no round. But it is a different
+ * granularity: rejecting one draft never rejected the round, it dealt the same
+ * card with the reviewer's answers thrown away. So there is no call site that
+ * wants rejection, and there is deliberately no policy switch here to give one.
+ */
+
+/**
+ * Whether a parsed value could be a draft at all.
+ *
+ * An array is not: `JSON.parse("[1,2]")` is an object with a `length`, and
+ * reading fields off it would decode a list into an untouched draft rather than
+ * into nothing.
+ *
+ * Exported because the workspace pane's draft is this shape plus two flags, and
+ * its decoder has to read those two off the same record — see
+ * `features/workspace/lib/review-draft.ts`. Sharing the guard is what lets it
+ * extend `decodeDraftAnswers` without asserting a type it has not checked.
+ */
+export function isDraftRecord(
+  value: unknown,
+): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/**
+ * A stored number, or no answer.
+ *
+ * `Number.isFinite` rather than a bare `typeof`: nothing `JSON.parse` produces
+ * is `NaN` or `Infinity`, but this takes `unknown` and a non-finite score would
+ * travel all the way to `clampScore`, whose `Math.min`/`Math.max` propagate it
+ * into a form the writer is then told is unfinished.
+ */
+function toScore(candidate: unknown): number | null {
+  return typeof candidate === "number" && Number.isFinite(candidate)
+    ? candidate
+    : null;
+}
+
+/** The examination split as `ReviewDraft` holds it: two parallel arrays. */
+type ExaminationSplit = Pick<ReviewDraft, "methods" | "shares">;
+
+function isExaminationKey(value: unknown): value is ExaminationKey {
+  return (EXAMINATION_DISTRIBUTION_KEYS as readonly unknown[]).includes(value);
+}
+
+/**
+ * The stored examination split, or no split at all.
+ *
+ * `methods` and `shares` are parallel, always add up to 100, and name methods
+ * *this* build knows about. A stored `"quiz"` from a build that offered one used
+ * to be cast straight into `ExaminationKey[]` and reach the bar as a segment
+ * with no colour and no label; a length mismatch used to reach `moveDivider` as
+ * arithmetic over `undefined`.
+ *
+ * Anything that fails drops the split and **nothing else**. A split we cannot
+ * read is a question left unanswered; the rest of the review is still the
+ * writer's work and there is no reason to burn it.
+ */
+function toExaminationSplit(value: Record<string, unknown>): ExaminationSplit {
+  const none: ExaminationSplit = { methods: [], shares: [] };
+
+  const { methods, shares } = value;
+  if (!Array.isArray(methods) || !Array.isArray(shares)) return none;
+  if (methods.length !== shares.length || methods.length === 0) return none;
+
+  const named = methods.filter(isExaminationKey);
+  if (named.length !== methods.length) return none;
+  if (new Set(named).size !== named.length) return none;
+
+  const sizes = shares.filter(
+    (share): share is number => typeof share === "number" && share > 0,
+  );
+  if (sizes.length !== shares.length) return none;
+  if (sizes.reduce((total, share) => total + share, 0) !== 100) return none;
+
+  return { methods: named, shares: sizes };
+}
+
+/**
+ * A stored record as this build's answers.
+ *
+ * Total: every record decodes to a draft. The caller has already established
+ * that it *is* a record, which is the only thing that can fail.
+ */
+export function decodeDraftAnswers(
+  value: Record<string, unknown>,
+): ReviewDraft {
+  // Every field named, nothing defaulted from `EMPTY_REVIEW_DRAFT`. See above:
+  // the spread is what let a new field drop out of a reload unnoticed.
+  return {
+    ...toExaminationSplit(value),
+    approachTheoryPercent: toScore(value.approachTheoryPercent),
+    workloadScore: toScore(value.workloadScore),
+    learningScore: toScore(value.learningScore),
+    happyTook: typeof value.happyTook === "boolean" ? value.happyTook : null,
+    message: typeof value.message === "string" ? value.message : "",
+  };
+}
+
+/**
+ * Whatever a browser handed back, as a draft — or `null` when it is not an
+ * object and there is therefore nothing in it to salvage.
+ */
+export function decodeReviewDraft(value: unknown): ReviewDraft | null {
+  return isDraftRecord(value) ? decodeDraftAnswers(value) : null;
+}
+
 /** The smallest share a segment may be dragged to, in whole percent. */
 export const MIN_SHARE = 5;
 /** Shares move in these steps, so the split stays a round number. */

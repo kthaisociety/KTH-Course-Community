@@ -16,7 +16,9 @@ import type { ReviewFormData } from "@/features/reviews";
  * nothing at runtime and the convention is free to hold there.
  */
 import {
+  decodeDraftAnswers,
   EMPTY_REVIEW_DRAFT as EMPTY_REVIEW_ANSWERS,
+  isDraftRecord,
   isUntouched as noAnswersGiven,
   type ReviewDraft as ReviewAnswers,
   toReviewFormData as toAnsweredFormData,
@@ -60,6 +62,35 @@ export const EMPTY_REVIEW_DRAFT: ReviewDraft = {
   approachForgotten: false,
 };
 
+/**
+ * A stored draft as the pane holds it, or `null` when the stored value is not
+ * an object and there is nothing in it to salvage.
+ *
+ * The answers are `features/reviews/lib/review-draft.ts`'s to decode, for the
+ * same reason the model is: there is nothing about the pane that makes a stored
+ * `workloadScore` mean something else. Only the two flags are read here, which
+ * is exactly the extension this file exists for.
+ *
+ * The record guard is shared rather than repeated so that the flags come off a
+ * value TypeScript has *checked* is a record — the alternative is decoding the
+ * answers first and then asserting that the input must have been a record after
+ * all, which is the kind of unchecked cast #166 set out to remove.
+ *
+ * Nothing is defaulted from `EMPTY_REVIEW_DRAFT`. Adding a field to this
+ * interface fails to compile here, and adding one to `ReviewAnswers` fails to
+ * compile in the reviews decoder; between them there is no field on either half
+ * of the shape that can be added without a compiler error naming the decoder
+ * that has to learn about it.
+ */
+export function decodeReviewDraft(value: unknown): ReviewDraft | null {
+  if (!isDraftRecord(value)) return null;
+  return {
+    ...decodeDraftAnswers(value),
+    examinationForgotten: value.examinationForgotten === true,
+    approachForgotten: value.approachForgotten === true,
+  };
+}
+
 /** The three sections the progress bar counts. */
 export const REVIEW_DRAFT_SECTIONS = 3;
 
@@ -102,8 +133,8 @@ export function isUntouched(draft: ReviewDraft): boolean {
  * The flags are folded away first, and explicitly rather than by relying on the
  * checkboxes having cleared the answers they cover. A draft comes back out of
  * `localStorage`, where it may have been written by an older build or by a
- * tab that never finished a keystroke, and `toDraft` reads each field on its
- * own — so a stored draft carrying both a ticked box and the methods it was
+ * tab that never finished a keystroke, and `decodeReviewDraft` reads each field
+ * on its own — so a stored draft carrying both a ticked box and the methods it was
  * meant to clear is a shape this has to survive. "I don't remember" wins,
  * because that is the answer the writer gave last.
  *

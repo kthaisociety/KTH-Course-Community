@@ -74,6 +74,44 @@ describe("drafts", () => {
     expect(readDrafts().DD2380?.message).toBe("Half a thought");
   });
 
+  /**
+   * The guard against a new field being dropped on the way back in — #166, the
+   * defect underneath the duplication.
+   *
+   * This file's decoder and `features/reviews/lib/reviewer-session.ts`'s both
+   * spread `EMPTY_REVIEW_DRAFT` and then copied across the fields they knew
+   * about, so a field added to the draft compiled in both, type-checked in
+   * both, and came back empty on the next reload from whichever one you forgot.
+   * They now share one decoder, and it defaults nothing — an unhandled field is
+   * a compiler error. This is the same guarantee at runtime.
+   *
+   * `ANSWERED` is typed, so a new field has to be given a value here too, and
+   * every value differs from the empty draft's so a dropped one shows up rather
+   * than coincidentally matching the default.
+   */
+  it("brings every field of a fully answered draft back", () => {
+    const ANSWERED: ReviewDraft = {
+      methods: ["exam", "labs"],
+      shares: [60, 40],
+      approachTheoryPercent: 35,
+      approachForgotten: true,
+      examinationForgotten: true,
+      workloadScore: 8,
+      learningScore: 6,
+      happyTook: true,
+      message: "Hard, and worth it",
+    };
+    for (const [field, value] of Object.entries(ANSWERED)) {
+      expect(value, field).not.toEqual(
+        EMPTY_REVIEW_DRAFT[field as keyof ReviewDraft],
+      );
+    }
+
+    writeFresh({ DD2380: ANSWERED });
+
+    expect(readDrafts().DD2380).toEqual(ANSWERED);
+  });
+
   it("forgets a draft nobody came back to for a week", () => {
     storeRawDraft("DD2380", draftWith(), Date.now() - WEEK_MS - 1000);
 
@@ -258,6 +296,12 @@ describe("drafts the previous release left behind", () => {
  * A decoder that rejects is a decoder that deletes, because the pane writes its
  * state straight back over storage. So a stored draft that is wrong in one
  * field has to come back missing that field and nothing else.
+ *
+ * The rules themselves belong to `features/reviews/lib/review-draft.ts` now —
+ * this file used to hold its own copy of them and `reviewer-session.ts` a
+ * third, which is #166. These stay because what is asserted here is that *this
+ * storage path* still salvages: the shared decoder having the right policy is
+ * no use if a future read stops going through it.
  */
 describe("a stored draft that does not quite fit", () => {
   it("keeps the write-up and the scores when the examination split is broken", () => {

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { sanitizeHtml } from "@/lib/sanitize-html";
 import { examinationDistributionSchema } from "@/types";
 import {
+  decodeReviewDraft,
   EMPTY_REVIEW_DRAFT,
   isUntouched,
   type ReviewDraft,
@@ -175,5 +176,90 @@ describe("what the pane sends", () => {
 
   it("leaves a write-up nobody typed empty rather than inventing a paragraph", () => {
     expect(toReviewFormData(answered({ message: "   " }))?.message).toBe("");
+  });
+});
+
+/*
+ * Only what the pane adds to the shared decoder, for the same reason as the
+ * rest of this file. The answers, and every salvage rule about them, are
+ * `features/reviews/lib/review-draft.spec.ts`'s.
+ */
+describe("decodeReviewDraft", () => {
+  /**
+   * Typed, so a field added to either half of the shape has to be given a value
+   * here and then survive the round trip. That is the runtime half of #166's
+   * guarantee; the compile-time half is that neither decoder defaults anything
+   * from an empty draft any more, so an unhandled field fails to build.
+   */
+  const ANSWERED: ReviewDraft = {
+    methods: ["exam", "labs"],
+    shares: [60, 40],
+    approachTheoryPercent: 35,
+    approachForgotten: true,
+    examinationForgotten: true,
+    workloadScore: 8,
+    learningScore: 6,
+    happyTook: true,
+    message: "Hard, and worth it",
+  };
+
+  it("carries every field of a fully answered draft across", () => {
+    for (const [field, value] of Object.entries(ANSWERED)) {
+      expect(value, field).not.toEqual(
+        EMPTY_REVIEW_DRAFT[field as keyof ReviewDraft],
+      );
+    }
+
+    expect(decodeReviewDraft(JSON.parse(JSON.stringify(ANSWERED)))).toEqual(
+      ANSWERED,
+    );
+  });
+
+  it("is nothing at all when the value is not an object", () => {
+    for (const value of [null, "draft", 7, ["exam"]]) {
+      expect(decodeReviewDraft(value), String(value)).toBeNull();
+    }
+  });
+
+  /**
+   * The flags are the pane's whole extension, and they are the one part of a
+   * draft with no null: a box is ticked or it is not. Anything that is not
+   * `true` is a box nobody ticked, which is also what an older build that never
+   * wrote them looks like.
+   */
+  it("reads a flag that is not true as a box nobody ticked", () => {
+    expect(decodeReviewDraft({})).toMatchObject({
+      examinationForgotten: false,
+      approachForgotten: false,
+    });
+    expect(
+      decodeReviewDraft({ examinationForgotten: "yes", approachForgotten: 1 }),
+    ).toMatchObject({ examinationForgotten: false, approachForgotten: false });
+  });
+
+  /*
+   * A draft carrying both a ticked box and the methods it was meant to clear is
+   * a shape storage can hold — the fields are read one at a time — and
+   * `toReviewFormData` is where "I don't remember" wins. The decoder's job is
+   * to report what was stored, not to tidy it.
+   */
+  it("keeps a ticked box and the answers beside it, and lets the mapper decide", () => {
+    const draft = decodeReviewDraft({
+      methods: ["exam"],
+      shares: [100],
+      examinationForgotten: true,
+      workloadScore: 5,
+      learningScore: 5,
+      happyTook: true,
+    });
+
+    expect(draft).toMatchObject({
+      methods: ["exam"],
+      examinationForgotten: true,
+    });
+    expect(
+      // biome-ignore lint/style/noNonNullAssertion: decoded from a record above.
+      toReviewFormData(draft!)?.examinationDistribution,
+    ).toBeNull();
   });
 });
