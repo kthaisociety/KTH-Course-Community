@@ -281,11 +281,11 @@ export function Landing() {
     <motion.div
       initial={false}
       animate={leavingFor ? "leaving" : "at-rest"}
-      className="scrollbar-subtle @container cc-theme min-h-dvh bg-cc-pg text-cc-ink text-sm lg:h-dvh lg:overflow-y-auto"
+      className="scrollbar-subtle @container cc-theme min-h-dvh bg-cc-pg text-cc-ink text-sm lg:flex lg:h-dvh lg:flex-col lg:overflow-y-auto"
     >
       <motion.header
         variants={HERO_EXIT}
-        className="relative z-10 flex h-[66px] items-center justify-between gap-5 border-cc-rule border-b bg-cc-pg px-4 @lg:px-7"
+        className="relative z-10 flex h-[66px] shrink-0 items-center justify-between gap-5 border-cc-rule border-b bg-cc-pg px-4 @lg:px-7"
       >
         <Link
           href="/"
@@ -360,7 +360,7 @@ export function Landing() {
 
       <section
         data-hero
-        className="relative min-h-[480px] @lg:min-h-[600px] overflow-hidden"
+        className="relative min-h-[480px] lg:min-h-[400px] lg:flex-1 overflow-hidden"
       >
         {/* The graph clears with everything else. It is the backdrop the bar is
             leaving, and a still canvas sitting behind a page that has faded out
@@ -382,7 +382,7 @@ export function Landing() {
           />
         </motion.div>
 
-        <div className="relative z-[1] flex min-h-[480px] @lg:min-h-[600px] flex-col items-center justify-center px-4 @lg:px-7">
+        <div className="relative z-[1] flex min-h-[480px] lg:h-full lg:min-h-0 flex-col items-center justify-center px-4 @lg:px-7">
           <div className="flex w-full max-w-[720px] flex-col items-center text-center">
             {/* The artboard's 70px, and it is load-bearing: it grows the
                 centred column at the top, which is what sits the hero copy
@@ -502,7 +502,7 @@ export function Landing() {
 
       <motion.section
         variants={HERO_EXIT}
-        className="border-cc-rule border-t bg-cc-surface px-4 py-[34px] @lg:px-7"
+        className="border-cc-rule border-t bg-cc-surface px-4 py-[34px] @lg:px-7 lg:shrink-0"
       >
         <div className="mx-auto flex max-w-[960px] flex-col gap-[22px] @lg:grid @lg:grid-cols-3">
           {SECTIONS.map((section) => (
