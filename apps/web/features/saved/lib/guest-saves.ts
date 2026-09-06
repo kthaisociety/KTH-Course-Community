@@ -133,16 +133,32 @@ export function setGuestSave(
 }
 
 /**
- * Drops the whole list.
+ * Drops exactly the codes named, and keeps everything else.
  *
- * Called only once the account write it was handed to has landed — the
- * artboard's `runImport` clears local storage in the same step that commits the
- * merge, and comments the ordering: *"the browser hand-off is cleared only
- * now"* (line 594). Clearing first would lose the list outright if the write
- * then failed.
+ * Called once the account writes have landed — the artboard's `runImport`
+ * clears local storage in the same step that commits the merge, and comments
+ * the ordering: *"the browser hand-off is cleared only now"* (line 594).
+ * Clearing first would lose the list outright if the write then failed.
+ *
+ * **Named codes, not the whole list.** The artboard can afford
+ * `localStorage.removeItem` there because its `localSaves` is component state
+ * that nothing else writes. Ours is `localStorage`, which every tab on this
+ * origin shares, and an import is a run of awaited network writes — so a save
+ * made in a second tab while the first is importing is in storage and *not* in
+ * the snapshot being imported. Clearing wholesale deletes it without ever
+ * having written it to the account, which is the one way this feature can lose
+ * a course outright.
+ *
+ * So the removal re-reads storage and subtracts, rather than assuming storage
+ * still says what it said before the awaits.
  */
-export function clearGuestSaves(): void {
-  writeGuestSaves(EMPTY);
+export function retireGuestSaves(codes: readonly string[]): void {
+  if (!codes.length) return;
+  const retired = new Set(codes);
+  const current = readGuestSaves();
+  const kept = current.filter((code) => !retired.has(code));
+  if (kept.length === current.length) return;
+  writeGuestSaves(kept);
 }
 
 /** `useSyncExternalStore`'s subscribe half. */

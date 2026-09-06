@@ -726,7 +726,54 @@ describe("Saved", { timeout: 20_000 }, () => {
       ).toBeVisible();
     });
 
-    // Clearing before the writes land is what would lose the list outright.
+    /**
+     * Found by review on #194. The import holds a snapshot across awaited
+     * account writes, and `localStorage` is shared by every tab on the origin
+     * — so a save made in a second tab while the first is importing is in
+     * storage and is not in the snapshot. Retiring the whole list deleted it
+     * without any account ever having received it, which is the one way this
+     * feature can lose a course outright.
+     */
+    it("keeps a course saved in another tab while the import runs", async () => {
+      saved();
+      writeGuestSaves(["DD2380"]);
+      // The second tab writes while the first is waiting on its account write.
+      setSaved.mockImplementationOnce(async () => {
+        writeGuestSaves([...readGuestSaves(), "DD1337"]);
+      });
+      render(<Saved />);
+
+      await userEvent.click(
+        screen.getByRole("button", { name: "Add to my account" }),
+      );
+
+      // DD2380 went to the account and left the browser; DD1337 never did, so
+      // it is still here and still offered.
+      expect(setSaved).toHaveBeenCalledExactlyOnceWith("DD2380", true);
+      expect(readGuestSaves()).toEqual(["DD1337"]);
+    });
+
+    // A run that fails half way has still imported the half that answered.
+    // Leaving those in the browser makes the retry rewrite them.
+    it("retires what landed before a failure, and keeps what did not", async () => {
+      saved();
+      writeGuestSaves(["DD2380", "DD2421"]);
+      setSaved
+        .mockResolvedValueOnce(undefined)
+        .mockRejectedValueOnce(new Error("offline"));
+      render(<Saved />);
+
+      await userEvent.click(
+        screen.getByRole("button", { name: "Add to my account" }),
+      );
+
+      expect(readGuestSaves()).toEqual(["DD2421"]);
+      expect(
+        await screen.findByRole("button", { name: "Try again" }),
+      ).toBeVisible();
+    });
+
+    // Retiring before the writes land is what would lose the list outright.
     it("keeps the browser list when a write fails, and offers a retry", async () => {
       saved();
       writeGuestSaves(["DD2380"]);

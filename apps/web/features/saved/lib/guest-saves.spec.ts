@@ -9,10 +9,10 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  clearGuestSaves,
   GUEST_SAVES_KEY,
   readGuestSaves,
   resetGuestSavesCache,
+  retireGuestSaves,
   setGuestSave,
   subscribeGuestSaves,
   writeGuestSaves,
@@ -81,10 +81,57 @@ describe("the guest saves store", () => {
 
   it("leaves nothing behind once the list is emptied", () => {
     writeGuestSaves(["DD2380"]);
-    clearGuestSaves();
+    retireGuestSaves(["DD2380"]);
 
     expect(readGuestSaves()).toEqual([]);
     expect(window.localStorage.getItem(GUEST_SAVES_KEY)).toBeNull();
+  });
+
+  describe("retireGuestSaves", () => {
+    it("removes only what it was asked to remove", () => {
+      writeGuestSaves(["DD2380", "DD2421", "DD1337"]);
+
+      retireGuestSaves(["DD2380", "DD1337"]);
+
+      expect(readGuestSaves()).toEqual(["DD2421"]);
+    });
+
+    /**
+     * The regression behind the fix. An import holds a snapshot across awaited
+     * account writes; another tab can add to the shared store meanwhile. The
+     * subtraction has to be against storage as it is *now*, not against the
+     * snapshot, or the newcomer is deleted having never reached an account.
+     */
+    it("keeps a code another tab added after the snapshot was taken", () => {
+      const snapshot = ["DD2380", "DD2421"];
+      writeGuestSaves(snapshot);
+
+      // The other tab, mid-import.
+      setGuestSave("DD1337", true);
+
+      retireGuestSaves(snapshot);
+
+      expect(readGuestSaves()).toEqual(["DD1337"]);
+    });
+
+    it("ignores codes that are not in the list", () => {
+      writeGuestSaves(["DD2380"]);
+
+      retireGuestSaves(["DD9999"]);
+
+      expect(readGuestSaves()).toEqual(["DD2380"]);
+    });
+
+    it("does nothing, and notifies nobody, when given no codes", () => {
+      writeGuestSaves(["DD2380"]);
+      const onChange = vi.fn();
+      subscribeGuestSaves(onChange);
+
+      retireGuestSaves([]);
+
+      expect(readGuestSaves()).toEqual(["DD2380"]);
+      expect(onChange).not.toHaveBeenCalled();
+    });
   });
 
   describe("a store written by something else", () => {
