@@ -382,12 +382,21 @@ export function Landing() {
           />
         </motion.div>
 
-        <div className="relative z-[1] flex min-h-[480px] @lg:min-h-[600px] flex-col items-center justify-center px-4 py-14 @lg:px-7">
+        <div className="relative z-[1] flex min-h-[480px] @lg:min-h-[600px] flex-col items-center justify-center px-4 @lg:px-7">
           <div className="flex w-full max-w-[720px] flex-col items-center text-center">
+            {/* The artboard's 70px, and it is load-bearing: it grows the
+                centred column at the top, which is what sits the hero copy
+                where the artboard has it rather than 64px higher.
+
+                Desktop takes 58 instead — 12 off the top, given back to the
+                bar's own margin below. A deliberate divergence: the artboard's
+                19px headline-to-bar gap read too tight once built, and this is
+                the half of the trade that moves the copy up. Mobile keeps the
+                70, along with its own untouched 16px gap. */}
             <motion.p
               variants={HERO_EXIT}
               data-hero-clear
-              className="m-0 font-semibold text-[11px] text-cc-dim uppercase tracking-[0.09em]"
+              className="mt-[70px] @lg:mt-[58px] mb-0 font-semibold text-[11px] text-cc-dim uppercase tracking-[0.09em]"
             >
               Run by students at KTH
             </motion.p>
@@ -402,7 +411,29 @@ export function Landing() {
 
             {/* The one element that stays. It carries `data-hero-clear` for the
                 graph's keep-out and no `variants` for the exit, which is the
-                whole difference between the two sets. */}
+                whole difference between the two sets.
+
+                `Course Community - Landing.dc.html` pins this bar out of flow,
+                at `top:400px` from the page top, floating over an empty 97px
+                spacer. That is not a layout decision to copy: there the bar is
+                one element that *transitions* `top` between the hero and
+                Explore's header (`barTop`, `barTween`), and `top` does not
+                animate in flow. Here the departure is a route change that
+                measures the bar's box at submit time, so the bar can stay in
+                flow — and the artboard's 97px is the space it occupies plus its
+                margins, split around it rather than stacked above it.
+
+                19 + 42 + 36 = 97. The sum has to hold, or the centred column
+                changes height and every line in the hero moves; the 19 is what
+                puts the bar's top back on the artboard's 400px, 334px below the
+                header. Both measured against the artboard, not derived.
+
+                Desktop now runs 31 + 42 + 36 = 109, with the extra 12 taken off
+                the kicker's top margin above. That keeps the column the same
+                height and the bar on the same 400px — only the copy above it
+                moves, which is the point: the artboard's 19 read too tight in
+                the built page. The 97 is still what the artboard says, and this
+                is knowingly 12 off it. */}
             <form
               ref={barRef}
               data-hero-clear
@@ -410,7 +441,7 @@ export function Landing() {
                 event.preventDefault();
                 submitSearch(query);
               }}
-              className="mt-6 @lg:mt-[97px] flex h-[42px] w-full @lg:max-w-[560px] items-center gap-2.5 rounded-[10px] border border-cc-rule3 bg-cc-surface px-3.5"
+              className="mt-4 @lg:mt-[31px] flex h-[42px] w-full @lg:max-w-[560px] items-center gap-2.5 rounded-[10px] border border-cc-rule3 bg-cc-surface px-3.5"
             >
               <Search
                 size={16}
@@ -431,7 +462,7 @@ export function Landing() {
             <motion.div
               variants={HERO_EXIT}
               data-hero-clear
-              className="mt-4 flex flex-wrap items-center justify-center gap-[7px]"
+              className="mt-6 @lg:mt-[36px] flex flex-wrap items-center justify-center gap-[7px]"
             >
               <span className="text-[12px] text-cc-dim">Try</span>
               {TRY.map((term) => (
