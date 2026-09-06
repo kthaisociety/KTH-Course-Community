@@ -11,7 +11,11 @@ import {
   type CourseCardView,
   toCourseCardModel,
 } from "@/features/courses/lib/course-card-model";
-import { useSetCourseSaved } from "@/features/saved";
+import {
+  toggleGuestSave,
+  useGuestSaves,
+  useSetCourseSaved,
+} from "@/features/saved";
 import type {
   CourseCardAction,
   CourseCardModel,
@@ -98,12 +102,18 @@ export function useCourseCard({
   const courseCode = course.courseCode;
 
   const { setSaved } = useSetCourseSaved();
+  const guestSaves = useGuestSaves();
   const { data: takenCourses } = useTakenCourses(signedIn);
   const markTaken = useMarkCourseTaken();
 
   const [takenPickerOpen, setTakenPickerOpen] = useState(false);
 
-  const isSaved = user?.savedCourseCodes.includes(courseCode) ?? false;
+  // Whichever list this reader's saves are actually in. A guest's is the
+  // browser's, so the button reflects a save the moment they make it rather
+  // than staying unfilled until they have an account.
+  const isSaved = signedIn
+    ? (user?.savedCourseCodes.includes(courseCode) ?? false)
+    : guestSaves.includes(courseCode);
   const isTaken =
     takenCourses?.some((taken) => taken.courseCode === courseCode) ?? false;
 
@@ -117,9 +127,24 @@ export function useCourseCard({
     setSaved,
   });
 
+  /**
+   * Saving, for whoever is asking.
+   *
+   * A guest's save is not deferred behind sign-in any more: the Saved artboard
+   * keeps a signed-out reader's list in the browser under its own key and
+   * offers to move it into an account later
+   * (`docs/design_ref/2026-09-06/Course Community - Saved.dc.html:322`, and the
+   * `pendingImport` row at 119-124). Interrupting a save to ask for an account
+   * contradicted both that and the app's own line that browsing never needs
+   * one.
+   *
+   * `save-course` remains the reason for the *other* two ways a card asks for
+   * an account — the collection picker and marking a course taken — because
+   * those write to rows a browser has nowhere to keep.
+   */
   function onSave() {
     if (!signedIn) {
-      requestAuthFrom("save-course");
+      toggleGuestSave(courseCode, !isSaved);
       return;
     }
     setSaved(courseCode, !isSaved).catch(() =>

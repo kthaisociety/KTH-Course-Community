@@ -23,7 +23,21 @@ export function proxy(request: NextRequest) {
  * Every route that needs an account. A route renamed without its entry here
  * silently loses its signed-out redirect, which is why `/saved` moved in the
  * same commit that moved the page (#90).
+ *
+ * `/profile` and `/saved` are deliberately **not** here. The artboards draw
+ * both of them for a signed-out reader — `/saved` as a working page whose saves
+ * live in the browser
+ * (`docs/design_ref/2026-09-06/Course Community - Saved.dc.html:322`), and
+ * `/profile` as the in-place "Sign in to see your page" panel
+ * (`… - My Page.dc.html:73`) inside the shell, with the rail carrying its guest
+ * banner. A redirect to `/auth` renders neither, and both pages already carry
+ * the signed-out branch this matcher was hiding.
+ *
+ * `/taken` stays gated while the transcript route is account-only. The artboard
+ * gives it a guest state too — upload and parse, then gate at "Sign in to keep
+ * this list" (`… - Taken Courses.dc.html:1305`) — and honouring that means
+ * opening an unauthenticated PDF parse, which is its own decision.
  */
 export const config = {
-  matcher: ["/profile/:path*", "/saved/:path*", "/taken/:path*"],
+  matcher: ["/taken/:path*"],
 };

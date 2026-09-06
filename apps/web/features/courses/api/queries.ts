@@ -19,7 +19,10 @@ export function useCourseDetails(courseCode: string | undefined) {
   );
 }
 
-export function useCourseSummaries(courseCodes: string[], enabled = true) {
+export function useCourseSummaries(
+  courseCodes: readonly string[],
+  enabled = true,
+) {
   const trpc = useTRPC();
   return useQueries({
     queries: courseCodes.map((courseCode) =>
@@ -49,7 +52,7 @@ const STATS_BATCH_SIZE = 200;
  * `user.me`, and asking for the stats of an empty list while that resolves would
  * fetch, then immediately refetch.
  */
-export function useCourseStats(courseCodes: string[], enabled = true) {
+export function useCourseStats(courseCodes: readonly string[], enabled = true) {
   const trpc = useTRPC();
 
   const batches: string[][] = [];

@@ -4,7 +4,7 @@ import { Lock, RotateCw, TriangleAlert } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useRef, useState } from "react";
-import { useMe, useRequireSession } from "@/features/auth";
+import { authHref, useMe } from "@/features/auth";
 import {
   type EditableReview,
   Review,
@@ -98,7 +98,6 @@ type OpenEditor = { review: EditableReview; courseCode: string };
  * costs and what would fix it.
  */
 export function MyPage() {
-  useRequireSession();
   const router = useRouter();
   const {
     user,
@@ -188,8 +187,12 @@ export function MyPage() {
     void reviewsQuery.refetch();
   }
 
-  // Signed out. `proxy.ts` only checks that a session cookie exists, so a stale
-  // one lands here; the artboard's own sign-in panel is what it gets.
+  // Signed out, which is a state this page renders rather than a state it
+  // refuses. `My Page.dc.html:73` draws it: the panel below, inside the shell,
+  // with the rail beside it carrying its own guest banner. This page is no
+  // longer in `proxy.ts`'s matcher and no longer calls `useRequireSession`, so
+  // a guest arrives here instead of at `/auth` — and so does the stale-cookie
+  // case that used to be the only way to reach this branch.
   if (!isSessionLoading && !isAuthenticated) {
     return (
       <PageColumn>
@@ -449,7 +452,18 @@ export function MyPage() {
   );
 }
 
-/** The artboard's signed-out panel, for a session that expired on the way here. */
+/**
+ * The artboard's signed-out panel (`… - My Page.dc.html:73-90`).
+ *
+ * Two controls, as it draws: Sign up on `--btn`, Log in outlined beside it.
+ * Both go to the same place — the artboard wires both of its own to `onSignIn`
+ * — because `/auth` is one surface and Better Auth creates the account on first
+ * sign-in either way. The pair is what tells a first-time reader they are
+ * welcome; collapsing it to one button was a quiet narrowing of that.
+ *
+ * `authHref` rather than a bare `/auth`, so signing in comes back to this page
+ * instead of to `/search`.
+ */
 function SignedOutPanel() {
   return (
     <div className="px-7 pt-[18px] @max-[440px]:px-[14px]">
@@ -468,12 +482,20 @@ function SignedOutPanel() {
           Your course list, reviews and average stay private to you and sync
           across devices.
         </p>
-        <Link
-          href="/auth"
-          className="mt-[11px] inline-flex h-8 items-center rounded-lg bg-cc-btn px-3.5 font-semibold text-[12.5px] text-cc-btn-fg no-underline hover:opacity-[.88]"
-        >
-          Sign in
-        </Link>
+        <div className="mt-[11px] flex gap-[7px]">
+          <Link
+            href={authHref("/profile")}
+            className="inline-flex h-8 items-center whitespace-nowrap rounded-lg bg-cc-btn px-3.5 font-semibold text-[12.5px] text-cc-btn-fg no-underline hover:opacity-[.88]"
+          >
+            Sign up
+          </Link>
+          <Link
+            href={authHref("/profile")}
+            className="inline-flex h-8 items-center whitespace-nowrap rounded-lg border border-cc-rule3 bg-cc-surface px-3.5 font-medium text-[12.5px] text-cc-brand no-underline hover:border-cc-hov"
+          >
+            Log in
+          </Link>
+        </div>
       </div>
     </div>
   );

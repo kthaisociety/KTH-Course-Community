@@ -2,6 +2,14 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { CourseStats } from "@/types";
+// The real store, not a mock: it is the page's data source for a guest, and a
+// stub would leave the reads and the writes agreeing with each other and with
+// nothing else.
+import {
+  readGuestSaves,
+  resetGuestSavesCache,
+  writeGuestSaves,
+} from "../lib/guest-saves";
 import { Saved } from "./saved";
 
 const push = vi.fn();
@@ -23,8 +31,8 @@ vi.mock("next/navigation", () => ({
 }));
 vi.mock("@/features/auth", () => ({
   useMe: () => useMe(),
-  useRequireSession: () => ({}),
   AuthReasonDialog: () => null,
+  authHref: (to: string) => `/auth?next=${encodeURIComponent(to)}`,
 }));
 vi.mock("@/features/courses/api/queries", () => ({
   useCourseDetails: () => ({ data: undefined }),
@@ -107,6 +115,12 @@ function saved(...courseCodes: string[]) {
   });
 }
 
+/** Nobody signed in, with these codes saved in the browser instead. */
+function guest(...courseCodes: string[]) {
+  useMe.mockReturnValue({ user: null, isLoading: false });
+  writeGuestSaves(courseCodes);
+}
+
 function cardFor(courseCode: string): HTMLElement {
   const card = screen
     .getAllByRole("article")
@@ -115,7 +129,15 @@ function cardFor(courseCode: string): HTMLElement {
   return card;
 }
 
+function removeButtonFor(courseCode: string) {
+  return within(cardFor(courseCode)).getByRole("button", {
+    name: `Remove ${courseCode} from saved courses`,
+  });
+}
+
 beforeEach(() => {
+  window.localStorage.clear();
+  resetGuestSavesCache();
   saved();
   collections.mockReturnValue([]);
   takenCourses.mockReturnValue([]);
@@ -473,12 +495,6 @@ describe("Saved", { timeout: 20_000 }, () => {
    * code that is not already a member).
    */
   describe("unsaving", () => {
-    function removeButtonFor(courseCode: string) {
-      return within(cardFor(courseCode)).getByRole("button", {
-        name: `Remove ${courseCode} from saved courses`,
-      });
-    }
-
     it("asks before it writes anything", async () => {
       saved("DD2380", "DD2421");
       render(<Saved />);
@@ -593,6 +609,138 @@ describe("Saved", { timeout: 20_000 }, () => {
       await userEvent.click(removeButtonFor("DD2380"));
       expect(document.body.textContent).not.toMatch(/will also|also remove/i);
       expect(document.body.textContent).not.toMatch(/delete your review/i);
+    });
+  });
+
+  /**
+   * The page a signed-out reader gets.
+   *
+   * `Saved.dc.html` draws this as a working page rather than a locked one: the
+   * list is the browser's (line 322, 517) and the hand-off into an account is
+   * offered afterwards (119-124). Until this, `/saved` redirected a guest to
+   * `/auth` from two places at once and none of it was reachable.
+   */
+  describe("a guest", () => {
+    it("sees the courses saved in this browser", () => {
+      guest("DD2380", "DD2421");
+      render(<Saved />);
+
+      expect(cardFor("DD2380")).toBeInTheDocument();
+      expect(cardFor("DD2421")).toBeInTheDocument();
+    });
+
+    it("is not sent to the sign-in page", () => {
+      guest("DD2380");
+      render(<Saved />);
+
+      expect(replace).not.toHaveBeenCalledWith("/auth");
+      expect(push).not.toHaveBeenCalledWith("/auth");
+    });
+
+    it("gets the same empty state as a member, not a locked page", () => {
+      guest();
+      render(<Saved />);
+
+      expect(screen.getByText("No saved courses yet")).toBeVisible();
+    });
+
+    it("unsaves into the browser rather than through the account", async () => {
+      guest("DD2380");
+      render(<Saved />);
+
+      await userEvent.click(removeButtonFor("DD2380"));
+      await userEvent.click(
+        screen.getByRole("button", { name: "Remove course" }),
+      );
+
+      expect(readGuestSaves()).toEqual([]);
+      expect(setSaved).not.toHaveBeenCalled();
+    });
+
+    // There is no account to move the list into yet, so the offer would be
+    // asking them to press a button that cannot do anything.
+    it("is not offered the hand-off into an account", () => {
+      guest("DD2380");
+      render(<Saved />);
+
+      expect(
+        screen.queryByRole("button", { name: "Add to my account" }),
+      ).not.toBeInTheDocument();
+    });
+  });
+
+  describe("the hand-off from browser to account", () => {
+    it("offers the browser list once there is an account to put it in", () => {
+      saved();
+      writeGuestSaves(["DD2380", "DD2421"]);
+      render(<Saved />);
+
+      expect(
+        screen.getByText(
+          "2 courses saved in this browser are ready to add to your account.",
+        ),
+      ).toBeVisible();
+    });
+
+    it("says nothing when the browser is holding nothing", () => {
+      saved("DD2380");
+      render(<Saved />);
+
+      expect(
+        screen.queryByRole("button", { name: "Add to my account" }),
+      ).not.toBeInTheDocument();
+    });
+
+    it("writes each course to the account and then clears the browser", async () => {
+      saved();
+      writeGuestSaves(["DD2380", "DD2421"]);
+      render(<Saved />);
+
+      await userEvent.click(
+        screen.getByRole("button", { name: "Add to my account" }),
+      );
+
+      expect(setSaved).toHaveBeenCalledWith("DD2380", true);
+      expect(setSaved).toHaveBeenCalledWith("DD2421", true);
+      expect(readGuestSaves()).toEqual([]);
+      expect(
+        await screen.findByText("2 saved courses added to your account"),
+      ).toBeVisible();
+    });
+
+    // The account's copy already won, so there is nothing to write — and that
+    // is not a failure to report as one.
+    it("writes nothing when the account already holds them all", async () => {
+      saved("DD2380");
+      writeGuestSaves(["DD2380"]);
+      render(<Saved />);
+
+      await userEvent.click(
+        screen.getByRole("button", { name: "Add to my account" }),
+      );
+
+      expect(setSaved).not.toHaveBeenCalled();
+      expect(readGuestSaves()).toEqual([]);
+      expect(
+        await screen.findByText("Your saved courses are already up to date"),
+      ).toBeVisible();
+    });
+
+    // Clearing before the writes land is what would lose the list outright.
+    it("keeps the browser list when a write fails, and offers a retry", async () => {
+      saved();
+      writeGuestSaves(["DD2380"]);
+      setSaved.mockRejectedValueOnce(new Error("offline"));
+      render(<Saved />);
+
+      await userEvent.click(
+        screen.getByRole("button", { name: "Add to my account" }),
+      );
+
+      expect(readGuestSaves()).toEqual(["DD2380"]);
+      expect(
+        await screen.findByRole("button", { name: "Try again" }),
+      ).toBeVisible();
     });
   });
 });
