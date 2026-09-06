@@ -11,7 +11,7 @@ import {
   DialogDescription,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useMe, useRequireSession } from "@/features/auth";
+import { type AuthReason, AuthReasonDialog, useMe } from "@/features/auth";
 import { useCourseSummaries, useTakenCourses } from "@/features/courses";
 import {
   clearReviewerSession,
@@ -27,6 +27,11 @@ import { formatHp } from "@/lib/kth";
 import type { TranscriptProposal } from "@/server/ingest/transcript/service";
 import { useTakenMutations } from "../api/mutations";
 import { uploadTranscript } from "../api/transcript";
+import {
+  clearGuestProposal,
+  readGuestProposal,
+  writeGuestProposal,
+} from "../lib/guest-proposal";
 import {
   parseReviewDeepLink,
   type ReviewDeepLink,
@@ -152,6 +157,17 @@ function importedSummary(added: number, filled: number): string {
  * deep link, and it carries the course a row named — and the parameter is taken
  * back out so a reload does not replay it.
  *
+ * **A signed-out visitor gets the whole flow except the write.** The artboard
+ * poses a guest on the empty screen rather than on a locked page
+ * (`… - Taken Courses.dc.html:767`), lets them read a transcript, and asks for
+ * the account at the *keep* step: the confirm button reads "Sign in to keep
+ * this list" and the confirm is resumed once they are in (`:1305-1308`). That
+ * is implementable only because parsing and writing are two calls —
+ * `POST /api/user/transcript` parses and stores nothing, and
+ * `transcript.confirm` is a `protectedProcedure` that nothing here weakens. The
+ * proposal is handed across the sign-in by `../lib/guest-proposal`, which is
+ * where the reasoning about what may be written down lives.
+ *
  * **Removing a row confirms first.** The artboard confirms after, with an
  * undoable note; #155 settled that destructive actions confirm before, and a
  * taken course is the most destructive of the three because everything on the
@@ -159,7 +175,6 @@ function importedSummary(added: number, filled: number): string {
  * dialog is about the wrong row, the note is about the right one.
  */
 export function TakenCourses() {
-  useRequireSession();
   const router = useRouter();
   const { isAuthenticated, isLoading: isSessionLoading } = useMe();
   // `taken.list` is protected, so it waits for a session rather than sending a
@@ -217,6 +232,10 @@ export function TakenCourses() {
    * back, an imported one cannot.
    */
   const [pendingRemove, setPendingRemove] = useState<TakenRow | null>(null);
+  /** Why this page is asking for an account, or `null`. */
+  const [authReason, setAuthReason] = useState<AuthReason | null>(null);
+  /** Whether the proposal on screen came back across a sign-in. */
+  const [isResumed, setIsResumed] = useState(false);
   /**
    * The round on screen, or `null` when the list is. `restored` is the stored
    * progress and unsaved answers when the round is one this tab was already in
@@ -239,6 +258,8 @@ export function TakenCourses() {
   } | null>(null);
   /** Whether the arrival below has already been read. See why it must be. */
   const hasReadArrival = useRef(false);
+  /** Whether a proposal left for a sign-in has already been picked up. */
+  const hasTakenHandoff = useRef(false);
 
   const lastImport = lastTranscriptImport(takenCourses);
   const isBusy = update.isPending || remove.isPending || add.isPending;
@@ -280,6 +301,39 @@ export function TakenCourses() {
     const session = readReviewerSession();
     if (deepLink !== null || session) setPendingOpen({ deepLink, session });
   }, [router]);
+
+  /**
+   * Picks up the transcript a signed-out reader left behind on their way to
+   * sign in — the artboard's `pending: "confirm"` (`… - Taken Courses.dc.html:1307`).
+   *
+   * Waits for the session to be known, because whether there is one decides
+   * both halves of what happens: an account **claims** the record, which is
+   * what clears it, while a reader who came back still signed out is shown
+   * their own parse again and the record stays for the sign-in they were part
+   * way through. Either way it is one shot, guarded by a ref — a second read
+   * after the claim would only ever say "no".
+   *
+   * **What it does not do is confirm on its own.** The artboard finishes the
+   * write the moment the account appears; this page puts the reader back on the
+   * preview with "Looks right" under it instead. `use-guest-saves.ts` settled
+   * the same question the same way for the saved list — *signing in is not
+   * consent to write a list of courses to an account* — and it matters more
+   * here, because the rows would be a student's grades and because
+   * `localStorage` is a place other code on this origin can write. One click
+   * over a list they can see is the whole difference.
+   */
+  useEffect(() => {
+    if (hasTakenHandoff.current || isSessionLoading) return;
+    hasTakenHandoff.current = true;
+
+    const held = readGuestProposal();
+    if (held === null) return;
+    // Claimed: it has done its job and has no business outliving the sign-in.
+    if (isAuthenticated) clearGuestProposal();
+    setProposal(held.proposal);
+    setIncludeGrades(held.includeGrades);
+    setIsResumed(isAuthenticated);
+  }, [isSessionLoading, isAuthenticated]);
 
   /**
    * Opens what the arrival asked for, once it is possible to be honest about
@@ -415,6 +469,27 @@ export function TakenCourses() {
   }
 
   /**
+   * Opens the by-hand form, or asks for the account it would write to.
+   *
+   * The artboard offers "Add courses manually instead" on the same empty screen
+   * it poses a guest on (`… - Taken Courses.dc.html:95`, `:767`), and its own
+   * handler just opens the form — its mock has no server to refuse the save.
+   * Ours does: `taken.add` is a `protectedProcedure`. So a guest gets the
+   * sign-in prompt here instead of a form whose Save cannot work.
+   *
+   * The reason is `sign-up` rather than the transcript gate's own: nothing is
+   * waiting to be kept at this point, and "You keep everything you were looking
+   * at" is the true thing to say to somebody who has typed nothing yet.
+   */
+  function startManualAdd() {
+    if (!isAuthenticated) {
+      setAuthReason("sign-up");
+      return;
+    }
+    setAddOpen(true);
+  }
+
+  /**
    * Makes the writes the confirmed proposal describes, and only those.
    *
    * New courses go through `transcript.confirm`, which stamps them imported.
@@ -437,6 +512,15 @@ export function TakenCourses() {
    */
   async function confirmProposal() {
     if (!proposal || isConfirming) return;
+    // The gate, and the point of the whole signed-out flow: the account is
+    // asked for here rather than at the door, and the proposal is written down
+    // first so the sign-in can bring it back. Nothing has been stored on the
+    // server at this point and nothing is about to be.
+    if (!isAuthenticated) {
+      writeGuestProposal(proposal, includeGrades);
+      setAuthReason("keep-course-list");
+      return;
+    }
     setConfirmError(null);
     setIsConfirming(true);
     try {
@@ -464,6 +548,8 @@ export function TakenCourses() {
                 : { courses: plan.create },
             );
       setProposal(null);
+      setIsResumed(false);
+      clearGuestProposal();
       setBanner(
         importedSummary(written.inserted + written.updated, plan.fill.length),
       );
@@ -579,12 +665,19 @@ export function TakenCourses() {
         <TranscriptProposalReview
           proposal={proposal}
           includeGrades={includeGrades}
+          isSignedIn={isAuthenticated}
+          isResumed={isResumed}
           isConfirming={isConfirming}
           error={confirmError}
           onConfirm={() => void confirmProposal()}
           onCancel={() => {
             setProposal(null);
             setConfirmError(null);
+            setIsResumed(false);
+            // Discarding is discarding: the copy under this button promises
+            // nothing was saved, and a record left behind would put the rows
+            // back on the next visit.
+            clearGuestProposal();
           }}
         />
       );
@@ -599,7 +692,7 @@ export function TakenCourses() {
           onRetry={() => setReadError(null)}
           onAddByHand={() => {
             setReadError(null);
-            setAddOpen(true);
+            startManualAdd();
           }}
         />
       );
@@ -623,7 +716,7 @@ export function TakenCourses() {
               includeGrades={includeGrades}
               onIncludeGradesChange={setIncludeGrades}
               onFile={(file) => void readTranscript(file)}
-              onAddByHand={() => setAddOpen(true)}
+              onAddByHand={startManualAdd}
             />
           </div>
         </div>
@@ -718,7 +811,7 @@ export function TakenCourses() {
 
             <button
               type="button"
-              onClick={() => setAddOpen(true)}
+              onClick={startManualAdd}
               className="m-px flex w-[calc(100%-2px)] min-w-[600px] cursor-pointer items-center gap-2.5 rounded-[9px] border border-cc-brand/40 border-dashed bg-cc-brand/6 px-[15px] py-[11px] text-cc-brand hover:border-cc-brand hover:bg-cc-brand/11"
             >
               <Plus size={15} strokeWidth={2} aria-hidden />
@@ -806,6 +899,23 @@ export function TakenCourses() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/*
+        The artboard draws this gate as a screen of the page (`isAuth`,
+        `… - Taken Courses.dc.html:56-68`). It is a dialog here because that is
+        what the sign-in surface is everywhere else in this app — `auth.tsx`
+        records that the design's own sign-in is "a panel over the page it
+        interrupted" — and because `AuthReasonDialog` already carries the two
+        halves the artboard's screen only mimes: a `callbackURL` that comes back
+        to `/taken`, and the email path, which cannot stay in this document at
+        all. Its kicker and title are the artboard's, word for word.
+      */}
+      <AuthReasonDialog
+        reason={authReason}
+        onReasonChange={setAuthReason}
+        onClose={() => setAuthReason(null)}
+        returnTo={() => "/taken"}
+      />
     </PageColumn>
   );
 }

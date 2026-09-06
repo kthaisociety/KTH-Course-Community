@@ -663,8 +663,8 @@ describe("MyPage my dot", () => {
 
   /**
    * The signed-out panel, which `My Page.dc.html:73-90` draws inside the shell
-   * rather than as a redirect. It was unreachable until `/profile` came out of
-   * `proxy.ts`'s matcher and this page stopped calling `useRequireSession`.
+   * rather than as a redirect. It was unreachable until `/profile` stopped
+   * being redirected away and this page stopped calling `useRequireSession`.
    */
   describe("a guest", () => {
     beforeEach(() => {

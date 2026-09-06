@@ -19,9 +19,10 @@ import { decodeReviewDraft, type ReviewDraft } from "./review-draft";
  * That file's *draft* has since moved to `localStorage`, and the difference is
  * worth naming rather than copying by habit: the workspace throws a guest out of
  * the tab to sign in, and the magic-link path lands them in a new one. Nothing
- * here does that. `/taken` is behind `proxy.ts`, so a reviewer working through
- * this queue is already signed in and the tab they started in is the tab they
- * finish in.
+ * here does that. `/taken` opens to a signed-out visitor now, but a round is
+ * dealt from *taken* courses and a guest has none — every card in this queue
+ * belongs to an account that was already signed in when the round started, so
+ * the tab they started in is the tab they finish in.
  *
  * Every read is defensive. What comes back is whatever was in the tab's
  * storage, possibly written by an older build, so anything that does not match
