@@ -100,9 +100,10 @@
      definition of both palettes, so nothing here is tuned locally: a colour
      change belongs in the design and arrives here as a re-mirror.
 
-     One exception, and it is named where it is declared: `--cc-applied` at the
-     foot of this block is a colour the artboards use inline and `cc-theme.css`
-     has never named. It is the only token here without a line to mirror.
+     One exception, and it is argued where it is declared: `--cc-applied`,
+     further down this block, is a colour the artboards use inline and
+     `cc-theme.css` has never named. It is the only token in either palette with
+     no line to mirror.
 
      pg page background  surface cards, fields, menus  inset recessed panel
      pill chips, tracks and hover fills
@@ -210,21 +211,22 @@
      the hex inline as the applied half of the bar. Four other artboards reuse it
      as a dashed "add something" border and as link text on a toast. So it is a
      real colour of the design with no name, which is why this is the one `--cc-*`
-     token below that is not a line of `cc-theme.css`. When an export finally
-     names it, this is the token to reconcile.
+     token in the file that mirrors nothing. When an export finally names it,
+     this is the token to reconcile.
 
      ## Why two literals and not one `color-mix`
 
-     Three call sites used to derive it as
+     `pane-parts.tsx` and `reviewer-card.tsx` each used to derive it as
      `color-mix(in srgb, var(--cc-btn) 40%, var(--cc-surface))`, which was the
      right substitution while nothing was named (#86's rule) and is the wrong
      shape for a token. A mix is a standing promise that the derivation will keep
      being correct, and nobody re-checks it: `--cc-btn` inverts between the
      themes — `#1751a6` light, `#8bb3ef` dark — so the mix silently re-resolves
-     every time either input moves. That is the same mechanism that put a white
-     "Sign up" button on a `--cc-btn` rail, which the 2026-09-05 export had to
-     fix. Two flat values are checked once and reviewed when changed, and they
-     are what every other token here is.
+     every time either input moves. Colours that quietly track each other are how
+     the light rail ended up painting a `--cc-btn` "Sign up" onto a `--cc-rail`
+     that is the same `#1751a6`; the rail block below is white on purpose for
+     that reason. Two flat values are checked once and reviewed when changed,
+     and they are what every other token here is.
 
      Light is the artboard's own literal, so this stops approximating it: the mix
      resolved to `#a2b9db`, which also held the "Applied" label (`--cc-brand`
