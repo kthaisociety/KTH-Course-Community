@@ -213,10 +213,20 @@ export function setGuestSave(courseCode: string, saved: boolean): void {
  * to make them one, so a re-save landing between them is still deleted. Two
  * things bound that. It is a window of one synchronous tick rather than the
  * seconds of awaited network writes the paragraphs above are about. And every
- * code that reaches here is a course the account already holds — either it was
- * there before the run or the run just wrote it — so what a mistimed delete can
- * cost is the browser's copy of a save the account is keeping, never the only
- * copy of anything. Closing it needs mutual exclusion that every writer takes,
+ * code that reaches here is a course the account already holds, because the
+ * caller hands over only what its own account write has resolved for — so what
+ * a mistimed delete can cost is the browser's copy of a save the account is
+ * keeping, never the only copy of anything.
+ *
+ * That second bound is a fact about the caller, not about this function, and it
+ * has been false once already: `useGuestSavesImport` used to retire a code on
+ * the strength of the `user.me` cache listing it, and that cache is optimistic,
+ * so a rejected write took the account's copy away after the browser's had
+ * gone. The premise is stated in `useGuestSavesImport` and pinned by its tests
+ * for that reason. If a caller ever hands this function a code without a
+ * resolved write behind it, the bound is gone and so is the argument for
+ * leaving the window open; the answer then is IndexedDB's transactions, not a
+ * lock. Closing it needs mutual exclusion that every writer takes,
  * which means `navigator.locks` and an async `setGuestSave` reaching every Save
  * button in the app; that is both the lock this layout was chosen to do without
  * and the shape review already rejected upstream in this file, because where

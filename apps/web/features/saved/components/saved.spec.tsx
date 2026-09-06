@@ -709,9 +709,10 @@ describe("Saved", { timeout: 20_000 }, () => {
       ).toBeVisible();
     });
 
-    // The account's copy already won, so there is nothing to write — and that
-    // is not a failure to report as one.
-    it("writes nothing when the account already holds them all", async () => {
+    // Nothing new reaches the account, and that is not a failure to report as
+    // one. The write still goes out — `saved.save` is idempotent, and the
+    // account's own answer is the only thing that may retire a browser copy.
+    it("adds nothing when the account already holds them all", async () => {
       saved("DD2380");
       writeGuestSaves(["DD2380"]);
       render(<Saved />);
@@ -720,7 +721,7 @@ describe("Saved", { timeout: 20_000 }, () => {
         screen.getByRole("button", { name: "Add to my account" }),
       );
 
-      expect(setSaved).not.toHaveBeenCalled();
+      expect(setSaved).toHaveBeenCalledExactlyOnceWith("DD2380", true);
       expect(readGuestSaves()).toEqual([]);
       expect(
         await screen.findByText("Your saved courses are already up to date"),
@@ -802,12 +803,22 @@ describe("Saved", { timeout: 20_000 }, () => {
     });
 
     /**
-     * The premise `retireGuestSaves` leans on when it accepts that its marker
-     * compare is two operations rather than one: nothing leaves the browser
-     * that the account is not already holding, so the worst a mistimed delete
-     * can cost is a duplicate rather than the last copy of a save.
+     * Found by review on #194, and the premise `retireGuestSaves` leans on when
+     * it accepts that its marker compare is two operations rather than one:
+     * nothing leaves the browser that the account is not already holding.
+     *
+     * The run used to establish that from `user.me`, which is the wrong source
+     * — `useSetCourseSaved` writes a code into that cache before the account
+     * has answered and takes it back out if the write is rejected. So a course
+     * the cache listed was retired from the browser with no write of this run's
+     * own behind it, and a rollback moments later left it saved in neither
+     * place: the one way this feature can still lose a course outright.
+     *
+     * Every snapshotted code now gets its own write, and only a resolved one
+     * retires anything. This test is that invariant: the cache says the account
+     * has DD2380, the write for it fails, and the browser keeps its copy.
      */
-    it("retires only what the account holds, when a write fails", async () => {
+    it("keeps a course the account cache lists but the write does not land", async () => {
       saved("DD2380");
       writeGuestSaves(["DD2380", "DD2421"]);
       setSaved.mockRejectedValueOnce(new Error("offline"));
@@ -817,10 +828,38 @@ describe("Saved", { timeout: 20_000 }, () => {
         screen.getByRole("button", { name: "Add to my account" }),
       );
 
-      // DD2380 was in the account before the run and is retired on the strength
-      // of that; DD2421 never reached it, so it stays where it is.
-      expect(setSaved).toHaveBeenCalledExactlyOnceWith("DD2421", true);
-      expect(readGuestSaves()).toEqual(["DD2421"]);
+      // The run stops at the first rejection, so DD2421 is never attempted and
+      // neither course is retired on a promise nobody kept.
+      expect(setSaved).toHaveBeenCalledExactlyOnceWith("DD2380", true);
+      expect(readGuestSaves()).toEqual(["DD2380", "DD2421"]);
+      expect(
+        await screen.findByRole("button", { name: "Try again" }),
+      ).toBeVisible();
+    });
+
+    /**
+     * The same premise on the path that succeeds. `retireGuestSaves` may only
+     * ever be handed codes with a resolved account write behind them, so a
+     * course the cache already lists is written anyway rather than retired on
+     * the cache's word.
+     */
+    it("writes even the courses the account cache already lists", async () => {
+      saved("DD2380");
+      writeGuestSaves(["DD2380", "DD2421"]);
+      render(<Saved />);
+
+      await userEvent.click(
+        screen.getByRole("button", { name: "Add to my account" }),
+      );
+
+      expect(setSaved).toHaveBeenCalledWith("DD2380", true);
+      expect(setSaved).toHaveBeenCalledWith("DD2421", true);
+      expect(readGuestSaves()).toEqual([]);
+      // One course was new to the account; the cache's copy of DD2380 is what
+      // the count reports against, and reporting is all it decides.
+      expect(
+        await screen.findByText("1 saved course added to your account"),
+      ).toBeVisible();
     });
 
     // Retiring before the writes land is what would lose the list outright.
