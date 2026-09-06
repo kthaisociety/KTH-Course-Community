@@ -40,19 +40,12 @@ import { cn } from "@/lib/utils";
  * says so, which is how the design gets corrected at source.
  *
  * **The Sign up button is not that case, and this comment used to say it was.**
- * It claimed the artboard's ink is `#12417f` and that white-alpha was the
- * deliberate substitution. Neither half survives the 2026-09-06 export. Six
- * artboards — About:44, Explore:45, My Page:45, Saved:45, Saved copy:45, Taken
- * Courses:44 — draw it as `background:#8bb3ef; color:#0a2449`. Landing:151 alone
- * still draws `#fff` / `#12417f`, which is where the old reading came from.
- *
- * So the button below is `bg-white text-cc-rail`, and that is what **no**
- * artboard draws: `--cc-rail` is `#1751a6` in light, not `#12417f`. Everything
- * else about it already matches — `mt-2.5`, `h-[34px]`, `rounded-[8px]`,
- * `13px/600`. Only the two colours are wrong, and they are not corrected here
- * because one rail component cannot follow two artboards; the export has to
- * agree with itself first. Tracked as the issue filed from #167, marked as
- * needing a design decision.
+ * The export disagrees with itself: six artboards draw it `#8bb3ef`/`#0a2449`,
+ * Landing:151 draws `#fff`/`#12417f`. It was white in both themes until that
+ * product call was made, and is now `--cc-rail-btn` / `--cc-rail-btn-fg` —
+ * white on the light rail still, the six artboards' blue on the dark one.
+ * Everything else already matched: `mt-2.5`, `h-[34px]`, `rounded-[8px]`,
+ * `13px/600`.
  *
  * The drawer renders this same component rather than a second one, so it keeps
  * the rail's metrics. The Mobile Preview draws slightly different ones — 56px of
@@ -275,7 +268,7 @@ export function Rail({ onRequestAuth, onDismiss }: Props) {
                 onDismiss?.();
                 onRequestAuth("sign-up");
               }}
-              className="mt-2.5 flex h-[34px] w-full cursor-pointer items-center justify-center rounded-[8px] bg-white font-semibold text-[13px] text-cc-rail"
+              className="mt-2.5 flex h-[34px] w-full cursor-pointer items-center justify-center rounded-[8px] bg-cc-rail-btn font-semibold text-[13px] text-cc-rail-btn-fg hover:opacity-90"
             >
               Sign up
             </button>

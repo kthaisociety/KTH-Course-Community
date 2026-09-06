@@ -10,6 +10,11 @@ const useMe = vi.fn();
 vi.mock("@/features/auth", () => ({ useMe: () => useMe() }));
 vi.mock("@/features/saved", () => ({
   useSetCourseSaved: () => ({ setSaved: vi.fn().mockResolvedValue(undefined) }),
+  // The signed-out save path. These specs render signed-in, so the list is
+  // always empty here; it is stubbed rather than left out because the card
+  // reads it unconditionally.
+  useGuestSaves: () => [],
+  toggleGuestSave: vi.fn(),
 }));
 vi.mock("@/features/courses/api/queries", () => ({
   useCollections: () => ({ data: [] }),

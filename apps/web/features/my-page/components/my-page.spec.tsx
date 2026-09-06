@@ -34,8 +34,8 @@ vi.mock("@/trpc/client", () => ({
 
 vi.mock("@/features/auth", () => ({
   useMe: () => me(),
-  useRequireSession: () => ({}),
   useLogout: () => logout,
+  authHref: (to: string) => `/auth?next=${encodeURIComponent(to)}`,
 }));
 
 vi.mock("@/lib/user", () => ({ uploadProfilePicture: vi.fn() }));
@@ -659,5 +659,55 @@ describe("MyPage my dot", () => {
     expect(
       screen.queryByRole("button", { name: "comet" }),
     ).not.toBeInTheDocument();
+  });
+
+  /**
+   * The signed-out panel, which `My Page.dc.html:73-90` draws inside the shell
+   * rather than as a redirect. It was unreachable until `/profile` came out of
+   * `proxy.ts`'s matcher and this page stopped calling `useRequireSession`.
+   */
+  describe("a guest", () => {
+    beforeEach(() => {
+      me.mockReturnValue({
+        user: null,
+        isLoading: false,
+        isAuthenticated: false,
+        userId: "",
+      });
+    });
+
+    it("gets the artboard's panel in place, not a redirect", () => {
+      render(<MyPage />);
+
+      expect(screen.getByText("Sign in to see your page")).toBeVisible();
+      // The page renders the state rather than navigating out of it.
+      expect(push).not.toHaveBeenCalled();
+    });
+
+    it("is offered both ways in, as the artboard draws them", () => {
+      render(<MyPage />);
+
+      expect(screen.getByRole("link", { name: "Sign up" })).toBeVisible();
+      expect(screen.getByRole("link", { name: "Log in" })).toBeVisible();
+    });
+
+    // Signing in from here comes back here. A bare `/auth` would land them on
+    // `/search`, having asked for their own page.
+    it("comes back to this page after signing in", () => {
+      render(<MyPage />);
+
+      for (const name of ["Sign up", "Log in"]) {
+        expect(screen.getByRole("link", { name })).toHaveAttribute(
+          "href",
+          "/auth?next=%2Fprofile",
+        );
+      }
+    });
+
+    it("does not ask for anything the reader has no account for", () => {
+      render(<MyPage />);
+
+      expect(screen.queryByRole("tab", { name: "Overview" })).toBeNull();
+    });
   });
 });

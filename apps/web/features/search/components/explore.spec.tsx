@@ -47,8 +47,12 @@ vi.mock("@/features/auth", async (importOriginal) => ({
   useMe: () => useMe(),
 }));
 
+const toggleGuestSave = vi.fn();
 vi.mock("@/features/saved", () => ({
   useSetCourseSaved: () => ({ setSaved: vi.fn().mockResolvedValue(undefined) }),
+  useGuestSaves: () => [],
+  toggleGuestSave: (courseCode: string, saved: boolean) =>
+    toggleGuestSave(courseCode, saved),
 }));
 
 vi.mock("@/features/courses/api/queries", () => ({
@@ -557,7 +561,10 @@ describe("Explore", () => {
       expect(screen.getByLabelText("Search courses")).toBeEnabled();
     });
 
-    it("is asked to sign in only when they try to save", async () => {
+    // Saving is not one of the things that needs an account. The Saved
+    // artboard keeps a signed-out reader's list in the browser and offers to
+    // move it into an account later, so the save lands and no dialog opens.
+    it("saves to the browser without being asked to sign in", async () => {
       render(<Explore />);
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
 
@@ -565,9 +572,8 @@ describe("Explore", () => {
         screen.getByRole("button", { name: "Save course" }),
       );
 
-      expect(
-        await screen.findByText("Sign in to save this course"),
-      ).toBeVisible();
+      expect(toggleGuestSave).toHaveBeenCalledWith("DD2380", true);
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     });
   });
 

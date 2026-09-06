@@ -109,8 +109,16 @@ function ccNameFor(designToken: string): string {
  *   in `globals.css` chosen locally, because the artboards hardcode the light
  *   hex in both themes. When an export names it, delete this entry and the
  *   parity check picks it up.
+ * - `--cc-rail-btn`, `--cc-rail-btn-fg` — the rail's "Sign up". `cc-theme.css`
+ *   names neither, and the artboards disagree: six write `#8bb3ef`/`#0a2449`
+ *   inline, Landing:151 writes `#fff`/`#12417f`. Settled per theme, so the two
+ *   blocks differ. When an export names them, delete this entry.
  */
-const UNNAMED_BY_THE_DESIGN = new Set(["--cc-applied"]);
+const UNNAMED_BY_THE_DESIGN = new Set([
+  "--cc-applied",
+  "--cc-rail-btn",
+  "--cc-rail-btn-fg",
+]);
 
 const PALETTES = [
   { theme: "light", ours: ":root", theirs: ":root" },

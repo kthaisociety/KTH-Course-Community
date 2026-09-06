@@ -12,11 +12,17 @@ const addCourse = vi.fn();
 const removeCourse = vi.fn();
 const markTaken = vi.fn();
 const onRequestAuth = vi.fn();
+const toggleGuestSave = vi.fn();
+/** The browser's saved list, as the card sees it. Set per test. */
+let guestSaves: readonly string[] = [];
 const toastError = vi.fn();
 
 vi.mock("@/features/auth", () => ({ useMe: () => useMe() }));
 vi.mock("@/features/saved", () => ({
   useSetCourseSaved: () => ({ setSaved }),
+  useGuestSaves: () => guestSaves,
+  toggleGuestSave: (courseCode: string, saved: boolean) =>
+    toggleGuestSave(courseCode, saved),
 }));
 vi.mock("@/features/courses/api/queries", () => ({
   useCollections: (enabled: boolean) => collectionsList(enabled),
@@ -69,6 +75,7 @@ function card(overrides: Record<string, unknown> = {}) {
 
 beforeEach(() => {
   signedOut();
+  guestSaves = [];
   takenList.mockReturnValue({ data: undefined });
   collectionsList.mockReturnValue({ data: undefined });
   setSaved.mockResolvedValue(undefined);
@@ -88,11 +95,25 @@ describe("useCourseCard", () => {
       expect(collectionsList).toHaveBeenCalledWith(false);
     });
 
-    it("is asked to sign in rather than silently failing to save", async () => {
+    // The Saved artboard keeps a signed-out reader's list in the browser and
+    // offers to move it into an account later, so a save is not a reason to
+    // interrupt anybody. Nothing protected is called and nothing is deferred.
+    it("saves to the browser rather than asking for an account", async () => {
       const { result } = card();
       await act(async () => result.current.c.onSave?.());
+      expect(toggleGuestSave).toHaveBeenCalledWith(COURSE.courseCode, true);
       expect(setSaved).not.toHaveBeenCalled();
-      expect(onRequestAuth).toHaveBeenCalledWith("save-course");
+      expect(onRequestAuth).not.toHaveBeenCalled();
+    });
+
+    it("shows a browser save as saved, and unsaves it again", async () => {
+      guestSaves = [COURSE.courseCode];
+      const { result } = card();
+      // `isSaved` reaches the card as the label it decides, not as a flag.
+      expect(result.current.c.saveLabel).toBe("Saved");
+
+      await act(async () => result.current.c.onSave?.());
+      expect(toggleGuestSave).toHaveBeenCalledWith(COURSE.courseCode, false);
     });
 
     it("gets the design's inline prompt over the taken pill", async () => {

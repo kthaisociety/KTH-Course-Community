@@ -4,12 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import {
-  type AuthReason,
-  AuthReasonDialog,
-  useMe,
-  useRequireSession,
-} from "@/features/auth";
+import { type AuthReason, AuthReasonDialog, useMe } from "@/features/auth";
 import { Collections } from "@/features/collections";
 import {
   CourseCardItem,
@@ -28,6 +23,8 @@ import {
   WorkspacePaneHost,
 } from "@/features/workspace";
 import { useSetCourseSaved } from "../api/mutations";
+import { toggleGuestSave, useGuestSavesImport } from "../hooks/use-guest-saves";
+import { GuestSavesImportBanner } from "./guest-saves-import-banner";
 
 /**
  * How many card-shaped placeholders stand in while the list loads. The count is
@@ -121,10 +118,13 @@ type Props = {
 };
 
 export function Saved({ openCollectionId = null, openCourse = null }: Props) {
-  useRequireSession();
   const router = useRouter();
   const { user, isLoading: isSessionLoading } = useMe();
   const { setSaved } = useSetCourseSaved();
+  // The signed-out reader's list, and the hand-off that moves it into an
+  // account once they have one. Held here rather than inside the banner so the
+  // list below can read the same codes the banner is offering to import.
+  const guestImport = useGuestSavesImport();
   const [authReason, setAuthReason] = useState<AuthReason | null>(null);
   /**
    * The course an unsave has been asked about and not yet answered.
@@ -205,10 +205,25 @@ export function Saved({ openCollectionId = null, openCourse = null }: Props) {
     );
   }, [requestedCode, requestedKind, openTab, router, openCollectionId]);
 
-  // `user.me` rather than `saved.list`: the two return the same codes, and the
-  // card's own Save state already reads this one. A second copy would mean an
-  // unsave that empties one and leaves the other holding the course.
-  const savedCourseCodes = user?.savedCourseCodes ?? [];
+  const signedIn = user !== null;
+  /**
+   * The list this page draws.
+   *
+   * For a member, `user.me` rather than `saved.list`: the two return the same
+   * codes, and the card's own Save state already reads this one. A second copy
+   * would mean an unsave that empties one and leaves the other holding the
+   * course.
+   *
+   * For a guest, the browser's own list. These are the artboard's `acctSaves`
+   * and `localSaves`, and `savedVals` picks between them by exactly this test
+   * (`… - Saved.dc.html:517`). They are never merged for display: a reader who
+   * has just signed in sees their account, and the banner above offers them the
+   * browser list separately rather than showing a total that is not stored
+   * anywhere.
+   */
+  const savedCourseCodes = signedIn
+    ? (user?.savedCourseCodes ?? [])
+    : guestImport.guestCodes;
   const summaries = useCourseSummaries(savedCourseCodes, !isSessionLoading);
   const { data: stats } = useCourseStats(savedCourseCodes, !isSessionLoading);
 
@@ -232,6 +247,13 @@ export function Saved({ openCollectionId = null, openCourse = null }: Props) {
     const courseCode = pendingUnsave;
     setPendingUnsave(null);
     if (!courseCode) return;
+
+    // A guest's list is in this browser, so removing from it is a local write
+    // that cannot fail against a server and has nothing to roll back.
+    if (!signedIn) {
+      toggleGuestSave(courseCode, false);
+      return;
+    }
 
     setSaved(courseCode, false).catch(() =>
       toast.error(`Could not remove ${courseCode} from your saved courses.`),
@@ -266,6 +288,24 @@ export function Saved({ openCollectionId = null, openCourse = null }: Props) {
           data-testid="saved-results"
           className="scrollbar-hidden min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto"
         >
+          {/* The hand-off sits above the collections row, which is where the
+              artboard puts it — its four rows are the first thing in the
+              results column, before `showSavedSection`. */}
+          <div className="pt-[18px] empty:hidden @max-[440px]:pt-3">
+            <GuestSavesImportBanner
+              signedIn={signedIn}
+              guestCodes={guestImport.guestCodes}
+              state={guestImport.state}
+              onRun={() =>
+                void guestImport.run({
+                  accountCodes: user?.savedCourseCodes ?? [],
+                  save: (courseCode) => setSaved(courseCode, true),
+                })
+              }
+              onDismiss={guestImport.dismiss}
+            />
+          </div>
+
           {/* The artboard's `18px 28px 10px`, narrowing with the list below it. */}
           <div className="pt-[18px] pb-2.5 @max-[440px]:pt-3">
             <Collections

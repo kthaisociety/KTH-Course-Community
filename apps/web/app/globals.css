@@ -50,6 +50,8 @@
   --color-cc-inset: var(--cc-inset);
   --color-cc-pill: var(--cc-pill);
   --color-cc-rail: var(--cc-rail);
+  --color-cc-rail-btn: var(--cc-rail-btn);
+  --color-cc-rail-btn-fg: var(--cc-rail-btn-fg);
   --color-cc-ink: var(--cc-ink);
   --color-cc-ink2: var(--cc-ink2);
   --color-cc-muted: var(--cc-muted);
@@ -215,6 +217,14 @@
   --cc-rail-focus: #ffffff;
   --cc-rail-focus-ring: rgba(255, 255, 255, 0.35);
 
+  /* The rail's "Sign up". The export disagrees with itself — six artboards
+     draw it `#8bb3ef`/`#0a2449`, Landing:151 draws `#fff`/`#12417f` — and the
+     decision the `--sidebar-primary` note below deferred is settled per theme:
+     white here, the six artboards' blue on the dark rail. Not `--cc-btn`,
+     which is `--cc-rail` itself in light. */
+  --cc-rail-btn: #ffffff;
+  --cc-rail-btn-fg: var(--cc-rail);
+
   /* The applied end of a theory/applied bar — the one colour on these screens
      the design uses without ever having named (#173).
 
@@ -345,9 +355,10 @@
      gives it `#fff` / `#12417f`. Neither is white on `--cc-rail`. `bg-sidebar`
      has no consumer, so nothing renders from these and nothing is wrong on
      screen — but the note was being read as authority for what `rail.tsx`
-     paints, which is how it survived two passes. What the rail's Sign up should
-     actually be is a product decision, because the export disagrees with
-     itself; see the issue filed from #167. */
+     paints, which is how it survived two passes. That decision is now settled
+     per theme in `--cc-rail-btn` above, which is what `rail.tsx` paints. These
+     aliases stay white because they are shadcn's `Sidebar` contract and still
+     have no consumer. */
   --sidebar: var(--cc-rail);
   --sidebar-foreground: #ffffff;
   --sidebar-primary: #ffffff;
@@ -451,6 +462,11 @@
      (H211 S57%), lightness dropped 75% → 38% the way `--cc-btn` itself is
      reflected between the two palettes. */
   --cc-applied: #2a5f98;
+
+  /* The six artboards' pair. White was too loud on the dark rail for what is
+     only a secondary invitation; light keeps it. */
+  --cc-rail-btn: #8bb3ef;
+  --cc-rail-btn-fg: #0a2449;
 }
 
 @layer base {
