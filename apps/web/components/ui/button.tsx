@@ -4,8 +4,22 @@ import * as React from "react";
 
 import { cn } from "@/lib/utils";
 
+/**
+ * `cursor-pointer` is in the base and not at the call sites.
+ *
+ * Tailwind v4's preflight adds no pointer to a `<button>` — v3 did, and dropping
+ * it is a documented v4 breaking change — while every artboard writes
+ * `cursor:pointer` on every clickable. So each `<Button>` rendered an arrow, and
+ * no call site had a reason to notice: the hand-rolled buttons in `features/**`
+ * mostly say `cursor-pointer` themselves, which is exactly what made the
+ * primitive's omission invisible.
+ *
+ * It is safe beside `disabled:pointer-events-none`: an element with no pointer
+ * events takes no cursor of its own, so a disabled button still shows the
+ * default arrow without a `disabled:cursor-*` counterpart.
+ */
 const buttonVariants = cva(
-  "group/button inline-flex shrink-0 items-center justify-center rounded-lg border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  "group/button inline-flex shrink-0 cursor-pointer items-center justify-center rounded-lg border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {

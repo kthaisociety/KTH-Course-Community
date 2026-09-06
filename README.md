@@ -130,7 +130,7 @@ The router stays thin: validate input, pick `baseProcedure` or
 `protectedProcedure` requires a Better Auth session (`ctx.session.user`).
 Visitors may browse courses, search, and read reviews; everything else should be
 protected. `proxy.ts` (Next 16; not `middleware.ts`) only checks that a cookie
-exists on `/profile` and `/favorites` — the procedure is the real gate.
+exists on `/profile` and `/saved` — the procedure is the real gate.
 
 ```ts
 // server/api/routers/reviews.ts
@@ -208,7 +208,7 @@ export default function Page() {
 ```
 
 Reuse existing features instead of duplicating them (`useMe` / session from
-`auth`, course cards from `courses`, `useToggleFavorite` from `favorites`).
+`auth`, course cards from `courses`, `useSetCourseSaved` from `saved`).
 Leave shadcn primitives in `components/ui`.
 
 See `features/search` + `server/services/search.ts` +

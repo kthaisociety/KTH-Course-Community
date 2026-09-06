@@ -3,10 +3,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { CourseSummary } from "@/types";
 import * as courseService from "../../course/service";
 import { NotFoundError } from "../../errors";
+import * as graphService from "../../graph/service";
 import * as takenService from "../../taken/service";
 import { buildTranscriptProposal, confirmTranscriptImport } from "./service";
 
 vi.mock("../../course/service");
+// The tier writer belongs to the graph domain and is reached service -> service.
+vi.mock("../../graph/service");
 vi.mock("../../taken/service");
 
 function fixture(name: string): string {
@@ -92,7 +95,7 @@ describe("buildTranscriptProposal", () => {
 
     await buildTranscriptProposal(fixture("ladok-english.txt"));
 
-    expect(takenService.recordTakenCourses).not.toHaveBeenCalled();
+    expect(takenService.recordTranscriptCoursesIfAbsent).not.toHaveBeenCalled();
   });
 });
 
@@ -118,7 +121,7 @@ describe("confirmTranscriptImport", () => {
     vi.mocked(courseService.getSummariesByCodes).mockResolvedValue(
       catalogue("SF1625", "DD1337"),
     );
-    vi.mocked(takenService.recordTakenCourses).mockResolvedValue({
+    vi.mocked(takenService.recordTranscriptCoursesIfAbsent).mockResolvedValue({
       inserted: 2,
       updated: 0,
     });
@@ -129,8 +132,10 @@ describe("confirmTranscriptImport", () => {
       importedAt,
     );
 
-    expect(takenService.recordTakenCourses).toHaveBeenCalledTimes(1);
-    expect(takenService.recordTakenCourses).toHaveBeenCalledWith(
+    expect(takenService.recordTranscriptCoursesIfAbsent).toHaveBeenCalledTimes(
+      1,
+    );
+    expect(takenService.recordTranscriptCoursesIfAbsent).toHaveBeenCalledWith(
       "user-1",
       [
         {
@@ -146,7 +151,7 @@ describe("confirmTranscriptImport", () => {
           attendanceYear: 2023,
         },
       ],
-      { source: "transcript", importedAt },
+      importedAt,
     );
     expect(result).toEqual({ inserted: 2, updated: 0 });
   });
@@ -163,24 +168,27 @@ describe("confirmTranscriptImport", () => {
         importedAt,
       ),
     ).rejects.toBeInstanceOf(NotFoundError);
-    expect(takenService.recordTakenCourses).not.toHaveBeenCalled();
+    expect(takenService.recordTranscriptCoursesIfAbsent).not.toHaveBeenCalled();
   });
 
-  it("sends one row per course code when a transcript is imported twice", async () => {
+  it("delegates repeated transcript confirmations to the insert-only write", async () => {
     vi.mocked(courseService.getSummariesByCodes).mockResolvedValue(
       catalogue("SF1625", "DD1337"),
     );
-    vi.mocked(takenService.recordTakenCourses).mockResolvedValue({
+    vi.mocked(takenService.recordTranscriptCoursesIfAbsent).mockResolvedValue({
       inserted: 0,
-      updated: 2,
+      updated: 0,
     });
 
     await confirmTranscriptImport("user-1", confirmed, importedAt);
     await confirmTranscriptImport("user-1", confirmed, importedAt);
 
-    expect(takenService.recordTakenCourses).toHaveBeenCalledTimes(2);
-    for (const [, rows] of vi.mocked(takenService.recordTakenCourses).mock
-      .calls) {
+    expect(takenService.recordTranscriptCoursesIfAbsent).toHaveBeenCalledTimes(
+      2,
+    );
+    for (const [, rows] of vi.mocked(
+      takenService.recordTranscriptCoursesIfAbsent,
+    ).mock.calls) {
       expect(rows.map((row) => row.courseCode)).toEqual(["SF1625", "DD1337"]);
     }
   });
@@ -189,7 +197,7 @@ describe("confirmTranscriptImport", () => {
     vi.mocked(courseService.getSummariesByCodes).mockResolvedValue(
       catalogue("SF1625"),
     );
-    vi.mocked(takenService.recordTakenCourses).mockResolvedValue({
+    vi.mocked(takenService.recordTranscriptCoursesIfAbsent).mockResolvedValue({
       inserted: 1,
       updated: 0,
     });
@@ -200,7 +208,8 @@ describe("confirmTranscriptImport", () => {
       importedAt,
     );
 
-    const [, rows] = vi.mocked(takenService.recordTakenCourses).mock.calls[0];
+    const [, rows] = vi.mocked(takenService.recordTranscriptCoursesIfAbsent)
+      .mock.calls[0];
     expect(rows).toEqual([
       {
         courseCode: "SF1625",
@@ -215,7 +224,59 @@ describe("confirmTranscriptImport", () => {
     const result = await confirmTranscriptImport("user-1", [], importedAt);
 
     expect(result).toEqual({ inserted: 0, updated: 0 });
-    expect(takenService.recordTakenCourses).not.toHaveBeenCalled();
+    expect(takenService.recordTranscriptCoursesIfAbsent).not.toHaveBeenCalled();
     expect(courseService.getSummariesByCodes).not.toHaveBeenCalled();
+    // Nothing was imported, so nothing about the ladder can have changed.
+    expect(
+      graphService.recordEarnedPersonalizationTierOnContribution,
+    ).not.toHaveBeenCalled();
+  });
+
+  /**
+   * Confirming an import is the second of the two moments #161's ladder can
+   * move: it earns tier 2 outright, and tier 3 for somebody who had already
+   * reviewed everything the transcript names. It runs after the write so the
+   * recompute reads committed rows.
+   */
+  it("recomputes the earned personalization tier after the import lands", async () => {
+    vi.mocked(courseService.getSummariesByCodes).mockResolvedValue(
+      catalogue("SF1625", "DD1337"),
+    );
+    vi.mocked(takenService.recordTranscriptCoursesIfAbsent).mockResolvedValue({
+      inserted: 2,
+      updated: 0,
+    });
+
+    await confirmTranscriptImport("user-1", confirmed, importedAt);
+
+    expect(
+      graphService.recordEarnedPersonalizationTierOnContribution,
+    ).toHaveBeenCalledWith("user-1");
+    expect(
+      vi.mocked(graphService.recordEarnedPersonalizationTierOnContribution).mock
+        .invocationCallOrder[0],
+    ).toBeGreaterThan(
+      vi.mocked(takenService.recordTranscriptCoursesIfAbsent).mock
+        .invocationCallOrder[0] ?? 0,
+    );
+  });
+
+  it("recomputes the tier even when the confirmation only inserted nothing new", async () => {
+    // A repeat confirmation writes no rows, but the stored transcript rows it
+    // re-confirms are still the ones the ladder is judged over, and the
+    // recompute is idempotent — so it runs rather than being guessed about.
+    vi.mocked(courseService.getSummariesByCodes).mockResolvedValue(
+      catalogue("SF1625", "DD1337"),
+    );
+    vi.mocked(takenService.recordTranscriptCoursesIfAbsent).mockResolvedValue({
+      inserted: 0,
+      updated: 0,
+    });
+
+    await confirmTranscriptImport("user-1", confirmed, importedAt);
+
+    expect(
+      graphService.recordEarnedPersonalizationTierOnContribution,
+    ).toHaveBeenCalledWith("user-1");
   });
 });

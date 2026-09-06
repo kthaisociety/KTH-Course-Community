@@ -20,3 +20,12 @@
 # Lockfiles are generated; keep them out of diffs.
 bun.lock          -diff linguist-generated
 package-lock.json -diff linguist-generated
+
+# A read-only mirror of the Claude Design project. Never reformat it and keep it
+# out of diffs: lefthook runs `biome check --write` on staged files, which
+# silently rewrote support.js once already.
+docs/design/** -diff linguist-generated
+
+# ...except the README, which is ours rather than mirrored and has to stay
+# readable in diffs and reviews.
+docs/design/README.md diff -linguist-generated

@@ -2,9 +2,10 @@
 -- course_explore directly, so the compatibility trigger from 0009 and the
 -- four legacy course columns can be removed.
 --
--- Refuse to discard the legacy copy if the target row or any moved value has
--- drifted. The trigger should make this impossible; failing here turns a
--- broken assumption into an explicit migration error instead of data loss.
+-- Refuse to discard the legacy copy if its authoritative target row is
+-- missing. Search ingestion has written directly to course_explore since the
+-- expand phase, so its values may legitimately be newer than the deprecated
+-- courses mirror and must not be compared for equality here.
 DO $$
 BEGIN
 	IF EXISTS (
@@ -13,11 +14,8 @@ BEGIN
 		LEFT JOIN "course_explore"
 			ON "course_explore"."course_code" = "courses"."code"
 		WHERE "course_explore"."course_code" IS NULL
-			OR "course_explore"."embedding" IS DISTINCT FROM "courses"."embedding"
-			OR "course_explore"."source_hash" IS DISTINCT FROM "courses"."embedding_hash"
-			OR "course_explore"."search_vector" IS DISTINCT FROM "courses"."search_vector"
 	) THEN
-		RAISE EXCEPTION 'Cannot contract courses: course_explore search state differs from the legacy columns';
+		RAISE EXCEPTION 'Cannot contract courses: a course_explore target row is missing';
 	END IF;
 END
 $$;--> statement-breakpoint

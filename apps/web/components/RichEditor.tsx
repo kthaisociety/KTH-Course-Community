@@ -1,6 +1,6 @@
 "use client";
 
-import { $generateHtmlFromNodes } from "@lexical/html";
+import { $generateHtmlFromNodes, $generateNodesFromDOM } from "@lexical/html";
 import { ListItemNode, ListNode } from "@lexical/list";
 import { CheckListPlugin } from "@lexical/react/LexicalCheckListPlugin";
 import {
@@ -12,7 +12,7 @@ import { LexicalErrorBoundary } from "@lexical/react/LexicalErrorBoundary";
 import { ListPlugin } from "@lexical/react/LexicalListPlugin";
 import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
 import { HeadingNode, QuoteNode } from "@lexical/rich-text";
-import { ParagraphNode, TextNode } from "lexical";
+import { $getRoot, $insertNodes, ParagraphNode, TextNode } from "lexical";
 import { useEffect, useState } from "react";
 import { ContentEditable } from "@/components/editor/editor-ui/content-editable";
 import { FormatBulletedList } from "@/components/editor/plugins/toolbar/block-format/format-bulleted-list";
@@ -49,13 +49,31 @@ const editorConfig: InitialConfigType = {
 
 type RichTextEditorProps = {
   onContentChange?: (content: string) => void;
+  /**
+   * Markup the editor opens with, for editing something already written. Read
+   * once, when the editor mounts — Lexical owns the document from then on, so
+   * a later change to this prop is ignored. Remount (a `key`) to reseed.
+   */
+  initialHtml?: string;
 };
 export function RichTextEditor(props: Readonly<RichTextEditorProps>) {
+  const { initialHtml } = props;
   return (
     <div className="bg-background w-full overflow-hidden rounded-lg border">
       <LexicalComposer
         initialConfig={{
           ...editorConfig,
+          editorState: initialHtml
+            ? (editor) => {
+                const dom = new DOMParser().parseFromString(
+                  initialHtml,
+                  "text/html",
+                );
+                const nodes = $generateNodesFromDOM(editor, dom);
+                $getRoot().select();
+                $insertNodes(nodes);
+              }
+            : undefined,
         }}
       >
         <TooltipProvider>

@@ -2,6 +2,7 @@ import { nanoid } from "nanoid";
 import type { Review, ReviewInput, ReviewVoteType } from "@/types";
 import { reviewInputSchema } from "@/types";
 import { ForbiddenError, NotFoundError, ValidationError } from "../errors";
+import { recordEarnedPersonalizationTierOnContribution } from "../graph/service";
 import * as reviewsRepo from "./repository";
 
 export type { ReviewInput };
@@ -74,17 +75,42 @@ function validateReviewInput(input: ReviewInput): ReviewInput {
   };
 }
 
+/**
+ * Publish one app user's review of one course.
+ *
+ * At most one per user per course — `CONTEXT.md`'s rule, which nothing was
+ * enforcing: a second create inserted a second row and moved the course's
+ * averages with it. A reviewer who has changed their mind has `updateReview`;
+ * this is the write that publishes a first one.
+ *
+ * The check and the insert are one operation in the repository rather than two
+ * calls from here, because two overlapping requests would otherwise both find
+ * nothing and both write.
+ */
 export async function createReview(
   courseCode: string,
   userId: string,
   reviewData: ReviewInput,
 ) {
-  const inserted = await reviewsRepo.insertReview({
+  const inserted = await reviewsRepo.insertReviewIfFirst({
     id: nanoid(),
     userId,
     courseCode,
     ...validateReviewInput(reviewData),
   });
+  if (!inserted) {
+    throw new ValidationError(
+      `You have already reviewed ${courseCode}. Edit that review instead.`,
+    );
+  }
+
+  // Publishing a first review is one of the two moments #161's ladder can move:
+  // it earns tier 1 outright, and it is what completes a transcript for tier 3.
+  // The recompute reads the row this call just committed, raises the column and
+  // never lowers it, and swallows its own failures — a review that was
+  // published stays published even if the tier write does not land.
+  await recordEarnedPersonalizationTierOnContribution(userId);
+
   return serializeReview(inserted);
 }
 

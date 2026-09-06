@@ -31,9 +31,15 @@ export const transcriptRouter = createTRPCRouter({
     .input(
       z.object({
         courses: z.array(confirmedCourse).max(MAX_CONFIRMED_COURSES),
+        fills: z.array(confirmedCourse).max(MAX_CONFIRMED_COURSES).default([]),
       }),
     )
     .mutation(({ ctx, input }) =>
-      confirmTranscriptImport(ctx.session.user.id, input.courses, new Date()),
+      confirmTranscriptImport(
+        ctx.session.user.id,
+        input.courses,
+        new Date(),
+        input.fills,
+      ),
     ),
 });

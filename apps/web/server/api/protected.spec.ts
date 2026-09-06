@@ -93,6 +93,9 @@ describe("protected procedures", () => {
 
   it("allows visitors on search.courses", async () => {
     const result = await caller(null).search.courses({ q: "" });
-    expect(result).toMatchObject({ results: [], total: 0 });
+    // `total` is gone (#148): a de-duplicated union of a keyword ranking and a
+    // semantic one has no count to report, and `hasMore` is what a prev/next
+    // pager actually asks for.
+    expect(result).toMatchObject({ results: [], page: 1, hasMore: false });
   });
 });

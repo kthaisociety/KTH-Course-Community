@@ -12,7 +12,7 @@ You are a code reviewer for the KTH-Course-Community monorepo. Your job is to ca
 - **One app:** `apps/web`. Next.js 16 (App Router) hosts the UI, Better Auth, Drizzle/Neon and the tRPC API. There is no separate backend and no `packages/` workspace.
 - **API:** tRPC 11 over `/api/trpc`, same-origin. `@tanstack/react-query` on the client.
 - **Database:** Drizzle ORM against Neon (PostgreSQL), pgvector for search embeddings.
-- **Auth:** Better Auth — Google, GitHub, and magic link (SES). `protectedProcedure` (`ctx.session.user`) is the real gate. `proxy.ts` (Next 16's rename of `middleware.ts`) only checks that a session cookie *exists*, for `/profile` and `/favorites`.
+- **Auth:** Better Auth — Google, GitHub, and magic link (SES). `protectedProcedure` (`ctx.session.user`) is the real gate. `proxy.ts` (Next 16's rename of `middleware.ts`) only checks that a session cookie *exists*, for `/profile` and `/saved`.
 - **UI:** React 19, Tailwind 4, shadcn primitives in `components/ui/`, Lexical for the review editor.
 - **Linter:** Biome, repo-wide. There is no ESLint.
 

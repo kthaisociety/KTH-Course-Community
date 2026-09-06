@@ -1,0 +1,144 @@
+/* Course Community — theme tokens.
+   The single definition of the light and dark palettes. Pages link this file
+   from their helmet and consume the variables inline; nothing else belongs here.
+
+   pg      page background            surface  cards, fields, menus
+   inset   recessed panel             pill     chips, tracks, hover fills
+   rail    the sidebar (darkens with the theme)
+   ink     primary text               ink2     secondary text
+   muted   supporting text            dim/dim2 labels and hints
+   chipInk text on a pill             rule/2/3 hairline, border, strong border
+   hov     hover border               brand    links and brand text
+   btn/btnFg  filled button and its foreground */
+
+:root {
+  --pg: #faf8f1;
+  --surface: #ffffff;
+  --inset: #faf8f1;
+  --pill: #f2efe6;
+  --rail: #1751a6;
+  --ink: #16202b;
+  --ink2: #3d4650;
+  --muted: #5c6570;
+  --dim: #6b6355;
+  --dim2: #8a857a;
+  --chipInk: #4a5560;
+  --rule: #eae6da;
+  --rule2: #e5e0d2;
+  --rule3: #ddd8c9;
+  --hov: #b9c9de;
+  --brand: #1751a6;
+  --btn: #1751a6;
+  --btnFg: #ffffff;
+  --info: rgba(23, 81, 166, .07);
+  --warn: #fdf7ea;
+  --warnBorder: #f0e6d2;
+  --warnInk: #7a5309;
+  --warnBtn: #1751a6;
+  --warnBtnFg: #ffffff;
+  --scoreWorkload: #b3691f;
+  --infoSolid: #eef4fb;
+  --warnSolid: #fdf7ea;
+  --success: #1c7a4a;
+  --successFg: #ffffff;
+  --successTint: #e9f3ef;
+  --successTintBorder: #cfe4de;
+  --successInk: #1c6b60;
+  --danger: #b3261e;
+  --dangerFg: #ffffff;
+  --dangerTint: #fdf3ef;
+  --dangerTintBorder: #f0d7cf;
+  --dangerInk: #a3452a;
+  --dangerInk2: #7a3b26;
+  --nodeAurora: #2f9e8e;
+  --nodeEmber: #c96a4a;
+  --nodeFrost: #2f5fa8;
+  --nodeMoss: #4a7c2f;
+  --nodeSlate: #57646f;
+  --nodeViolet: #6a4ea8;
+  --checkedTint: rgba(23, 81, 166, .08);
+  --checkedHoverTint: rgba(23, 81, 166, .14);
+  --focus: #1751a6;
+  --focusRing: rgba(23, 81, 166, .25);
+  --railFocus: #ffffff;
+  --railFocusRing: rgba(255, 255, 255, .35);
+}
+
+[data-cc-theme="dark"] {
+  --pg: #071831;
+  --surface: #0b254c;
+  --inset: #040f1f;
+  --pill: rgba(244, 238, 226, .16);
+  --rail: #0d2e5e;
+  --ink: #e6eaef;
+  --ink2: #d7dde4;
+  --muted: #c3cedf;
+  --dim: #b4c3da;
+  --dim2: #9daec8;
+  --chipInk: #dadfe7;
+  --rule: rgba(244, 238, 226, .16);
+  --rule2: rgba(244, 238, 226, .22);
+  --rule3: rgba(244, 238, 226, .32);
+  --hov: #dbe8fa;
+  --brand: #d7e3f7;
+  --btn: #8bb3ef;
+  --btnFg: #0a2449;
+  --info: rgba(226, 236, 251, .10);
+  --warn: rgba(223, 165, 60, .16);
+  --warnBorder: rgba(223, 165, 60, .3);
+  --warnInk: #f2c879;
+  --warnBtn: #dfa53c;
+  --warnBtnFg: #1a1305;
+  --scoreWorkload: #e8b563;
+  --infoSolid: #21395e;
+  --warnSolid: #2d3949;
+  --success: #5fd08a;
+  --successFg: #0c2417;
+  --successTint: rgba(95, 208, 138, .14);
+  --successTintBorder: rgba(95, 208, 138, .3);
+  --successInk: #5fd08a;
+  --danger: #ff8a80;
+  --dangerFg: #2b0a08;
+  --dangerTint: rgba(255, 138, 128, .14);
+  --dangerTintBorder: rgba(255, 138, 128, .3);
+  --dangerInk: #ff8a80;
+  --dangerInk2: #ffb3ab;
+  --nodeAurora: #5fd8c4;
+  --nodeEmber: #f2946f;
+  --nodeFrost: #8ec2ff;
+  --nodeMoss: #a5d47c;
+  --nodeSlate: #b3c1d0;
+  --nodeViolet: #bda2f0;
+  --checkedTint: rgba(142, 194, 255, .22);
+  --checkedHoverTint: rgba(142, 194, 255, .32);
+  --focus: #8bb3ef;
+  --focusRing: rgba(139, 179, 239, .3);
+  --railFocus: #8bb3ef;
+  --railFocusRing: rgba(139, 179, 239, .3);
+}
+
+/* Colour changes cross-fade; nothing else about a page animates from here. */
+[data-cc-theme] * {
+  transition: background-color .34s ease, color .34s ease, border-color .34s ease;
+}
+
+input::placeholder { color: var(--dim); }
+
+/* One focus treatment for the whole app: a visible ring on keyboard focus only,
+   overriding any inline outline:none. Applies to every focusable element —
+   native controls and hand-rolled role="button" divs alike. */
+[data-cc-theme] :focus-visible {
+  outline: 2px solid var(--focus) !important;
+  outline-offset: 2px !important;
+  box-shadow: 0 0 0 4px var(--focusRing) !important;
+}
+
+/* The rail is painted in brand blue itself, so any --focus-family token
+   resolves to the same colour as its background and vanishes — same failure
+   as the on-rail --btn case. Anything focusable inside [data-cc-sidebar] gets
+   the on-rail pair instead. */
+[data-cc-theme] [data-cc-sidebar] :focus-visible {
+  outline: 2px solid var(--railFocus) !important;
+  outline-offset: 2px !important;
+  box-shadow: 0 0 0 4px var(--railFocusRing) !important;
+}

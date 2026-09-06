@@ -78,7 +78,11 @@ _Avoid_: transcript sync, Ladok scrape, upload (that is the file step, not this)
 
 **Collection**:
 A named, ordered group of one app user's saved courses. A course may only join a
-collection its owner has also saved.
+collection its owner has also saved. A collection is a **view over** saved
+courses, never a place they move to: joining one does not remove a course from
+Saved, and a course may belong to several at once. Saved lists every saved
+course, and the collection chips narrow that list rather than relocating out of
+it.
 _Avoid_: comparison, list, folder, group, playlist
 
 ### Reviews
@@ -113,6 +117,16 @@ _Avoid_: exam breakdown, assessment mix, examination methods
 How theoretical rather than applied the reviewer found the course, on the same
 "I don't remember" rule.
 _Avoid_: theory rating, theoretical vs applied
+
+**Fast-track reviewer**:
+The screen on Taken courses that deals one card per unreviewed taken course, in
+a **round**. It is a second way of asking for a **Review**, never a second kind
+of one: a card writes through the same hook and the same validator as every
+other form. A round lives in the tab and nowhere else — skipping a card writes
+nothing at all, so the course is still an unreviewed taken course afterwards for
+the same reason it was before.
+_Avoid_: review wizard, review queue (that is the round's order, not the screen),
+bulk review, quick rating
 
 ### The community graph
 
@@ -149,7 +163,17 @@ _Avoid_: avatar, skin, theme
 
 **Signal**:
 The moving trail rendered along a node. A visual state, never a stored event.
-_Avoid_: pulse, ping, animation, activity
+A signal is ongoing: a node either carries one or it does not. A **one-shot
+reveal** — the ring **Find your dot** draws once on the viewer's own node — is a
+different thing, and *pulse* is its name. So `scene.pulse` is not a signal by
+another word, and the two are not interchangeable.
+_Today_: it does not move. `users_node_profiles.signal_style` stores the axis and
+`hero-network.tsx` draws each style standing still, because that canvas paints
+when an input changes rather than every frame and the pulse is the only frame
+loop it has. The ongoing/one-shot distinction still holds — a signal is painted
+whenever its node is, a pulse only while the label is up. Closed by whatever
+gives the hero a bounded loop a signal can ride on.
+_Avoid_: ping, animation, activity
 
 **Personalization tier**:
 How far an app user has unlocked node personalisation, held as the highest value

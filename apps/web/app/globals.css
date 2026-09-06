@@ -12,11 +12,8 @@
   --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
-  --color-primary-dark: var(--primary-dark);
-  --color-primary-light: var(--primary-light);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
-  --color-secondary-light: var(--secondary-light);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
   --color-accent: var(--accent);
@@ -46,7 +43,8 @@
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
 
-  /* Course Community design tokens (see cc-theme.css in the design project). */
+  /* Course Community design tokens — see `docs/design_ref/2026-09-06/cc-theme.css`,
+     which the `:root` and `.dark` blocks below mirror verbatim. */
   --color-cc-pg: var(--cc-pg);
   --color-cc-surface: var(--cc-surface);
   --color-cc-inset: var(--cc-inset);
@@ -66,51 +64,57 @@
   --color-cc-btn: var(--cc-btn);
   --color-cc-btn-fg: var(--cc-btn-fg);
   --color-cc-info: var(--cc-info);
+  --color-cc-warn: var(--cc-warn);
+  --color-cc-warn-border: var(--cc-warn-border);
+  --color-cc-warn-ink: var(--cc-warn-ink);
+  --color-cc-warn-btn: var(--cc-warn-btn);
+  --color-cc-warn-btn-fg: var(--cc-warn-btn-fg);
+  --color-cc-score-workload: var(--cc-score-workload);
+  --color-cc-info-solid: var(--cc-info-solid);
+  --color-cc-warn-solid: var(--cc-warn-solid);
+  --color-cc-success: var(--cc-success);
+  --color-cc-success-fg: var(--cc-success-fg);
+  --color-cc-danger: var(--cc-danger);
+  --color-cc-danger-fg: var(--cc-danger-fg);
+  --color-cc-success-tint: var(--cc-success-tint);
+  --color-cc-success-tint-border: var(--cc-success-tint-border);
+  --color-cc-success-ink: var(--cc-success-ink);
+  --color-cc-danger-tint: var(--cc-danger-tint);
+  --color-cc-danger-tint-border: var(--cc-danger-tint-border);
+  --color-cc-danger-ink: var(--cc-danger-ink);
+  --color-cc-danger-ink2: var(--cc-danger-ink2);
+  --color-cc-node-aurora: var(--cc-node-aurora);
+  --color-cc-node-ember: var(--cc-node-ember);
+  --color-cc-node-frost: var(--cc-node-frost);
+  --color-cc-node-moss: var(--cc-node-moss);
+  --color-cc-node-slate: var(--cc-node-slate);
+  --color-cc-node-violet: var(--cc-node-violet);
+  --color-cc-checked-tint: var(--cc-checked-tint);
+  --color-cc-checked-hover-tint: var(--cc-checked-hover-tint);
+  --color-cc-applied: var(--cc-applied);
 }
 
 :root {
-  --background: #faf8f1;
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: #243744;
-  --primary-dark: #18242d;
-  --primary-light: #778c9c;
-  --primary-foreground: white;
-  --secondary: #423842;
-  --secondary-light: #6b5b6b;
-  --secondary-foreground: white;
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: #243744;
-  --sidebar-primary-foreground: white;
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  /* Course Community — light palette, mirrored verbatim from
+     `docs/design_ref/2026-09-06/cc-theme.css`. That file is the design's single
+     definition of both palettes, so nothing here is tuned locally: a colour
+     change belongs in the design and arrives here as a re-mirror.
 
-  /* Course Community — light palette.
-     pg  page background   surface cards, fields, menus   inset recessed panel
-     pill chips and tracks  rail the sidebar (brand blue in both themes)
+     One exception, and it is argued where it is declared: `--cc-applied`,
+     further down this block, is a colour the artboards use inline and
+     `cc-theme.css` has never named. It is the only token in either palette with
+     no line to mirror.
+
+     pg page background  surface cards, fields, menus  inset recessed panel
+     pill chips, tracks and hover fills
+     rail the sidebar — it darkens with the theme rather than holding one brand
+     blue across both, which is what `cc-theme.css` now says and what #127 §2
+     corrects: light `#1751a6`, dark `#0d2e5e`
      ink primary text  ink2 secondary  muted supporting  dim/dim2 labels and hints
-     chip-ink text on a pill  rule/2/3 hairline, border, strong border
-     hov hover border  brand links and brand text  btn/btn-fg filled button */
+     chip-ink text on a pill
+     rule/rule2/rule3 hairline between rows, card border, control border
+     hov hover and focus border  brand links and brand text
+     btn/btn-fg the filled button and its foreground */
   --cc-pg: #faf8f1;
   --cc-surface: #ffffff;
   --cc-inset: #faf8f1;
@@ -130,64 +134,323 @@
   --cc-btn: #1751a6;
   --cc-btn-fg: #ffffff;
   --cc-info: rgba(23, 81, 166, 0.07);
-}
 
-.dark {
-  --background: oklch(0.28 0.04 260);
-  --foreground: #e5e7eb;
-  --card: #0f172a;
-  --card-foreground: #e5e7eb;
-  --popover: #0f172a;
-  --popover-foreground: #e5e7eb;
-  --primary: oklch(0.21 0.04 266);
-  --primary-dark: #18242d;
-  --primary-light: #5b86a5;
-  --primary-foreground: #f8fafc;
-  --secondary: oklch(0.71 0.04 257);
-  --secondary-light: #6b5b6b;
-  --secondary-foreground: #e5e7eb;
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
+  /* `--cc-warn-*` is the **review draft** family. It used to be documented here
+     as "the nudge to write a review", which #127 §4 flags as wrong: #88 showed
+     the actual nudge is `--cc-btn` on `--cc-surface`, and nothing amber appears
+     on it.
+
+     The tint half is the draft's header. The Design System artboard names
+     `--warn` "Review draft header" in both `TINTS` and `BANNERS`, and
+     `Course Community - Workspace Pane.dc.html` paints exactly it in its
+     `isReview` branch — `--warn` behind the draft's title block, `--warnInk` on
+     its "Review draft" eyebrow, and `--warnBorder` + `--warnSolid` as the
+     border and opaque backing of the progress row that sticks beneath it.
+
+     `--cc-warn-btn`/`--cc-warn-btn-fg` are a separate pair, and the one place
+     the old wording was not wrong: the Design System demos them under "Status
+     text & buttons" as a **"Write a review"** button. They are an accent, not a
+     banner tint — the filled progress segments and the submit button in
+     `review-draft-panel.tsx`, and the Review Card's accent for a review that
+     was not happy (`Review Card.dc.html:51`). Neither appears anywhere in the
+     Workspace Pane's `isReview` branch. */
+  --cc-warn: #fdf7ea;
+  --cc-warn-border: #f0e6d2;
+  --cc-warn-ink: #7a5309;
+  --cc-warn-btn: #1751a6;
+  --cc-warn-btn-fg: #ffffff;
+  --cc-score-workload: #b3691f;
+  --cc-info-solid: #eef4fb;
+  --cc-warn-solid: #fdf7ea;
+  --cc-success: #1c7a4a;
+  --cc-success-fg: #ffffff;
+  --cc-danger: #b3261e;
+  --cc-danger-fg: #ffffff;
+
+  /* Community graph node colours — light.
+     `server/graph/placement.ts` stores a colour *name*, never a hex, so these
+     six tokens are the client half of that contract and the palette can be
+     re-skinned here without a data migration.
+
+     Mirrored, like everything above: the revised `cc-theme.css` names all six
+     (`--nodeAurora` … `--nodeViolet`), and the Design System artboard renders
+     them under "Community graph nodes". They are *unassigned* rather than
+     absent — #68 §3 settled that a node with no configured appearance is
+     `--cc-brand`, and these are the palette personalisation will draw from once
+     a tier writer exists. */
+  --cc-node-aurora: #2f9e8e;
+  --cc-node-ember: #c96a4a;
+  --cc-node-frost: #2f5fa8;
+  --cc-node-moss: #4a7c2f;
+  --cc-node-slate: #57646f;
+  --cc-node-violet: #6a4ea8;
+
+  /* The panel-tint families. A tint, its border and its ink are three separate
+     tokens because a banner needs all three and none of them is derivable from
+     `--cc-success` / `--cc-danger`: dark states them as alpha over the page,
+     light as flat mixes that are not a percentage of anything. Anything
+     deriving one with `color-mix` is reading the palette from before these
+     existed (#127 §1). */
+  --cc-success-tint: #e9f3ef;
+  --cc-success-tint-border: #cfe4de;
+  --cc-success-ink: #1c6b60;
+  --cc-danger-tint: #fdf3ef;
+  --cc-danger-tint-border: #f0d7cf;
+  --cc-danger-ink: #a3452a;
+  --cc-danger-ink2: #7a3b26;
+
+  /* "Mark as taken" and "Save" once they are on, plus that state's hover. */
+  --cc-checked-tint: rgba(23, 81, 166, 0.08);
+  --cc-checked-hover-tint: rgba(23, 81, 166, 0.14);
+
+  /* Keyboard focus, and the rail's own pair because brand blue vanishes on it.
+
+     `--cc-focus` is `--cc-brand`, which is also `--cc-rail` — so a ring drawn in
+     it on a sidebar control is the same colour as its background and cannot be
+     seen. That is the third instance of one pattern: `--cc-btn` on `--cc-rail`
+     gave an invisible Sign up button before the 2026-09-05 export fixed it. The
+     design answers it as a rule rather than a case, and so does this. */
+  --cc-focus: #1751a6;
+  --cc-focus-ring: rgba(23, 81, 166, 0.25);
+  --cc-rail-focus: #ffffff;
+  --cc-rail-focus-ring: rgba(255, 255, 255, 0.35);
+
+  /* The applied end of a theory/applied bar — the one colour on these screens
+     the design uses without ever having named (#173).
+
+     `cc-theme.css` in the 2026-09-05 export contains no `9dbfe4` and declares no
+     token for it, while `Course Community - Workspace Pane.dc.html:115` writes
+     the hex inline as the applied half of the bar. Four other artboards reuse it
+     as a dashed "add something" border and as link text on a toast. So it is a
+     real colour of the design with no name, which is why this is the one `--cc-*`
+     token in the file that mirrors nothing. When an export finally names it,
+     this is the token to reconcile.
+
+     ## Why two literals and not one `color-mix`
+
+     `pane-parts.tsx` and `reviewer-card.tsx` each used to derive it as
+     `color-mix(in srgb, var(--cc-btn) 40%, var(--cc-surface))`, which was the
+     right substitution while nothing was named (#86's rule) and is the wrong
+     shape for a token. A mix is a standing promise that the derivation will keep
+     being correct, and nobody re-checks it: `--cc-btn` inverts between the
+     themes — `#1751a6` light, `#8bb3ef` dark — so the mix silently re-resolves
+     every time either input moves. Colours that quietly track each other are how
+     the light rail ended up painting a `--cc-btn` "Sign up" onto a `--cc-rail`
+     that is the same `#1751a6`; the rail block below is white on purpose for
+     that reason. Two flat values are checked once and reviewed when changed,
+     and they are what every other token here is.
+
+     Light is the artboard's own literal, so this stops approximating it: the mix
+     resolved to `#a2b9db`, which also held the "Applied" label (`--cc-brand`
+     `#1751a6`, 12px semibold) at 3.80:1 where the design's value gives 3.98:1.
+
+     Dark is chosen for the dark page, by the design's own reflection: it moves
+     `--cc-btn` from HSL lightness 37% to 74% and keeps hue and saturation, so
+     this moves its light value (H211 S57% L75%) to L38% the same way. Pinning
+     `#9dbfe4` in dark was the one thing that could not work — at luminance 0.50
+     against `--cc-btn`'s 0.44 the quieter half of the bar would read *brighter*
+     than the brand half it sits beside, 1.12:1 apart.
+
+     ## What it is not for
+
+     The bar, and nothing else yet. #173 asked whether the draft's starter pills
+     should take it too — the artboard draws them with the same hex, dashed
+     (`Course Community - Workspace Pane.dc.html:274`), where
+     `review-draft-panel.tsx` uses `border-cc-hov`. They are left alone on
+     purpose: `Collections.dc.html:108` and `:134` draw the same dashed
+     `#9dbfe4` and `collections.tsx:524`/`:553` already map both onto
+     `--cc-hov`. Moving one of the three onto this token would replace one
+     inconsistency with a worse one — the same artboard element spelled two ways
+     — and this token is named for a fill in a bar, not for a border. If the
+     dashed border is worth its own name it is worth all three call sites and a
+     name of its own.
+
+     Resolved: light `#9dbfe4` — 1.91:1 on `--cc-surface`, 3.98:1 against the
+     `--cc-btn` half beside it, and 3.98:1 under its `--cc-brand` label.
+     Dark `#2a5f98` — 2.31:1 on `--cc-surface`, 3.07:1 against `--cc-btn`, and
+     5.09:1 under `--cc-brand`. Neither disappears into its ground and neither
+     is mistakable for the half beside it. */
+  --cc-applied: #9dbfe4;
+
+  /* ── shadcn primitives, expressed in Course Community tokens ──────────────
+     `components/ui/**` is a stock shadcn set and styles itself against
+     `--background`, `--card`, `--muted` and friends. Those used to be a second,
+     unrelated neutral palette sitting beside `--cc-*` and disagreeing with it:
+     light `--background` was the design's cream while dark `--background` was a
+     blue-grey nothing like `--cc-pg`, and `--card` was pure white against a
+     `#0f172a` dark. That is the whole reason dark "worked better" than light —
+     the design's dark palette is self-consistent, so it was only in light that
+     the two systems sat side by side and every seam showed.
+
+     So every shadcn token is now an alias onto the `--cc-*` token that means
+     the same thing. There is one palette, and a dialog, popover or button
+     inherits the theme without knowing the design exists.
+
+     The aliases are declared once, here, rather than repeated under `.dark`. A
+     custom property is substituted at computed-value time, so `var(--cc-pg)`
+     resolves against whichever `--cc-*` values are in scope *on the element the
+     alias is declared on*. `next-themes` is configured `attribute="class"` in
+     `app/layout.tsx`, which puts `.dark` on `<html>` — the same element as
+     `:root` — so one declaration covers both themes. A second `.dark` nested on
+     a descendant would not re-resolve them; nothing in the repo does that, and
+     Tailwind's `@custom-variant dark (&:is(.dark *))` assumes the same. */
+  --background: var(--cc-pg);
+  --foreground: var(--cc-ink);
+  --card: var(--cc-surface);
+  --card-foreground: var(--cc-ink);
+  /* A popover is a menu, and `--cc-surface` is "cards, fields, menus". */
+  --popover: var(--cc-surface);
+  --popover-foreground: var(--cc-ink);
+  --primary: var(--cc-btn);
+  --primary-foreground: var(--cc-btn-fg);
+  /* shadcn's `secondary` is a *filled* quiet control, not the design's outlined
+     "Secondary" button. The design's quiet fill is the pill, and `--cc-chip-ink`
+     is literally "text on a pill". */
+  --secondary: var(--cc-pill);
+  --secondary-foreground: var(--cc-chip-ink);
+  --muted: var(--cc-pill);
+  --muted-foreground: var(--cc-muted);
+  /* `accent` is the hover or selected fill inside menus and lists. The Design
+     System lists "hover" under `--pill` alongside chips and tracks, and text on
+     a hover fill stays primary ink rather than dropping to chip ink. */
+  --accent: var(--cc-pill);
+  --accent-foreground: var(--cc-ink);
+  --destructive: var(--cc-danger);
+  /* `RULES` in the Design System splits these: `--rule2` is the card border,
+     `--rule3` the control border. shadcn's `--input` is only ever a control's
+     border (and `bg-input/30` its dark fill), so it takes `--cc-rule3` rather
+     than joining `--border` on `--cc-rule2`. */
+  --border: var(--cc-rule2);
+  --input: var(--cc-rule3);
+  /* The focus ring. `--cc-hov` is the palette's own emphasis border and is
+     already what the feedback form focuses to, so the ring matches the design
+     instead of introducing a colour the design does not have. */
+  --ring: var(--cc-hov);
+  --radius: 0.625rem;
+
+  /* The rail family. `bg-sidebar` has no consumer today — this repo's rail is
+     `features/shell/components/rail.tsx`, not shadcn's `Sidebar`, which is not
+     even vendored — but leaving these on stock greys would reintroduce the
+     second palette the moment anyone reached for one.
+
+     The rail is the one surface the design paints without tokens: there is no
+     `--cc-rail-fg`, and the artboard draws on it in plain white at varying
+     alpha in both themes. `rail.tsx` says the same and uses the same `white/nn`
+     values, so these mirror it — `.16` is the active nav item and `.20` the
+     divider above the signed-out block.
+
+     `--sidebar-primary` is **not** the artboard's "Sign up", and this comment
+     used to claim it was. Six of the seven artboards that draw the rail give
+     that button `background:#8bb3ef; color:#0a2449`; the seventh, Landing,
+     gives it `#fff` / `#12417f`. Neither is white on `--cc-rail`. `bg-sidebar`
+     has no consumer, so nothing renders from these and nothing is wrong on
+     screen — but the note was being read as authority for what `rail.tsx`
+     paints, which is how it survived two passes. What the rail's Sign up should
+     actually be is a product decision, because the export disagrees with
+     itself; see the issue filed from #167. */
+  --sidebar: var(--cc-rail);
+  --sidebar-foreground: #ffffff;
+  --sidebar-primary: #ffffff;
+  --sidebar-primary-foreground: var(--cc-rail);
+  --sidebar-accent: rgba(255, 255, 255, 0.16);
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: rgba(255, 255, 255, 0.2);
+  --sidebar-ring: #ffffff;
+
+  /* `--chart-*` stays on its stock neutral ramp: it has no honest `--cc-*`
+     counterpart. The six `--cc-node-*` are the community graph's palette, and
+     #68 settled that they are what personalisation will assign to a person —
+     they are not a categorical chart scale. The one chart this repo draws, the
+     examination split, carries its own literals in
+     `features/reviews/lib/examination-palette.ts` for the reason recorded
+     there, and `components/ui/chart.tsx` has no consumer at all. Greys read
+     acceptably on either ground, so they are left rather than forced. */
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.21 0.04 266);
-  --sidebar-primary-foreground: #f8fafc;
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+}
 
-  /* Course Community — dark palette. */
-  --cc-pg: #0d2d5b;
-  --cc-surface: #143a72;
-  --cc-inset: #0a2449;
+/* Course Community — dark palette, again `cc-theme.css` verbatim. Only the
+   `--cc-*` tokens are restated: every shadcn alias in `:root` is written in
+   terms of these and `.dark` lands on that same `<html>` element, so the whole
+   primitive set swaps with them. */
+.dark {
+  --cc-pg: #071831;
+  --cc-surface: #0b254c;
+  --cc-inset: #040f1f;
   --cc-pill: rgba(244, 238, 226, 0.16);
-  --cc-rail: #1751a6;
-  --cc-ink: #f6f1e6;
-  --cc-ink2: #eae4d7;
-  --cc-muted: #d3e0f4;
-  --cc-dim: #c6d5ee;
-  --cc-dim2: #b0c1de;
-  --cc-chip-ink: #f0ebdf;
-  --cc-rule: rgba(244, 238, 226, 0.22);
-  --cc-rule2: rgba(244, 238, 226, 0.3);
-  --cc-rule3: rgba(244, 238, 226, 0.42);
+  --cc-rail: #0d2e5e;
+  --cc-ink: #e6eaef;
+  --cc-ink2: #d7dde4;
+  --cc-muted: #c3cedf;
+  --cc-dim: #b4c3da;
+  --cc-dim2: #9daec8;
+  --cc-chip-ink: #dadfe7;
+  --cc-rule: rgba(244, 238, 226, 0.16);
+  --cc-rule2: rgba(244, 238, 226, 0.22);
+  --cc-rule3: rgba(244, 238, 226, 0.32);
   --cc-hov: #dbe8fa;
-  --cc-brand: #e2ecfb;
-  --cc-btn: #f4eee2;
-  --cc-btn-fg: #1751a6;
+  --cc-brand: #d7e3f7;
+  --cc-btn: #8bb3ef;
+  --cc-btn-fg: #0a2449;
   --cc-info: rgba(226, 236, 251, 0.1);
+  /* The review draft's call to action is amber here where light is blue. That
+     hue change is the design's, not a mistake: on the dark blue surface a blue
+     button vanishes. */
+  --cc-warn: rgba(223, 165, 60, 0.16);
+  --cc-warn-border: rgba(223, 165, 60, 0.3);
+  --cc-warn-ink: #f2c879;
+  --cc-warn-btn: #dfa53c;
+  --cc-warn-btn-fg: #1a1305;
+  --cc-score-workload: #e8b563;
+  --cc-info-solid: #21395e;
+  --cc-warn-solid: #2d3949;
+  --cc-success: #5fd08a;
+  --cc-success-fg: #0c2417;
+  --cc-danger: #ff8a80;
+  --cc-danger-fg: #2b0a08;
+
+  /* Community graph node colours — dark. The design lifts each light hue to the
+     same hue at a much higher lightness, because the light set is mixed for the
+     cream page and disappears into `--cc-pg`'s deep blue. The names, and which
+     name means which hue, do not change. */
+  --cc-node-aurora: #5fd8c4;
+  --cc-node-ember: #f2946f;
+  --cc-node-frost: #8ec2ff;
+  --cc-node-moss: #a5d47c;
+  --cc-node-slate: #b3c1d0;
+  --cc-node-violet: #bda2f0;
+
+  /* The tints are alpha over the page here rather than the flat mixes light
+     uses, and the inks collapse onto the solid colour: at this lightness
+     `--cc-success` and `--cc-danger` already read as text. */
+  --cc-success-tint: rgba(95, 208, 138, 0.14);
+  --cc-success-tint-border: rgba(95, 208, 138, 0.3);
+  --cc-success-ink: #5fd08a;
+  --cc-danger-tint: rgba(255, 138, 128, 0.14);
+  --cc-danger-tint-border: rgba(255, 138, 128, 0.3);
+  --cc-danger-ink: #ff8a80;
+  --cc-danger-ink2: #ffb3ab;
+  --cc-checked-tint: rgba(142, 194, 255, 0.22);
+  --cc-checked-hover-tint: rgba(142, 194, 255, 0.32);
+
+  /* The rail darkens with the theme, so the page pair already reads on it and
+     both are the same value here — see the light block for why they diverge
+     there. */
+  --cc-focus: #8bb3ef;
+  --cc-focus-ring: rgba(139, 179, 239, 0.3);
+  --cc-rail-focus: #8bb3ef;
+  --cc-rail-focus-ring: rgba(139, 179, 239, 0.3);
+
+  /* The applied end of a theory/applied bar, chosen for this page rather than
+     mixed for it — see the light block. The artboards hardcode the light hex
+     here too, which is what makes this the one value in the file that no export
+     has ever stated for dark. Same hue and saturation as the light value
+     (H211 S57%), lightness dropped 75% → 38% the way `--cc-btn` itself is
+     reflected between the two palettes. */
+  --cc-applied: #2a5f98;
 }
 
 @layer base {
@@ -199,7 +462,82 @@
   }
 }
 
-/* Thin, muted scrollbar for internal scroll panes (e.g. search list, sidebar). */
+/* One focus treatment for the whole app, mirroring `cc-theme.css` in the
+   2026-09-06 export.
+
+   `:focus-visible` and not `:focus`, so a mouse click does not ring the control
+   it just pressed — that is what gets a focus style deleted again a week later.
+   `!important` because the artboards carry 22 inline `outline:none`
+   declarations and this has to beat every one of them, and because it must also
+   reach hand-rolled `role="button"` divs, which are not focusable by default and
+   get no help from the shadcn primitives' own ring.
+
+   The second rule exists because the rail is painted in `--cc-rail`, which in
+   light *is* `--cc-brand` and therefore `--cc-focus` — a ring drawn in the page
+   pair there is the same colour as its background. `AppShell` marks the rail
+   with `data-cc-sidebar` for this.
+
+   ## `:not([tabindex="-1"])`
+
+   `tabindex="-1"` means "focusable by script, not reachable by Tab". Radix puts
+   it on `DialogContent` so a dialog can take focus when it opens, which is a
+   focus *trap* and not a keyboard focus — and this rule would otherwise paint a
+   2px ring around the whole modal and, because the halo is `box-shadow`,
+   replace the artboard's drop shadow with it.
+
+   That is measured, not assumed. In Chrome, a `tabindex="-1"` element focused
+   by script matches `:focus-visible` when the interaction before it was the
+   keyboard and not when it was the mouse — so `getComputedStyle(content)
+   .boxShadow` returns the artboard's `0 18px 48px rgba(20,30,45,.24)` after a
+   click and this rule's `0 0 0 4px rgba(23,81,166,.25)` after Enter.
+
+   No dialog in the app reaches that state today: Radix hands focus on to the
+   first focusable descendant, and every one of ours has one — a button, a field
+   or the close control. The guard is here because the first text-only dialog
+   with `showCloseButton={false}` would land on it, and the symptom (a modal that
+   loses its shadow, but only for keyboard users) is close to unfindable.
+
+   Roving-tabindex is unaffected. `my-page.tsx`'s tab list is the only one, and
+   it sets `tabIndex={0}` on the selected tab, so the tab that has focus is never
+   the one this excludes.
+
+   ## Nine treatments removed, three kept
+
+   #167's residue was twelve hand-rolled treatments in `features/**`, not the
+   five this comment used to claim. Nine are gone. The three that remain are
+   deliberate and say so at their own call sites:
+   `review-draft-panel.tsx`'s checkbox ring (painted on a sibling of an
+   `sr-only` peer, which this rule cannot reach), `workspace-pane.tsx`'s
+   `focus:bg-cc-pill` (a menu highlight, not a ring), and
+   `search/components/explore.tsx`'s dead `focus-visible:outline-cc-brand`,
+   which this rule already overrides and which is left for the PR that owns
+   that file. */
+:focus-visible:not([tabindex="-1"]) {
+  /* biome-ignore lint/complexity/noImportantStyles: it has to beat the 22 inline `outline:none` declarations the artboards carry, and the shadcn primitives' own ring. Without it a focus style exists everywhere except where it is needed. */
+  outline: 2px solid var(--cc-focus) !important;
+  /* biome-ignore lint/complexity/noImportantStyles: paired with the outline above; an offset that loses to an inline rule puts the ring under the control's own border. */
+  outline-offset: 2px !important;
+  /* biome-ignore lint/complexity/noImportantStyles: the halo is what carries the ring across surfaces of differing contrast, so it must win wherever the outline does. */
+  box-shadow: 0 0 0 4px var(--cc-focus-ring) !important;
+}
+
+[data-cc-sidebar] :focus-visible:not([tabindex="-1"]) {
+  /* biome-ignore lint/complexity/noImportantStyles: overrides the page pair above, which is itself `!important`; a plain declaration here would lose to it. */
+  outline-color: var(--cc-rail-focus) !important;
+  /* biome-ignore lint/complexity/noImportantStyles: as above — it replaces an `!important` halo, not a plain one. */
+  box-shadow: 0 0 0 4px var(--cc-rail-focus-ring) !important;
+}
+
+/* The default for every scroll container in the app: thin and muted, so a pane
+   that scrolls says so without a chunky OS bar cutting across the design.
+
+   The convention is that a scroll container picks one of these two utilities
+   deliberately. Neither is the same as picking nothing: a container with no
+   utility renders the browser's default bar, which is what the artboards do not
+   draw and what this pass corrected across ten surfaces. If you add
+   `overflow-auto` anywhere, add one of these with it.
+
+   `--border` is mapped onto `--cc-rule2`, so this tracks the theme on its own. */
 @utility scrollbar-subtle {
   scrollbar-width: thin;
   scrollbar-color: var(--border) transparent;
@@ -217,6 +555,22 @@
   }
   &::-webkit-scrollbar-thumb:hover {
     background-color: var(--border);
+  }
+}
+
+/* The deliberate exception, and the only one. Explore owns its list's scroll
+   surface: hiding the rail keeps that surface visually quiet while retaining
+   wheel, touch, keyboard and programmatic scrolling.
+
+   Reach for this only where something else already tells the reader the region
+   scrolls. Hiding the bar on a list that carries no other affordance takes one
+   away rather than tidying one up, which is why everywhere else takes
+   `scrollbar-subtle`. */
+@utility scrollbar-hidden {
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
   }
 }
 

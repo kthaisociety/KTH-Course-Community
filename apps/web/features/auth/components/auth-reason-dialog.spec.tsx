@@ -122,14 +122,64 @@ describe("AuthReasonDialog", () => {
     );
   });
 
-  it("routes to the full auth page for email", async () => {
+  // The email path leaves this tab for `/auth`, and the link `/auth` mails is
+  // opened in a *new* one — so the destination has to travel in the URL or it
+  // does not travel at all.
+  it("routes to the full auth page for email, carrying where to come back to", async () => {
     const user = userEvent.setup();
     open("log-in");
     await user.click(
       screen.getByRole("button", { name: /continue with email/i }),
     );
-    expect(push).toHaveBeenCalledWith("/auth");
+    expect(push).toHaveBeenCalledWith(
+      "/auth?next=%2Fcourse%2FDD2380%3Fq%3Dagents",
+    );
     expect(signInSocial).not.toHaveBeenCalled();
+  });
+
+  // `?next=` is read straight back out and handed to Better Auth, so a
+  // destination that is not this site is an open redirect with a real sign-in
+  // in front of it. Rejected here, before it can be offered to anyone.
+  it.each([
+    "https://evil.example/steal",
+    "//evil.example/steal",
+    String.raw`/\evil.example/steal`,
+  ])("refuses to come back to %s", async (destination) => {
+    window.history.replaceState({}, "", "/search");
+    const user = userEvent.setup();
+    render(
+      <AuthReasonDialog
+        reason="log-in"
+        onReasonChange={vi.fn()}
+        onClose={vi.fn()}
+        returnTo={() => destination}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: /google/i }));
+
+    await waitFor(() => expect(signInSocial).toHaveBeenCalled());
+    expect(signInSocial.mock.calls[0][0].callbackURL).toBe("/search");
+  });
+
+  // A caller may know something the URL has stopped saying — the review draft
+  // panel puts back the `?open=` a host has already spent — so the destination
+  // is a mapper over where the visitor is, not a fixed string.
+  it("lets the caller adjust where the sign-in comes back to", async () => {
+    const user = userEvent.setup();
+    render(
+      <AuthReasonDialog
+        reason="post-review"
+        onReasonChange={vi.fn()}
+        onClose={vi.fn()}
+        returnTo={(here) => `${here}&open=DD2380&kind=review`}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: /google/i }));
+
+    await waitFor(() => expect(signInSocial).toHaveBeenCalled());
+    expect(signInSocial.mock.calls[0][0].callbackURL).toBe(
+      "/course/DD2380?q=agents&open=DD2380&kind=review",
+    );
   });
 
   it("reports a failed sign-in instead of failing silently", async () => {

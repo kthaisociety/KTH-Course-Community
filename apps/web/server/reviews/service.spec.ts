@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ForbiddenError, NotFoundError, ValidationError } from "../errors";
+import * as graphService from "../graph/service";
 import * as reviewsRepo from "./repository";
 import {
   createReview,
@@ -10,6 +11,8 @@ import {
 } from "./service";
 
 vi.mock("./repository");
+// The tier writer belongs to the graph domain and is reached service -> service.
+vi.mock("../graph/service");
 
 const review = {
   id: "review-123",
@@ -60,8 +63,28 @@ describe("reviews", () => {
     ).rejects.toBeInstanceOf(ForbiddenError);
   });
 
+  it("createReview refuses a second review of the same course", async () => {
+    // The repository writes only if there is no review yet, and says so by
+    // returning nothing — the check and the insert are one operation there.
+    vi.mocked(reviewsRepo.insertReviewIfFirst).mockResolvedValue(undefined);
+
+    await expect(
+      createReview("SF1625", "user-456", {
+        examinationDistribution: null,
+        approachTheoryPercent: null,
+        workloadScore: 8,
+        learningScore: 9,
+        happyTook: true,
+        message: null,
+      }),
+    ).rejects.toThrow(ValidationError);
+    expect(reviewsRepo.insertReviewIfFirst).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: "user-456", courseCode: "SF1625" }),
+    );
+  });
+
   it("createReview round-trips a review through the target columns only", async () => {
-    vi.mocked(reviewsRepo.insertReview).mockResolvedValue(review);
+    vi.mocked(reviewsRepo.insertReviewIfFirst).mockResolvedValue(review);
 
     const created = await createReview("SF1625", "user-456", {
       examinationDistribution: review.examinationDistribution,
@@ -73,7 +96,7 @@ describe("reviews", () => {
     });
 
     expect(
-      vi.mocked(reviewsRepo.insertReview).mock.calls[0]?.[0],
+      vi.mocked(reviewsRepo.insertReviewIfFirst).mock.calls[0]?.[0],
     ).toMatchObject({
       courseCode: "SF1625",
       userId: "user-456",
@@ -102,13 +125,54 @@ describe("reviews", () => {
     });
   });
 
+  /**
+   * Publishing a review is one of the two moments #161's ladder can move, and
+   * the recompute runs here rather than in a job so the member sees the unlock
+   * on the page they earned it from.
+   */
+  it("createReview recomputes the earned personalization tier", async () => {
+    vi.mocked(reviewsRepo.insertReviewIfFirst).mockResolvedValue(review);
+
+    await createReview("SF1625", "user-456", {
+      examinationDistribution: null,
+      approachTheoryPercent: null,
+      workloadScore: 8,
+      learningScore: 9,
+      happyTook: true,
+      message: null,
+    });
+
+    expect(
+      graphService.recordEarnedPersonalizationTierOnContribution,
+    ).toHaveBeenCalledWith("user-456");
+  });
+
+  it("createReview does not recompute the tier when nothing was published", async () => {
+    // A rejected duplicate changes no review and can earn no tier.
+    vi.mocked(reviewsRepo.insertReviewIfFirst).mockResolvedValue(undefined);
+
+    await expect(
+      createReview("SF1625", "user-456", {
+        examinationDistribution: null,
+        approachTheoryPercent: null,
+        workloadScore: 8,
+        learningScore: 9,
+        happyTook: true,
+        message: null,
+      }),
+    ).rejects.toThrow(ValidationError);
+    expect(
+      graphService.recordEarnedPersonalizationTierOnContribution,
+    ).not.toHaveBeenCalled();
+  });
+
   it("createReview keeps an unremembered distribution and percent null", async () => {
     const forgetful = {
       ...review,
       examinationDistribution: null,
       approachTheoryPercent: null,
     };
-    vi.mocked(reviewsRepo.insertReview).mockResolvedValue(forgetful);
+    vi.mocked(reviewsRepo.insertReviewIfFirst).mockResolvedValue(forgetful);
 
     const created = await createReview("SF1625", "user-456", {
       examinationDistribution: null,
@@ -119,7 +183,8 @@ describe("reviews", () => {
       message: "Great course content!",
     });
 
-    const written = vi.mocked(reviewsRepo.insertReview).mock.calls[0]?.[0];
+    const written = vi.mocked(reviewsRepo.insertReviewIfFirst).mock
+      .calls[0]?.[0];
     expect(written?.examinationDistribution).toBeNull();
     expect(written?.approachTheoryPercent).toBeNull();
     expect(created.examinationDistribution).toBeNull();
@@ -169,7 +234,7 @@ describe("reviews", () => {
         message: "Great course content!",
       }),
     ).rejects.toBeInstanceOf(ValidationError);
-    expect(reviewsRepo.insertReview).not.toHaveBeenCalled();
+    expect(reviewsRepo.insertReviewIfFirst).not.toHaveBeenCalled();
   });
 
   it("createReview rejects a distribution that does not add up to 100", async () => {
@@ -186,7 +251,7 @@ describe("reviews", () => {
         message: null,
       }),
     ).rejects.toBeInstanceOf(ValidationError);
-    expect(reviewsRepo.insertReview).not.toHaveBeenCalled();
+    expect(reviewsRepo.insertReviewIfFirst).not.toHaveBeenCalled();
   });
 
   it.each([0, 11, 5.5])(
@@ -202,12 +267,12 @@ describe("reviews", () => {
           message: null,
         }),
       ).rejects.toBeInstanceOf(ValidationError);
-      expect(reviewsRepo.insertReview).not.toHaveBeenCalled();
+      expect(reviewsRepo.insertReviewIfFirst).not.toHaveBeenCalled();
     },
   );
 
   it("createReview stores a blank message as null", async () => {
-    vi.mocked(reviewsRepo.insertReview).mockResolvedValue({
+    vi.mocked(reviewsRepo.insertReviewIfFirst).mockResolvedValue({
       ...review,
       message: null,
     });
@@ -221,9 +286,9 @@ describe("reviews", () => {
       message: "   ",
     });
 
-    expect(vi.mocked(reviewsRepo.insertReview).mock.calls[0]?.[0].message).toBe(
-      null,
-    );
+    expect(
+      vi.mocked(reviewsRepo.insertReviewIfFirst).mock.calls[0]?.[0].message,
+    ).toBe(null);
   });
 
   it("toggleVote records an upvote when the reviewer has not voted", async () => {
