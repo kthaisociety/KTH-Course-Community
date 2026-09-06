@@ -91,6 +91,7 @@
   --color-cc-node-violet: var(--cc-node-violet);
   --color-cc-checked-tint: var(--cc-checked-tint);
   --color-cc-checked-hover-tint: var(--cc-checked-hover-tint);
+  --color-cc-applied: var(--cc-applied);
 }
 
 :root {
@@ -98,6 +99,10 @@
      `docs/design_ref/2026-09-05/cc-theme.css`. That file is the design's single
      definition of both palettes, so nothing here is tuned locally: a colour
      change belongs in the design and arrives here as a re-mirror.
+
+     One exception, and it is named where it is declared: `--cc-applied` at the
+     foot of this block is a colour the artboards use inline and `cc-theme.css`
+     has never named. It is the only token here without a line to mirror.
 
      pg page background  surface cards, fields, menus  inset recessed panel
      pill chips, tracks and hover fills
@@ -196,6 +201,62 @@
   /* "Mark as taken" and "Save" once they are on, plus that state's hover. */
   --cc-checked-tint: rgba(23, 81, 166, 0.08);
   --cc-checked-hover-tint: rgba(23, 81, 166, 0.14);
+
+  /* The applied end of a theory/applied bar — the one colour on these screens
+     the design uses without ever having named (#173).
+
+     `cc-theme.css` in the 2026-09-05 export contains no `9dbfe4` and declares no
+     token for it, while `Course Community - Workspace Pane.dc.html:115` writes
+     the hex inline as the applied half of the bar. Four other artboards reuse it
+     as a dashed "add something" border and as link text on a toast. So it is a
+     real colour of the design with no name, which is why this is the one `--cc-*`
+     token below that is not a line of `cc-theme.css`. When an export finally
+     names it, this is the token to reconcile.
+
+     ## Why two literals and not one `color-mix`
+
+     Three call sites used to derive it as
+     `color-mix(in srgb, var(--cc-btn) 40%, var(--cc-surface))`, which was the
+     right substitution while nothing was named (#86's rule) and is the wrong
+     shape for a token. A mix is a standing promise that the derivation will keep
+     being correct, and nobody re-checks it: `--cc-btn` inverts between the
+     themes — `#1751a6` light, `#8bb3ef` dark — so the mix silently re-resolves
+     every time either input moves. That is the same mechanism that put a white
+     "Sign up" button on a `--cc-btn` rail, which the 2026-09-05 export had to
+     fix. Two flat values are checked once and reviewed when changed, and they
+     are what every other token here is.
+
+     Light is the artboard's own literal, so this stops approximating it: the mix
+     resolved to `#a2b9db`, which also held the "Applied" label (`--cc-brand`
+     `#1751a6`, 12px semibold) at 3.80:1 where the design's value gives 3.98:1.
+
+     Dark is chosen for the dark page, by the design's own reflection: it moves
+     `--cc-btn` from HSL lightness 37% to 74% and keeps hue and saturation, so
+     this moves its light value (H211 S57% L75%) to L38% the same way. Pinning
+     `#9dbfe4` in dark was the one thing that could not work — at luminance 0.50
+     against `--cc-btn`'s 0.44 the quieter half of the bar would read *brighter*
+     than the brand half it sits beside, 1.12:1 apart.
+
+     ## What it is not for
+
+     The bar, and nothing else yet. #173 asked whether the draft's starter pills
+     should take it too — the artboard draws them with the same hex, dashed
+     (`Course Community - Workspace Pane.dc.html:274`), where
+     `review-draft-panel.tsx` uses `border-cc-hov`. They are left alone on
+     purpose: `Collections.dc.html:108` and `:134` draw the same dashed
+     `#9dbfe4` and `collections.tsx:524`/`:553` already map both onto
+     `--cc-hov`. Moving one of the three onto this token would replace one
+     inconsistency with a worse one — the same artboard element spelled two ways
+     — and this token is named for a fill in a bar, not for a border. If the
+     dashed border is worth its own name it is worth all three call sites and a
+     name of its own.
+
+     Resolved: light `#9dbfe4` — 1.91:1 on `--cc-surface`, 3.98:1 against the
+     `--cc-btn` half beside it, and 3.98:1 under its `--cc-brand` label.
+     Dark `#2a5f98` — 2.31:1 on `--cc-surface`, 3.07:1 against `--cc-btn`, and
+     5.09:1 under `--cc-brand`. Neither disappears into its ground and neither
+     is mistakable for the half beside it. */
+  --cc-applied: #9dbfe4;
 
   /* ── shadcn primitives, expressed in Course Community tokens ──────────────
      `components/ui/**` is a stock shadcn set and styles itself against
@@ -351,6 +412,14 @@
   --cc-danger-ink2: #ffb3ab;
   --cc-checked-tint: rgba(142, 194, 255, 0.22);
   --cc-checked-hover-tint: rgba(142, 194, 255, 0.32);
+
+  /* The applied end of a theory/applied bar, chosen for this page rather than
+     mixed for it — see the light block. The artboards hardcode the light hex
+     here too, which is what makes this the one value in the file that no export
+     has ever stated for dark. Same hue and saturation as the light value
+     (H211 S57%), lightness dropped 75% → 38% the way `--cc-btn` itself is
+     reflected between the two palettes. */
+  --cc-applied: #2a5f98;
 }
 
 @layer base {

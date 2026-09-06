@@ -92,6 +92,26 @@ function ccNameFor(designToken: string): string {
   return `--cc-${designToken.slice(2).replace(/[A-Z]/g, "-$&").toLowerCase()}`;
 }
 
+/**
+ * `--cc-*` tokens the app names and `cc-theme.css` does not.
+ *
+ * The parity check below is the point of this file and this list is a hole in
+ * it, so it is a list rather than a predicate: adding to it is a visible edit
+ * with a reason attached, and everything not on it still fails as loudly as
+ * before.
+ *
+ * - `--cc-applied` — the applied end of a theory/applied bar. The artboards
+ *   write `#9dbfe4` inline for it (`Course Community - Workspace Pane.dc.html`
+ *   at `:115`, and four other artboards reuse the hex for other things) and no
+ *   export has ever given it a name. Three call sites derived it with
+ *   `color-mix` instead; #173 named it here so the derivation cannot silently
+ *   re-resolve when `--cc-btn` moves. Its dark value is the one `--cc-*` value
+ *   in `globals.css` chosen locally, because the artboards hardcode the light
+ *   hex in both themes. When an export names it, delete this entry and the
+ *   parity check picks it up.
+ */
+const UNNAMED_BY_THE_DESIGN = new Set(["--cc-applied"]);
+
 const PALETTES = [
   { theme: "light", ours: ":root", theirs: ":root" },
   { theme: "dark", ours: ".dark", theirs: '[data-cc-theme="dark"]' },
@@ -113,9 +133,31 @@ describe.each(PALETTES)("the $theme palette", (palette) => {
 
   it("adds nothing to the `--cc-*` namespace the design does not define", () => {
     const extra = [...ours.keys()].filter(
-      (name) => name.startsWith("--cc-") && !designed.has(name),
+      (name) =>
+        name.startsWith("--cc-") &&
+        !designed.has(name) &&
+        !UNNAMED_BY_THE_DESIGN.has(name),
     );
     expect(extra).toEqual([]);
+  });
+
+  /**
+   * A hole in the parity check is only safe while it is still needed. An export
+   * that names one of these leaves the entry behind exempting a token the
+   * design now defines — which would let its value drift with nothing checking,
+   * in the one place someone had already decided checking mattered.
+   */
+  it("does not exempt a token the design has since named", () => {
+    const named = [...UNNAMED_BY_THE_DESIGN].filter((name) =>
+      designed.has(name),
+    );
+    expect(named).toEqual([]);
+  });
+
+  /** And an exemption for a token nobody declares any more is dead weight. */
+  it("does not exempt a token globals.css no longer declares", () => {
+    const gone = [...UNNAMED_BY_THE_DESIGN].filter((name) => !ours.has(name));
+    expect(gone).toEqual([]);
   });
 });
 

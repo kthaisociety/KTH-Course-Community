@@ -1,8 +1,4 @@
-import {
-  EMPTY_REVIEW_DRAFT,
-  type ExaminationKey,
-  type ReviewDraft,
-} from "./review-draft";
+import { decodeReviewDraft, type ReviewDraft } from "./review-draft";
 
 /**
  * What the fast-track reviewer keeps across a reload of `/taken`, and why.
@@ -29,7 +25,11 @@ import {
  *
  * Every read is defensive. What comes back is whatever was in the tab's
  * storage, possibly written by an older build, so anything that does not match
- * the shape is dropped rather than trusted.
+ * the shape is dropped rather than trusted — but at the granularity the thing
+ * is worth at. A round that is not a round is refused whole; a *draft* is
+ * salvaged field by field by the shared `decodeReviewDraft`, because this file
+ * once had its own copy of that decoder and the workspace pane had another, and
+ * the two came to disagree about what a bad draft means (#166).
  *
  * **Being well-formed is not the same as being current.** Nothing in this file
  * knows which courses still need reviewing, so it cannot tell a round that was
@@ -58,34 +58,6 @@ const OUTCOMES: CardOutcome[] = ["saved", "skipped"];
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function toDraft(value: unknown): ReviewDraft | null {
-  if (!isRecord(value)) return null;
-
-  const methods = Array.isArray(value.methods) ? value.methods : [];
-  const shares = Array.isArray(value.shares) ? value.shares : [];
-  if (
-    !methods.every((method) => typeof method === "string") ||
-    !shares.every((share) => typeof share === "number") ||
-    methods.length !== shares.length
-  ) {
-    return null;
-  }
-
-  const score = (candidate: unknown) =>
-    typeof candidate === "number" ? candidate : null;
-
-  return {
-    ...EMPTY_REVIEW_DRAFT,
-    methods: methods as ExaminationKey[],
-    shares,
-    approachTheoryPercent: score(value.approachTheoryPercent),
-    workloadScore: score(value.workloadScore),
-    learningScore: score(value.learningScore),
-    happyTook: typeof value.happyTook === "boolean" ? value.happyTook : null,
-    message: typeof value.message === "string" ? value.message : "",
-  };
 }
 
 /**
@@ -138,10 +110,30 @@ export function readReviewerSession(): ReviewerSession | null {
     }
   }
 
+  /**
+   * Each card's answers, salvaged rather than vetted.
+   *
+   * `decodeReviewDraft` drops a field it cannot read and keeps the rest, and
+   * this file used to do the opposite: a `methods`/`shares` pair that did not
+   * line up threw the whole card away — write-up, scores and all — on the
+   * reading that a half-understood round is worse than none.
+   *
+   * That reading does not survive looking at what dropping a draft actually
+   * does. It does not drop the *card*: the code stays in `queue`, so the
+   * reviewer is dealt the same course with an empty form and no sign that
+   * anything was lost. And `reviewer.tsx` writes the whole session back in a
+   * `useEffect` keyed on `round`, which fires on the mount that follows the
+   * restore — so the discarded answers are gone from storage before the
+   * reviewer has typed anything, exactly as #180 found in the workspace pane.
+   *
+   * The round-level refusals below are a different thing and they stay: a
+   * missing or empty `queue` is genuinely not a round, and refusing one opens
+   * no card and destroys no answers.
+   */
   const drafts: Record<string, ReviewDraft> = {};
   if (isRecord(value.drafts)) {
     for (const [code, candidate] of Object.entries(value.drafts)) {
-      const draft = toDraft(candidate);
+      const draft = decodeReviewDraft(candidate);
       if (draft) drafts[code] = draft;
     }
   }

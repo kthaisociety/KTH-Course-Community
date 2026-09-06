@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  decodeReviewDraft,
   dividerPositions,
   EMPTY_REVIEW_DRAFT,
   evenShares,
@@ -213,5 +214,153 @@ describe("isUntouched", () => {
     expect(isUntouched(draft({ message: "  " }))).toBe(true);
     expect(isUntouched(draft({ happyTook: false }))).toBe(false);
     expect(isUntouched(draft({ approachTheoryPercent: 50 }))).toBe(false);
+  });
+});
+
+/*
+ * The one decoder both storages go through.
+ *
+ * `features/workspace/lib/workspace-storage.ts` and `./reviewer-session.ts`
+ * used to hand-decode a stored draft each. They drifted by four lines, then by
+ * what a malformed record *means* — one salvaged, the other rejected — which is
+ * #166. Everything about the reading is asserted here, once; each storage's own
+ * suite asserts that it goes through this and salvages.
+ */
+describe("decodeReviewDraft", () => {
+  /**
+   * The guard against a field being dropped on the way back in.
+   *
+   * Both old copies spread `EMPTY_REVIEW_DRAFT` before setting the fields they
+   * knew about, which made the result structurally complete whether or not the
+   * decoder had heard of every field: a field added to `ReviewDraft` compiled in
+   * both, type-checked in both, and came back as its empty value after a reload.
+   * The decoder no longer spreads it, so an omission is a compiler error — and
+   * this is the same guarantee at runtime, for the day somebody puts the spread
+   * back.
+   *
+   * `ANSWERED` is typed, so a field added to `ReviewDraft` has to be given a
+   * value here too rather than quietly dropping out of the test with the code.
+   */
+  const ANSWERED: ReviewDraft = {
+    methods: ["exam", "labs"],
+    shares: [60, 40],
+    approachTheoryPercent: 35,
+    workloadScore: 8,
+    learningScore: 6,
+    happyTook: true,
+    message: "Hard, and worth it",
+  };
+
+  it("carries every field of a fully answered draft across", () => {
+    // Every field differs from the empty draft, so a dropped one shows up as a
+    // difference rather than coincidentally matching the default.
+    for (const [field, value] of Object.entries(ANSWERED)) {
+      expect(value, field).not.toEqual(
+        EMPTY_REVIEW_DRAFT[field as keyof ReviewDraft],
+      );
+    }
+
+    expect(decodeReviewDraft(JSON.parse(JSON.stringify(ANSWERED)))).toEqual(
+      ANSWERED,
+    );
+  });
+
+  it("is nothing at all when the value is not an object", () => {
+    for (const value of [null, undefined, "draft", 7, true, ["exam"]]) {
+      expect(decodeReviewDraft(value), String(value)).toBeNull();
+    }
+  });
+
+  it("reads an empty object as a draft nobody has answered", () => {
+    expect(decodeReviewDraft({})).toEqual(EMPTY_REVIEW_DRAFT);
+  });
+
+  /*
+   * Salvage, not reject — the decision #166 had to make, and the reason there
+   * is only one decoder rather than one with a policy argument. Both screens
+   * mirror their state straight back over storage, so a draft refused here is
+   * a draft deleted within a commit. A bar we cannot draw is one unanswered
+   * question; the write-up and the scores are still the writer's work.
+   */
+  describe("a stored draft that is wrong in one field", () => {
+    const KEPT = {
+      workloadScore: 8,
+      learningScore: 3,
+      happyTook: true,
+      message: "Still mine",
+    };
+
+    it("keeps the answers when the bar's arrays do not line up", () => {
+      expect(
+        decodeReviewDraft({
+          ...KEPT,
+          methods: ["exam", "labs"],
+          shares: [100],
+        }),
+      ).toEqual({ ...EMPTY_REVIEW_DRAFT, ...KEPT, methods: [], shares: [] });
+    });
+
+    it("drops a split naming a method this build does not have", () => {
+      expect(
+        decodeReviewDraft({
+          ...KEPT,
+          methods: ["exam", "quiz"],
+          shares: [60, 40],
+        })?.methods,
+      ).toEqual([]);
+    });
+
+    it("drops a split that does not add up to 100", () => {
+      expect(
+        decodeReviewDraft({
+          ...KEPT,
+          methods: ["exam", "labs"],
+          shares: [60, 30],
+        })?.methods,
+      ).toEqual([]);
+    });
+
+    it("drops a split naming the same method twice", () => {
+      expect(
+        decodeReviewDraft({
+          ...KEPT,
+          methods: ["exam", "exam"],
+          shares: [50, 50],
+        })?.methods,
+      ).toEqual([]);
+    });
+
+    it("keeps a split that is entirely fine", () => {
+      expect(
+        decodeReviewDraft({ methods: ["exam", "labs"], shares: [60, 40] }),
+      ).toMatchObject({ methods: ["exam", "labs"], shares: [60, 40] });
+    });
+
+    it("reads an answer of the wrong type as no answer", () => {
+      expect(
+        decodeReviewDraft({
+          workloadScore: "8",
+          learningScore: null,
+          approachTheoryPercent: [],
+          happyTook: "yes",
+          message: 12,
+        }),
+      ).toEqual(EMPTY_REVIEW_DRAFT);
+    });
+
+    /*
+     * `JSON.parse` cannot produce either, but this takes `unknown`. A
+     * non-finite score would travel to `clampScore`, whose `Math.min`/`Math.max`
+     * propagate it into a form the writer is then told is unfinished.
+     */
+    it("reads a score that is not a finite number as no answer", () => {
+      expect(
+        decodeReviewDraft({ workloadScore: Number.NaN })?.workloadScore,
+      ).toBeNull();
+      expect(
+        decodeReviewDraft({ approachTheoryPercent: Number.POSITIVE_INFINITY })
+          ?.approachTheoryPercent,
+      ).toBeNull();
+    });
   });
 });

@@ -27,8 +27,19 @@ import {
   toggleMethod,
 } from "../lib/review-draft";
 
-/** The applied half of the theory track, as the workspace pane tints it too. */
-const APPLIED_FILL = "color-mix(in srgb, var(--cc-btn) 40%, var(--cc-surface))";
+/**
+ * The applied half of the theory track, as the workspace pane tints it too.
+ *
+ * Both used to spell out the same `color-mix`, and this copy had escaped the
+ * one `features/workspace/components/pane-parts.tsx` exports to stop exactly
+ * that. #173 named the colour instead — `--cc-applied`, per theme, in
+ * `globals.css` — so the two are now two references to one token rather than
+ * two statements of one recipe, and a change to the colour is a change in one
+ * place whichever file you find first. Importing the pane's constant across the
+ * feature boundary would reach past `@/features/workspace`'s barrel into a
+ * component file for a string; the token is the shared thing.
+ */
+const APPLIED_FILL = "var(--cc-applied)";
 /** An unanswered track is drawn in the theme's strong hairline, not a fill. */
 const UNSET_FILL = "var(--cc-rule3)";
 /** Below this share a segment is too narrow to hold its own category name. */
