@@ -1,7 +1,6 @@
 import type { CourseSummary } from "@/types";
 import { embedSingle } from "../ai";
 import { getSummariesByCodes } from "../course/service";
-import { getAggregatesByCourseCodes } from "../reviews/service";
 import {
   listDepartments,
   type SearchHit,
@@ -10,14 +9,6 @@ import {
 } from "./repository";
 
 export type { SearchHit };
-
-/**
- * The search filter asks for a minimum in stars, 1-5, because that is how the
- * dropdown renders. Review scores are stored 1-10. Convert the threshold up
- * rather than the averages down: the comparison then happens in the scale the
- * columns actually use, and no rounding is invented on the way.
- */
-const SCORE_POINTS_PER_STAR = 2;
 
 const embeddingCache = new Map<string, number[]>();
 const embeddingInflight = new Map<string, Promise<number[]>>();
@@ -102,68 +93,70 @@ async function searchWithEmbedding(
 }
 
 /**
- * `minRating` is the dropdown's "at least N stars", and what it measures is
- * the **learning score**: how much reviewers got out of the course.
+ * Hybrid search: keyword and embedding in parallel, keyword order kept, new
+ * semantic hits appended, sliced to `size`.
  *
- * It used to be the mean of workload and learning together, which made a
- * punishing course score like a rewarding one. `CONTEXT.md` is explicit that
- * workload is not a verdict — a heavy course is not a bad one — so averaging
- * it into a rating filter told users the opposite of what they asked. Of the
- * axes a review actually stores, learning is the only one that moves in the
- * direction a minimum-rating filter means; `happy_took` is a yes/no share on
- * a different question, not a 1-10 score to threshold. See #67.
+ * ## `department` is the only filter, and it is deliberate
  *
- * A course with no reviews has no rating, so it cannot clear a minimum and is
- * filtered out — absent, rather than a zero that would rank it last.
+ * There used to be a second one — a minimum-rating dropdown, "at least N
+ * stars", thresholding the learning mean. It has been removed. It was in no
+ * artboard: `docs/design_ref/2026-09-05/Course Community - Explore.dc.html`
+ * draws no filter row at all, and the control was invented to satisfy #89.
+ * With no design behind it there was nothing to be right about, so it went
+ * rather than staying as a permanent, undesigned deviation.
  *
- * The threshold is compared against the raw stored mean. Search is choosing
- * courses, not drawing a card, so it takes the reviews domain's aggregate
- * rather than the rounded figures `course/service.ts` assembles for display.
+ * It also took a live bug with it. It could not be expressed in SQL — the
+ * scores live in the reviews domain, so the threshold was applied here, in
+ * application code, *after* the query had come back. To leave something to
+ * filter, the query over-fetched `size * 5`. If more than four fifths of that
+ * window missed the threshold the caller silently got fewer results than it
+ * asked for, with nothing on the wire saying more existed. That failure mode
+ * left with the feature, and the over-fetch went with it: `size` is now what
+ * is fetched.
+ *
+ * `department` stays, and is still a deviation from the artboard — but a cheap
+ * and honest one. It filters in SQL (`department ILIKE`, in the repository),
+ * so the database does the narrowing, every returned row already satisfies it,
+ * and the result count is whatever the caller asked for. It needs no window,
+ * no second round trip, and no post-fetch pass.
+ *
+ * ## Why `total` is still a lie, and still #148
+ *
+ * The router returns `total: results.length` — the count of what it just
+ * returned, not of what matches. Removing the rating filter clears **one of
+ * three** reasons a truthful count could not be computed; two remain, and they
+ * are the structural ones:
+ *
+ * - the result set is the union of two independent rankings, de-duplicated,
+ *   which has no natural count short of running both queries unbounded; and
+ * - the semantic path has no cutoff — every course with an embedding is a hit
+ *   at some distance, so "how many match" is not a question it can answer.
+ *
+ * So a real pager still needs server work (a `COUNT` and an honoured offset),
+ * and #148 still owns it. One fewer obstacle, not none.
  */
 export async function searchCourses(
   query: string,
   size = 10,
-  /** `minRating` is in stars (1-5), not in stored score points (1-10). */
-  filters?: { department?: string; minRating?: number },
+  filters?: { department?: string },
 ): Promise<CourseSummary[]> {
   if (!query?.trim()) return [];
   const departmentFilter = resolveDepartmentFilter(filters?.department);
-  const hasMinRatingFilter = Boolean(filters?.minRating);
 
-  const fetchSize = hasMinRatingFilter ? size * 5 : size;
   const [keywordHits, semanticHits] = await Promise.all([
-    searchByKeyword(query, size, departmentFilter, hasMinRatingFilter),
-    searchWithEmbedding(query, fetchSize, departmentFilter),
+    searchByKeyword(query, size, departmentFilter),
+    searchWithEmbedding(query, size, departmentFilter),
   ]);
 
   const seen = new Set(keywordHits.map((h) => h.courseCode));
-  const ranked = [
+  const codes = [
     ...keywordHits,
     ...semanticHits.filter((h) => !seen.has(h.courseCode)),
-  ].slice(0, fetchSize);
+  ]
+    .slice(0, size)
+    .map((h) => h.courseCode);
 
-  if (ranked.length === 0) return [];
-
-  let codes = ranked.map((h) => h.courseCode);
-
-  const minRating = filters?.minRating;
-  if (minRating) {
-    // The reviews domain's raw aggregate, not the course card's numbers: the
-    // card rounds its means to one decimal for display, and a 5.99 rounded up
-    // to 6.0 would clear a three-star threshold it actually misses. Filtering
-    // reads the unrounded score; rounding stays at the presentation edge.
-    const aggregates = await getAggregatesByCourseCodes(codes);
-    const learningMeanByCode = new Map(
-      aggregates.map((row) => [row.courseCode, row.learningMean]),
-    );
-    const threshold = minRating * SCORE_POINTS_PER_STAR;
-    codes = codes.filter((code) => {
-      const learningMean = learningMeanByCode.get(code);
-      return learningMean !== undefined && learningMean >= threshold;
-    });
-  }
-
-  codes = codes.slice(0, size);
+  if (codes.length === 0) return [];
 
   return getSummariesByCodes(codes);
 }

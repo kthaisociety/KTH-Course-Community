@@ -77,8 +77,8 @@ vi.mock("@/features/workspace/components/workspace-pane", () => ({
   WorkspacePane: () => <section aria-label="Open courses" />,
 }));
 
-// `toSearchCoursesInput` stays real: that the browser sends a star threshold and
-// never a 1-10 score is the point of it (#67).
+// `toSearchCoursesInput` stays real: exactly which filters reach `search.courses`
+// is the point of it, and a removed one must not reappear on the wire.
 vi.mock("../api/queries", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../api/queries")>()),
   useSearchCourses: (input: unknown) => useSearchCourses(input),
@@ -167,8 +167,9 @@ describe("Explore", () => {
     });
 
     // The count is what came back, not what matched: `search.courses` returns one
-    // page and post-filters after fetching, so "2 courses match" would be a
-    // claim the server cannot support (#74).
+    // page of a de-duplicated union of two rankings and cannot count the rest,
+    // so "2 courses match" would be a claim the server cannot support (#74,
+    // and #148 for the pager that count would need).
     it("says how many results it is showing, not how many matched", () => {
       render(<Explore />);
       expect(screen.getByText("Showing 2 courses for “graphs”")).toBeVisible();
@@ -556,21 +557,6 @@ describe("Explore", () => {
       search = "q=graphs";
     });
 
-    // The dropdown asks for stars; `search/service.ts` converts to the stored
-    // 1-10 scale and thresholds the learning mean alone (#67).
-    it("sends the rating threshold in stars", async () => {
-      render(<Explore />);
-
-      await userEvent.selectOptions(
-        screen.getByLabelText("Minimum rating"),
-        "4",
-      );
-
-      expect(replace).toHaveBeenCalledWith("/search?q=graphs&rating=4", {
-        scroll: false,
-      });
-    });
-
     it("offers the schools the catalogue actually holds", () => {
       render(<Explore />);
       const school = screen.getByLabelText("School");
@@ -582,12 +568,11 @@ describe("Explore", () => {
       ).toBeInTheDocument();
     });
 
-    it("keeps both filters in the URL, so a filtered search is shareable", async () => {
-      search = "q=graphs&department=EECS&rating=3";
+    it("keeps the school in the URL, so a filtered search is shareable", async () => {
+      search = "q=graphs&department=EECS";
       render(<Explore />);
 
       expect(screen.getByLabelText("School")).toHaveValue("EECS");
-      expect(screen.getByLabelText("Minimum rating")).toHaveValue("3");
 
       await userEvent.click(
         screen.getByRole("button", { name: "Clear filters" }),
@@ -597,14 +582,47 @@ describe("Explore", () => {
       });
     });
 
-    // A hand-edited threshold outside 1-5 would be rejected by the procedure.
-    it("ignores a rating the procedure would reject", () => {
-      search = "q=graphs&rating=9";
-      render(<Explore />);
-      expect(screen.getByLabelText("Minimum rating")).toHaveValue("");
-      expect(useSearchCourses).toHaveBeenCalledWith(
-        expect.objectContaining({ minRating: undefined }),
+    /**
+     * The minimum-rating filter was removed — it was in no artboard, and it was
+     * applied after the query, so it could silently return short results. Links
+     * carrying `?rating=` were shareable while it existed, and they are still
+     * out there.
+     *
+     * Such a link must be *boring*: no control comes back, the parameter is not
+     * sent to `search.courses`, and the reader gets the unfiltered search the
+     * link named. Not an error, not a warning, not an empty page.
+     */
+    it("ignores a stale ?rating= from an old shared link", () => {
+      search = "q=graphs&department=EECS&rating=4";
+      useSearchCourses.mockReturnValue(
+        results(course("SF2740", "Graph Theory")),
       );
+      render(<Explore />);
+
+      expect(screen.queryByLabelText("Minimum rating")).not.toBeInTheDocument();
+      expect(useSearchCourses).toHaveBeenCalledWith({
+        q: "graphs",
+        department: "EECS",
+      });
+      expect(
+        screen.getByRole("heading", { name: "SF2740 Graph Theory" }),
+      ).toBeVisible();
+    });
+
+    // Clearing must not depend on the removed filter: school alone still turns
+    // "Clear filters" on, and clearing it turns the button back off.
+    it("offers Clear filters for the school alone", async () => {
+      search = "q=graphs";
+      render(<Explore />);
+      expect(
+        screen.queryByRole("button", { name: "Clear filters" }),
+      ).not.toBeInTheDocument();
+
+      await userEvent.selectOptions(screen.getByLabelText("School"), "EECS");
+
+      expect(replace).toHaveBeenCalledWith("/search?q=graphs&department=EECS", {
+        scroll: false,
+      });
     });
   });
 

@@ -10,9 +10,6 @@ export const searchRouter = createTRPCRouter({
         page: z.number().int().positive().optional(),
         size: z.number().int().positive().optional(),
         department: z.string().optional(),
-        // Stars, as the filter dropdown renders them. The service converts
-        // this to the 1-10 scale review scores are stored on.
-        minRating: z.number().int().min(1).max(5).optional(),
       }),
     )
     .query(async ({ input }) => {
@@ -20,7 +17,6 @@ export const searchRouter = createTRPCRouter({
       const pageSize = input.size ?? 10;
       const results = await searchCourses(input.q, pageSize, {
         department: input.department,
-        minRating: input.minRating,
       });
       return {
         results,
