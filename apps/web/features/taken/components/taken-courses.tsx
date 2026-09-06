@@ -163,7 +163,7 @@ function importedSummary(added: number, filled: number): string {
  * poses a guest on the empty screen rather than on a locked page
  * (`… - Taken Courses.dc.html`), lets them read a transcript, and asks for
  * the account at the *keep* step: the confirm button reads "Sign in to keep
- * this list" and the confirm is resumed once they are in (`:1305-1308`). That
+ * this list" and the confirm is resumed once they are in. That
  * is implementable only because parsing and writing are two calls —
  * `POST /api/user/transcript` parses and stores nothing, and
  * `transcript.confirm` is a `protectedProcedure` that nothing here weakens. The

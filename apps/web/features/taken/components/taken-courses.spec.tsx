@@ -1216,9 +1216,9 @@ describe("arriving with ?review=…", () => {
  * The signed-out flow the artboard draws, and the two halves that make it safe.
  *
  * `docs/design_ref/2026-09-06/Course Community - Taken Courses.dc.html`
- * poses a guest on the **empty** screen rather than on a locked page, and
- * `:1305-1308` puts the account at the *keep* step: the confirm reads "Sign in
- * to keep this list", and the confirm is resumed once they are in. Everything
+ * poses a guest on the **empty** screen rather than on a locked page, and puts
+ * the account at the *keep* step: the confirm reads "Sign in to keep this
+ * list", and the confirm is resumed once they are in. Everything
  * up to that button is a read — `POST /api/user/transcript` stores nothing —
  * and everything past it is `transcript.confirm`, which is a
  * `protectedProcedure` and is not called here.

@@ -13,8 +13,7 @@ import type {
  * PDF in, reads what came out, and the confirm button says "Sign in to keep
  * this list" — then `{ screen: "auth", returnTo: "list", pending: "confirm" }`,
  * and after the sign-in "the action that asked for the account finishes itself"
- * (`docs/design_ref/2026-09-06/Course Community - Taken Courses.dc.html`,
- * `:1247-1250`).
+ * (`docs/design_ref/2026-09-06/Course Community - Taken Courses.dc.html`).
  *
  * In the artboard that resume is free, because its sign-in is a `setState`. Ours
  * is a round trip through somebody else's site: Google and GitHub redirect the
@@ -54,9 +53,8 @@ import type {
  * never finishes signing in, person B signs in on the same browser profile
  * inside the half hour, and a record keyed on nothing at all is A's course list
  * — and A's grades, if A had the switch on — sitting on B's screen under
- * "Looks right". An earlier revision of this comment argued from the writer to
- * conclude "there is no second account's data to keep apart"; that does not
- * follow, and it was wrong.
+ * "Looks right". "Only a guest writes one, so there is no second account's data
+ * to keep apart" does not follow: it argues from the writer about the reader.
  *
  * So the record carries a `handoff` token, minted at write time and handed to
  * the caller, which puts it in the return-to the sign-in round trip carries
