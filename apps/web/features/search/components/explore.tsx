@@ -49,8 +49,9 @@ import { useExplore } from "../hooks/use-explore";
  *   another page", and the server answers it with one extra row. `total` is
  *   gone rather than corrected; `hasMore` replaced it.
  *   `server/search/service.ts` carries the reasoning.
- * - The artboard's pager **labels the page it is on** (line 264,
- *   `pageLabel: "Page N of M"`, line 1289) and this keeps that label, minus the
+ * - The artboard's pager **labels the page it is on**
+ *   (`docs/design_ref/2026-09-06/Course Community - Explore.dc.html:264`, whose
+ *   `pageLabel` is built at :1289) and this keeps that label, minus the
  *   `of M`. Dropping only the half the data cannot support is the smallest edit
  *   that leaves the control the artboard drew — three items centred with a
  *   14px gap — intact, and "Page 3" asserts nothing about a total. It is also
@@ -325,7 +326,8 @@ const PAGER_BUTTON_CLASS =
 /**
  * The artboard's pager: Previous, the page it is on, Next.
  *
- * `Course Community - Explore.dc.html:261-267` draws exactly this — a 34px
+ * `docs/design_ref/2026-09-06/Course Community - Explore.dc.html:261-267`
+ * draws exactly this — a 34px
  * pill either side of a `--muted` label, centred with a 14px gap, each pill
  * `--ink` when it can be used and `--dim2` when it cannot. Two things here are
  * not literal transcriptions of it:
