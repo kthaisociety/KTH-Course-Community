@@ -206,10 +206,11 @@ function clampPage(page: number | undefined): number {
  * One honest caveat. The semantic leg reads an HNSW index, which is approximate
  * and whose search list widens with the LIMIT, so its prefix is stable in
  * practice rather than by construction — `repository.ts` says what the tiebreak
- * does and does not buy. The exposure is bounded: the keyword leg is exact and
- * comes first, so it is only the tail of a deep page that an ANN wobble could
- * reshuffle, and no page a reader reaches by clicking Next is built from a
- * different fetch than the one that offered it.
+ * does and does not buy. The exposure is bounded twice over: the keyword leg is
+ * exact and comes first, so only the tail of a deep page is ANN-ordered at all;
+ * and `MAX_SEARCH_PAGES` keeps the widest window this domain ever asks for at
+ * 101 rows, which over a catalogue this size is well inside where an HNSW scan
+ * and an exact one agree.
  *
  * The cost of the whole scheme is a discarded prefix: page 5 fetches 101 rows
  * and drops 80. At this catalogue size that is cheap, and `MAX_SEARCH_PAGES`
