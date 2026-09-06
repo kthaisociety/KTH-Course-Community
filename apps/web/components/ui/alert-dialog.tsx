@@ -27,6 +27,23 @@ function AlertDialogPortal({
   );
 }
 
+/**
+ * Nothing imports this file any more.
+ *
+ * Its four consumers were the app's delete confirmations, and they moved to
+ * {@link import("./confirm-dialog").ConfirmDialog} — the artboard's own
+ * confirmation — which is built on `Dialog`. That also leaves the
+ * `overlayClassName` prop #178 added here without a caller.
+ *
+ * It is kept rather than deleted because "which vendored shadcn primitives
+ * should this repo still carry" is one question about 37 files, not a decision
+ * to take one file at a time; see the follow-up issue. If it does come back
+ * into use, note the width trap recorded on `ConfirmDialog`:
+ * `data-[size=default]:sm:max-w-sm` below sits in a different tailwind-merge
+ * group from a plain `max-w-*`, so a caller asking for a width wider than 384px
+ * silently does not get it. That is the same trap #178 removed from
+ * `DialogContent` and it is still here.
+ */
 function AlertDialogOverlay({
   className,
   ...props
@@ -35,7 +52,10 @@ function AlertDialogOverlay({
     <AlertDialogPrimitive.Overlay
       data-slot="alert-dialog-overlay"
       className={cn(
-        "fixed inset-0 z-50 bg-black/10 duration-100 supports-backdrop-filter:backdrop-blur-xs data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
+        // The artboards' modal scrim, flat and unblurred. See
+        // {@link DialogOverlay} for why it is the default and which two scrims
+        // legitimately differ from it.
+        "fixed inset-0 z-50 bg-[rgba(20,30,45,0.34)] duration-100 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
         className,
       )}
       {...props}

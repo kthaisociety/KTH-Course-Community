@@ -5,14 +5,26 @@ import { isTRPCClientError } from "@trpc/client";
 import type { AppRouter } from "@/server/api/root";
 import { type RouterOutputs, useTRPC } from "@/trpc/client";
 
-/** One taken course as `taken.list` returns it. */
-export type TakenCourse = RouterOutputs["taken"]["list"][number];
-
-/** The viewer's taken courses. Protected, so it waits for a session. */
-export function useTakenCourses(enabled: boolean) {
-  const trpc = useTRPC();
-  return useQuery(trpc.taken.list.queryOptions(undefined, { enabled }));
-}
+/**
+ * The viewer's taken courses and the shape of one, both re-exported rather than
+ * re-declared.
+ *
+ * This file used to hold a byte-identical copy of `useTakenCourses`, and that
+ * was not a tidiness problem: `features/courses/index.ts` exports the hook
+ * *specifically* so "both surfaces share one query key", and a second
+ * declaration is a second `useQuery` call site building its own cache entry. My
+ * Page and the course card were fetching `taken.list` twice and could disagree
+ * about the answer.
+ *
+ * Both imports go to the module rather than the feature barrel, for the reason
+ * `../../reviews/api/queries.ts` records: `@/features/courses` reaches the
+ * course card, which reaches Saved, Collections and the workspace pane, and
+ * `@/features/taken` is imported by a component that imports reviews. The
+ * modules are leaves — `api/queries` imports nothing but the tRPC client, and
+ * `taken-rows` is types — so neither can close a cycle.
+ */
+export { useTakenCourses } from "@/features/courses/api/queries";
+export type { TakenCourse } from "@/features/taken/lib/taken-rows";
 
 /**
  * Every published review, which is what `reviews.list` returns when it is given

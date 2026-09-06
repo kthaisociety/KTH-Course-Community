@@ -322,10 +322,10 @@ export function MyPage() {
                 {unreviewed.isLoading ? (
                   <div
                     aria-hidden
-                    className="h-[140px] animate-pulse rounded-xl border border-cc-rule2 bg-cc-surface"
+                    className="h-[140px] animate-pulse rounded-[12px] border border-cc-rule2 bg-cc-surface"
                   />
                 ) : unreviewed.isUnavailable ? (
-                  <output className="block rounded-xl border border-cc-rule bg-cc-surface px-[17px] py-4 text-[12.5px] text-cc-dim">
+                  <output className="block rounded-[12px] border border-cc-rule bg-cc-surface px-[17px] py-4 text-[12.5px] text-cc-dim">
                     Which of your courses still need a review could not be
                     worked out just now. Reload to try again.
                   </output>
@@ -491,14 +491,14 @@ function MyPageSkeleton() {
         {SKELETON_KEYS.map((key) => (
           <div
             key={key}
-            className="rounded-xl border border-cc-rule bg-cc-surface px-[17px] py-4"
+            className="rounded-[12px] border border-cc-rule bg-cc-surface px-[17px] py-4"
           >
             <div className="h-[11px] w-[70%] animate-pulse rounded bg-cc-pill" />
             <div className="mt-3 h-[22px] w-[46%] animate-pulse rounded-[5px] bg-cc-rule" />
           </div>
         ))}
       </div>
-      <div className="h-[140px] animate-pulse rounded-xl border border-cc-rule bg-cc-surface" />
+      <div className="h-[140px] animate-pulse rounded-[12px] border border-cc-rule bg-cc-surface" />
     </div>
   );
 }

@@ -2,16 +2,7 @@
 
 import { MessageSquare } from "lucide-react";
 import { useState } from "react";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   Empty,
   EmptyDescription,
@@ -93,34 +84,25 @@ export function ReviewList({ courseCode, reviews }: Readonly<ReviewListProps>) {
         />
       ) : null}
 
-      <AlertDialog
-        open={pendingDeleteId !== null}
-        onOpenChange={(open) => {
-          if (!open) setPendingDeleteId(null);
+      <ConfirmDialog
+        request={
+          pendingDeleteId === null
+            ? null
+            : {
+                eyebrow: "Reviews",
+                title: "Delete this review?",
+                body: "It is removed from the course for everyone, along with the votes it collected. This cannot be undone.",
+                cancelLabel: "Keep it",
+                actionLabel: "Delete review",
+              }
+        }
+        onCancel={() => setPendingDeleteId(null)}
+        onConfirm={() => {
+          const id = pendingDeleteId;
+          setPendingDeleteId(null);
+          if (id) void removeReview(id);
         }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete this review?</AlertDialogTitle>
-            <AlertDialogDescription>
-              It is removed from the course for everyone, along with the votes
-              it collected. This cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Keep it</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                const id = pendingDeleteId;
-                setPendingDeleteId(null);
-                if (id) void removeReview(id);
-              }}
-            >
-              Delete review
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      />
     </div>
   );
 }

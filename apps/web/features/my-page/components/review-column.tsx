@@ -40,7 +40,7 @@ export function ReviewColumn({
         {heading}
       </h2>
       {reviews.length === 0 ? (
-        <div className="rounded-xl border border-cc-rule3 border-dashed bg-cc-surface px-5 py-11 text-center">
+        <div className="rounded-[12px] border border-cc-rule3 border-dashed bg-cc-surface px-5 py-11 text-center">
           <div className="font-semibold text-[16px]">{emptyTitle}</div>
           <p className="mx-auto mt-[7px] max-w-[420px] text-[13px] text-cc-muted leading-[1.5]">
             {emptyBody}

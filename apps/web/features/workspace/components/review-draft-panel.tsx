@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { type AuthReason, AuthReasonDialog, useMe } from "@/features/auth";
 import { useCourseDetails } from "@/features/courses";
 import {
+  APPLIED_FILL,
   APPROACH_MAX,
   APPROACH_MIDPOINT,
   APPROACH_MIN,
@@ -15,17 +16,18 @@ import {
   MIN_SHARE,
   moveDivider,
   nudgeDivider,
+  ScoreSlider,
   toggleMethod,
+  UNSET_FILL,
   useAddReview,
   useReviewList,
+  ValuePill,
 } from "@/features/reviews";
 import { formatHp } from "@/lib/kth";
 import { cn } from "@/lib/utils";
 import {
   EXAMINATION_DISTRIBUTION_KEYS,
   EXAMINATION_DISTRIBUTION_LABELS,
-  MAX_REVIEW_SCORE,
-  MIN_REVIEW_SCORE,
 } from "@/types";
 import { withOpenCourse } from "../lib/open-courses";
 import {
@@ -41,7 +43,7 @@ import {
   clearAwaitingSignIn,
   markAwaitingSignIn,
 } from "../lib/workspace-storage";
-import { APPLIED_FILL, Kicker } from "./pane-parts";
+import { Kicker } from "./pane-parts";
 
 /** How the design starts a review for someone staring at an empty box. */
 const PROMPTS = [
@@ -49,9 +51,6 @@ const PROMPTS = [
   ["Who is it for?", "This course is a great fit if you "],
   ["Time it really took?", "Budget more time than you think for "],
 ] as const;
-
-/** Unanswered tracks are drawn in the theme's strong hairline, not a fill. */
-const UNSET_FILL = "var(--cc-rule3)";
 
 /**
  * The theory/applied track moves in whole five-point steps, as the artboard's
@@ -66,14 +65,6 @@ function Card({ children }: { children: React.ReactNode }) {
     <div className="rounded-[12px] border border-cc-rule bg-cc-pg p-4">
       {children}
     </div>
-  );
-}
-
-function ValuePill({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="flex-none rounded-full bg-cc-pill px-[9px] py-0.5 font-semibold text-[12px] text-cc-brand tabular-nums">
-      {children}
-    </span>
   );
 }
 
@@ -98,6 +89,19 @@ function ForgotCheckbox({
       <span
         aria-hidden="true"
         className={cn(
+          /*
+            **Do not remove this ring as a duplicate of `globals.css`'s.** #167
+            deleted nine hand-rolled focus treatments that the global
+            `:focus-visible` rule had made redundant; this is the one that is
+            not, and the reason is not visible from the class list.
+
+            The focusable element here is the `peer` input above, which is
+            `sr-only` — clipped to a 1px box. The global rule draws its outline
+            and halo on *that*, where nothing can see them. This ring is painted
+            on a sibling that is never itself `:focus-visible`, so the global
+            rule does not reach it and does not override it. Delete it and the
+            checkbox has no visible focus indicator at all.
+          */
           "flex size-4 flex-none items-center justify-center rounded-[4px] border text-[10px] peer-focus-visible:ring-2 peer-focus-visible:ring-cc-hov",
           checked
             ? "border-cc-brand bg-cc-brand text-cc-btn-fg"
@@ -108,71 +112,6 @@ function ForgotCheckbox({
       </span>
       <span className="text-[12.5px] text-cc-ink2">I don't remember</span>
     </label>
-  );
-}
-
-/**
- * A 1–10 score, on the scale the database stores.
- *
- * The visible track is ours so an unanswered score can read as empty rather
- * than as 1; the range input on top of it is what a keyboard and a screen
- * reader drive. `onPointerUp` commits as well as `onChange` so that clicking
- * the value the input already holds still answers the question.
- */
-function ScoreSlider({
-  label,
-  value,
-  minLabel,
-  maxLabel,
-  onChange,
-}: {
-  label: string;
-  value: number | null;
-  minLabel: string;
-  maxLabel: string;
-  onChange: (next: number) => void;
-}) {
-  const percent = value === null ? 0 : (value / MAX_REVIEW_SCORE) * 100;
-  return (
-    <div>
-      <div className="mb-[9px] flex items-baseline justify-between gap-2.5">
-        <span className="font-semibold text-[14.5px]">{label}</span>
-        <ValuePill>
-          {value === null ? "Not set" : `${value} / ${MAX_REVIEW_SCORE}`}
-        </ValuePill>
-      </div>
-      <div className="relative flex h-[22px] items-center">
-        <div className="h-2 w-full overflow-hidden rounded-[4px] bg-cc-pill">
-          <div
-            className="h-full"
-            style={{ width: `${percent}%`, background: "var(--cc-warn-btn)" }}
-          />
-        </div>
-        {value !== null && (
-          <div
-            aria-hidden="true"
-            className="-ml-2.5 absolute size-5 rounded-full border-2 border-cc-brand bg-cc-surface"
-            style={{ left: `${percent}%` }}
-          />
-        )}
-        <input
-          type="range"
-          min={MIN_REVIEW_SCORE}
-          max={MAX_REVIEW_SCORE}
-          step={1}
-          value={value ?? MIN_REVIEW_SCORE}
-          aria-label={label}
-          aria-valuetext={value === null ? "Not set" : `${value} of 10`}
-          onChange={(event) => onChange(Number(event.target.value))}
-          onPointerUp={(event) => onChange(Number(event.currentTarget.value))}
-          className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-        />
-      </div>
-      <div className="mt-1 flex justify-between text-[11.5px] text-cc-muted">
-        <span>{minLabel}</span>
-        <span>{maxLabel}</span>
-      </div>
-    </div>
   );
 }
 
@@ -435,7 +374,7 @@ export function ReviewDraftPanel({
                   disabled={examDisabled}
                   onClick={() => update(toggleMethod(draft, key))}
                   className={cn(
-                    "flex h-[30px] items-center gap-1.5 rounded-[15px] border px-[11px] text-[12.5px] disabled:opacity-40",
+                    "flex h-[30px] cursor-pointer items-center gap-1.5 rounded-[15px] border px-[11px] text-[12.5px] disabled:cursor-not-allowed disabled:opacity-40",
                     picked
                       ? "border-cc-brand bg-cc-pill text-cc-ink"
                       : "border-cc-rule3 bg-cc-surface text-cc-muted hover:border-cc-brand",
@@ -656,7 +595,7 @@ export function ReviewDraftPanel({
                   aria-pressed={picked}
                   onClick={() => patch({ happyTook: option.value })}
                   className={cn(
-                    "flex h-10 flex-1 items-center justify-center gap-[7px] rounded-[9px] border text-[13.5px] hover:border-cc-brand",
+                    "flex h-10 flex-1 cursor-pointer items-center justify-center gap-[7px] rounded-[9px] border text-[13.5px] hover:border-cc-brand",
                     picked
                       ? "border-cc-brand bg-cc-pill font-semibold text-cc-brand"
                       : "border-cc-rule3 bg-cc-surface font-medium text-cc-chip-ink",
@@ -695,7 +634,7 @@ export function ReviewDraftPanel({
                       : starter,
                   })
                 }
-                className="flex h-7 items-center rounded-[14px] border border-cc-hov border-dashed bg-cc-pill px-[11px] font-medium text-[11.5px] text-cc-brand"
+                className="cursor-pointer flex h-7 items-center rounded-[14px] border border-cc-hov border-dashed bg-cc-pill px-[11px] font-medium text-[11.5px] text-cc-brand"
               >
                 {label}
               </button>
@@ -706,7 +645,7 @@ export function ReviewDraftPanel({
             onChange={(event) => patch({ message: event.target.value })}
             aria-label="Write your review"
             placeholder="What should the next student know before signing up?"
-            className="mt-2.5 block min-h-[104px] w-full resize-y rounded-[10px] border border-cc-rule3 bg-cc-surface p-3 text-[13.5px] text-cc-ink2 leading-[1.55] outline-none focus-visible:border-cc-hov"
+            className="mt-2.5 block min-h-[104px] w-full resize-y rounded-[10px] border border-cc-rule3 bg-cc-surface p-3 text-[13.5px] text-cc-ink2 leading-[1.55] outline-none"
           />
           <p className="mt-1.5 text-[11.5px] text-cc-muted">
             Be constructive and respectful
@@ -798,10 +737,15 @@ export function ReviewDraftPanel({
             }
             onClick={publish}
             className={cn(
-              "flex h-9 items-center rounded-[8px] px-4 font-semibold text-[13px]",
+              // `disabled:cursor-not-allowed` and not a bare `cursor-not-allowed`
+              // on the unpublishable branch alone: publishing, an existing
+              // review and a still-loading session all disable this button
+              // while the draft itself is publishable, and those states want the
+              // same cursor the incomplete draft gets.
+              "flex h-9 cursor-pointer items-center rounded-[8px] px-4 font-semibold text-[13px] disabled:cursor-not-allowed",
               publishable
                 ? "bg-cc-warn-btn text-cc-warn-btn-fg"
-                : "cursor-not-allowed bg-cc-pill text-cc-dim",
+                : "bg-cc-pill text-cc-dim",
             )}
           >
             {justPublished

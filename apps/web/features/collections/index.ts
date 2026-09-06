@@ -12,19 +12,15 @@
  */
 
 export { Collections } from "./components/collections";
-/**
- * The artboard's confirmation, exported because Saved asks the same question
- * about the same object.
+/*
+ * `ConfirmDialog` used to be exported from here, because Saved asks the same
+ * question about the same object — unsaving a course cascades it out of every
+ * collection it was in, so it is destructive in exactly the way deleting a
+ * collection is (#155).
  *
- * Unsaving a course is destructive in exactly the way deleting a collection is:
- * `user_saved_courses` is the composite foreign key every `collection_courses`
- * row hangs off, so an unsave cascades the course out of every collection it
- * was in and takes its place in each of their orders with it. One dialog asks
- * both questions (#155). It lives here because collections is where the first
- * of them is asked; when a third screen needs it, it belongs in
- * `components/ui/` instead.
+ * That export said what would end it: *"when a third screen needs it, it belongs
+ * in `components/ui/` instead."* Seven screens now ask a confirmation, so it is
+ * `@/components/ui/confirm-dialog` and Saved imports it directly. Nothing
+ * collection-shaped is exported twice, which is why this note replaces the
+ * export rather than a re-export standing in for it.
  */
-export {
-  ConfirmDialog,
-  type ConfirmRequest,
-} from "./components/confirm-dialog";

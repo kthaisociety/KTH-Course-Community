@@ -97,6 +97,20 @@ export function distToContent(x: number, y: number, rects: Rect[]) {
 }
 
 /**
+ * Step size for the radial march, in px.
+ *
+ * A ray can leave one rect and enter another, so clearance along it is not
+ * monotone and cannot be bisected blind. The march finds the first step that is
+ * clear; `RADIAL_REFINEMENTS` bisections then recover the sub-pixel boundary
+ * inside that bracket, so the cost is `MAX_PUSH / RADIAL_STEP` plus a constant
+ * rather than a pixel-accurate scan.
+ */
+const RADIAL_STEP = 2;
+
+/** Bisections used to refine the bracket the march found. 2px / 2^20 is nothing. */
+const RADIAL_REFINEMENTS = 20;
+
+/**
  * The nearest point to `(x, y)` that is genuinely clear of the copy.
  *
  * The contract is deliberately two-valued, because everything downstream leans
@@ -112,13 +126,54 @@ export function distToContent(x: number, y: number, rects: Rect[]) {
  * anyway. And it is idempotent in both branches, so pushing an already-pushed
  * point is a no-op rather than a second 120px of travel.
  *
- * The move is along **one axis, to the wall of some rect**: the candidates are
- * every rect's four walls taken one at a time, and the nearest candidate that is
- * clear of *all* of them wins. Moving on a single axis is what keeps a node
- * beside the headline it was under rather than dragging it diagonally across the
- * hero, and scoring each candidate against the whole set is what makes one pass
- * enough.
+ * ## Radially from `origin`, and why that is the whole point
  *
+ * The field is a sunflower: `computeWorldPosition` puts successive nodes a
+ * golden angle apart around the community origin, and **that angular structure
+ * is the even spacing**. Two nodes are kept apart by having different bearings,
+ * not by anything about their radii.
+ *
+ * Escaping along an axis destroys it. The four candidates per rect are its four
+ * walls, so every pushed point lands on one of four lines, and two points that
+ * left by the same wall keep only the one coordinate the wall did not set. Two
+ * nodes above the headline both take `(x, r.y - margin)` — the same `y`, their
+ * own `x` — and a column of nodes collapses onto a row. Measured on a ring of
+ * 150 points inside the copy, the closest pair went from 3.35px apart to 0.35px:
+ * the push made them ten times closer than the projection had them.
+ *
+ * Pushing along the ray from `origin` cannot do that. Two nodes on different
+ * bearings stay on different bearings however far either travels, so the
+ * spacing the sunflower bought is spent on the way out instead of thrown away.
+ *
+ * `origin` is the view's own anchor — the point the window is centred on, which
+ * is where the spiral's rays actually emanate from on screen. Omit it and the
+ * behaviour is the axis-only one, which is what the two degenerate cases below
+ * fall back to.
+ *
+ * ## When the axis candidates still win
+ *
+ * The ray is searched in **both** directions — outward preferred, inward as far
+ * as the origin and never past it — because a node under a tall block often has
+ * no outward exit inside `MAX_PUSH` while the near edge is a few pixels behind
+ * it. The first version of this searched outward only, and review found what
+ * that cost: three nodes sharing an `x` under a 300px-deep block fell through to
+ * the axis walls and landed on the single point `(400, 235.999999)`. Both
+ * directions are covered by tests.
+ *
+ * The axis candidates are still the last resort, for two cases no ray can serve:
+ *
+ * - **Neither direction clears inside the budget.** A node deep under a
+ *   full-width block has no answer on its own ray at all.
+ * - **The point is the origin.** A node exactly on the anchor has no bearing to
+ *   push along, so there is nothing to preserve and the nearest wall is as good
+ *   an answer as any.
+ *
+ * Where the axis fallback does run it can still collapse two points onto one,
+ * and that is a known residue rather than a solved problem — a stateless,
+ * per-point function cannot see the other node it is landing on top of. It is
+ * filed; do not read the presence of the radial path as a guarantee.
+ *
+ * Among the axis candidates the nearest that is clear of *all* rects wins.
  * Leaving each rect greedily by its own nearest wall — the obvious
  * implementation — does not work here, and the reason is worth recording:
  * `SAFETY` pads every rect by 25px a side, so the headline's own lines overlap
@@ -134,9 +189,13 @@ export function pushClear(
   y: number,
   rects: Rect[],
   radius = 0,
+  origin?: { x: number; y: number },
 ): { x: number; y: number } {
   // Already clear: the identity, and this branch is what makes it so.
   if (clearAt(x, y, rects, radius) === 1) return { x, y };
+
+  const radial = origin ? pushRadially(x, y, rects, radius, origin) : null;
+  if (radial) return radial;
 
   // What the point has to end up outside a rect by. `clearAt` takes `radius`
   // off each axis before it measures, so clearing `FEATHER + radius` on one
@@ -167,6 +226,115 @@ export function pushClear(
 
   // Nowhere within the budget: it stays put and the fade takes over.
   return best ?? { x, y };
+}
+
+/**
+ * The nearest point clear of the copy **on the ray through `origin` and
+ * `(x, y)`**, or `null` if there is none within `MAX_PUSH`.
+ *
+ * Both directions along that ray, not just outward. Outward is preferred
+ * whenever it has an answer at all, because it never moves a node closer to the
+ * anchor than the projection put it and so keeps the field spreading from the
+ * middle — but a node under a *tall* block has no outward exit inside the budget
+ * while the near edge is a few pixels behind it, and refusing there sent it to
+ * the axis fallback, which is what discards the bearing.
+ *
+ * Inward stops at `origin` and never crosses it. That is what the "outward
+ * only" rule was really protecting: a point that passed through the anchor
+ * would come out on the opposite bearing, and two nodes doing that could swap
+ * sides or meet. Staying on one side of the origin makes distinct bearings
+ * distinct points, which is the whole property this function exists for.
+ */
+function pushRadially(
+  x: number,
+  y: number,
+  rects: Rect[],
+  radius: number,
+  origin: { x: number; y: number },
+): { x: number; y: number } | null {
+  const dx = x - origin.x;
+  const dy = y - origin.y;
+  const length = Math.hypot(dx, dy);
+  // On the anchor: no bearing, nothing to preserve. The caller falls back.
+  if (length === 0) return null;
+
+  const ux = dx / length;
+  const uy = dy / length;
+
+  const outward = marchAlong(x, y, ux, uy, MAX_PUSH, rects, radius);
+  // Inward may travel at most to the origin — `length` — so it cannot cross it.
+  const inward = marchAlong(
+    x,
+    y,
+    -ux,
+    -uy,
+    Math.min(MAX_PUSH, length),
+    rects,
+    radius,
+  );
+
+  // Outward wins whenever it has an answer, even a longer one, because it never
+  // moves a node closer to the anchor than the projection put it and so keeps
+  // the field spreading from the middle. Inward is for the node with no outward
+  // exit inside the budget at all.
+  //
+  // Taking the *nearer* of the two was measured and makes no difference to the
+  // closest-pair numbers on any of the four keep-outs tested — wherever both
+  // exist, outward was already the one being picked. So this is a choice on
+  // principle rather than on evidence, and it is stated that way.
+  const best = outward ?? inward;
+  // `travel` is `marchAlong`'s bookkeeping and not part of this function's
+  // contract, so the winner is copied rather than returned — otherwise a caller
+  // comparing two results by value sees a field the type does not promise.
+  // `pushClear`'s idempotency assertion is what caught that.
+  return best ? { x: best.x, y: best.y } : null;
+}
+
+/**
+ * The nearest clear point along one direction, within `budget`, or `null`.
+ *
+ * A ray can leave one rect and enter another, so clearance along it is not
+ * monotone and cannot be bisected blind: the march finds the first step that
+ * clears, and the bisection then recovers the boundary inside that one bracket.
+ * `lo` stays the last distance known *not* to clear, so the bracket is always
+ * [not clear, clear] and the bisection cannot converge onto the wrong side of a
+ * rect the ray merely clipped.
+ */
+function marchAlong(
+  x: number,
+  y: number,
+  ux: number,
+  uy: number,
+  budget: number,
+  rects: Rect[],
+  radius: number,
+): { x: number; y: number; travel: number } | null {
+  const at = (t: number) => ({ x: x + ux * t, y: y + uy * t });
+
+  let lo = 0;
+  let hi = -1;
+  for (let t = RADIAL_STEP; t <= budget; t += RADIAL_STEP) {
+    const p = at(t);
+    if (clearAt(p.x, p.y, rects, radius) === 1) {
+      hi = t;
+      break;
+    }
+    lo = t;
+  }
+  if (hi < 0) return null;
+
+  for (let i = 0; i < RADIAL_REFINEMENTS; i++) {
+    const mid = (lo + hi) / 2;
+    const p = at(mid);
+    if (clearAt(p.x, p.y, rects, radius) === 1) hi = mid;
+    else lo = mid;
+  }
+
+  // `hi` is the last distance actually verified clear, so returning it keeps
+  // the post-condition the contract promises rather than trusting the limit.
+  const out = at(hi);
+  if (clearAt(out.x, out.y, rects, radius) !== 1) return null;
+  return { x: out.x, y: out.y, travel: hi };
 }
 
 /**

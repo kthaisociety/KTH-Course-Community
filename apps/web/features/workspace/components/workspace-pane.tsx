@@ -222,13 +222,35 @@ export function WorkspacePane({
             </DropdownMenuTrigger>
             <DropdownMenuContent
               align="start"
-              className="scrollbar-subtle cc-theme max-h-[222px] w-[262px] overflow-y-auto border-cc-rule2 bg-cc-surface p-[5px] text-cc-ink"
+              /*
+                A real border and the artboard's own shadow, matching the five
+                other popovers in the app.
+
+                This carried `border-cc-rule2` with no width utility, and
+                Tailwind v4's preflight sets `border: 0` on everything — so the
+                colour named a border that never painted, and the visible edge
+                was `DropdownMenuContent`'s stock `ring-1 ring-foreground/10`.
+                It also inherited shadcn's `shadow-md`. The collection chip,
+                tile and detail menus and both course-card popovers all state
+                `border border-cc-rule2` with `shadow-[0_8px_24px_rgba(20,30,45,.14)]`;
+                this was the one outlier.
+              */
+              className="scrollbar-subtle cc-theme max-h-[222px] w-[262px] overflow-y-auto border border-cc-rule2 bg-cc-surface p-[5px] text-cc-ink shadow-[0_8px_24px_rgba(20,30,45,0.14)]"
             >
               {openCourses.map((entry) => (
                 <DropdownMenuItem
                   key={entry.id}
                   onSelect={() => onActivate(entry.id)}
                   className={cn(
+                    /*
+                      `focus:bg-cc-pill` is the menu *highlight*, not a focus
+                      ring — Radix moves DOM focus between items as the pointer
+                      or the arrow keys travel, and this is the wash that follows
+                      it. It survived #167's sweep of hand-rolled focus
+                      treatments for that reason: it sets a background, which the
+                      global `:focus-visible` rule does not touch, and removing
+                      it would leave the menu with no highlight at all.
+                    */
                     "gap-2.5 rounded-[7px] px-2.5 py-[7px] text-[12.5px] focus:bg-cc-pill",
                     entry.id === active.id
                       ? "font-semibold text-cc-brand"
@@ -273,7 +295,7 @@ export function WorkspacePane({
                     title={label}
                     onClick={() => onActivate(entry.id)}
                     className={cn(
-                      "flex h-[34px] w-full items-center gap-[7px] rounded-t-[9px] border border-cc-rule3 border-b-0 text-[12.5px]",
+                      "flex h-[34px] w-full cursor-pointer items-center gap-[7px] rounded-t-[9px] border border-cc-rule3 border-b-0 text-[12.5px]",
                       layout.tier === "tight"
                         ? "justify-center px-0"
                         : "justify-start px-[9px]",
@@ -308,7 +330,7 @@ export function WorkspacePane({
                       title="Close pane"
                       aria-label={`Close ${label}`}
                       onClick={() => onClose(entry.id)}
-                      className="-translate-y-1/2 absolute top-1/2 right-1 flex size-5 items-center justify-center rounded-[5px] text-[15px] text-cc-dim leading-none hover:bg-cc-pill"
+                      className="cursor-pointer -translate-y-1/2 absolute top-1/2 right-1 flex size-5 items-center justify-center rounded-[5px] text-[15px] text-cc-dim leading-none hover:bg-cc-pill"
                     >
                       ×
                     </button>

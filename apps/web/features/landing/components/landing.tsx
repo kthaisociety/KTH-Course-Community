@@ -329,7 +329,7 @@ export function Landing() {
                 type="button"
                 onClick={() => void logout()}
                 aria-label="Log out"
-                className="flex h-[34px] items-center gap-1.5 rounded-[8px] px-[11px] font-medium text-[13px] text-cc-chip-ink hover:bg-cc-pill"
+                className="cursor-pointer flex h-[34px] items-center gap-1.5 rounded-[8px] px-[11px] font-medium text-[13px] text-cc-chip-ink hover:bg-cc-pill"
               >
                 <LogOut size={15} strokeWidth={1.9} aria-hidden />
                 <span className="hidden @lg:inline">Log out</span>
@@ -342,14 +342,14 @@ export function Landing() {
               <button
                 type="button"
                 onClick={() => setAuthReason("log-in")}
-                className="flex h-[34px] items-center rounded-[8px] border border-transparent bg-transparent px-[13px] font-medium text-[13px] text-cc-brand hover:bg-cc-pill"
+                className="cursor-pointer flex h-[34px] items-center rounded-[8px] border border-transparent bg-transparent px-[13px] font-medium text-[13px] text-cc-brand hover:bg-cc-pill"
               >
                 Log in
               </button>
               <button
                 type="button"
                 onClick={() => setAuthReason("sign-up")}
-                className="flex h-[34px] items-center rounded-[8px] bg-cc-btn px-[15px] font-semibold text-[13px] text-cc-btn-fg hover:opacity-[0.88]"
+                className="cursor-pointer flex h-[34px] items-center rounded-[8px] bg-cc-btn px-[15px] font-semibold text-[13px] text-cc-btn-fg hover:opacity-[0.88]"
               >
                 Sign up
               </button>
@@ -441,7 +441,7 @@ export function Landing() {
                   onPointerEnter={warmExplore}
                   onFocus={warmExplore}
                   onClick={() => submitSearch(term)}
-                  className="flex h-7 items-center rounded-[14px] border border-cc-rule2 bg-cc-surface px-[11px] text-[12.5px] text-cc-chip-ink hover:border-cc-hov"
+                  className="cursor-pointer flex h-7 items-center rounded-[14px] border border-cc-rule2 bg-cc-surface px-[11px] text-[12.5px] text-cc-chip-ink hover:border-cc-hov"
                 >
                   {term}
                 </button>
@@ -508,14 +508,14 @@ export function Landing() {
             <button
               type="button"
               onClick={() => setAuthReason("sign-up")}
-              className="mt-4 flex h-[42px] w-full items-center justify-center rounded-[9px] bg-cc-btn font-semibold text-[13.5px] text-cc-btn-fg hover:opacity-[0.88]"
+              className="cursor-pointer mt-4 flex h-[42px] w-full items-center justify-center rounded-[9px] bg-cc-btn font-semibold text-[13.5px] text-cc-btn-fg hover:opacity-[0.88]"
             >
               Sign up
             </button>
             <button
               type="button"
               onClick={() => setAuthReason("log-in")}
-              className="mt-2 flex h-[42px] w-full items-center justify-center rounded-[9px] border border-cc-rule3 bg-cc-surface font-medium text-[13.5px] text-cc-ink hover:border-cc-hov"
+              className="cursor-pointer mt-2 flex h-[42px] w-full items-center justify-center rounded-[9px] border border-cc-rule3 bg-cc-surface font-medium text-[13.5px] text-cc-ink hover:border-cc-hov"
             >
               Log in
             </button>

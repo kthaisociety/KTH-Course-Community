@@ -28,7 +28,50 @@ function widthClasses() {
 describe("ConfirmDialog", () => {
   it("is shut when there is nothing to confirm", () => {
     open(null);
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+  });
+
+  /**
+   * The four delete confirmations this replaced were built on `AlertDialog` and
+   * so announced as `alertdialog`; this is built on `Dialog`, which announces
+   * `dialog`, and the difference is whether a screen reader treats the question
+   * as interrupting. The role is restored by passing it through, which only
+   * works because Radix spreads a caller's props over its own `role="dialog"` —
+   * an implementation detail of the primitive, and therefore worth a test rather
+   * than a comment.
+   */
+  it("announces as an alertdialog, not a plain dialog", () => {
+    open();
+    const content = screen.getByRole("alertdialog");
+    expect(content).toHaveAccessibleName(REQUEST.title);
+    expect(content).toHaveAccessibleDescription(REQUEST.body);
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  /**
+   * `pointer-cursor.spec.tsx` sweeps `features/**` and this component now lives
+   * outside it, so its two buttons are asserted here instead of falling into
+   * the gap the move created.
+   */
+  it("gives both buttons the pointer cursor", () => {
+    open();
+    for (const name of [REQUEST.cancelLabel, REQUEST.actionLabel]) {
+      expect(screen.getByRole("button", { name })).toHaveClass(
+        "cursor-pointer",
+      );
+    }
+  });
+
+  /**
+   * Cancel is first in the DOM so it is what Radix focuses on open: the safe
+   * half of a destructive question should be the one a stray Enter hits. Every
+   * caller relies on it and none states it, so it is asserted once here.
+   */
+  it("opens with the safe choice focused", () => {
+    open();
+    expect(
+      screen.getByRole("button", { name: REQUEST.cancelLabel }),
+    ).toHaveFocus();
   });
 
   it("keeps its 440px without the workaround it used to need", () => {

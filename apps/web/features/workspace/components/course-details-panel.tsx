@@ -4,6 +4,7 @@ import { useCallback, useRef, useState } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCourseDetails, useCourseSummaries } from "@/features/courses";
 import {
+  APPLIED_FILL,
   examinationSegments,
   ReviewList,
   useReviewList,
@@ -13,7 +14,7 @@ import { sanitizeCourseHtml } from "@/lib/sanitize-html";
 import { cn } from "@/lib/utils";
 import type { CourseReviewStats } from "@/types";
 import { EXAMINATION_DISTRIBUTION_LABELS, MAX_REVIEW_SCORE } from "@/types";
-import { APPLIED_FILL, Kicker } from "./pane-parts";
+import { Kicker } from "./pane-parts";
 
 function Figure({ label, value }: { label: string; value: string }) {
   return (
@@ -161,7 +162,7 @@ function ReviewsSummary({
           <button
             type="button"
             onClick={onReadReviews}
-            className="text-left font-semibold text-[11.5px] text-cc-dim hover:underline"
+            className="cursor-pointer text-left font-semibold text-[11.5px] text-cc-dim hover:underline"
           >
             Read all {stats.reviewCount} reviews →
           </button>
@@ -309,7 +310,7 @@ export function CourseDetailsPanel({
                 type="button"
                 onClick={() => setContentOpen((open) => !open)}
                 aria-expanded={contentOpen}
-                className="mt-[7px] font-medium text-[13px] text-cc-brand hover:underline"
+                className="cursor-pointer mt-[7px] font-medium text-[13px] text-cc-brand hover:underline"
               >
                 {contentOpen ? "Show less" : "Read more"}
               </button>
@@ -349,7 +350,7 @@ export function CourseDetailsPanel({
           <button
             type="button"
             onClick={onWriteReview}
-            className="flex h-[34px] flex-none items-center gap-[7px] whitespace-nowrap rounded-[8px] bg-cc-btn px-[13px] font-medium text-[13px] text-cc-btn-fg hover:opacity-[0.88]"
+            className="cursor-pointer flex h-[34px] flex-none items-center gap-[7px] whitespace-nowrap rounded-[8px] bg-cc-btn px-[13px] font-medium text-[13px] text-cc-btn-fg hover:opacity-[0.88]"
           >
             Write a review
           </button>
@@ -366,7 +367,7 @@ export function CourseDetailsPanel({
                 onClick={() => setReviewsOpen((open) => !open)}
                 aria-expanded={reviewsOpen}
                 className={cn(
-                  "-mb-px flex items-center gap-[7px] border-b-2 pb-[9px] font-semibold text-[13px]",
+                  "-mb-px flex cursor-pointer items-center gap-[7px] border-b-2 pb-[9px] font-semibold text-[13px]",
                   reviewsOpen
                     ? "border-cc-brand text-cc-brand"
                     : "border-transparent text-cc-muted",

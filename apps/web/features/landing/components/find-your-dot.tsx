@@ -144,7 +144,7 @@ export function FindYourDot({ open, status, onClose, onRetry }: Props) {
           revealing ? "bg-[rgba(14,26,44,0.08)]" : "bg-[rgba(14,26,44,0.34)]",
         )}
         className={cn(
-          "cc-theme w-[396px] max-w-[calc(100vw-2rem)] gap-0 rounded-[14px] border border-cc-rule2 bg-cc-surface p-6 text-cc-ink shadow-[0_20px_56px_rgba(14,26,44,0.26)] sm:max-w-[396px]",
+          "cc-theme w-[396px] max-w-[calc(100vw-2rem)] gap-0 rounded-[14px] border border-cc-rule2 bg-cc-surface p-6 text-cc-ink shadow-[0_20px_56px_rgba(14,26,44,0.26)]",
           revealing && "top-auto bottom-9 translate-y-0",
         )}
       >
@@ -290,7 +290,7 @@ function SignIn(props: {
       <button
         type="submit"
         disabled={props.sending}
-        className="mt-3.5 flex h-10 w-full items-center justify-center gap-2 rounded-[9px] bg-cc-btn font-semibold text-[13.5px] text-cc-btn-fg hover:opacity-[0.88] disabled:opacity-70"
+        className="cursor-pointer mt-3.5 flex h-10 w-full items-center justify-center gap-2 rounded-[9px] bg-cc-btn font-semibold text-[13.5px] text-cc-btn-fg hover:opacity-[0.88] disabled:opacity-70"
       >
         {props.sending ? <Spinner /> : null}
         {props.sending ? "Sending…" : "Send private link"}
@@ -352,7 +352,7 @@ function Header({ title, onClose }: { title: string; onClose: () => void }) {
         type="button"
         onClick={onClose}
         aria-label="Close"
-        className="flex size-[26px] shrink-0 items-center justify-center rounded-[7px] text-[17px] text-cc-dim leading-none hover:bg-cc-pill"
+        className="cursor-pointer flex size-[26px] shrink-0 items-center justify-center rounded-[7px] text-[17px] text-cc-dim leading-none hover:bg-cc-pill"
       >
         ×
       </button>
@@ -390,7 +390,7 @@ function FilledButton(props: {
     <button
       type="button"
       onClick={props.onClick}
-      className="mt-4 flex h-[38px] w-full items-center justify-center rounded-[9px] bg-cc-btn font-semibold text-[13px] text-cc-btn-fg hover:opacity-[0.88]"
+      className="cursor-pointer mt-4 flex h-[38px] w-full items-center justify-center rounded-[9px] bg-cc-btn font-semibold text-[13px] text-cc-btn-fg hover:opacity-[0.88]"
     >
       {props.children}
     </button>
@@ -405,7 +405,7 @@ function OutlineButton(props: {
     <button
       type="button"
       onClick={props.onClick}
-      className="mt-4 flex h-[38px] w-full items-center justify-center rounded-[9px] border border-cc-rule3 bg-cc-surface font-medium text-[13px] text-cc-ink hover:border-cc-hov"
+      className="cursor-pointer mt-4 flex h-[38px] w-full items-center justify-center rounded-[9px] border border-cc-rule3 bg-cc-surface font-medium text-[13px] text-cc-ink hover:border-cc-hov"
     >
       {props.children}
     </button>

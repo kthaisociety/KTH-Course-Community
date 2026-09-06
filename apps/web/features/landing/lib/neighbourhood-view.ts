@@ -378,11 +378,20 @@ export function projectGraphWindow(args: {
     // same rects, and they fade along with everybody else. That is honest: a
     // hero with no legible place left is better admitted than answered with one
     // dot drawn over the headline and called a reveal.
+    //
+    // `centre` is passed as the push's origin so the escape is radial. The
+    // field is a sunflower around the window centre, and `centre` is where that
+    // centre lands on screen, so a node's bearing from it *is* the golden-angle
+    // separation that keeps it away from its neighbours. Pushing along that
+    // bearing spends the spacing; pushing to the nearest wall throws it away,
+    // because every point that leaves by one wall keeps only the coordinate the
+    // wall did not set. See `pushClear` for the measurement.
     const { x: screenX, y: screenY } = pushClear(
       projectedX,
       projectedY,
       keepOut,
       NODE_RADIUS,
+      centre,
     );
     const placed: ScreenNode = {
       id: node.id,

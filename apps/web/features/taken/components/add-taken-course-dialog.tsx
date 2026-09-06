@@ -121,8 +121,7 @@ export function AddTakenCourseDialog({
     <Dialog open={open} onOpenChange={(next) => !next && close()}>
       <DialogContent
         showCloseButton={false}
-        overlayClassName="bg-[rgba(14,26,44,0.34)] supports-backdrop-filter:backdrop-blur-none"
-        className="cc-theme w-[560px] max-w-[calc(100vw-2rem)] gap-0 rounded-[14px] border-cc-rule2 bg-cc-surface p-[22px] text-cc-ink shadow-[0_18px_48px_rgba(20,30,45,0.26)]"
+        className="cc-theme w-[560px] max-w-[calc(100vw-2rem)] gap-0 rounded-[14px] bg-cc-surface p-[22px] text-cc-ink shadow-[0_18px_48px_rgba(20,30,45,0.26)]"
       >
         <div className="flex items-start justify-between gap-3.5">
           <div>
@@ -268,7 +267,7 @@ export function AddTakenCourseDialog({
                   onChange={(event) =>
                     setYear(event.target.value.replace(/\D/g, "").slice(0, 4))
                   }
-                  className="mt-1.5 box-border h-[34px] w-full rounded-[8px] border border-cc-rule3 bg-cc-surface px-[11px] text-[13px] text-cc-ink tabular-nums outline-none focus:border-cc-brand"
+                  className="mt-1.5 box-border h-[34px] w-full rounded-[8px] border border-cc-rule3 bg-cc-surface px-[11px] text-[13px] text-cc-ink tabular-nums outline-none"
                 />
               </div>
             </div>

@@ -21,7 +21,7 @@ export function StatCard({
 }: Props) {
   return (
     <div
-      className={`rounded-xl border px-[17px] py-4 ${
+      className={`rounded-[12px] border px-[17px] py-4 ${
         emphasis
           ? "border-cc-hov bg-cc-info-solid"
           : "border-cc-rule bg-cc-surface"

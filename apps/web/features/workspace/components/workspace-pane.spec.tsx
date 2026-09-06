@@ -49,6 +49,10 @@ vi.mock("@/features/courses", () => ({
 vi.mock("@/features/reviews", async () => ({
   ...(await import("@/features/reviews/lib/examination-palette")),
   ...(await import("@/features/reviews/lib/review-draft")),
+  // The real score controls. They are presentation with no data behind them,
+  // and this suite asserts on what the slider renders — "counts the sections as
+  // they are answered" reads its value pill — so a stub would test the stub.
+  ...(await import("@/features/reviews/components/score-controls")),
   useReviewList: (code: string | undefined) => useReviewList(code),
   useAddReview: () => addReview,
   ReviewList: ({
