@@ -57,7 +57,7 @@ apps/web/
 - These layers are **enforced by Biome**, not just convention: a router importing a `repository`, or a repository importing a `service`/`router`, fails `bun run lint`. See the `noRestrictedImports` overrides in `biome.json`.
 - Cross-domain calls go service → service (e.g. `search/service.ts` imports `../course/service`). Routers never import another domain's router; compose them in `server/api/root.ts`.
 - Feature `api/` exposes wrapped `useQuery` / `useMutation` hooks, not raw queryOptions factories.
-- `protectedProcedure` is the real auth gate (`ctx.session.user`). `proxy.ts` (Next 16; not `middleware.ts`) only checks that a session cookie exists for `/profile`, `/saved` and `/taken`. Visitors may browse courses, search, and read reviews.
+- `protectedProcedure` is the real auth gate (`ctx.session.user`), and now the only one: there is no `proxy.ts` (Next 16's name for `middleware.ts`). Every page renders for a signed-out visitor — `/profile` and `/saved` draw their own signed-out state, `/taken` lets a guest read a transcript and asks for the account at the keep step. Nothing a signed-out caller does writes a row.
 - Browser calls same-origin `/api/trpc` and `/api/auth`. Multipart profile pictures POST to `/api/user/profile-picture` (not tRPC).
 - Every multipart route in `app/api/` caps its body with `capRequestBody` from `server/http/body-cap.ts` **before** calling `request.formData()`, which buffers the whole body before anything can read a file's size. `server/http/` is domain-neutral on purpose: this cap lived under `server/ingest/transcript/` and the profile-picture route never found it.
 - Tests colocate as `*.spec.ts` next to server code; mock repositories, not the database.

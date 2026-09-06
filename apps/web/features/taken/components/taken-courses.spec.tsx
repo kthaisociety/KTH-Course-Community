@@ -4,6 +4,11 @@ import { StrictMode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { UnreviewedTakenCourse } from "@/features/reviews/api/queries";
 import type { TranscriptProposal } from "@/server/ingest/transcript/service";
+import {
+  GUEST_PROPOSAL_TTL_MS,
+  readGuestProposal,
+  writeGuestProposal,
+} from "../lib/guest-proposal";
 import type { TakenCourse } from "../lib/taken-rows";
 import { TakenCourses } from "./taken-courses";
 
@@ -36,6 +41,10 @@ const routerReplace = vi.fn();
 const routerPush = vi.fn();
 /** The round the page hands the reviewer, so a test can see what it pruned. */
 const restoredProp = vi.fn();
+/** The session this render sees. Guests are a state of this page now. */
+const me = vi.fn<() => { isLoading: boolean; isAuthenticated: boolean }>();
+/** Which reason the page last asked for an account with, or nothing. */
+const authReasonProp = vi.fn();
 
 // One object, as Next's own `useRouter` returns: a fresh one every call would
 // make every effect that depends on the router run on every render, which is
@@ -47,12 +56,27 @@ vi.mock("next/navigation", () => ({
 }));
 
 vi.mock("@/features/auth", () => ({
-  useMe: () => ({ isLoading: false, isAuthenticated: true }),
-  useRequireSession: () => ({}),
+  useMe: () => me(),
+  // Faithful rather than a no-op: the redirect is the thing these tests are
+  // about, so a stub that could not perform it would let the gate come back
+  // without a single test noticing.
+  useRequireSession: () => {
+    if (!me().isAuthenticated) routerReplace("/auth");
+    return {};
+  },
+  AuthReasonDialog: ({ reason }: { reason: string | null }) => {
+    authReasonProp(reason);
+    return reason === null ? null : (
+      <div data-testid="auth-prompt">Asking for an account: {reason}</div>
+    );
+  },
 }));
 vi.mock("@/features/courses", () => ({
-  useTakenCourses: () => ({
-    data: takenList(),
+  // `enabled` is honoured, because `taken.list` is a protected procedure and a
+  // signed-out reader genuinely has no list — a mock that answered anyway
+  // would hide the whole guest screen behind somebody else's courses.
+  useTakenCourses: (enabled: boolean) => ({
+    data: enabled ? takenList() : undefined,
     isPending: false,
     isError: listFailed(),
     // The screen re-reads the list before it plans an import, so the mock has
@@ -190,9 +214,16 @@ async function uploadPdf() {
 beforeEach(() => {
   vi.clearAllMocks();
   // `?review=1` and an interrupted round are both read off the browser, so
-  // each test starts on a clean URL and an empty tab store.
+  // each test starts on a clean URL and an empty tab store. `localStorage`
+  // goes too: a transcript left for a sign-in is kept there.
   window.history.replaceState({}, "", "/taken");
   sessionStorage.clear();
+  localStorage.clear();
+  // One test moves the clock past a stored proposal's expiry; leaving it moved
+  // would silently expire the next test's, so the reset is here rather than at
+  // the end of that test, where a failure would skip it.
+  vi.useRealTimers();
+  me.mockReturnValue({ isLoading: false, isAuthenticated: true });
   takenList.mockReturnValue([takenCourse()]);
   listFailed.mockReturnValue(false);
   refetchTaken.mockImplementation(() =>
@@ -1158,5 +1189,145 @@ describe("arriving with ?review=…", () => {
       ),
     );
     expect(routerReplace).toHaveBeenCalledTimes(1);
+  });
+});
+/**
+ * The signed-out flow the artboard draws, and the two halves that make it safe.
+ *
+ * `docs/design_ref/2026-09-06/Course Community - Taken Courses.dc.html:767`
+ * poses a guest on the **empty** screen rather than on a locked page, and
+ * `:1305-1308` puts the account at the *keep* step: the confirm reads "Sign in
+ * to keep this list", and the confirm is resumed once they are in. Everything
+ * up to that button is a read — `POST /api/user/transcript` stores nothing —
+ * and everything past it is `transcript.confirm`, which is a
+ * `protectedProcedure` and is not called here.
+ */
+describe("a signed-out visitor", () => {
+  beforeEach(() => {
+    me.mockReturnValue({ isLoading: false, isAuthenticated: false });
+    takenList.mockReturnValue([]);
+  });
+
+  it("is not sent to /auth", () => {
+    render(<TakenCourses />);
+
+    expect(routerReplace).not.toHaveBeenCalledWith("/auth");
+  });
+
+  it("lands on the drop zone, which is the artboard's empty screen", () => {
+    render(<TakenCourses />);
+
+    expect(screen.getByLabelText("Ladok transcript PDF")).toBeInTheDocument();
+  });
+
+  it("reads a transcript and is offered the rows, with nothing written", async () => {
+    render(<TakenCourses />);
+    await uploadPdf();
+
+    expect(await screen.findByText("1 course read")).toBeInTheDocument();
+    expect(uploadTranscript).toHaveBeenCalledTimes(1);
+    expect(confirmImport).not.toHaveBeenCalled();
+  });
+
+  it("asks for the account at the keep step rather than writing", async () => {
+    render(<TakenCourses />);
+    await uploadPdf();
+    await userEvent.click(
+      await screen.findByRole("button", {
+        name: "Sign in to keep this list",
+      }),
+    );
+
+    expect(await screen.findByTestId("auth-prompt")).toHaveTextContent(
+      "keep-course-list",
+    );
+    expect(confirmImport).not.toHaveBeenCalled();
+  });
+
+  it("holds the rows for the sign-in, and keeps grades out of the record", async () => {
+    render(<TakenCourses />);
+    await uploadPdf();
+    await userEvent.click(
+      await screen.findByRole("button", {
+        name: "Sign in to keep this list",
+      }),
+    );
+
+    const held = readGuestProposal();
+    expect(held?.proposal.candidates).toEqual([
+      expect.objectContaining({ courseCode: "DD1337", grade: null }),
+    ]);
+  });
+
+  it("keeps the grades when the reader turned the switch on", async () => {
+    render(<TakenCourses />);
+    await userEvent.click(screen.getByRole("switch", { name: /grade/i }));
+    await uploadPdf();
+    await userEvent.click(
+      await screen.findByRole("button", {
+        name: "Sign in to keep this list",
+      }),
+    );
+
+    expect(readGuestProposal()?.proposal.candidates[0].grade).toBe("B");
+  });
+
+  it("asks for an account instead of opening the by-hand form", async () => {
+    render(<TakenCourses />);
+    await userEvent.click(
+      screen.getByRole("button", { name: /Add courses manually/i }),
+    );
+
+    expect(await screen.findByTestId("auth-prompt")).toHaveTextContent(
+      "sign-up",
+    );
+    expect(addTaken).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * Coming back with an account, which is the artboard's `pending: "confirm"`.
+ *
+ * It stops one step short of the artboard, which writes the moment the account
+ * appears: the rows are put back on the preview and the reader presses the
+ * button. `use-guest-saves.ts` settled the same question the same way — signing
+ * in is not consent to write a list of courses to an account — and here the
+ * record it would write from is `localStorage`, which anything on this origin
+ * can put rows into.
+ */
+describe("coming back from a sign-in", () => {
+  beforeEach(() => takenList.mockReturnValue([]));
+
+  it("puts the transcript back on the preview", async () => {
+    writeGuestProposal(proposal(), false);
+    render(<TakenCourses />);
+
+    expect(await screen.findByText("1 course read")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Looks right" }),
+    ).toBeInTheDocument();
+    expect(confirmImport).not.toHaveBeenCalled();
+  });
+
+  it("writes only once the reader confirms, and then forgets the record", async () => {
+    writeGuestProposal(proposal(), false);
+    render(<TakenCourses />);
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Looks right" }),
+    );
+
+    await waitFor(() => expect(confirmImport).toHaveBeenCalledTimes(1));
+    expect(readGuestProposal()).toBeNull();
+  });
+
+  it("drops a record that has gone stale rather than reviving it", async () => {
+    writeGuestProposal(proposal(), false);
+    vi.setSystemTime(Date.now() + GUEST_PROPOSAL_TTL_MS + 1000);
+    render(<TakenCourses />);
+
+    expect(
+      await screen.findByLabelText("Ladok transcript PDF"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("1 course read")).not.toBeInTheDocument();
   });
 });

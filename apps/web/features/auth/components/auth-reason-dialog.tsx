@@ -20,7 +20,12 @@ import { authHref, currentReturnTo, safeReturnTo } from "../lib/return-to";
  * every prompt names the one thing that does — and promises the work in progress
  * survives it.
  */
-export type AuthReason = "log-in" | "sign-up" | "save-course" | "post-review";
+export type AuthReason =
+  | "log-in"
+  | "sign-up"
+  | "save-course"
+  | "post-review"
+  | "keep-course-list";
 
 const REASONS: Record<
   AuthReason,
@@ -49,6 +54,19 @@ const REASONS: Record<
     title: "Sign in to publish your review",
     body: "Your draft is held as it is — text, ratings and the course all stay put. Nothing is published until you confirm.",
     cancel: "Back to my draft",
+  },
+  /**
+   * The Taken Courses gate. Its kicker and title are the artboard's own —
+   * `docs/design_ref/2026-09-06/Course Community - Taken Courses.dc.html:58-59`
+   * draws "ONE STEP LEFT" over "Sign in to keep this list", and `:1305` puts
+   * the second of those on the confirm button that opens this. The body is the
+   * artboard's `authReturnLine` for a reader who has rows waiting (`:1245`).
+   */
+  "keep-course-list": {
+    kicker: "One step left",
+    title: "Sign in to keep this list",
+    body: "Your course list is waiting — signing in brings you straight back to it. Nothing is saved until you confirm it.",
+    cancel: "Back to the list",
   },
 };
 
