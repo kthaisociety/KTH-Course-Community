@@ -919,6 +919,10 @@ export function HeroNetwork({
       onPointerDown={(event) => {
         const scene = sceneRef.current;
         if (!scene || scene.reduced || scene.paused) return;
+        // The primary button only. A right-click is on its way to a context
+        // menu and a middle-click to a paste; neither is somebody asking the
+        // graph for anything. Touch and pen both report 0 here.
+        if (event.button !== 0) return;
         const hit = nodeUnder(scene, event);
         // Its own node bursts like any other, and that is the best discovery
         // moment this feature has: the page has just pointed at your dot.

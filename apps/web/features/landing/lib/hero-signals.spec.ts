@@ -627,6 +627,41 @@ describe("trail geometry", () => {
     }
   });
 
+  /**
+   * A signal leaves the node that sent it, whichever end of the edge that is.
+   *
+   * A **backbone edge** is stored newer-to-older and drawn undirected, but a
+   * signal has a sender: `spawnSignal` tosses for the end it leaves from and a
+   * **burst** leaves from whichever node was clicked, which is as often the
+   * edge's `to` as its `from`. Measuring progress from the view model's `from`
+   * regardless draws half the traffic running backwards, out of a node that did
+   * not send it — which is exactly the bug this pins.
+   */
+  it("travels away from its sender, not away from the edge's first endpoint", () => {
+    const walk = (senderIndex: 0 | 1) => {
+      const field = fieldOf(chain(2, {}, 600));
+      burstAt(field, field.nodes[senderIndex]);
+      const signal = field.signals[0];
+      const sender = field.nodes[senderIndex];
+      signal.p = 0.25;
+      const near = signalPaint(field, signal);
+      signal.p = 0.75;
+      const far = signalPaint(field, signal);
+      if (!near || !far) throw new Error("expected a visible signal");
+      return {
+        near: Math.hypot(near.headX - sender.x, near.headY - sender.y),
+        far: Math.hypot(far.headX - sender.x, far.headY - sender.y),
+      };
+    };
+
+    // Sent from the edge's `from`, and sent from its `to`: in both cases the
+    // head is further from its own sender at 0.75 than it was at 0.25.
+    for (const index of [0, 1] as const) {
+      const { near, far } = walk(index);
+      expect(far).toBeGreaterThan(near);
+    }
+  });
+
   /** A burst arm still waiting its turn is not on the canvas yet. */
   it("draws nothing for an arm that has not left", () => {
     const field = fieldOf(chain(4));

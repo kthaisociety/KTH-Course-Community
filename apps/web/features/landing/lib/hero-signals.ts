@@ -863,12 +863,45 @@ function smoothStep(a: number, b: number, x: number): number {
   return t * t * (3 - 2 * t);
 }
 
-/** The `at(s, p)` of :1091, which — its control point being the midpoint of its
- * own endpoints — reduces exactly to a straight interpolation. Written as one. */
-function pointAt(edge: FieldEdge, p: number) {
+/**
+ * Which way along the edge this signal is actually going.
+ *
+ * A **backbone edge** is stored newer-to-older and drawn undirected, but a
+ * signal has a sender and a receiver — `spawnSignal` tosses for the end it
+ * leaves from and a **burst** leaves from whichever node was clicked, which is
+ * as often the edge's `to` as its `from`. So `p` is progress *from the sender*,
+ * and everything geometric below has to be measured from the sender rather than
+ * from whichever endpoint the view model happened to list first. Getting this
+ * wrong draws the signal running backwards, out of a node that did not send it.
+ */
+function travel(edge: FieldEdge, signal: Signal) {
+  const forward = signal.fromId === edge.from.node.id;
+  const a = forward ? edge.from : edge.to;
+  const b = forward ? edge.to : edge.from;
+  const length = Math.max(1, Math.hypot(b.x - a.x, b.y - a.y));
   return {
-    x: edge.from.x + (edge.to.x - edge.from.x) * p,
-    y: edge.from.y + (edge.to.y - edge.from.y) * p,
+    /** The sender's end. */
+    ax: a.x,
+    ay: a.y,
+    /** The receiver's end. */
+    bx: b.x,
+    by: b.y,
+    length,
+    /** A unit vector pointing the way the signal is travelling. */
+    ux: (b.x - a.x) / length,
+    uy: (b.y - a.y) / length,
+  };
+}
+
+/**
+ * The `at(s, p)` of :1091, which — its control point being the midpoint of its
+ * own endpoints — reduces exactly to a straight interpolation. Written as one,
+ * and measured from the sender.
+ */
+function pointAt(along: ReturnType<typeof travel>, p: number) {
+  return {
+    x: along.ax + (along.bx - along.ax) * p,
+    y: along.ay + (along.by - along.ay) * p,
   };
 }
 
@@ -903,16 +936,16 @@ export function signalPaint(
   );
   if (k <= PAINT_FLOOR) return null;
 
-  const length = edgeLength(edge);
+  const along = travel(edge, signal);
   const wanted =
     (TRAIL_BASE + TRAIL_GAIN * k) *
     (signal.style === "comet" ? COMET_LENGTHEN : 1);
   // Never behind the node it left: a wake that ran off the end of its own edge
   // would be a line to somebody the signal is not travelling to.
-  const back = Math.min(signal.p, wanted / length);
-  const head = pointAt(edge, signal.p);
-  const tail = pointAt(edge, signal.p - back);
-  const available = back * length;
+  const back = Math.min(signal.p, wanted / along.length);
+  const head = pointAt(along, signal.p);
+  const tail = pointAt(along, signal.p - back);
+  const available = back * along.length;
   const width = WIDTH_BASE + WIDTH_GAIN * k;
 
   const paint: SignalPaint = {
@@ -932,7 +965,7 @@ export function signalPaint(
       // Each ring is dropped further back than the last, and is wider and
       // fainter for having been left there longer.
       const at = signal.p - back * ((index + 1) / steps);
-      const spot = pointAt(edge, at);
+      const spot = pointAt(along, at);
       paint.rings.push({
         x: spot.x,
         y: spot.y,
@@ -949,10 +982,10 @@ export function signalPaint(
       const near = available * (segment.from / COMET_REACH);
       const far = available * (segment.to / COMET_REACH);
       paint.strokes.push({
-        fromX: head.x - unitX(edge) * far,
-        fromY: head.y - unitY(edge) * far,
-        toX: head.x - unitX(edge) * near,
-        toY: head.y - unitY(edge) * near,
+        fromX: head.x - along.ux * far,
+        fromY: head.y - along.uy * far,
+        toX: head.x - along.ux * near,
+        toY: head.y - along.uy * near,
         width: width * (segment.width / lead.width),
         alpha: k * (segment.alpha / lead.alpha),
       });
@@ -975,14 +1008,6 @@ export function signalPaint(
     });
   }
   return paint;
-}
-
-function unitX(edge: FieldEdge): number {
-  return (edge.to.x - edge.from.x) / edgeLength(edge);
-}
-
-function unitY(edge: FieldEdge): number {
-  return (edge.to.y - edge.from.y) / edgeLength(edge);
 }
 
 /** `TRAIL_STOPS`, interpolated. `at` runs 0 at the tail to 1 at the head. */
