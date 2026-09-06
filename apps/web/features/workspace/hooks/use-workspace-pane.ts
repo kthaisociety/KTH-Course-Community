@@ -8,6 +8,7 @@ import {
   type OpenCourseKind,
   openCourse,
   type Workspace,
+  type WorkspaceScope,
 } from "../lib/open-courses";
 import { readWorkspace, writeWorkspace } from "../lib/workspace-storage";
 
@@ -24,6 +25,20 @@ import { readWorkspace, writeWorkspace } from "../lib/workspace-storage";
  * OAuth redirect away and back — returns the student to the courses they had
  * open rather than to an empty pane. Restoring happens in an effect rather
  * than in the initial state so the server and the first client render agree.
+ *
+ * ## The scope, and why it is a parameter
+ *
+ * Each host passes its own {@link WorkspaceScope}, and that is what keeps
+ * Explore's tabs out of Saved: the two pages read and write separate keys, so
+ * navigating between them no longer rehydrates the other's list. Signing in
+ * still returns a reader to their tabs, because the redirect comes back to the
+ * *same* route and therefore to the same scope.
+ *
+ * It is passed in rather than read off `usePathname()` so the hook stays pure
+ * and testable and the host goes on owning its own state, which is the shape
+ * the rest of this comment describes. A host's scope is a literal and never
+ * changes for the life of the mount; the read guard below would not notice if
+ * it did.
  *
  * ## Why `hydrated` is state and not a ref
  *
@@ -60,7 +75,7 @@ import { readWorkspace, writeWorkspace } from "../lib/workspace-storage";
  * it has to arrive *with* the value it describes. Swapping them is the bug at
  * both ends.
  */
-export function useWorkspacePane() {
+export function useWorkspacePane(scope: WorkspaceScope) {
   const [workspace, setWorkspace] = useState<Workspace>(EMPTY_WORKSPACE);
   const [hydrated, setHydrated] = useState(false);
   const read = useRef(false);
@@ -68,13 +83,13 @@ export function useWorkspacePane() {
   useEffect(() => {
     if (read.current) return;
     read.current = true;
-    setWorkspace(readWorkspace());
+    setWorkspace(readWorkspace(scope));
     setHydrated(true);
-  }, []);
+  }, [scope]);
 
   useEffect(() => {
-    if (hydrated) writeWorkspace(workspace);
-  }, [hydrated, workspace]);
+    if (hydrated) writeWorkspace(scope, workspace);
+  }, [hydrated, scope, workspace]);
 
   const open = useCallback((courseCode: string, kind: OpenCourseKind) => {
     setWorkspace((current) => openCourse(current, courseCode, kind));

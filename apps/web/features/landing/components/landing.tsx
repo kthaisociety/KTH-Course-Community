@@ -433,7 +433,15 @@ export function Landing() {
                 height and the bar on the same 400px — only the copy above it
                 moves, which is the point: the artboard's 19 read too tight in
                 the built page. The 97 is still what the artboard says, and this
-                is knowingly 12 off it. */}
+                is knowingly 12 off it.
+
+                The cap is `--cc-search-bar-w`, the token Explore's own bar
+                takes its width from, and not the artboard's 560. The two have to
+                be the same number: `search-morph.tsx` animates the arriving bar
+                with `translate3d` alone and never interpolates its width, so a
+                hero bar wider than the one it turns into would snap narrower at
+                the moment of arrival — the one seam the hand-off exists to hide.
+                Only a cap is set here; the bar is still `w-full` below `@lg`. */}
             <form
               ref={barRef}
               data-hero-clear
@@ -441,7 +449,7 @@ export function Landing() {
                 event.preventDefault();
                 submitSearch(query);
               }}
-              className="mt-4 @lg:mt-[31px] flex h-[42px] w-full @lg:max-w-[560px] items-center gap-2.5 rounded-[10px] border border-cc-rule3 bg-cc-surface px-3.5"
+              className="mt-4 @lg:mt-[31px] flex h-[42px] w-full @lg:max-w-[var(--cc-search-bar-w)] items-center gap-2.5 rounded-[10px] border border-cc-rule3 bg-cc-surface px-3.5"
             >
               <Search
                 size={16}

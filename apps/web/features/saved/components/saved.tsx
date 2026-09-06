@@ -96,6 +96,13 @@ const SAVED_HEADING_ID = "saved-courses-heading";
  * owns the page's only scroll would clip a long collection instead.
  * `resultsMax` is computed by the artboard and never read by its
  * markup, so there is nothing to follow.
+ *
+ * The 236px it shortens by is the **rail's width**, which is what the same
+ * number means in the Explore artboard's `searchBarMargin` — but the two do
+ * different things with it. Explore's row is centred, so a right margin moves
+ * its bar; this block is left-aligned, so the margin only takes width off its
+ * right-hand end. Either way nothing is built from it here, because the strip is
+ * inside the column the pane already narrows.
  */
 type Props = {
   /**
@@ -141,7 +148,7 @@ export function Saved({ openCollectionId = null, openCourse = null }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const rowRef = useRef<HTMLDivElement>(null);
   const presentation = useWorkspacePresentation(containerRef);
-  const workspace = useWorkspacePane();
+  const workspace = useWorkspacePane("saved");
   const [resultsRef, resultsWidth] = useResultsWidth();
   const geo = courseCardGeometry(resultsWidth);
 
@@ -272,10 +279,28 @@ export function Saved({ openCollectionId = null, openCourse = null }: Props) {
         subtitle="Keep track of courses you are interested in and organize them into collections."
       />
 
-      {/* The artboard's row: the results column, and the pane beside it. */}
+      {/*
+        The artboard's row: the results column, and the pane beside it.
+
+        The top padding is space this page does not use, held so that its tab
+        strip starts level with Explore's. Explore spends exactly
+        `--cc-search-block-h` on a search block between its header and this row;
+        this page has nothing to put there, and without the reservation the two
+        strips began 74px apart.
+
+        **Permanent, not conditional on tabs being open.** A page that jumped
+        down 74px when the reader opened their first tab would be a worse defect
+        than 74px of quiet space, and it would move the collections strip under
+        a reader mid-scroll.
+
+        Gated to `@3xl`, which is `WorkspacePaneHost`'s own condition. Below it
+        the workspace is a sheet, there is no side-by-side column and no tab
+        strip to line up with anything, and 74px of blank costs real height on a
+        phone.
+      */}
       <div
         ref={rowRef}
-        className="flex min-h-0 flex-1 gap-[18px] px-7 pb-5 @max-[440px]:px-[14px]"
+        className="flex min-h-0 flex-1 gap-[18px] px-7 pb-5 @3xl:pt-[var(--cc-search-block-h)] @max-[440px]:px-[14px]"
       >
         <div
           ref={resultsRef}

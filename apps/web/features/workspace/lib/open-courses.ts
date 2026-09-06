@@ -8,9 +8,10 @@
  * both easy to get subtly wrong and cheap to test in isolation.
  *
  * Nothing here decides persistence: these are pure transitions over a value.
- * `use-workspace-pane.ts` is what keeps that value in `sessionStorage`, so that
- * signing in — an OAuth redirect away and back — returns to the courses that
- * were open.
+ * `use-workspace-pane.ts` is what keeps that value in `sessionStorage` — under
+ * the {@link WorkspaceScope} of the page that owns it — so that signing in, an
+ * OAuth redirect away and back to the same route, returns to the courses that
+ * were open there.
  */
 
 /**
@@ -27,6 +28,22 @@ export interface OpenCourse {
   courseCode: string;
   kind: OpenCourseKind;
 }
+
+/**
+ * Which page's open list this is.
+ *
+ * A tab belongs to the page it was opened on: Explore's tabs live in Explore,
+ * Saved's live in Saved, and neither page shows the other's. The artboards say
+ * the same thing by construction — `Course Community - Explore.dc.html` and
+ * `Course Community - Saved.dc.html` each declare their own `tabs: []` in local
+ * state, and `cc-store.js`, the store they genuinely share, carries no tab
+ * state at all.
+ *
+ * It is a domain word rather than a route string on purpose. The two hosts pass
+ * it as a literal, so nothing here reads `usePathname()` and the open list stays
+ * a value a test can hand around. See ADR 0007.
+ */
+export type WorkspaceScope = "explore" | "saved";
 
 /** Every course open in the pane, in tab order, and which one is in front. */
 export interface Workspace {

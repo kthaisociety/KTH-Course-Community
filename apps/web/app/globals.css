@@ -447,6 +447,49 @@
   --cc-rail-btn-fg: #0a2449;
 }
 
+/* The height of Explore's search block, and the one number that keeps the two
+   workspace hosts' tab strips level.
+
+   Explore puts a search block between its `PageHeader` and the row the pane
+   sits in; Saved puts nothing there. The strip lives in that row on both pages,
+   so whatever the block measures is exactly how far Saved's strip sits above
+   Explore's — it was 118px. Making them agree means one side reserving what the
+   other spends, and a literal on each side is a pair that drifts the first time
+   either is edited. So Explore takes this as its block's **height** and Saved
+   takes the same token as its row's **padding-top**, and neither number can
+   move without the other.
+
+   74px is the Explore artboard's own search row: `padding:18px 24px 14px`
+   around a 42px bar. The block reached 118px here by carrying a second row —
+   the school filter, which the artboard does not draw at all — and that row
+   moves up beside the bar rather than the artboard's figure being adjusted.
+   Both sides are `@3xl` only, which is where the pane is a column and there are
+   two strips to level; the narrow layout keeps its stack and reserves nothing.
+
+   The width below is here for the same reason and buys the same thing across a
+   different seam. The landing's hero bar and Explore's are one element as far as
+   the reader is concerned — `search-morph.tsx` animates the second out of the
+   first — and it animates `translate3d` only, never width. Two literals that
+   disagreed would make the bar snap at the moment of arrival, which is precisely
+   the seam the hand-off exists to hide.
+
+   460 rather than the artboards' 560 buys clearance from the pane's divider, now
+   that the tab strip starts directly beneath the bar. It does not buy *all* of
+   it, and the shortfall is measured rather than assumed: with the row centred on
+   the viewport and the pane at its 504px default, the bar's right edge overhangs
+   the divider by a constant 48px at every width the content column is capped at
+   — 98px before this change. Closing it completely would take a 364px bar, which
+   is a smaller field than anyone has asked for. 460 is the authorised number and
+   the overhang is a known, bounded 48px.
+
+   Both are declared here rather than in the `:root` above because that block is
+   a verbatim mirror of `docs/design_ref/2026-09-06/cc-theme.css`, which names
+   colours only. These are layout constants with no line there to mirror. */
+:root {
+  --cc-search-block-h: 74px;
+  --cc-search-bar-w: 460px;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

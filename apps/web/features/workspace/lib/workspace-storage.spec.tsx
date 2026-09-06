@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { EMPTY_WORKSPACE } from "./open-courses";
 import { EMPTY_REVIEW_DRAFT, type ReviewDraft } from "./review-draft";
 import {
   claimAwaitingSignIn,
@@ -382,14 +383,73 @@ describe("a stored draft that does not quite fit", () => {
  */
 describe("what stayed in the tab", () => {
   it("keeps the open list in sessionStorage", () => {
-    writeWorkspace({
+    writeWorkspace("explore", {
       open: [{ id: "review:DD2380", courseCode: "DD2380", kind: "review" }],
       activeId: "review:DD2380",
     });
 
-    expect(sessionStorage.getItem("cc.workspace.open")).not.toBeNull();
-    expect(localStorage.getItem("cc.workspace.open")).toBeNull();
-    expect(readWorkspace().open).toHaveLength(1);
+    expect(sessionStorage.getItem("cc.workspace.open.explore")).not.toBeNull();
+    expect(localStorage.getItem("cc.workspace.open.explore")).toBeNull();
+    expect(readWorkspace("explore").open).toHaveLength(1);
+  });
+
+  /*
+   * The open list is keyed per page, so Explore's tabs and Saved's are two
+   * lists that never see each other. Reading the *other* page's key back is
+   * what the old single key made impossible.
+   */
+  it("keeps each page's open list under its own key", () => {
+    writeWorkspace("explore", {
+      open: [{ id: "details:DD2380", courseCode: "DD2380", kind: "details" }],
+      activeId: "details:DD2380",
+    });
+    writeWorkspace("saved", {
+      open: [{ id: "details:SF1626", courseCode: "SF1626", kind: "details" }],
+      activeId: "details:SF1626",
+    });
+
+    expect(
+      readWorkspace("explore").open.map((entry) => entry.courseCode),
+    ).toEqual(["DD2380"]);
+    expect(
+      readWorkspace("saved").open.map((entry) => entry.courseCode),
+    ).toEqual(["SF1626"]);
+  });
+
+  it("leaves one page's list alone when the other is written", () => {
+    writeWorkspace("explore", {
+      open: [{ id: "details:DD2380", courseCode: "DD2380", kind: "details" }],
+      activeId: "details:DD2380",
+    });
+    writeWorkspace("saved", EMPTY_WORKSPACE);
+
+    expect(readWorkspace("explore").open).toHaveLength(1);
+    expect(readWorkspace("saved").open).toHaveLength(0);
+  });
+
+  /*
+   * The bare `cc.workspace.open` an older build wrote held *both* pages' tabs,
+   * which is the leak the scope removes. It is neither adopted nor cleaned up:
+   * adopting it into one page would put the leak straight back, and an open tab
+   * is one click to restore — the argument `adoptLegacyDrafts` makes for drafts
+   * does not carry here. It expires with the session.
+   */
+  it("never reads or writes the shared key an older build left behind", () => {
+    const legacy = JSON.stringify({
+      open: [{ id: "details:DD2380", courseCode: "DD2380", kind: "details" }],
+      activeId: "details:DD2380",
+    });
+    sessionStorage.setItem("cc.workspace.open", legacy);
+
+    expect(readWorkspace("explore")).toEqual(EMPTY_WORKSPACE);
+    expect(readWorkspace("saved")).toEqual(EMPTY_WORKSPACE);
+
+    writeWorkspace("explore", {
+      open: [{ id: "details:SF1626", courseCode: "SF1626", kind: "details" }],
+      activeId: "details:SF1626",
+    });
+
+    expect(sessionStorage.getItem("cc.workspace.open")).toBe(legacy);
   });
 
   it("keeps the published note in sessionStorage", () => {

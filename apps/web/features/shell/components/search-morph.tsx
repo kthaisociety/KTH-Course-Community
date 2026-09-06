@@ -36,13 +36,24 @@ import {
  * remaining travel are two views of it.
  *
  * That matters because the two motions are causally related rather than merely
- * simultaneous. The bar centres in the viewport on the landing and in the space
- * *beside* the rail on Explore, so its resting centre sits about half a rail
- * width further right: the horizontal half of the bar's travel is the rail's
- * arrival, measured. Driving them from one value is how that reads as a single
- * gesture instead of two things starting at once — and the horizontal component
- * is never assumed, because `dx` is the difference between two rects that were
- * actually measured.
+ * simultaneous. Driving them from one value is how they read as a single
+ * gesture instead of as two things starting at once.
+ *
+ * ## The travel is vertical now, and that is deliberate
+ *
+ * The bar used to come to rest about half a rail width further right on Explore
+ * than on the landing, because it centred in the viewport there and in the space
+ * *beside* the rail here — so the horizontal half of its travel was the rail's
+ * arrival, made visible. Explore now shifts its search row left by the rail's
+ * full width (`@3xl:mr-[236px]`, argued in `explore.tsx`), which puts the bar on
+ * the viewport's centre line on both pages and collapses `dx` to roughly zero.
+ *
+ * Nothing here needs changing for it and nothing is broken by it: `dx` is the
+ * difference between two rects that were actually measured, never a number this
+ * file assumes, and `dy` stays large enough that the bail-out below — which only
+ * refuses a bar that arrived where it already stood — is nowhere near. The rail
+ * still slides in on the same spring; it is only the bar that no longer travels
+ * sideways with it. Do not "restore" the offset as a bug.
  *
  * ## Why the offsets are written to the node
  *
