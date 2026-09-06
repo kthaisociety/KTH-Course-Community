@@ -55,6 +55,19 @@ The full source prose stating who may take a course, kept verbatim in
 `courses.eligibility`. Authoritative where a prerequisite edge is only a hint.
 _Avoid_: prerequisites, requirements text
 
+**School**:
+The KTH school that owns a course, as KOPPS reports it — `department.name` on
+the course detail, ingested into `courses.department`. It is the reader's word
+for it: Explore's filter is `aria-label="School"` and offers "All schools".
+
+This is the one entry that runs the other way round, and deliberately. The
+identifier stays `department` — the column, the `department ILIKE` the search
+filter runs, and the field on the wire — because that is KOPPS's own name for it
+and renaming it would buy a word no reader ever sees. So School in copy,
+`department` in code, and this is a settled mapping rather than a _Today_: no
+migration closes it.
+_Avoid_: faculty, institution, division — in either.
+
 ### A user's courses
 
 Saving, taking and reviewing are three independent relationships. None implies

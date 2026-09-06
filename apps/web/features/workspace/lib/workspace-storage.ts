@@ -3,6 +3,7 @@ import {
   type OpenCourse,
   type OpenCourseKind,
   type Workspace,
+  type WorkspaceScope,
 } from "./open-courses";
 import {
   decodeReviewDraft,
@@ -80,7 +81,25 @@ import {
  * whole point of the stamp.
  */
 
-const WORKSPACE_KEY = "cc.workspace.open";
+/**
+ * The open list's key, per page.
+ *
+ * One bare `cc.workspace.open` used to hold both pages' tabs, so navigating
+ * Explore → Saved rehydrated the list the other page had written and each
+ * showed the other's tabs. A tab belongs to the page it was opened on — see
+ * {@link WorkspaceScope} and ADR 0007 — so the scope is in the key.
+ *
+ * **The bare key is legacy and is never read or written again.** A reader
+ * mid-upgrade holds one under it; it expires with their session. This is
+ * deliberately *not* what `adoptLegacyDrafts` does below: that migrates drafts,
+ * because losing unpublished writing is real damage, whereas an open tab is one
+ * click to restore. Adopting a shared list into one page would put the leak this
+ * key exists to remove straight back.
+ */
+function workspaceKey(scope: WorkspaceScope): string {
+  return `cc.workspace.open.${scope}`;
+}
+
 const DRAFTS_KEY = "cc.workspace.drafts";
 const PUBLISHED_KEY = "cc.workspace.published";
 const AWAITING_SIGN_IN_KEY = "cc.workspace.awaiting-sign-in";
@@ -155,8 +174,8 @@ function toOpenCourse(value: unknown): OpenCourse | null {
   return { id, courseCode, kind: kind as OpenCourseKind };
 }
 
-export function readWorkspace(): Workspace {
-  const value = read("session", WORKSPACE_KEY);
+export function readWorkspace(scope: WorkspaceScope): Workspace {
+  const value = read("session", workspaceKey(scope));
   if (!isRecord(value) || !Array.isArray(value.open)) return EMPTY_WORKSPACE;
 
   const open = value.open
@@ -172,8 +191,11 @@ export function readWorkspace(): Workspace {
   return { open, activeId };
 }
 
-export function writeWorkspace(workspace: Workspace): void {
-  write("session", WORKSPACE_KEY, workspace);
+export function writeWorkspace(
+  scope: WorkspaceScope,
+  workspace: Workspace,
+): void {
+  write("session", workspaceKey(scope), workspace);
 }
 
 /** One course's draft with the clock reading that decides when to forget it. */

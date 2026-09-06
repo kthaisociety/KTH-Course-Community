@@ -8,14 +8,14 @@ beforeEach(() => {
 
 describe("useWorkspacePane", () => {
   it("starts with nothing open, so the host hides the pane", () => {
-    const { result } = renderHook(() => useWorkspacePane());
+    const { result } = renderHook(() => useWorkspacePane("explore"));
 
     expect(result.current.openCourses).toEqual([]);
     expect(result.current.hasOpenCourses).toBe(false);
   });
 
   it("opens, activates and closes courses", () => {
-    const { result } = renderHook(() => useWorkspacePane());
+    const { result } = renderHook(() => useWorkspacePane("explore"));
 
     act(() => result.current.open("DD2380", "details"));
     act(() => result.current.open("SF1626", "details"));
@@ -30,12 +30,12 @@ describe("useWorkspacePane", () => {
   });
 
   it("brings the open courses back after the page reloads to sign in", () => {
-    const first = renderHook(() => useWorkspacePane());
+    const first = renderHook(() => useWorkspacePane("explore"));
     act(() => first.result.current.open("DD2380", "details"));
     act(() => first.result.current.open("DD2380", "review"));
     first.unmount();
 
-    const { result } = renderHook(() => useWorkspacePane());
+    const { result } = renderHook(() => useWorkspacePane("explore"));
 
     expect(result.current.openCourses.map((entry) => entry.id)).toEqual([
       "details:DD2380",
@@ -45,12 +45,12 @@ describe("useWorkspacePane", () => {
   });
 
   it("does not restore a workspace that was closed down to nothing", () => {
-    const first = renderHook(() => useWorkspacePane());
+    const first = renderHook(() => useWorkspacePane("explore"));
     act(() => first.result.current.open("DD2380", "details"));
     act(() => first.result.current.close("details:DD2380"));
     first.unmount();
 
-    const { result } = renderHook(() => useWorkspacePane());
+    const { result } = renderHook(() => useWorkspacePane("explore"));
 
     expect(result.current.hasOpenCourses).toBe(false);
   });
@@ -80,7 +80,7 @@ describe("useWorkspacePane", () => {
     let renders = 0;
     const { result } = renderHook(() => {
       renders += 1;
-      return useWorkspacePane();
+      return useWorkspacePane("explore");
     });
 
     act(() => result.current.open("DD2380", "details"));
@@ -114,31 +114,96 @@ describe("useWorkspacePane", () => {
    */
   it("does not blank the stored open list on the way to restoring it", () => {
     sessionStorage.setItem(
-      "cc.workspace.open",
+      "cc.workspace.open.explore",
       JSON.stringify({
         open: [{ id: "review:DD2380", courseCode: "DD2380", kind: "review" }],
         activeId: "review:DD2380",
       }),
     );
 
-    const { result } = renderHook(() => useWorkspacePane());
+    const { result } = renderHook(() => useWorkspacePane("explore"));
 
     expect(result.current.openCourses.map((entry) => entry.id)).toEqual([
       "review:DD2380",
     ]);
     expect(
-      JSON.parse(sessionStorage.getItem("cc.workspace.open") ?? "{}").open,
+      JSON.parse(sessionStorage.getItem("cc.workspace.open.explore") ?? "{}")
+        .open,
     ).toHaveLength(1);
   });
 
   it("ignores whatever else is in the tab's storage", () => {
     sessionStorage.setItem(
-      "cc.workspace.open",
+      "cc.workspace.open.explore",
       JSON.stringify({ open: [{ id: 1 }, "nope"], activeId: 7 }),
     );
 
-    const { result } = renderHook(() => useWorkspacePane());
+    const { result } = renderHook(() => useWorkspacePane("explore"));
 
     expect(result.current.openCourses).toEqual([]);
+  });
+
+  /*
+   * The defect this scope exists for. Both hosts used to read one key, so
+   * navigating Explore → Saved unmounted one and mounted the other onto the
+   * *same* stored list — and each page showed the tabs the other had opened.
+   *
+   * Unmounting and mounting is what a route change does to these two, so that
+   * is what the test does: a tab opened under one scope, then the other scope
+   * mounted in its place.
+   */
+  describe("the scope", () => {
+    it("keeps one page's tabs out of the other", () => {
+      const explore = renderHook(() => useWorkspacePane("explore"));
+      act(() => explore.result.current.open("DD2380", "details"));
+      explore.unmount();
+
+      const saved = renderHook(() => useWorkspacePane("saved"));
+
+      expect(saved.result.current.openCourses).toEqual([]);
+      expect(saved.result.current.hasOpenCourses).toBe(false);
+    });
+
+    it("brings a page's own tabs back when the reader returns to it", () => {
+      const explore = renderHook(() => useWorkspacePane("explore"));
+      act(() => explore.result.current.open("DD2380", "details"));
+      explore.unmount();
+
+      // Saved in between, writing its own empty list over its own key.
+      renderHook(() => useWorkspacePane("saved")).unmount();
+
+      const back = renderHook(() => useWorkspacePane("explore"));
+
+      expect(back.result.current.openCourses.map((entry) => entry.id)).toEqual([
+        "details:DD2380",
+      ]);
+    });
+
+    /*
+     * A reader mid-upgrade holds a shared list under the bare key. Adopting it
+     * into one page would recreate the leak the scope removes, so it is left
+     * to expire with the session — read by nothing and written by nothing.
+     */
+    it("ignores the shared list an older build left behind", () => {
+      sessionStorage.setItem(
+        "cc.workspace.open",
+        JSON.stringify({
+          open: [
+            { id: "details:DD2380", courseCode: "DD2380", kind: "details" },
+          ],
+          activeId: "details:DD2380",
+        }),
+      );
+
+      const { result } = renderHook(() => useWorkspacePane("explore"));
+      act(() => result.current.open("SF1626", "details"));
+
+      expect(result.current.openCourses.map((entry) => entry.id)).toEqual([
+        "details:SF1626",
+      ]);
+      expect(
+        JSON.parse(sessionStorage.getItem("cc.workspace.open") ?? "{}").open,
+      ).toHaveLength(1);
+    });
   });
 });

@@ -41,5 +41,6 @@ export type {
   OpenCourse,
   OpenCourseKind,
   OpenCourseRequest,
+  WorkspaceScope,
 } from "./lib/open-courses";
 export { openCourseRequest } from "./lib/open-courses";
