@@ -879,4 +879,63 @@ describe("Saved", { timeout: 20_000 }, () => {
       ).toBeVisible();
     });
   });
+
+  /**
+   * The space this page holds for a block it does not have.
+   *
+   * Explore spends `--cc-search-block-h` on its search block between the header
+   * and the row the workspace pane sits in; this page puts nothing there. The
+   * tab strip lives in that row on both, so without the reservation the two
+   * strips started 74px apart - 118px before Explore's block came down to one
+   * row. Both sides read the one token, so neither can be edited to a literal
+   * without the other noticing.
+   *
+   * jsdom lays nothing out, so this reads the declaration rather than the
+   * pixels, as `workspace-pane-host.spec.tsx` does for its own `@3xl` gate.
+   */
+  describe("the space above the row", () => {
+    function row() {
+      return screen.getByTestId("saved-results").parentElement;
+    }
+
+    it("reserves what Explore spends on its search block", () => {
+      saved("DD2380");
+      render(<Saved />);
+
+      expect(row()).toHaveClass("@3xl:pt-[var(--cc-search-block-h)]");
+    });
+
+    /**
+     * Permanent, not conditional on tabs being open: a page that jumped down
+     * 74px when the reader opened their first tab would be worse than 74px of
+     * quiet space, and it would move the collections strip under a reader
+     * mid-scroll.
+     */
+    it("holds the space whether or not anything is open", async () => {
+      saved("DD2380");
+      render(<Saved />);
+      expect(row()).toHaveClass("@3xl:pt-[var(--cc-search-block-h)]");
+
+      await userEvent.click(
+        within(cardFor("DD2380")).getByRole("button", {
+          name: /Artificial Intelligence/,
+        }),
+      );
+
+      expect(screen.getByTestId("workspace-pane-host")).toBeInTheDocument();
+      expect(row()).toHaveClass("@3xl:pt-[var(--cc-search-block-h)]");
+    });
+
+    /**
+     * `@3xl` is `WorkspacePaneHost`'s own condition. Below it the workspace is a
+     * sheet, there is no side-by-side column and no tab strip to line up with,
+     * and 74px of blank costs real height on a phone.
+     */
+    it("gives the space up where there is no tab strip to line up with", () => {
+      saved("DD2380");
+      render(<Saved />);
+
+      expect(row()).not.toHaveClass("pt-[var(--cc-search-block-h)]");
+    });
+  });
 });

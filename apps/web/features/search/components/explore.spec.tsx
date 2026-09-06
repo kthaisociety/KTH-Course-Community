@@ -1056,4 +1056,116 @@ describe("Explore", () => {
       expect(bar()?.style.transform).toBe("");
     });
   });
+
+  /**
+   * Where the search block leaves the tab strip.
+   *
+   * Explore and Saved both host the workspace pane, and the strip sits in the
+   * row each of them puts below its header. Explore spends a search block on
+   * the way there and Saved spends nothing, so the strips started 118px apart.
+   * The block is one row now, and both pages measure the same token — Explore
+   * as height, Saved as padding — so neither number can move without the other.
+   *
+   * jsdom lays nothing out, so these read the declarations rather than the
+   * pixels. That is the same bargain `workspace-pane-host.spec.tsx` makes for
+   * the `@3xl` gate, and it catches the thing that actually breaks: one side
+   * being edited to a literal.
+   */
+  describe("the search block", () => {
+    function block() {
+      return screen.getByLabelText("Search courses").closest("search");
+    }
+
+    function bar() {
+      return screen.getByLabelText("Search courses").closest("form");
+    }
+
+    it("is one row, at the height Saved reserves for it", () => {
+      render(<Explore />);
+
+      expect(block()).toHaveClass(
+        "@3xl:h-[var(--cc-search-block-h)]",
+        "@3xl:flex-row",
+      );
+    });
+
+    /**
+     * Only where there is a pane to line up with. Below `@3xl` the workspace is
+     * a sheet, Saved reserves nothing, and the block keeps the two-row stack it
+     * has always had — a phone measured with the row forced on it put the search
+     * field at 128px to keep a filter beside it.
+     */
+    it("keeps its own stack where there is no tab strip to line up with", () => {
+      render(<Explore />);
+
+      expect(block()).toHaveClass("flex-col");
+      expect(block()).not.toHaveClass("h-[var(--cc-search-block-h)]");
+    });
+
+    it("puts the school filter in the row rather than under it", () => {
+      render(<Explore />);
+
+      const row = block();
+      expect(row).not.toBeNull();
+      expect(row).toContainElement(bar());
+      expect(row).toContainElement(screen.getByLabelText("School"));
+      // Siblings in the row, not the bar's own children: a filter is its own
+      // committed choice and there is nothing here for a submit to gather.
+      expect(bar()).not.toContainElement(screen.getByLabelText("School"));
+    });
+
+    /**
+     * 236px is the rail's width, so a right margin of it on a centred row puts
+     * the bar on the viewport's centre line instead of the centre of the column
+     * beside the rail. Gated to `@3xl` because that is where the rail itself
+     * appears — below it there is nothing to compensate for.
+     */
+    it("shifts left by the rail's width, only where there is a rail", () => {
+      render(<Explore />);
+
+      expect(block()).toHaveClass("@3xl:mr-[236px]");
+      expect(block()).not.toHaveClass("mr-[236px]");
+    });
+
+    /**
+     * The bar is centred, not the bar and the filters together. "Clear filters"
+     * joins the row whenever a school is chosen, and a centred group would shove
+     * the field sideways each time it appeared — its resting position is what
+     * the landing hand-off aims at. A flexible track on each side is what holds
+     * it still, so the bar keeps its own place while the filters grow rightward.
+     */
+    it("keeps the bar's resting place when Clear filters joins the row", () => {
+      search = "q=graphs";
+      const plain = render(<Explore />);
+      expect(
+        screen.queryByRole("button", { name: "Clear filters" }),
+      ).not.toBeInTheDocument();
+      const spacer = bar()?.previousElementSibling;
+      expect(spacer).toBe(block()?.firstElementChild);
+      expect(spacer).toHaveClass("flex-1");
+      plain.unmount();
+
+      search = "q=graphs&department=EECS";
+      render(<Explore />);
+
+      expect(
+        screen.getByRole("button", { name: "Clear filters" }),
+      ).toBeVisible();
+      // The same balancing track, on the same side of the same bar: the button
+      // grows rightward off the field instead of pushing it.
+      expect(bar()?.previousElementSibling).toBe(block()?.firstElementChild);
+      expect(bar()?.previousElementSibling).toHaveClass("flex-1");
+    });
+
+    /**
+     * One bar across two pages. `search-morph.tsx` animates the arriving bar
+     * with `translate3d` alone and never interpolates width, so a hero bar of a
+     * different size would snap at the moment of arrival.
+     */
+    it("takes the width the landing's hero bar is capped at", () => {
+      render(<Explore />);
+
+      expect(bar()).toHaveClass("max-w-[var(--cc-search-bar-w)]");
+    });
+  });
 });

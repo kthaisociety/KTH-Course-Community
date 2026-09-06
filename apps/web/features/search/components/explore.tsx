@@ -57,11 +57,25 @@ import { useExplore } from "../hooks/use-explore";
  *   SQL, so it is cheap, exact, and does not distort the result count. A filter
  *   that cannot be expressed in SQL does not belong beside it — see
  *   `server/search/service.ts`.
- * - The artboard narrows its **search bar** by 236px while tabs are open
- *   (`searchBarMargin`) so the field stays centred over the results
- *   rather than over the whole row. Not built: the bar is centred inside a
- *   `max-w-[560px]` box that is already narrower than the results column at
- *   every width the pane can open at, so the correction has nothing to correct.
+ * - The artboard shifts its **search bar** left by 236px while tabs are open
+ *   (`searchBarMargin`), and 236px is **the rail's width** —
+ *   `features/shell/components/app-shell.tsx` draws it `w-[236px]` and the
+ *   artboard's own rail is `width:236px`. The content column spans `236 → W`,
+ *   so its centre sits at `(W + 236) / 2`, which is 118px right of the
+ *   viewport's centre `W / 2`; a `margin-right` of 236px on a centred row
+ *   cancels exactly that. What the shift does is put the bar on the
+ *   **viewport's** centre line rather than on the centre of the column beside
+ *   the rail. Built, with two deliberate differences: it is applied
+ *   unconditionally rather than only while tabs are open, so the bar has one
+ *   resting position instead of sliding 118px sideways the moment a reader
+ *   opens their first tab — and the landing hand-off aims at that position. And
+ *   it is gated to `@3xl`, matching the rail's own `hidden @3xl/shell:block`,
+ *   because below that there is no rail to compensate for.
+ * - **The search block is one row, 74px tall, and the height is a token.**
+ *   `--cc-search-block-h` in `globals.css` is what Explore spends here and what
+ *   Saved reserves above its own row, so the two pages' tab strips start at the
+ *   same height. The school filter sits beside the bar rather than under it,
+ *   which is what gets the block from 118px down to the artboard's own 74.
  * - The artboard's **shared-element handoff from the landing hero** (its
  *   `pickUpSharedBar()`) *is* built, and is the one place in the app
  *   authorised to improve on the artboard rather than match it.
@@ -122,11 +136,42 @@ export function Explore() {
         />
       </div>
 
-      <search className="flex shrink-0 flex-col items-center gap-2.5 px-6 pt-[18px] pb-3.5">
+      {/*
+        The artboard's search row — `display:flex; align-items:center; gap:12px`
+        — at the height both pages measure their tab strips from. `mr-[236px]`
+        is the rail-width correction argued at the top of this file.
+
+        All of it is gated to `@3xl`, the same width the rail appears at, the
+        pane becomes a column and Saved reserves its matching space. Below it the
+        block keeps the two-row stack it has always had, and that is not a
+        compromise: there is no rail to correct for, no tab strip to line up
+        with, and a phone measured with the row forced on it put the search field
+        at 128px to keep a filter beside it. Nothing above @3xl reads the narrow
+        end, so the two layouts do not have to agree.
+      */}
+      <search className="flex shrink-0 flex-col items-center gap-2.5 px-6 pt-[18px] pb-3.5 @3xl:mr-[236px] @3xl:h-[var(--cc-search-block-h)] @3xl:flex-row @3xl:gap-3 @3xl:pt-0 @3xl:pb-0">
+        {/*
+          The bar's other half, and the whole reason it is centred rather than
+          the row's contents being centred together. It gives the left of the
+          row a flexible track equal to the one the filters occupy on the right,
+          so the field keeps one resting position whatever joins the row beside
+          it — "Clear filters" appears and disappears with the school, and a
+          centred group would shove the bar sideways each time. That resting
+          position is what the landing hand-off aims at, so it may not move.
+
+          It holds nothing and is announced as nothing.
+        */}
+        <div aria-hidden className="hidden min-w-0 flex-1 @3xl:block" />
+
+        {/*
+          `--cc-search-bar-w`, which the landing's hero bar is capped at too —
+          they are one bar to the reader and the hand-off between them does not
+          interpolate width. The token carries the argument.
+        */}
         <form
           ref={barRef}
           onSubmit={explore.onSubmit}
-          className="w-full max-w-[560px]"
+          className="w-full min-w-0 max-w-[var(--cc-search-bar-w)]"
         >
           <div className="flex h-[42px] items-center gap-2.5 rounded-[10px] border border-cc-rule3 bg-cc-surface px-3.5">
             <SearchIcon
@@ -513,8 +558,39 @@ function ResultsSkeleton() {
   );
 }
 
+/**
+ * The width rules are `@3xl:` only, and every number in them was measured in the
+ * running app rather than reasoned about. Below that width the control is
+ * exactly what it has always been: the narrow layout keeps its own row and is
+ * not touched here.
+ *
+ * A native `<select>` sizes itself to its widest **option**, and these options
+ * are whole department names — 100 of them, the longest "ECE/Skolan för
+ * teknikvetenskaplig kommunikation och lärande". Left alone the control comes
+ * out **398px** wide. That is harmless in a row of its own and is not once it
+ * shares a fixed-height row with the search bar: measured at a 1920px viewport
+ * it spilled 194px past its track and out of the row entirely.
+ *
+ * So on the row it is given a resting width and allowed to clip its own label,
+ * and nothing is lost by that — the open dropdown draws every option at full
+ * width, which is the one place the whole string has to be readable.
+ * `min-w-0` lets it give way first when "Clear filters" joins the row: measured
+ * at 1920 it settles to 112px beside the button and 176px without it, and in
+ * both cases the row ends exactly on its own content edge.
+ *
+ * What it may *not* do is vanish. `Filters` carries a `@3xl:min-w-[12.5rem]`
+ * floor for that: without one, the select is the control that collapses,
+ * because it sits in a flexible track while the bar has a real width to shrink
+ * from — at a 1010px viewport, where the rail correction has just taken 236px
+ * off a 498px row, it measured **22px**. With the floor the bar absorbs the
+ * loss instead and the pair settles at 226px and 108px, which is the right way
+ * round: a shorter search field is legible, a 22px filter is not. 12.5rem is
+ * also the largest floor the centring survives — the track is 204px at the
+ * content column's cap, and a floor above that would push the bar off the
+ * viewport's centre line at every width.
+ */
 const SELECT_CLASS =
-  "h-[34px] cursor-pointer rounded-[8px] border border-cc-rule3 bg-cc-surface px-2.5 font-medium text-[12.5px] text-cc-chip-ink hover:border-cc-hov focus-visible:outline-cc-brand";
+  "h-[34px] cursor-pointer rounded-[8px] border border-cc-rule3 bg-cc-surface px-2.5 font-medium text-[12.5px] text-cc-chip-ink @3xl:w-[11rem] @3xl:min-w-0 @3xl:max-w-full hover:border-cc-hov focus-visible:outline-cc-brand";
 
 /**
  * The school filter, and the only filter.
@@ -537,7 +613,7 @@ function Filters({ explore }: { explore: ReturnType<typeof useExplore> }) {
     // behind the arriving search bar rather than being there before it lands.
     <div
       data-cc-fade
-      className="flex flex-wrap items-center justify-center gap-2"
+      className="flex flex-wrap items-center justify-center gap-2 @3xl:min-w-[12.5rem] @3xl:flex-1 @3xl:flex-nowrap @3xl:justify-start"
     >
       <select
         aria-label="School"
@@ -557,7 +633,7 @@ function Filters({ explore }: { explore: ReturnType<typeof useExplore> }) {
         <button
           type="button"
           onClick={explore.onClearFilters}
-          className="h-[34px] cursor-pointer rounded-[8px] px-2.5 font-medium text-[12.5px] text-cc-brand hover:underline"
+          className="h-[34px] cursor-pointer rounded-[8px] px-2.5 font-medium text-[12.5px] text-cc-brand @3xl:shrink-0 hover:underline"
         >
           Clear filters
         </button>
