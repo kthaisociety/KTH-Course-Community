@@ -410,15 +410,14 @@ export function Saved({ openCollectionId = null, openCourse = null }: Props) {
                             workspace.open(course.courseCode, "review")
                           }
                           /*
-                            Every picker on this page opens upwards. The
-                            2026-09-05 artboard dropped its `picker-above` from
-                            this import, but the reason it was passed is a
-                            property of the page rather than of the drawing: the
-                            saved list is a single scrolling column, and a panel
-                            dropping out of the last card falls out of a box that
-                            is `overflow-x-hidden`. Following the removal would
-                            reintroduce that; it is recorded here rather than
-                            silently kept.
+                            A deliberate deviation: the Saved artboard leaves
+                            the Course Card's `pickerAbove` at its default, and
+                            this page passes it anyway. The reason is a property
+                            of the page rather than of the drawing — the saved
+                            list is a single scrolling column, and a panel
+                            dropping out of the last card falls out of a box
+                            that is `overflow-x-hidden`. Matching the artboard
+                            here would reintroduce that.
                           */
                           pickerAbove
                           onRequestAuth={setAuthReason}

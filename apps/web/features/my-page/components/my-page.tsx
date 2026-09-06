@@ -188,12 +188,9 @@ export function MyPage() {
   }
 
   // Signed out, which is a state this page renders rather than a state it
-  // refuses. `My Page.dc.html:73` draws it: the panel below, inside the shell,
-  // with the rail beside it carrying its own guest banner. This page is no
-  // no longer redirected away by a proxy and no longer calls
-  // `useRequireSession`, so a guest arrives here instead of at `/auth` — and so
-  // does the stale-cookie case that used to be the only way to reach this
-  // branch.
+  // refuses. The My Page artboard draws it: the panel below, inside the shell,
+  // with the rail beside it carrying its own guest banner. Nothing gates the
+  // route, so a visitor arrives here rather than at `/auth`.
   if (!isSessionLoading && !isAuthenticated) {
     return (
       <PageColumn>
