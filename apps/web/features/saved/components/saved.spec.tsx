@@ -801,6 +801,28 @@ describe("Saved", { timeout: 20_000 }, () => {
       ).toBeVisible();
     });
 
+    /**
+     * The premise `retireGuestSaves` leans on when it accepts that its marker
+     * compare is two operations rather than one: nothing leaves the browser
+     * that the account is not already holding, so the worst a mistimed delete
+     * can cost is a duplicate rather than the last copy of a save.
+     */
+    it("retires only what the account holds, when a write fails", async () => {
+      saved("DD2380");
+      writeGuestSaves(["DD2380", "DD2421"]);
+      setSaved.mockRejectedValueOnce(new Error("offline"));
+      render(<Saved />);
+
+      await userEvent.click(
+        screen.getByRole("button", { name: "Add to my account" }),
+      );
+
+      // DD2380 was in the account before the run and is retired on the strength
+      // of that; DD2421 never reached it, so it stays where it is.
+      expect(setSaved).toHaveBeenCalledExactlyOnceWith("DD2421", true);
+      expect(readGuestSaves()).toEqual(["DD2421"]);
+    });
+
     // Retiring before the writes land is what would lose the list outright.
     it("keeps the browser list when a write fails, and offers a retry", async () => {
       saved();

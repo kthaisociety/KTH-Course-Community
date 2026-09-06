@@ -26,11 +26,12 @@
  * only where that API exists, which left the same bug behind a browser check.
  *
  * A save is a flag on a course, so each one is its own key. Saving is
- * `setItem`, unsaving and retiring are `removeItem`, and every one of them is a
- * single atomic operation on a key no other course touches. Two tabs can now
- * save, unsave and import at the same time and none of them can erase another's
- * work, in every browser, with no lock. Reading enumerates the prefix, and a
- * read that races a write merely repaints.
+ * `setItem` and unsaving is `removeItem`: one atomic operation on a key no
+ * other course touches, so two tabs can save and unsave at the same time and
+ * neither can erase the other's work, in every browser, with no lock. Reading
+ * enumerates the prefix, and a read that races a write merely repaints.
+ * Retiring an import is the one operation that still reads before it writes,
+ * and `retireGuestSaves` sets out what that costs and why it is left as it is.
  *
  * The value stored is a sequence number, so the list keeps the order courses
  * were saved in rather than whatever order the browser hands keys back. It is
@@ -206,6 +207,21 @@ export function setGuestSave(courseCode: string, saved: boolean): void {
  * the re-save wrote a new one, so a key whose value has moved is left alone and
  * offered again. Reading it back is not a read-modify-write of the list; it is
  * one key answering whether it still holds the save that was imported.
+ *
+ * **What the compare does not close, and why it is left open.** `getItem` and
+ * `removeItem` are two operations and `localStorage` has no conditional delete
+ * to make them one, so a re-save landing between them is still deleted. Two
+ * things bound that. It is a window of one synchronous tick rather than the
+ * seconds of awaited network writes the paragraphs above are about. And every
+ * code that reaches here is a course the account already holds — either it was
+ * there before the run or the run just wrote it — so what a mistimed delete can
+ * cost is the browser's copy of a save the account is keeping, never the only
+ * copy of anything. Closing it needs mutual exclusion that every writer takes,
+ * which means `navigator.locks` and an async `setGuestSave` reaching every Save
+ * button in the app; that is both the lock this layout was chosen to do without
+ * and the shape review already rejected upstream in this file, because where
+ * the API is missing — older browsers, and jsdom, so every test here — the
+ * fallback is this code with none of the locked path exercised.
  */
 export function retireGuestSaves(saves: readonly GuestSave[]): void {
   if (!saves.length) return;
