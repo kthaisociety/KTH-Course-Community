@@ -48,10 +48,39 @@ import type {
  * dropped on read, so a transcript read on a shared machine is not still sitting
  * there tomorrow.
  *
- * **Only a guest ever writes one.** A signed-in reader confirms in place and
- * never reaches this file, so there is no second account's data to keep apart —
- * the owner-keying `workspace-storage.ts` needs does not apply. The record is
- * cleared the moment it is claimed.
+ * **It is claimable only by the sign-in it was written for.** Only a guest ever
+ * *writes* a record, but that says nothing about who *reads* one, and the read
+ * is where the exposure is: guest A parses a transcript on a shared machine and
+ * never finishes signing in, person B signs in on the same browser profile
+ * inside the half hour, and a record keyed on nothing at all is A's course list
+ * — and A's grades, if A had the switch on — sitting on B's screen under
+ * "Looks right". An earlier revision of this comment argued from the writer to
+ * conclude "there is no second account's data to keep apart"; that does not
+ * follow, and it was wrong.
+ *
+ * So the record carries a `handoff` token, minted at write time and handed to
+ * the caller, which puts it in the return-to the sign-in round trip carries
+ * (`?resume=`). A read presents a token or gets nothing. The sign-in that asked
+ * for the account comes back holding it; a reader who merely arrives at `/taken`
+ * on the same browser does not, whether they are signed in or not.
+ *
+ * That last clause matters and is not belt-and-braces. Letting a *signed-out*
+ * read go through untokened would defeat the whole scheme: B would be shown A's
+ * rows, press "Sign in to keep this list", and that press mints a fresh token
+ * bound to B's own sign-in over A's data.
+ *
+ * **What this is.** A single-use capability that rides the sign-in, not a
+ * server-side proof of ownership — nothing here can be, because at write time
+ * there is no account yet to bind to. It closes the shared-browser path above.
+ * It does not defend a reader who has handed over their own magic-link mail or
+ * their browser history, at which point the transcript is the smaller loss.
+ *
+ * The price is that the record no longer survives a *back* navigation out of the
+ * sign-in, because the history entry for `/taken` predates the token. Re-reading
+ * the file is two clicks and the drop zone is the screen they land on; being
+ * shown somebody else's grades has no similar remedy.
+ *
+ * The record is cleared the moment it is claimed.
  *
  * ## One key, whole-record writes
  *
@@ -68,6 +97,44 @@ const KEY = "kth-cc:taken-proposal";
 /** How long a stored proposal is honoured. */
 export const GUEST_PROPOSAL_TTL_MS = 30 * 60 * 1000;
 
+/**
+ * The parameter the handoff token rides back on.
+ *
+ * `safeReturnTo` keeps a path's query intact and `authHref` encodes the whole
+ * thing into `?next=`, so one name works for both halves of the round trip: the
+ * OAuth `callbackURL`, and the `/auth` mail whose link opens a *new tab* where
+ * the URL is the only thing that arrived.
+ */
+export const RESUME_PARAM = "resume";
+
+/** The handoff token an arrival is carrying, or `null`. */
+export function parseHandoff(search: string): string | null {
+  try {
+    const value = new URLSearchParams(search).get(RESUME_PARAM);
+    return value === null || value === "" ? null : value;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * `here`, with the handoff token on it — the return-to a sign-in comes back to.
+ *
+ * Built on `URL` against a throwaway origin rather than by string-joining,
+ * because `here` may already carry a query and this must not be the code that
+ * invents `/taken??resume=` or a second one. Only the path and query are
+ * returned, which is the only shape `safeReturnTo` accepts.
+ */
+export function withHandoff(here: string, handoff: string): string {
+  try {
+    const url = new URL(here, "https://cc.invalid");
+    url.searchParams.set(RESUME_PARAM, handoff);
+    return `${url.pathname}${url.search}`;
+  } catch {
+    return here;
+  }
+}
+
 /** A parsed transcript waiting for the account that will keep it. */
 export type StoredGuestProposal = {
   proposal: TranscriptProposal;
@@ -75,7 +142,24 @@ export type StoredGuestProposal = {
   includeGrades: boolean;
 };
 
-type Record_ = StoredGuestProposal & { savedAt: number };
+type Record_ = StoredGuestProposal & { savedAt: number; handoff: string };
+
+/**
+ * The token that ties one stored proposal to one sign-in.
+ *
+ * `randomUUID` where there is one, and a random-enough fallback where there is
+ * not — this is a handle that has to be *unguessable by the next person at the
+ * keyboard*, not a secret held against an attacker who can already run code on
+ * this origin. Anyone who can run code here can read the record directly.
+ */
+function mintHandoff(): string {
+  try {
+    if (typeof crypto?.randomUUID === "function") return crypto.randomUUID();
+  } catch {
+    /* fall through to the arithmetic below */
+  }
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+}
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -142,7 +226,12 @@ export function forStorage(
 }
 
 /**
- * Holds one proposal for the sign-in that is about to happen.
+ * Holds one proposal for the sign-in that is about to happen, and returns the
+ * token that sign-in must come back with.
+ *
+ * The caller puts it in the return-to; `readGuestProposal` will not part with
+ * the record for anything else. `null` means nothing was stored, so the caller
+ * can leave the URL alone rather than promising a resume that cannot happen.
  *
  * Every access to `localStorage` is wrapped: it throws outright in a browser
  * set to block site data and in Safari's private mode. A reader who has turned
@@ -151,30 +240,44 @@ export function forStorage(
 export function writeGuestProposal(
   proposal: TranscriptProposal,
   includeGrades: boolean,
-): void {
+): string | null {
+  const handoff = mintHandoff();
   try {
     const record: Record_ = {
       proposal: forStorage(proposal, includeGrades),
       includeGrades,
       savedAt: Date.now(),
+      handoff,
     };
     window.localStorage.setItem(KEY, JSON.stringify(record));
+    return handoff;
   } catch {
     /* storage unavailable — the reader re-reads the file instead */
+    return null;
   }
 }
 
 /**
- * The waiting proposal, or `null`.
+ * The proposal this `handoff` token was written for, or `null`.
  *
- * Defensive throughout: what comes back is whatever is in this browser's
- * storage, possibly written by an older build and possibly not written by us at
- * all. Anything that is not a record of rows with course codes in it is dropped
- * rather than trusted.
+ * The token is required and compared before anything is decoded, so a reader
+ * who did not come back from the sign-in that stored the record — the next
+ * person at a shared browser, signed in or not — gets `null` rather than a
+ * stranger's transcript. A `null` or empty token is *never* a match, so a
+ * caller that simply forgot to pass one fails closed.
+ *
+ * Defensive throughout otherwise: what comes back is whatever is in this
+ * browser's storage, possibly written by an older build and possibly not
+ * written by us at all. A record from before this token existed has no
+ * `handoff`, matches nothing, and is dropped. Anything that is not a record of
+ * rows with course codes in it is dropped rather than trusted.
  */
 export function readGuestProposal(
+  handoff: string | null,
   now: number = Date.now(),
 ): StoredGuestProposal | null {
+  if (typeof handoff !== "string" || handoff === "") return null;
+
   let raw: string | null;
   try {
     raw = window.localStorage.getItem(KEY);
@@ -190,6 +293,10 @@ export function readGuestProposal(
     return null;
   }
   if (!isObject(parsed)) return null;
+
+  // Before the TTL and before the shape: this is the question that decides
+  // whether the record is *ours to read at all*.
+  if (parsed.handoff !== handoff) return null;
 
   const savedAt = numberOrNull(parsed.savedAt);
   if (savedAt === null || now - savedAt > GUEST_PROPOSAL_TTL_MS) return null;

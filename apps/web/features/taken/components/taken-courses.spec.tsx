@@ -211,6 +211,27 @@ async function uploadPdf() {
   await userEvent.upload(screen.getByLabelText("Ladok transcript PDF"), PDF());
 }
 
+/**
+ * The token the page minted for whatever is in storage now.
+ *
+ * Read off the raw record because the page mints it internally and hands it to
+ * the sign-in rather than to us — which is the whole point of it.
+ */
+function storedHandoff(): string | null {
+  const raw = localStorage.getItem("kth-cc:taken-proposal");
+  return raw === null ? null : JSON.parse(raw).handoff;
+}
+
+/**
+ * A proposal left for a sign-in, arrived at the way a real sign-in comes back:
+ * on `/taken` carrying the record's handoff token. Nothing else reopens it.
+ */
+function arriveFromSignIn(includeGrades = false): string {
+  const handoff = writeGuestProposal(proposal(), includeGrades);
+  window.history.replaceState({}, "", `/taken?resume=${handoff}`);
+  return handoff ?? "";
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   // `?review=1` and an interrupted round are both read off the browser, so
@@ -1253,7 +1274,7 @@ describe("a signed-out visitor", () => {
       }),
     );
 
-    const held = readGuestProposal();
+    const held = readGuestProposal(storedHandoff());
     expect(held?.proposal.candidates).toEqual([
       expect.objectContaining({ courseCode: "DD1337", grade: null }),
     ]);
@@ -1269,7 +1290,9 @@ describe("a signed-out visitor", () => {
       }),
     );
 
-    expect(readGuestProposal()?.proposal.candidates[0].grade).toBe("B");
+    expect(
+      readGuestProposal(storedHandoff())?.proposal.candidates[0].grade,
+    ).toBe("B");
   });
 
   it("asks for an account instead of opening the by-hand form", async () => {
@@ -1299,7 +1322,7 @@ describe("coming back from a sign-in", () => {
   beforeEach(() => takenList.mockReturnValue([]));
 
   it("puts the transcript back on the preview", async () => {
-    writeGuestProposal(proposal(), false);
+    arriveFromSignIn();
     render(<TakenCourses />);
 
     expect(await screen.findByText("1 course read")).toBeInTheDocument();
@@ -1310,18 +1333,30 @@ describe("coming back from a sign-in", () => {
   });
 
   it("writes only once the reader confirms, and then forgets the record", async () => {
-    writeGuestProposal(proposal(), false);
+    const handoff = arriveFromSignIn();
     render(<TakenCourses />);
     await userEvent.click(
       await screen.findByRole("button", { name: "Looks right" }),
     );
 
     await waitFor(() => expect(confirmImport).toHaveBeenCalledTimes(1));
-    expect(readGuestProposal()).toBeNull();
+    expect(readGuestProposal(handoff)).toBeNull();
+  });
+
+  /**
+   * A spent capability has no business staying in the address bar, in history,
+   * or in a URL the reader pastes to somebody. Taken back out the same way
+   * `?review=` is.
+   */
+  it("takes the token back out of the URL", async () => {
+    arriveFromSignIn();
+    render(<TakenCourses />);
+
+    await waitFor(() => expect(routerReplace).toHaveBeenCalledWith("/taken"));
   });
 
   it("drops a record that has gone stale rather than reviving it", async () => {
-    writeGuestProposal(proposal(), false);
+    arriveFromSignIn();
     vi.setSystemTime(Date.now() + GUEST_PROPOSAL_TTL_MS + 1000);
     render(<TakenCourses />);
 
@@ -1329,5 +1364,100 @@ describe("coming back from a sign-in", () => {
       await screen.findByLabelText("Ladok transcript PDF"),
     ).toBeInTheDocument();
     expect(screen.queryByText("1 course read")).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * The shared browser, which is what the handoff token is for.
+ *
+ * Guest A reads a transcript on a library machine and never finishes signing
+ * in. Their record sits in `localStorage` for up to half an hour. Everything
+ * below is somebody *else* arriving at that browser inside the window, and none
+ * of them may be shown A's courses — the record is claimable only by an arrival
+ * carrying its token, which only A's own sign-in was given.
+ *
+ * Greptile reported the signed-in case as a P1 on #200 and reproduced it. It
+ * was real: the pickup keyed on nothing but "is there a session", so B saw A's
+ * rows with "Looks right" under them. The untokened *signed-out* read had to go
+ * with it, and that is the subtler half — B being shown the rows while signed
+ * out could press "Sign in to keep this list", which mints a fresh token bound
+ * to B's own sign-in over A's data, and lands right back at the same place.
+ */
+describe("a transcript left behind on a shared browser", () => {
+  beforeEach(() => takenList.mockReturnValue([]));
+
+  /** Guest A's record, with no token given to whoever arrives next. */
+  function leftByGuestA(includeGrades = true) {
+    writeGuestProposal(proposal(), includeGrades);
+    window.history.replaceState({}, "", "/taken");
+  }
+
+  it("is not shown to a different account signing in on the same browser", async () => {
+    leftByGuestA();
+    me.mockReturnValue({ isLoading: false, isAuthenticated: true });
+    render(<TakenCourses />);
+
+    expect(
+      await screen.findByLabelText("Ladok transcript PDF"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("1 course read")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Looks right" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("keeps the grades off that account's screen too", async () => {
+    leftByGuestA(true);
+    me.mockReturnValue({ isLoading: false, isAuthenticated: true });
+    render(<TakenCourses />);
+
+    await screen.findByLabelText("Ladok transcript PDF");
+    expect(screen.queryByText("B")).not.toBeInTheDocument();
+  });
+
+  /** Refused, not consumed: A's own sign-in can still come back for it. */
+  it("leaves the record for the sign-in it was written for", async () => {
+    leftByGuestA();
+    const handoff = storedHandoff();
+    me.mockReturnValue({ isLoading: false, isAuthenticated: true });
+    render(<TakenCourses />);
+
+    await screen.findByLabelText("Ladok transcript PDF");
+    expect(readGuestProposal(handoff)).not.toBeNull();
+  });
+
+  it("is not shown to the next signed-out visitor either", async () => {
+    leftByGuestA();
+    me.mockReturnValue({ isLoading: false, isAuthenticated: false });
+    render(<TakenCourses />);
+
+    expect(
+      await screen.findByLabelText("Ladok transcript PDF"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("1 course read")).not.toBeInTheDocument();
+  });
+
+  /**
+   * The token is a capability, so a guessed one is worth no more than none.
+   */
+  it("is not shown to an arrival carrying the wrong token", async () => {
+    leftByGuestA();
+    window.history.replaceState({}, "", "/taken?resume=not-the-token");
+    me.mockReturnValue({ isLoading: false, isAuthenticated: true });
+    render(<TakenCourses />);
+
+    expect(
+      await screen.findByLabelText("Ladok transcript PDF"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("1 course read")).not.toBeInTheDocument();
+  });
+
+  /** Nothing above may cost A their own resume. */
+  it("still comes back for the sign-in that left it", async () => {
+    arriveFromSignIn();
+    me.mockReturnValue({ isLoading: false, isAuthenticated: true });
+    render(<TakenCourses />);
+
+    expect(await screen.findByText("1 course read")).toBeInTheDocument();
   });
 });

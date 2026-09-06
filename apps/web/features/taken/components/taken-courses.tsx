@@ -29,7 +29,9 @@ import { useTakenMutations } from "../api/mutations";
 import { uploadTranscript } from "../api/transcript";
 import {
   clearGuestProposal,
+  parseHandoff,
   readGuestProposal,
+  withHandoff,
   writeGuestProposal,
 } from "../lib/guest-proposal";
 import {
@@ -260,6 +262,24 @@ export function TakenCourses() {
   const hasReadArrival = useRef(false);
   /** Whether a proposal left for a sign-in has already been picked up. */
   const hasTakenHandoff = useRef(false);
+  /**
+   * The handoff token this arrival carried, read once on mount.
+   *
+   * Held in a ref rather than re-read where it is used, because the arrival
+   * effect takes `?review=` back out with `router.replace("/taken")` and the
+   * pickup below waits for the session — so by the time it runs, the URL may
+   * already have been emptied of both parameters. Whether this page was
+   * arrived at by a sign-in coming back is a fact about the moment it mounted.
+   */
+  const arrivedWithHandoff = useRef<string | null>(null);
+  /**
+   * The token for the proposal this page has just written down, or `null`.
+   *
+   * A ref because it is read when the reader picks a provider, not when
+   * anything renders, and because it must not be stale by then: it is set in
+   * the same handler that opens the dialog.
+   */
+  const pendingHandoff = useRef<string | null>(null);
 
   const lastImport = lastTranscriptImport(takenCourses);
   const isBusy = update.isPending || remove.isPending || add.isPending;
@@ -295,8 +315,15 @@ export function TakenCourses() {
     if (hasReadArrival.current) return;
     hasReadArrival.current = true;
 
-    const deepLink = parseReviewDeepLink(window.location.search);
-    if (deepLink !== null) router.replace("/taken");
+    const search = window.location.search;
+    const deepLink = parseReviewDeepLink(search);
+    // Read before anything replaces the URL, and taken back out with it: a
+    // spent capability has no business sitting in the address bar, in history,
+    // or in whatever the reader pastes into a chat to show someone the page.
+    arrivedWithHandoff.current = parseHandoff(search);
+    if (deepLink !== null || arrivedWithHandoff.current !== null) {
+      router.replace("/taken");
+    }
 
     const session = readReviewerSession();
     if (deepLink !== null || session) setPendingOpen({ deepLink, session });
@@ -305,6 +332,15 @@ export function TakenCourses() {
   /**
    * Picks up the transcript a signed-out reader left behind on their way to
    * sign in — the artboard's `pending: "confirm"` (`… - Taken Courses.dc.html:1307`).
+   *
+   * **Only for the sign-in that left it.** The record is claimable only by an
+   * arrival carrying its handoff token, which the confirm below put in the
+   * return-to on the way out. Without one this does nothing at all, so a reader
+   * who merely opens `/taken` on a shared browser — signed in as somebody else,
+   * or still signed out — is never shown the previous visitor's transcript.
+   * `guest-proposal.ts` sets out why the untokened signed-out read had to go
+   * too: it was the step that let a second reader launder a first reader's rows
+   * into their own account.
    *
    * Waits for the session to be known, because whether there is one decides
    * both halves of what happens: an account **claims** the record, which is
@@ -326,10 +362,13 @@ export function TakenCourses() {
     if (hasTakenHandoff.current || isSessionLoading) return;
     hasTakenHandoff.current = true;
 
-    const held = readGuestProposal();
+    const held = readGuestProposal(arrivedWithHandoff.current);
     if (held === null) return;
     // Claimed: it has done its job and has no business outliving the sign-in.
-    if (isAuthenticated) clearGuestProposal();
+    if (isAuthenticated) {
+      clearGuestProposal();
+      pendingHandoff.current = null;
+    }
     setProposal(held.proposal);
     setIncludeGrades(held.includeGrades);
     setIsResumed(isAuthenticated);
@@ -517,7 +556,11 @@ export function TakenCourses() {
     // first so the sign-in can bring it back. Nothing has been stored on the
     // server at this point and nothing is about to be.
     if (!isAuthenticated) {
-      writeGuestProposal(proposal, includeGrades);
+      // The token comes back on the return-to and is the only thing that can
+      // reopen this record — see `guest-proposal.ts`. `null` means storage
+      // refused the write, and then the return-to stays plain `/taken`: there
+      // is nothing to resume and no point advertising a token for it.
+      pendingHandoff.current = writeGuestProposal(proposal, includeGrades);
       setAuthReason("keep-course-list");
       return;
     }
@@ -550,6 +593,7 @@ export function TakenCourses() {
       setProposal(null);
       setIsResumed(false);
       clearGuestProposal();
+      pendingHandoff.current = null;
       setBanner(
         importedSummary(written.inserted + written.updated, plan.fill.length),
       );
@@ -678,6 +722,7 @@ export function TakenCourses() {
             // nothing was saved, and a record left behind would put the rows
             // back on the next visit.
             clearGuestProposal();
+            pendingHandoff.current = null;
           }}
         />
       );
@@ -914,7 +959,17 @@ export function TakenCourses() {
         reason={authReason}
         onReasonChange={setAuthReason}
         onClose={() => setAuthReason(null)}
-        returnTo={() => "/taken"}
+        /*
+          Back to `/taken`, carrying the handoff token when there is a proposal
+          waiting — the third half `AuthReasonDialog` mimes for the review
+          draft, and here it is what makes the resume this reader's rather than
+          the next person's at this browser.
+        */
+        returnTo={() =>
+          pendingHandoff.current === null
+            ? "/taken"
+            : withHandoff("/taken", pendingHandoff.current)
+        }
       />
     </PageColumn>
   );

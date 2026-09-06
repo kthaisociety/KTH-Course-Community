@@ -12,11 +12,16 @@ import {
   clearGuestProposal,
   forStorage,
   GUEST_PROPOSAL_TTL_MS,
+  parseHandoff,
   readGuestProposal,
+  withHandoff,
   writeGuestProposal,
 } from "./guest-proposal";
 
 const KEY = "kth-cc:taken-proposal";
+
+/** The token a hand-written fixture is stored under, and read back with. */
+const HANDOFF = "handoff-1";
 
 function proposal(
   overrides: Partial<TranscriptProposal> = {},
@@ -44,23 +49,23 @@ beforeEach(() => {
 
 describe("holding a proposal across a sign-in", () => {
   it("gives back the rows it was handed", () => {
-    writeGuestProposal(proposal(), true);
+    const handoff = writeGuestProposal(proposal(), true);
 
-    expect(readGuestProposal()).toEqual({
+    expect(readGuestProposal(handoff)).toEqual({
       includeGrades: true,
       proposal: proposal(),
     });
   });
 
   it("says nothing when nothing is waiting", () => {
-    expect(readGuestProposal()).toBeNull();
+    expect(readGuestProposal(HANDOFF)).toBeNull();
   });
 
   it("forgets on request", () => {
-    writeGuestProposal(proposal(), true);
+    const handoff = writeGuestProposal(proposal(), true);
     clearGuestProposal();
 
-    expect(readGuestProposal()).toBeNull();
+    expect(readGuestProposal(handoff)).toBeNull();
   });
 
   /**
@@ -71,16 +76,16 @@ describe("holding a proposal across a sign-in", () => {
    * false for the one storage the reader cannot see.
    */
   it("keeps no grade when the reader turned grades off", () => {
-    writeGuestProposal(proposal(), false);
+    const handoff = writeGuestProposal(proposal(), false);
 
-    expect(readGuestProposal()?.proposal.candidates[0].grade).toBeNull();
+    expect(readGuestProposal(handoff)?.proposal.candidates[0].grade).toBeNull();
     expect(localStorage.getItem(KEY)).not.toContain('"B"');
   });
 
   it("keeps the grade when the reader turned grades on", () => {
-    writeGuestProposal(proposal(), true);
+    const handoff = writeGuestProposal(proposal(), true);
 
-    expect(readGuestProposal()?.proposal.candidates[0].grade).toBe("B");
+    expect(readGuestProposal(handoff)?.proposal.candidates[0].grade).toBe("B");
   });
 
   /**
@@ -93,21 +98,22 @@ describe("holding a proposal across a sign-in", () => {
       KEY,
       JSON.stringify({
         savedAt: Date.now(),
+        handoff: HANDOFF,
         includeGrades: false,
         proposal: proposal(),
       }),
     );
 
-    expect(readGuestProposal()?.proposal.candidates[0].grade).toBeNull();
+    expect(readGuestProposal(HANDOFF)?.proposal.candidates[0].grade).toBeNull();
   });
 
   it("carries the course codes the catalogue does not have", () => {
-    writeGuestProposal(
+    const handoff = writeGuestProposal(
       proposal({ unmatched: [{ courseCode: "XX9999", courseName: "Other" }] }),
       true,
     );
 
-    expect(readGuestProposal()?.proposal.unmatched).toEqual([
+    expect(readGuestProposal(handoff)?.proposal.unmatched).toEqual([
       { courseCode: "XX9999", courseName: "Other" },
     ]);
   });
@@ -115,28 +121,32 @@ describe("holding a proposal across a sign-in", () => {
 
 describe("a record that cannot be trusted", () => {
   it("expires, so a transcript read on a shared machine does not linger", () => {
-    writeGuestProposal(proposal(), true);
+    const handoff = writeGuestProposal(proposal(), true);
     vi.setSystemTime(Date.now() + GUEST_PROPOSAL_TTL_MS + 1);
 
-    expect(readGuestProposal()).toBeNull();
+    expect(readGuestProposal(handoff)).toBeNull();
   });
 
   it("survives right up to the expiry", () => {
-    writeGuestProposal(proposal(), true);
+    const handoff = writeGuestProposal(proposal(), true);
     vi.setSystemTime(Date.now() + GUEST_PROPOSAL_TTL_MS);
 
-    expect(readGuestProposal()).not.toBeNull();
+    expect(readGuestProposal(handoff)).not.toBeNull();
   });
 
   it.each([
     ["not JSON", "{"],
     ["not an object", '"a string"'],
-    ["undated", JSON.stringify({ proposal: proposal() })],
-    ["holding no proposal", JSON.stringify({ savedAt: Date.now() })],
+    ["undated", JSON.stringify({ handoff: HANDOFF, proposal: proposal() })],
+    [
+      "holding no proposal",
+      JSON.stringify({ savedAt: Date.now(), handoff: HANDOFF }),
+    ],
     [
       "holding no rows",
       JSON.stringify({
         savedAt: Date.now(),
+        handoff: HANDOFF,
         proposal: { candidates: [], unmatched: [] },
       }),
     ],
@@ -144,13 +154,14 @@ describe("a record that cannot be trusted", () => {
       "holding rows with no course code",
       JSON.stringify({
         savedAt: Date.now(),
+        handoff: HANDOFF,
         proposal: { candidates: [{ catalogueName: "Programming" }] },
       }),
     ],
   ])("is dropped when it is %s", (_what, raw) => {
     localStorage.setItem(KEY, raw);
 
-    expect(readGuestProposal()).toBeNull();
+    expect(readGuestProposal(HANDOFF)).toBeNull();
   });
 
   /**
@@ -164,12 +175,13 @@ describe("a record that cannot be trusted", () => {
       KEY,
       JSON.stringify({
         savedAt: Date.now(),
+        handoff: HANDOFF,
         includeGrades: true,
         proposal: { candidates: [{ courseCode: "DD1337", grade: 7 }] },
       }),
     );
 
-    expect(readGuestProposal()?.proposal.candidates).toEqual([
+    expect(readGuestProposal(HANDOFF)?.proposal.candidates).toEqual([
       {
         courseCode: "DD1337",
         transcriptName: "DD1337",
@@ -189,5 +201,104 @@ describe("the storage rule on its own", () => {
 
     expect(original.candidates[0].grade).toBe("B");
     expect(stripped.candidates[0].grade).toBeNull();
+  });
+});
+
+/**
+ * The handoff token, which is what stops one reader being handed another's
+ * transcript on a shared browser. `taken-courses.spec.tsx` mounts the whole
+ * screen against the same rule; these are the rule itself.
+ */
+describe("claimable only by the sign-in it was written for", () => {
+  it("mints a different token for every proposal it stores", () => {
+    const first = writeGuestProposal(proposal(), true);
+    const second = writeGuestProposal(proposal(), true);
+
+    expect(first).toBeTruthy();
+    expect(second).toBeTruthy();
+    expect(second).not.toBe(first);
+  });
+
+  it("refuses a token that does not match the record", () => {
+    writeGuestProposal(proposal(), true);
+
+    expect(readGuestProposal("some-other-token")).toBeNull();
+  });
+
+  /**
+   * The case the whole scheme exists for: a second person at the same browser
+   * opens `/taken` with no token at all. They get nothing, whether or not they
+   * are signed in — the component cannot even ask on their behalf.
+   */
+  it.each([
+    ["no token", null],
+    ["an empty token", ""],
+  ])("fails closed given %s", (_what, token) => {
+    writeGuestProposal(proposal(), true);
+
+    expect(readGuestProposal(token)).toBeNull();
+  });
+
+  /**
+   * A record written before this token existed has no `handoff`, so it matches
+   * nothing and is dropped rather than handed to the first reader who asks.
+   */
+  it("drops a record from a build that had no token", () => {
+    localStorage.setItem(
+      KEY,
+      JSON.stringify({
+        savedAt: Date.now(),
+        includeGrades: true,
+        proposal: proposal(),
+      }),
+    );
+
+    expect(readGuestProposal(HANDOFF)).toBeNull();
+    expect(readGuestProposal(null)).toBeNull();
+  });
+
+  it("still refuses the right token once the record is expired", () => {
+    const handoff = writeGuestProposal(proposal(), true);
+    vi.setSystemTime(Date.now() + GUEST_PROPOSAL_TTL_MS + 1);
+
+    expect(readGuestProposal(handoff)).toBeNull();
+  });
+});
+
+/** Carrying the token through the sign-in round trip, in the URL. */
+describe("the handoff parameter", () => {
+  it("puts the token on a plain path", () => {
+    expect(withHandoff("/taken", "abc")).toBe("/taken?resume=abc");
+  });
+
+  it("keeps a query the path already had", () => {
+    expect(withHandoff("/taken?review=1", "abc")).toBe(
+      "/taken?review=1&resume=abc",
+    );
+  });
+
+  it("replaces rather than repeats a token already there", () => {
+    expect(withHandoff("/taken?resume=old", "new")).toBe("/taken?resume=new");
+  });
+
+  it("escapes a token that would otherwise punctuate the query", () => {
+    expect(
+      parseHandoff(new URL(withHandoff("/taken", "a&b=c"), "https://x").search),
+    ).toBe("a&b=c");
+  });
+
+  it.each([
+    ["nothing", ""],
+    ["another parameter", "?review=1"],
+    ["an empty token", "?resume="],
+  ])("reads no token from %s", (_what, search) => {
+    expect(parseHandoff(search)).toBeNull();
+  });
+
+  it("round-trips what it wrote", () => {
+    const handoff = writeGuestProposal(proposal(), true);
+    const search = withHandoff("/taken", handoff ?? "").slice("/taken".length);
+
+    expect(readGuestProposal(parseHandoff(search))).not.toBeNull();
   });
 });
