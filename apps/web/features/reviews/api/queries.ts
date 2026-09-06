@@ -15,8 +15,17 @@ import {
 
 export type ReviewList = RouterOutputs["reviews"]["list"];
 
-/** One taken course as `taken.list` returns it: a code and self-reported facts. */
-export type TakenCourse = RouterOutputs["taken"]["list"][number];
+/**
+ * One taken course as `taken.list` returns it: a code and self-reported facts.
+ *
+ * Re-exported from the feature that owns the relationship rather than declared
+ * a third time. The module, not `@/features/taken`, because that barrel is
+ * reachable from a component that imports this feature; `taken-rows` is types
+ * only and cannot close a cycle.
+ */
+import type { TakenCourse } from "@/features/taken/lib/taken-rows";
+
+export type { TakenCourse };
 
 /**
  * A taken course with no review, and the catalogue title to draw it with.
