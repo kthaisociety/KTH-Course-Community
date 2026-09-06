@@ -711,7 +711,15 @@ function makeSignal(
   };
 }
 
-/** `relaySignal` (:1128): the signal carries on from the node that received it. */
+/**
+ * `relaySignal` (:1128): the signal carries on from the node that received it.
+ *
+ * A relay is ambient traffic continuing rather than a gesture anybody made, so
+ * it takes the ambient producer's rules: not back down the edge it arrived on,
+ * not onto an edge already carrying something, and **not onto an edge the copy
+ * has buried**. A burst is the one producer exempt from that last rule, because
+ * a burst arm is somebody's click and a missing arm would read as broken.
+ */
 function relaySignal(field: HeroField, arrived: Signal): void {
   const from = field.nodeById.get(arrived.toId);
   if (!from) return;
@@ -740,6 +748,11 @@ function relaySignal(field: HeroField, arrived: Signal): void {
  * there would read as broken, whereas an arm that draws faint-to-invisible
  * under the copy reads as depth. The cap exists to keep ambient traffic from
  * strobing, and a click is not ambient traffic.
+ *
+ * Skipping the cap costs nothing unbounded, which is the reason it is safe to
+ * do: one edge carries one signal, so however fast somebody clicks, the field
+ * cannot hold more signals than the graph window has edges — and a window is a
+ * *bounded* slice of the community by construction.
  */
 export function burstAt(field: HeroField, node: FieldNode): void {
   let delay = 0;
