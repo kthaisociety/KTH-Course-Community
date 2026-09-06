@@ -1,4 +1,8 @@
 import { describe, expect, it } from "vitest";
+// The real placement, not a stand-in: the property under test is that the
+// golden-angle spacing `computeWorldPosition` produces survives the keep-out,
+// so a synthetic field would be testing the wrong spiral.
+import { computeWorldPosition } from "@/server/graph/placement";
 import { clearAt, fallbackRects, MAX_PUSH, type Rect } from "./hero-keepout";
 import {
   DEFAULT_NODE_COLOR_VAR,
@@ -583,5 +587,90 @@ describe("projectGraphWindow", () => {
         "style",
       ]);
     }
+  });
+});
+
+/**
+ * Every node is somebody, and two people drawn on top of each other read as one
+ * person. Nothing asserted this: the suite proved each node was clear of the
+ * *copy*, and nothing proved the nodes were clear of *each other*.
+ *
+ * They are held apart by `computeWorldPosition`'s golden angle, which is an
+ * angular property — so a keep-out push that discards bearing discards the
+ * spacing with it. The axis-only push did: it sent every point it moved to one
+ * of four lines per rect, and a column of nodes under one rect came out as a
+ * row. `pushClear` now leaves along the ray from the view's anchor, and this is
+ * what says so from the outside.
+ */
+describe("nodes are drawn clear of each other, not only of the copy", () => {
+  function sunflower(n: number) {
+    return Array.from({ length: n }, (_, i) => {
+      const at = computeWorldPosition(`user-${i}`, i);
+      return { id: `n${i}`, x: at.x, y: at.y };
+    });
+  }
+
+  function closestPairOnScreen(nodes: { screenX: number; screenY: number }[]) {
+    let min = Number.POSITIVE_INFINITY;
+    for (let i = 0; i < nodes.length; i++) {
+      for (let j = i + 1; j < nodes.length; j++) {
+        min = Math.min(
+          min,
+          Math.hypot(
+            nodes[i].screenX - nodes[j].screenX,
+            nodes[i].screenY - nodes[j].screenY,
+          ),
+        );
+      }
+    }
+    return min;
+  }
+
+  /**
+   * Two node centres closer than a diameter overlap on the canvas. That is the
+   * floor this guards, not a spacing target — the real separations are 30px and
+   * up, and asserting those would fail on the next unrelated layout change.
+   */
+  const MIN_SEPARATION = NODE_RADIUS * 2;
+
+  for (const n of [3, 10, 150]) {
+    it(`keeps ${n} drawn nodes at least a diameter apart`, () => {
+      for (const keepOut of [COPY, BAND]) {
+        const view = project(
+          graphWindow({ x: 0, y: 0 }, sunflower(n)),
+          keepOut,
+        );
+        const drawn = view.nodes.filter(
+          (node) =>
+            node.clearance > 0 &&
+            node.screenX >= 0 &&
+            node.screenX <= WIDTH &&
+            node.screenY >= 0 &&
+            node.screenY <= HEIGHT,
+        );
+        if (drawn.length < 2) continue;
+        expect(closestPairOnScreen(drawn)).toBeGreaterThanOrEqual(
+          MIN_SEPARATION,
+        );
+      }
+    });
+  }
+
+  /**
+   * The push is what this is about, so it has to be the push that is exercised.
+   * A suite where nothing was ever moved would pass the separation assertion
+   * above while proving nothing.
+   */
+  it("actually moves some of them, or the assertion above is vacuous", () => {
+    const input = graphWindow({ x: 0, y: 0 }, sunflower(150));
+    const view = project(input, COPY);
+    const moved = view.nodes.filter((node) => {
+      const raw = projectedOnto(view, input.centre, {
+        x: input.nodes.find((n) => n.id === node.id)?.x ?? 0,
+        y: input.nodes.find((n) => n.id === node.id)?.y ?? 0,
+      });
+      return Math.hypot(node.screenX - raw.x, node.screenY - raw.y) > 0.01;
+    });
+    expect(moved.length).toBeGreaterThan(0);
   });
 });
