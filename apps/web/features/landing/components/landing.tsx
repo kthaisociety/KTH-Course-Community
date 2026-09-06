@@ -410,7 +410,7 @@ export function Landing() {
                 event.preventDefault();
                 submitSearch(query);
               }}
-              className="mt-4 @lg:mt-[97px] flex h-[42px] w-full @lg:max-w-[560px] items-center gap-2.5 rounded-[10px] border border-cc-rule3 bg-cc-surface px-3.5"
+              className="mt-6 @lg:mt-[97px] flex h-[42px] w-full @lg:max-w-[560px] items-center gap-2.5 rounded-[10px] border border-cc-rule3 bg-cc-surface px-3.5"
             >
               <Search
                 size={16}
