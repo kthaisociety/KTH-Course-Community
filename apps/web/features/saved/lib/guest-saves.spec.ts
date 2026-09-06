@@ -9,7 +9,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  GUEST_SAVES_KEY,
+  GUEST_SAVE_PREFIX,
   readGuestSaves,
   resetGuestSavesCache,
   retireGuestSaves,
@@ -32,13 +32,27 @@ describe("the guest saves store", () => {
     writeGuestSaves(["DD2380", "DD2421"]);
 
     expect(readGuestSaves()).toEqual(["DD2380", "DD2421"]);
+    // One key per course, so nothing is a list that two tabs must rewrite.
     expect(
-      JSON.parse(window.localStorage.getItem(GUEST_SAVES_KEY) ?? "null"),
-    ).toEqual(["DD2380", "DD2421"]);
+      Object.keys(window.localStorage)
+        .filter((key) => key.startsWith(GUEST_SAVE_PREFIX))
+        .sort(),
+    ).toEqual([`${GUEST_SAVE_PREFIX}DD2380`, `${GUEST_SAVE_PREFIX}DD2421`]);
   });
 
   it("has nothing before anything is saved", () => {
     expect(readGuestSaves()).toEqual([]);
+  });
+
+  // Key enumeration order is the browser's business, so each save carries a
+  // sequence number and the list is sorted by it. Without that the saved list
+  // would reorder itself between reloads.
+  it("lists courses oldest save first, not in key order", () => {
+    setGuestSave("DD2421", true);
+    setGuestSave("DD1337", true);
+    setGuestSave("DD2380", true);
+
+    expect(readGuestSaves()).toEqual(["DD2421", "DD1337", "DD2380"]);
   });
 
   // `useSyncExternalStore` re-renders forever if the snapshot is a new array
@@ -84,7 +98,11 @@ describe("the guest saves store", () => {
     retireGuestSaves(["DD2380"]);
 
     expect(readGuestSaves()).toEqual([]);
-    expect(window.localStorage.getItem(GUEST_SAVES_KEY)).toBeNull();
+    expect(
+      Object.keys(window.localStorage).filter((key) =>
+        key.startsWith(GUEST_SAVE_PREFIX),
+      ),
+    ).toEqual([]);
   });
 
   describe("retireGuestSaves", () => {
@@ -135,28 +153,28 @@ describe("the guest saves store", () => {
   });
 
   describe("a store written by something else", () => {
-    it("ignores unparseable content rather than throwing", () => {
-      window.localStorage.setItem(GUEST_SAVES_KEY, "{not json");
+    it("still counts a course whose order marker is nonsense", () => {
+      window.localStorage.setItem(`${GUEST_SAVE_PREFIX}DD2380`, "not a number");
+      resetGuestSavesCache();
+
+      // The key is the save; the value only orders it. Dropping the course
+      // over a bad hint would lose a save to fix a sort.
+      expect(readGuestSaves()).toEqual(["DD2380"]);
+    });
+
+    it("ignores a key with no course code after the prefix", () => {
+      window.localStorage.setItem(GUEST_SAVE_PREFIX, "1");
       resetGuestSavesCache();
 
       expect(readGuestSaves()).toEqual([]);
     });
 
-    it("ignores a value that is not a list", () => {
-      window.localStorage.setItem(GUEST_SAVES_KEY, '{"DD2380":true}');
+    it("ignores keys belonging to anything else", () => {
+      window.localStorage.setItem("kth-cc:theme", "dark");
+      window.localStorage.setItem(`${GUEST_SAVE_PREFIX}DD2380`, "1");
       resetGuestSavesCache();
 
-      expect(readGuestSaves()).toEqual([]);
-    });
-
-    it("drops entries that are not course codes", () => {
-      window.localStorage.setItem(
-        GUEST_SAVES_KEY,
-        JSON.stringify(["DD2380", 7, null, "", "DD2421"]),
-      );
-      resetGuestSavesCache();
-
-      expect(readGuestSaves()).toEqual(["DD2380", "DD2421"]);
+      expect(readGuestSaves()).toEqual(["DD2380"]);
     });
   });
 
@@ -172,23 +190,19 @@ describe("the guest saves store", () => {
       expect(readGuestSaves()).toEqual([]);
     });
 
-    // Blocked site data throws on both halves, so nothing can be persisted and
-    // nothing can be read back. The list then lives in memory for as long as
-    // the tab does: saving still works, and a reload is what loses it.
-    it("keeps the list for this tab and does not throw", () => {
+    // Storage is the authority throughout: a save it refused is not shown as
+    // saved. The page keeps working and the reader is not told a fiction.
+    it("does not throw, and does not claim a save it could not store", () => {
       vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
-        throw new Error("blocked");
-      });
-      vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
         throw new Error("blocked");
       });
       const onChange = vi.fn();
       subscribeGuestSaves(onChange);
 
-      expect(() => writeGuestSaves(["DD2380"])).not.toThrow();
+      expect(() => setGuestSave("DD2380", true)).not.toThrow();
 
       expect(onChange).toHaveBeenCalled();
-      expect(readGuestSaves()).toEqual(["DD2380"]);
+      expect(readGuestSaves()).toEqual([]);
     });
 
     // A quota error is the one case where writes fail and reads keep working.
@@ -210,36 +224,41 @@ describe("the guest saves store", () => {
    * interleaving lose whichever read first, and the loss that matters is a
    * save — a lost retirement just leaves a course to be offered again.
    */
+  /**
+   * The finding this layout answers, three rounds of review on #194. With the
+   * list under one key every change was a read-modify-write over shared
+   * storage, so two tabs mutating at once lost whichever read first — and the
+   * write that lost was somebody's saved course. Per-course keys mean no
+   * mutation reads anything, so there is nothing to lose.
+   */
   describe("concurrent tabs", () => {
-    /**
-     * A mutation modifies storage, not the snapshot this tab last handed out,
-     * so a write another tab has already committed survives it. This holds
-     * because `readGuestSaves` goes to storage on every call and keeps `cache`
-     * only for reference identity — worth pinning down, since the whole
-     * feature rests on it.
-     */
-    it("modifies what storage says, not what this tab last read", () => {
+    it("keeps a save another tab made, while this one saves", () => {
       writeGuestSaves(["DD2380"]);
       readGuestSaves();
 
-      // The other tab's write, with no `storage` event delivered yet.
+      // The other tab, with no `storage` event delivered here yet.
       window.localStorage.setItem(
-        GUEST_SAVES_KEY,
-        JSON.stringify(["DD2380", "DD1337"]),
+        `${GUEST_SAVE_PREFIX}DD1337`,
+        String(Date.now() + 1000),
       );
 
       setGuestSave("DD2421", true);
 
-      expect(readGuestSaves()).toEqual(["DD2380", "DD1337", "DD2421"]);
+      // Order is the other test's business; this one is about survival.
+      expect([...readGuestSaves()].sort()).toEqual([
+        "DD1337",
+        "DD2380",
+        "DD2421",
+      ]);
     });
 
-    it("keeps a concurrent save while retiring imported codes", () => {
+    it("keeps a save another tab made, while this one retires an import", () => {
       writeGuestSaves(["DD2380"]);
       readGuestSaves();
 
       window.localStorage.setItem(
-        GUEST_SAVES_KEY,
-        JSON.stringify(["DD2380", "DD1337"]),
+        `${GUEST_SAVE_PREFIX}DD1337`,
+        String(Date.now() + 1000),
       );
 
       retireGuestSaves(["DD2380"]);
@@ -247,40 +266,31 @@ describe("the guest saves store", () => {
       expect(readGuestSaves()).toEqual(["DD1337"]);
     });
 
-    /**
-     * The narrow window: the read and the write are two operations and nothing
-     * in `localStorage` makes them one. `navigator.locks` is the platform's
-     * mutex for it. jsdom has none, so the lock is stubbed here — which is
-     * also the only way to exercise the locked path at all, since every other
-     * test in this file runs the fallback.
-     */
-    it("takes a cross-tab lock when the platform has one", async () => {
-      const held: string[] = [];
-      const request = vi.fn(
-        async (name: string, callback: () => void | Promise<void>) => {
-          held.push(name);
-          await callback();
-        },
+    it("keeps a save another tab made, while this one unsaves", () => {
+      writeGuestSaves(["DD2380"]);
+      readGuestSaves();
+
+      window.localStorage.setItem(
+        `${GUEST_SAVE_PREFIX}DD1337`,
+        String(Date.now() + 1000),
       );
-      vi.stubGlobal("navigator", { locks: { request } });
 
-      setGuestSave("DD2380", true);
-      await vi.waitFor(() => expect(readGuestSaves()).toEqual(["DD2380"]));
+      setGuestSave("DD2380", false);
 
-      expect(held).toEqual(["kth-cc:saved-courses:write"]);
-      vi.unstubAllGlobals();
+      expect(readGuestSaves()).toEqual(["DD1337"]);
     });
 
-    // A lock that cannot be taken is not a reason to drop somebody's save.
-    it("still writes when the lock cannot be taken", async () => {
-      vi.stubGlobal("navigator", {
-        locks: { request: () => Promise.reject(new Error("no lock")) },
-      });
+    // No mutation reads the list, so there is no window between a read and a
+    // write for another tab to slip into, and no lock needed to close one.
+    it("never reads the list in order to change it", () => {
+      writeGuestSaves(["DD2380"]);
+      const reads = vi.spyOn(Storage.prototype, "getItem");
 
-      setGuestSave("DD2380", true);
-      await vi.waitFor(() => expect(readGuestSaves()).toEqual(["DD2380"]));
+      setGuestSave("DD2421", true);
+      setGuestSave("DD2380", false);
+      retireGuestSaves(["DD2421"]);
 
-      vi.unstubAllGlobals();
+      expect(reads).not.toHaveBeenCalled();
     });
   });
 
@@ -303,9 +313,9 @@ describe("the guest saves store", () => {
       expect(readGuestSaves()).toEqual([]);
 
       // The other tab's write, then the event this tab receives for it.
-      window.localStorage.setItem(GUEST_SAVES_KEY, JSON.stringify(["DD2380"]));
+      window.localStorage.setItem(`${GUEST_SAVE_PREFIX}DD2380`, "1");
       window.dispatchEvent(
-        new StorageEvent("storage", { key: GUEST_SAVES_KEY }),
+        new StorageEvent("storage", { key: `${GUEST_SAVE_PREFIX}DD2380` }),
       );
 
       expect(onChange).toHaveBeenCalled();

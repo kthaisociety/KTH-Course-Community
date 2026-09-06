@@ -7,15 +7,33 @@
  * models `localSaves` and `acctSaves` as two lists behind one page, and says
  * why — *"Guest saves have nowhere else to live, so they are kept under our own
  * key"* (`docs/design_ref/2026-09-06/Course Community - Saved.dc.html:322`).
- * This is that key. The name is the artboard's own, at line 212 of the same
- * file, so a browser that used the prototype and a browser that used the app
- * are holding the same list under the same name.
  *
  * It holds course *codes* and nothing else. A code is the one thing about a
  * course this app can re-fetch everything else from, so a stored list cannot go
  * stale in any way worse than naming a course that no longer exists — which
  * `saved.tsx` already survives, because an account save whose `course.summary`
  * does not answer has always been possible.
+ *
+ * ## One key per course, not one key holding a list
+ *
+ * The artboard keeps its list as a JSON array under a single key, and this did
+ * too until review found the consequence. A list under one key makes *every*
+ * change a read-modify-write: to add one course you read the array, append, and
+ * write the whole thing back. `localStorage` is shared by every tab on the
+ * origin and offers no compare-and-swap and no transaction, so two tabs doing
+ * that at once lose whichever read first — and the write that loses is
+ * somebody's saved course. Guarding it with `navigator.locks` closed the window
+ * only where that API exists, which left the same bug behind a browser check.
+ *
+ * A save is a flag on a course, so each one is its own key. Saving is
+ * `setItem`, unsaving and retiring are `removeItem`, and every one of them is a
+ * single atomic operation on a key no other course touches. Two tabs can now
+ * save, unsave and import at the same time and none of them can erase another's
+ * work, in every browser, with no lock. Reading enumerates the prefix, and a
+ * read that races a write merely repaints.
+ *
+ * The value stored is a sequence number, so the list keeps the order courses
+ * were saved in rather than whatever order the browser hands keys back.
  *
  * ## Why a store and not `useState`
  *
@@ -31,8 +49,8 @@
  * cached here and replaced only when it actually changes.
  */
 
-/** The artboard's key, kept verbatim. */
-export const GUEST_SAVES_KEY = "kth-cc:saved-courses";
+/** One key per saved course: `kth-cc:saved-course:DD2380`. */
+export const GUEST_SAVE_PREFIX = "kth-cc:saved-course:";
 
 /** Subscribers in this tab. Another tab arrives through `storage` instead. */
 const listeners = new Set<() => void>();
@@ -48,22 +66,18 @@ let cache: readonly string[] | null = null;
 
 const EMPTY: readonly string[] = Object.freeze([]);
 
-/** Course codes as stored, or `EMPTY` if the store is unusable or unset. */
-function parse(raw: string | null): readonly string[] {
-  if (!raw) return EMPTY;
-  try {
-    const value: unknown = JSON.parse(raw);
-    if (!Array.isArray(value)) return EMPTY;
-    // A stored list is only as trustworthy as the last thing that wrote it,
-    // and anything can write to `localStorage` under this origin. Codes that
-    // are not strings are dropped rather than rendered.
-    const codes = value.filter(
-      (code): code is string => typeof code === "string" && code.length > 0,
-    );
-    return codes.length ? Object.freeze([...new Set(codes)]) : EMPTY;
-  } catch {
-    return EMPTY;
-  }
+/**
+ * The order marker written with each save.
+ *
+ * Wall-clock, but never repeating within a tab: two saves in the same
+ * millisecond would otherwise tie and sort arbitrarily. Across tabs the clock
+ * is what orders them, which is as close to "when it was saved" as anything
+ * here can get without coordination nobody needs for a display order.
+ */
+let lastIssued = 0;
+function nextSequence(): number {
+  lastIssued = Math.max(Date.now(), lastIssued + 1);
+  return lastIssued;
 }
 
 function same(a: readonly string[], b: readonly string[]): boolean {
@@ -71,7 +85,7 @@ function same(a: readonly string[], b: readonly string[]): boolean {
 }
 
 /**
- * The stored codes.
+ * Every stored code, oldest save first.
  *
  * Every access to `localStorage` in this file is wrapped: it throws outright —
  * not returns null — in a browser set to block site data, and in Safari's
@@ -80,140 +94,129 @@ function same(a: readonly string[], b: readonly string[]): boolean {
  * refuses to render the page.
  */
 export function readGuestSaves(): readonly string[] {
-  let raw: string | null = null;
+  let found: { code: string; at: number }[];
   try {
-    raw = window.localStorage.getItem(GUEST_SAVES_KEY);
+    const store = window.localStorage;
+    found = [];
+    for (let index = 0; index < store.length; index += 1) {
+      const key = store.key(index);
+      if (!key?.startsWith(GUEST_SAVE_PREFIX)) continue;
+      const code = key.slice(GUEST_SAVE_PREFIX.length);
+      if (!code) continue;
+      // Anything can write to this origin's storage. A value that is not a
+      // number still marks the course as saved; it just sorts last, which is
+      // better than dropping a save over its ordering hint.
+      const at = Number(store.getItem(key));
+      found.push({
+        code,
+        at: Number.isFinite(at) ? at : Number.MAX_SAFE_INTEGER,
+      });
+    }
   } catch {
     return cache ?? EMPTY;
   }
-  const next = parse(raw);
+
+  found.sort((a, b) => a.at - b.at || a.code.localeCompare(b.code));
+  const next: readonly string[] = found.length
+    ? Object.freeze(found.map((entry) => entry.code))
+    : EMPTY;
   if (cache && same(cache, next)) return cache;
   cache = next;
   return next;
 }
 
-/**
- * Replaces the stored list outright and tells this tab's readers.
- *
- * A blind set: it does not look at what is there. Seeding a browser — which is
- * what the tests do with it — is the honest use. Anything that means "change
- * the list" goes through `mutate` instead, so it cannot overwrite a save
- * another tab made in between.
- */
-export function writeGuestSaves(codes: readonly string[]): void {
-  const next = Object.freeze([...new Set(codes)]);
-  cache = next.length ? next : EMPTY;
-  try {
-    if (next.length) {
-      window.localStorage.setItem(GUEST_SAVES_KEY, JSON.stringify(next));
-    } else {
-      // An empty list is stored as no list. It means the same thing on the way
-      // back in, and it leaves nothing behind for a reader who unsaved
-      // everything.
-      window.localStorage.removeItem(GUEST_SAVES_KEY);
-    }
-  } catch {
-    // Storage is the authority, and this write did not reach it. When it is
-    // blocked outright the reads throw too, so the cache above is what serves
-    // this tab and saving keeps working until the tab closes. When it is merely
-    // full, the reads still work and the next one drops this save — which is
-    // the honest answer, and better than showing a course as saved that no
-    // reload will bring back.
-  }
+/** Tells this tab's readers that the store moved. */
+function announce(): void {
+  cache = null;
   for (const listener of listeners) listener();
 }
 
-/** The lock every change to the list is taken under. */
-const GUEST_SAVES_LOCK = "kth-cc:saved-courses:write";
-
 /**
- * Changes the list, without clobbering what another tab changed meanwhile.
+ * Adds or removes one course.
  *
- * Every mutation is a read-modify-write over one shared `localStorage` key, and
- * nothing in the web platform makes those two operations one: there is no
- * compare-and-swap and no transaction. So two tabs mutating at once can lose
- * whichever read first — the second write is computed from a list that no
- * longer exists by the time it lands.
- *
- * The window is narrow. `readGuestSaves` goes to storage on every call, so the
- * value being modified is never stale by more than the few statements between
- * the read and the write; there is no waiting inside it. But narrow is not
- * none, and the write that loses is somebody's saved course.
- *
- * `navigator.locks` is the platform's answer and a genuine cross-tab mutex, so
- * the whole read-modify-write is taken under one. Where it is missing — older
- * browsers, and jsdom, which is why the fallback is what every other test in
- * this file exercises — the mutation still runs, unserialised, which is exactly
- * where this code stood before.
- *
- * Callers see none of it: every mutation returns `void`, so taking the lock
- * asynchronously changes nothing for them. Reads are deliberately not locked —
- * `useSyncExternalStore` needs a snapshot now, and a read that loses a race
- * merely repaints.
+ * One key, one operation, no read — which is the whole point of the layout.
+ * Nothing here can disturb a different course, so a second tab saving while
+ * this one unsaves or imports cannot lose either write.
  */
-function mutate(change: (current: readonly string[]) => readonly string[]) {
-  const apply = () => {
-    const current = readGuestSaves();
-    const next = change(current);
-    if (same(current, next)) return;
-    writeGuestSaves(next);
-  };
-
-  const locks = globalThis.navigator?.locks;
-  if (!locks) {
-    apply();
-    return;
-  }
-  // Failure to take the lock must not lose the change: a rejected request
-  // still leaves the reader expecting their save to have happened.
-  void locks.request(GUEST_SAVES_LOCK, apply).catch(apply);
-}
-
-/** Adds or removes one code. */
 export function setGuestSave(courseCode: string, saved: boolean): void {
-  mutate((current) =>
-    saved
-      ? current.includes(courseCode)
-        ? current
-        : [...current, courseCode]
-      : current.filter((code) => code !== courseCode),
-  );
+  if (!courseCode) return;
+  try {
+    if (saved) {
+      window.localStorage.setItem(
+        `${GUEST_SAVE_PREFIX}${courseCode}`,
+        String(nextSequence()),
+      );
+    } else {
+      window.localStorage.removeItem(`${GUEST_SAVE_PREFIX}${courseCode}`);
+    }
+  } catch {
+    // Storage is the authority and this write did not reach it, so the course
+    // is not shown as saved — the same answer a full store gets, rather than a
+    // filled button that no reload will honour. The page keeps working; only
+    // the remembering is lost.
+  }
+  announce();
 }
 
 /**
- * Drops exactly the codes named, and keeps everything else.
+ * Drops exactly the courses named, and keeps everything else.
  *
  * Called once the account writes have landed — the artboard's `runImport`
  * clears local storage in the same step that commits the merge, and comments
  * the ordering: *"the browser hand-off is cleared only now"* (line 594).
  * Clearing first would lose the list outright if the write then failed.
  *
- * **Named codes, not the whole list.** The artboard can afford
- * `localStorage.removeItem` there because its `localSaves` is component state
- * that nothing else writes. Ours is `localStorage`, which every tab on this
- * origin shares, and an import is a run of awaited network writes — so a save
- * made in a second tab while the first is importing is in storage and *not* in
- * the snapshot being imported. Clearing wholesale deletes it without ever
- * having written it to the account, which is the one way this feature can lose
- * a course outright.
- *
- * So the removal subtracts from storage as `mutate` re-reads it, rather than
- * assuming storage still says what it said before the awaits.
+ * **Named courses, not the whole list**, and one `removeItem` each. The
+ * artboard can afford a wholesale `removeItem` there because its `localSaves`
+ * is component state that nothing else writes; ours is shared storage, and an
+ * import is a run of awaited network writes long enough for another tab to save
+ * something that was never part of it.
  */
 export function retireGuestSaves(codes: readonly string[]): void {
   if (!codes.length) return;
-  const retired = new Set(codes);
-  mutate((current) => current.filter((code) => !retired.has(code)));
+  try {
+    for (const code of codes) {
+      window.localStorage.removeItem(`${GUEST_SAVE_PREFIX}${code}`);
+    }
+  } catch {
+    /* storage unavailable — nothing to retire from */
+  }
+  announce();
+}
+
+/**
+ * Replaces the whole list.
+ *
+ * The one operation here that is not per-course, and so the one that can
+ * clobber a concurrent save. It exists to seed a browser — which is what the
+ * tests use it for — and production code has no business calling it: saving,
+ * unsaving and importing are all expressed as the per-course operations above.
+ */
+export function writeGuestSaves(codes: readonly string[]): void {
+  const wanted = [...new Set(codes)];
+  try {
+    const store = window.localStorage;
+    for (const key of Object.keys(store)) {
+      if (key.startsWith(GUEST_SAVE_PREFIX)) store.removeItem(key);
+    }
+    for (const code of wanted) {
+      store.setItem(`${GUEST_SAVE_PREFIX}${code}`, String(nextSequence()));
+    }
+  } catch {
+    /* storage unavailable */
+  }
+  announce();
 }
 
 /** `useSyncExternalStore`'s subscribe half. */
 export function subscribeGuestSaves(onChange: () => void): () => void {
   listeners.add(onChange);
   // Another tab's write reaches this one only as a `storage` event, and it
-  // arrives with the cache still holding the old parse — so the cache is
-  // dropped rather than trusted.
+  // arrives with the cache still holding the old list — so the cache is
+  // dropped rather than trusted. A `null` key means the whole store was
+  // cleared, which is everyone's business.
   const onStorage = (event: StorageEvent) => {
-    if (event.key !== null && event.key !== GUEST_SAVES_KEY) return;
+    if (event.key !== null && !event.key.startsWith(GUEST_SAVE_PREFIX)) return;
     cache = null;
     onChange();
   };
