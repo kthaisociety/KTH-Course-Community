@@ -960,9 +960,11 @@ export function TakenCourses() {
         onReasonChange={setAuthReason}
         onClose={() => setAuthReason(null)}
         /*
-          Back to `/taken`, carrying the handoff token when there is a proposal
-          waiting — the third half `AuthReasonDialog` mimes for the review
-          draft, and here it is what makes the resume this reader's rather than
+          Back to `/taken`, carrying the handoff token when a proposal is
+          waiting for this sign-in. The mapper exists because the URL stops
+          saying something the caller still knows — the review draft uses it to
+          put back an `?open=` that was spent on arrival — and here what it puts
+          back is the one thing that makes the resume this reader's rather than
           the next person's at this browser.
         */
         returnTo={() =>
