@@ -460,7 +460,6 @@ export function syncField(
     nodeById.set(node.id, placed);
   }
 
-  const wasEdge = field.edgeByKey;
   const edges: FieldEdge[] = [];
   const edgeByKey = new Map<string, FieldEdge>();
   const edgesByNode = new Map<string, FieldEdge[]>();
@@ -473,10 +472,18 @@ export function syncField(
       key,
       from,
       to,
-      // The projection already sampled this line; take its answer rather than
-      // paying for eleven more samples per edge on a frame that is already
-      // rebuilding everything.
-      clearance: wasEdge.get(key)?.clearance ?? edge.clearance,
+      // **The fresh projection's answer, never the cache's.** A relayout is
+      // exactly the event that moves the copy, so the cached clearance is the
+      // one measurement that cannot be trusted across one: an edge the
+      // headline has just been reflowed on top of would keep the clear reading
+      // it had before. Under reduced motion nothing ever advances the field,
+      // so the rolling refresh would never come along to correct it and the
+      // edge would draw across protected copy for as long as the page is open.
+      //
+      // It costs nothing to take, either — `projectGraphWindow` has already
+      // sampled this line against the new keep-out on the way here, so this is
+      // reading a number that has been computed rather than computing one.
+      clearance: edge.clearance,
     };
     edges.push(placed);
     edgeByKey.set(key, placed);

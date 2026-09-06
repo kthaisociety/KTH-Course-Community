@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { Rect } from "./hero-keepout";
+import { lineClearance, type Rect } from "./hero-keepout";
 import {
   advanceField,
   burstAt,
@@ -65,6 +65,7 @@ function chain(
   count: number,
   over: Partial<ScreenNode> = {},
   spacing = 90,
+  keepOut: Rect[] = [],
 ): GraphWindowView {
   const nodes = Array.from({ length: count }, (_, i) =>
     screenNode({
@@ -74,10 +75,16 @@ function chain(
       ...over,
     }),
   );
+  // Sampled the way `projectGraphWindow` samples it, so a fixture built with a
+  // keep-out is the same shape of thing the real projection hands over.
   const edges = nodes.slice(1).map((to, i) => ({
     from: nodes[i],
     to,
-    clearance: 1,
+    clearance: lineClearance(
+      { x: nodes[i].screenX, y: nodes[i].screenY },
+      { x: to.screenX, y: to.screenY },
+      keepOut,
+    ),
   }));
   return { scale: VIEW_SCALE, centre: { x: 0, y: 0 }, nodes, edges };
 }
@@ -453,6 +460,29 @@ describe("reprojection and refetch", () => {
 
     expect(field.signals).toHaveLength(0);
     expect(field.nodes).toHaveLength(6);
+  });
+
+  /**
+   * A relayout is the one event that moves the copy, so it is the one event
+   * after which a cached clearance cannot be trusted.
+   *
+   * Clearance is otherwise cached on the edge and refreshed on a rolling slice,
+   * which is right while only the drift is moving — but carrying that cache
+   * across a reprojection keeps a clear reading for an edge the headline has
+   * just been reflowed on top of. **Under reduced motion nothing ever advances
+   * the field**, so the rolling refresh never arrives to correct it and the
+   * edge draws across protected copy for as long as the page is open. This runs
+   * no frames at all, deliberately: it is the reduced-motion path.
+   */
+  it("takes the new clearance when a relayout moves the copy onto an edge", () => {
+    const field = fieldOf(chain(3));
+    expect(field.edges.every((edge) => edge.clearance > VISIBLE)).toBe(true);
+
+    // The same graph window, re-projected with the copy now over the chain.
+    const rects: Rect[] = [{ x: 0, y: 200, w: 1000, h: 200 }];
+    syncField(field, chain(3, {}, 90, rects), rects, 1200);
+
+    expect(field.edges.every((edge) => edge.clearance <= VISIBLE)).toBe(true);
   });
 
   it("empties out when the graph window goes away", () => {
