@@ -75,7 +75,7 @@ import { useExplore } from "../hooks/use-explore";
  *   the rail is the shell's and only the shell can hand it over.
  */
 export function Explore() {
-  const workspace = useWorkspacePane();
+  const workspace = useWorkspacePane("explore");
   const explore = useExplore({
     onOpenCourse: (request) => workspace.open(request.courseCode, request.kind),
   });

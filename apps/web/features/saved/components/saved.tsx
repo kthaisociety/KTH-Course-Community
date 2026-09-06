@@ -141,7 +141,7 @@ export function Saved({ openCollectionId = null, openCourse = null }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const rowRef = useRef<HTMLDivElement>(null);
   const presentation = useWorkspacePresentation(containerRef);
-  const workspace = useWorkspacePane();
+  const workspace = useWorkspacePane("saved");
   const [resultsRef, resultsWidth] = useResultsWidth();
   const geo = courseCardGeometry(resultsWidth);
 
