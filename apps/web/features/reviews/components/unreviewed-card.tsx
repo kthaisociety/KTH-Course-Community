@@ -90,7 +90,7 @@ function CourseRowContent({ course }: { course: UnreviewedCourse }) {
  * artboard makes the same choice.
  *
  * The card is deliberately incurious about the set. It takes a list and renders
- * it, so Taken courses (#92) and My Page (#93) can each hand it a differently
+ * it, so Taken courses and My Page can each hand it a differently
  * derived list — and so nothing here is tempted to show a satisfaction state
  * for a course that has no review to carry one.
  */

@@ -20,7 +20,7 @@ import { requestedReturnTo } from "../lib/return-to";
  * `focus-visible:border-cc-hov` plus a `ring-2`, on the stated grounds that the
  * artboards drew no focus state — true when it was written, and not true since
  * the 2026-09-06 export, whose `cc-theme.css` defines one treatment for
- * everything (#167).
+ * everything.
  */
 const PROVIDER_BUTTON =
   "flex h-[38px] w-full cursor-pointer items-center justify-center gap-2 rounded-[9px] border border-cc-rule3 bg-cc-surface px-[15px] font-medium text-[13.5px] text-cc-ink outline-none hover:border-cc-hov disabled:cursor-not-allowed disabled:opacity-60 [&>svg]:size-4 [&>svg]:shrink-0";

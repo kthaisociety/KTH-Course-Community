@@ -706,7 +706,7 @@ export function ReviewDraftPanel({
             the tick. This used to derive the fill from `--cc-success` at 12%
             and take the *solid* for the text; neither is reachable that way,
             because dark states the tint as alpha over the page and light as a
-            flat mix that is not a percentage of anything (#127 §1). */}
+            flat mix that is not a percentage of anything. */}
         {justPublished && (
           <p className="flex items-center gap-2.5 border-cc-rule border-b bg-cc-success-tint px-5 py-2.5 text-[12.5px] text-cc-success-ink">
             Published. Thanks — your review is live on the course.

@@ -24,7 +24,7 @@ import type { TakenCourse } from "../api/queries";
  * Both are deliberate deviations from the artboard, which removes and then
  * offers a note: `user.delete` cascades across taken courses, collections,
  * reviews and votes, and clearing grades drops every value read from a
- * transcript. Neither has an undo to offer once it has run (#155).
+ * transcript. Neither has an undo to offer once it has run.
  */
 const CONFIRMATIONS: Record<"grades" | "account", ConfirmRequest> = {
   grades: {

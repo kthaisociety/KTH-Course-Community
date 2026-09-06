@@ -114,10 +114,8 @@ export function CollectionTile({
                 Rename
               </button>
               {/* Same pair as the chip's Delete, and the artboard's own:
-                  `--cc-danger-ink` over a `--cc-danger-tint` hover. The
-                  `color-mix` this replaces predated the tint family (#127 §1)
-                  and could not have reproduced it — dark states the tint as
-                  alpha over the page, not as a share of the solid colour. */}
+                  `--cc-danger-ink` over a `--cc-danger-tint` hover. Not a
+                  `color-mix` — see `collection-chip.tsx`. */}
               <button
                 type="button"
                 role="menuitem"

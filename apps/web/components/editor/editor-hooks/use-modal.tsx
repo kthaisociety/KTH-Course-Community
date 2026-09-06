@@ -30,7 +30,7 @@ export function useEditorModal(): [
       <Dialog open={true} onOpenChange={onClose}>
         {/*
           384px, stated rather than inherited: `DialogContent` used to clamp
-          every dialog to it and no longer does (#178). This modal is one of the
+          every dialog to it and no longer does. This modal is one of the
           two that were happy with the clamp, so it keeps it explicitly.
         */}
         <DialogContent className="sm:max-w-sm">

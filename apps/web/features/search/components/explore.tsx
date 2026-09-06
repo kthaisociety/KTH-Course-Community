@@ -37,7 +37,7 @@ import { useExplore } from "../hooks/use-explore";
  *
  * ## Where it departs from the artboard, and why
  *
- * - The artboard's **pager** is built (#148), and turns pages without ever
+ * - The artboard's **pager** is built, and turns pages without ever
  *   claiming how many there are. `search.courses` used to accept a `page` and
  *   drop it, and to report `total: results.length` — the size of the page it
  *   had just built. A pager over that would have invented pages, which is the
@@ -294,7 +294,7 @@ export function Explore() {
  * its own mock store. The server cannot answer that question: `search.courses`
  * returns one page and reports `total` as the length of that page, and that
  * page is a de-duplicated union of a keyword ranking and a semantic one, which
- * has no count short of running both unbounded (#74). "Showing" is the smallest
+ * has no count short of running both unbounded. "Showing" is the smallest
  * edit that keeps the sentence true.
  *
  * The rating filter used to be a third reason — it thresholded rows *after* the

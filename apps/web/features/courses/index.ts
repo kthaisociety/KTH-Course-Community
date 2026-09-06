@@ -1,7 +1,7 @@
 /**
  * The cross-feature API of the courses feature.
  *
- * What Explore (#89), Saved (#90) and Collections (#91) need in order to render
+ * What Explore, Saved and Collections need in order to render
  * a course card, and to manage the collections a card can be put into. The
  * card's mapper and its formatting helpers stay inside the feature, reachable
  * through `CourseCardItem` — a barrel that exports its own internals turns each
@@ -14,7 +14,7 @@
  *
  * `useTakenCourses` and `useMarkCourseTaken` are here for the same reason. The
  * card reads the viewer's taken courses to tick its Taken control and writes
- * one with `taken.add`; Taken courses (#92) reads the same list and builds its
+ * one with `taken.add`; Taken courses reads the same list and builds its
  * other three writes on the same invalidation, so both surfaces share one query
  * key and one `taken.add`.
  */

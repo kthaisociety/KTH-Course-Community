@@ -40,7 +40,7 @@ describe("search.courses", () => {
    * if it were the size of the matching set. It is not replaced by a truthful
    * count: a de-duplicated union of a keyword ranking and a semantic one has no
    * count to take, and the semantic leg matches every course with an embedding
-   * at some distance. `hasMore` is what a prev/next pager actually asks (#148).
+   * at some distance. `hasMore` is what a prev/next pager actually asks.
    */
   it("reports whether there is another page, and no total at all", async () => {
     vi.mocked(searchCourses).mockResolvedValue({

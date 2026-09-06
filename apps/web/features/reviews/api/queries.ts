@@ -32,7 +32,7 @@ export type { TakenCourse };
  *
  * The title is part of the answer rather than each screen's to fetch:
  * `user_taken_courses` stores only a code, so a host that forgot the lookup
- * rendered the code twice — which is exactly what My Page did (#157). There is
+ * rendered the code twice — which is exactly what My Page did. There is
  * one host fewer to remember now, and no second place for the join to diverge.
  *
  * `null` while `course.summary` is still in flight, or when it failed. The card
@@ -72,7 +72,7 @@ export function useReviewList(courseCode: string | undefined) {
  *
  * The catalogue title comes back with each course for the same reason the
  * difference does: it is the same join on both screens, and the host that had
- * to remember it was the host that forgot (#157).
+ * to remember it was the host that forgot.
  */
 export function useUnreviewedTakenCourses(): {
   courses: UnreviewedTakenCourse[];

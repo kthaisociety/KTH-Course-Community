@@ -88,7 +88,7 @@ function DialogContent({
           /*
             `max-w-[calc(100%-2rem)]` is the phone guard, and it is the only
             opinion this primitive has about width. There used to be an
-            `sm:max-w-sm` beside it, and it was a trap (#178).
+            `sm:max-w-sm` beside it, and it was a trap.
 
             tailwind-merge keeps `sm:max-w-*` and plain `max-w-*` in different
             groups, so neither a caller's `w-[440px]` nor its `max-w-4xl`

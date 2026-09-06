@@ -5,7 +5,7 @@
  * thing it can say about a course the reader picked is what it puts in the URL.
  * The parameter used to be the bare flag `1`, which could say "open the
  * reviewer" and nothing else, so a row and the "Fast track all N" button
- * deep-linked to the very same place and the named course was discarded (#157).
+ * deep-linked to the very same place and the named course was discarded.
  */
 
 /**

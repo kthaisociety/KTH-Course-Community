@@ -176,7 +176,7 @@ function takenCourse(overrides: Partial<TakenCourse> = {}): TakenCourse {
 /**
  * One unreviewed course as the hook now hands it over: the taken row plus the
  * catalogue title. The lookup moved into `useUnreviewedTakenCourses` so neither
- * host has to remember it, and My Page was the host that forgot (#157).
+ * host has to remember it, and My Page was the host that forgot.
  */
 function unreviewedCourse(
   overrides: Partial<TakenCourse> = {},
@@ -527,7 +527,7 @@ describe("adding by hand", () => {
 /**
  * Everything on a taken row is self-reported — `CONTEXT.md` says so — and a
  * transcript re-read is the only cheap way back, so the mutation waits behind a
- * confirmation (#155). The artboard confirms after; the product owner settled
+ * confirmation. The artboard confirms after; the product owner settled
  * on before for every destructive action.
  */
 describe("removing", () => {
@@ -1155,7 +1155,7 @@ describe("arriving with ?review=…", () => {
   });
 
   /**
-   * The defect this contract was widened for (#157): a row on My Page's prompt
+   * The defect this contract was widened for: a row on My Page's prompt
    * names a course, and the round has to start on it rather than on whatever
    * the unreviewed set happens to list first.
    */

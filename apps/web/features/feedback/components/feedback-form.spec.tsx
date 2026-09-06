@@ -74,7 +74,7 @@ describe("FeedbackForm", () => {
     /**
      * The panel was built when the palette had no green and borrowed
      * `--cc-info` with `--cc-brand` ink, which read as information rather than
-     * success. The tint family exists now (#127 §1) and its three tokens are
+     * success. The tint family exists now and its three tokens are
      * the artboard's three hexes exactly, so the panel says "this worked" in
      * the design's own colours in both themes.
      *

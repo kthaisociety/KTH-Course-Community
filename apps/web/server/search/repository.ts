@@ -17,7 +17,7 @@ export type SearchHit = {
  * query returns already satisfies it.
  *
  * The service now asks for a window that covers every page up to the one it is
- * serving, plus one row of lookahead (#148). That is still `size` meaning
+ * serving, plus one row of lookahead. That is still `size` meaning
  * `size` — it is a bigger number, not an inflated one — and it works only
  * because this query is *totally* ordered: the three-way bucket, then
  * `ts_rank`, then `courses.code ASC`. A LIMIT over a total order returns a
@@ -96,7 +96,7 @@ export async function searchByKeyword(
  * identical distance may come back in either order between two executions of
  * the same query. Under a plain LIMIT that is invisible — the same set, only
  * shuffled. Under pagination it is a bug: the service pages by slicing one
- * ordered prefix (#148), so a pair that swaps between the fetch for page 2 and
+ * ordered prefix, so a pair that swaps between the fetch for page 2 and
  * the fetch for page 3 puts one course on both pages and the other on neither.
  *
  * `courses.code` is the primary key, so appending it makes the order total, and

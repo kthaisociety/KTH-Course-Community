@@ -292,7 +292,7 @@ export function TakenCourses() {
    * **The parameter carries a course.** `?review=<CODE>` starts the round on
    * that course with the rest dealt behind it, which is what a row on My Page's
    * prompt means and what it could not say while the parameter was the bare
-   * flag `1` (#157). `1` still means what it always did — open the reviewer, on
+   * flag `1`. `1` still means what it always did — open the reviewer, on
    * no particular course — so links already in the wild keep working;
    * `parseReviewDeepLink` is the whole contract.
    *
@@ -660,7 +660,7 @@ export function TakenCourses() {
    * nowhere but here, and the only cheap way back is reading a transcript
    * again — which cannot restore a hand-entered course at all. The artboard
    * confirms *after*, with a note; the product owner settled on confirming
-   * before for every destructive action, and this is one of them (#155).
+   * before for every destructive action, and this is one of them.
    *
    * The note stays anyway. Confirming before is about not removing the wrong
    * row; Undo is about the row it was right to remove and wrong to lose.

@@ -62,7 +62,7 @@ const SAVED_HEADING_ID = "saved-courses-heading";
  * collection it was in and out of each of their orders. That is what the
  * confirmation below names, and now that this list shows organized courses too
  * it is a thing a reader can do without ever opening the collection they are
- * emptying (#155).
+ * emptying.
  *
  * **Collections is a section of this page, not a link away from it.** The
  * artboard imports the Collections artboard with `compact`, which is
@@ -317,7 +317,7 @@ export function Saved({ openCollectionId = null, openCourse = null }: Props) {
                 An open collection's cards sit in this very column, so they get
                 the ramp this page already measured for its own list. Without it
                 they pinned the expanded end and were clipped by the column the
-                pane had just narrowed (#159).
+                pane had just narrowed.
               */
               geo={geo}
             />
@@ -457,7 +457,7 @@ export function Saved({ openCollectionId = null, openCourse = null }: Props) {
       ) : null}
 
       {/*
-        Asked before the write, not confirmed after it (#155). The body names
+        Asked before the write, not confirmed after it. The body names
         the one thing an unsave really does take with it — the course's place in
         every collection holding it, cascaded off `user_saved_courses` — and
         says nothing about reviews or taken history, which have no foreign key

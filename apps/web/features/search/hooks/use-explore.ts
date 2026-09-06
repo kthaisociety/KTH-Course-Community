@@ -48,7 +48,7 @@ function pageFromParam(raw: string | null): number {
  * The field owns what is being typed, because an input driven from the URL
  * cannot keep up with a keystroke. `?q=` owns what is being *searched*: it seeds
  * the field on arrival, so a link shared out of Explore — or handed over by the
- * landing page's hero — opens on the search it names rather than empty (#95),
+ * landing page's hero — opens on the search it names rather than empty,
  * and the debounced value is written back to it so the address bar always names
  * the results on screen. `router.replace` rather than `push`: a search that grew
  * a character at a time must not leave twelve entries in the reader's history.

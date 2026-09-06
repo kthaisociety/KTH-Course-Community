@@ -12,7 +12,7 @@ export const searchRouter = createTRPCRouter({
    *
    * `page` used to be accepted and dropped, and the reply carried
    * `total: results.length` — the size of the page it had just built, offered
-   * as if it were the size of the matching set. Both are gone (#148): `page` is
+   * as if it were the size of the matching set. Both are gone: `page` is
    * honoured, and `total` is not replaced by a truthful count because there is
    * no truthful count to compute over a de-duplicated union of a keyword
    * ranking and a semantic one. `service.ts` sets out why at length.

@@ -344,7 +344,7 @@ export function MyPage() {
                     a course and the URL carries it — `?review=<CODE>` — because
                     the row's whole contract is "open the reviewer on this one",
                     and a parameter that could only say "open the reviewer"
-                    discarded the course the reader named (#157). The button,
+                    discarded the course the reader named. The button,
                     which names no course, still writes the original
                     `?review=1`.
                   */

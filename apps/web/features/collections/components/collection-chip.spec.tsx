@@ -36,7 +36,7 @@ describe("CollectionChip", () => {
    * a `#fdf3ef` hover, which is `--cc-danger-ink` over `--cc-danger-tint`. The
    * chip used to derive that hover with
    * `color-mix(in srgb, var(--cc-danger) 12%, var(--cc-surface))` because the
-   * tint family did not exist yet (#127 §1) — and no mix of the solid colour
+   * tint family did not exist yet — and no mix of the solid colour
    * could have reached it in dark, where the design states the tint as alpha
    * over the page instead.
    *

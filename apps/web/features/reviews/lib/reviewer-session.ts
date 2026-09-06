@@ -30,7 +30,7 @@ import { decodeReviewDraft, type ReviewDraft } from "./review-draft";
  * is worth at. A round that is not a round is refused whole; a *draft* is
  * salvaged field by field by the shared `decodeReviewDraft`, because this file
  * once had its own copy of that decoder and the workspace pane had another, and
- * the two came to disagree about what a bad draft means (#166).
+ * the two came to disagree about what a bad draft means.
  *
  * **Being well-formed is not the same as being current.** Nothing in this file
  * knows which courses still need reviewing, so it cannot tell a round that was

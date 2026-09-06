@@ -137,7 +137,7 @@ type Props = {
  *
  * `Course Community - Saved.dc.html` imports the Collections artboard as a
  * section of the Saved page, in its `compact` variant. That embedding is Saved's
- * to build (#90); this is the same component as a page of its own, so the
+ * to build; this is the same component as a page of its own, so the
  * feature is reachable and usable before Saved exists. The `compact` chip row
  * is built and Saved is its caller — the sentence that used to stand here said
  * it had none, which stopped being true when #90 landed.
@@ -174,7 +174,7 @@ type Props = {
  * narrows a column, and the ramp's input is the width itself rather than the
  * reason for it. So this measures too rather than pinning the expanded end:
  * measuring *is* pinning whenever the column is wide, and unlike pinning it is
- * also right when the column is not (#159).
+ * also right when the column is not.
  */
 export function Collections({
   openCollectionId = null,
