@@ -25,6 +25,11 @@ import {
 const DRAFTS_KEY = "cc.workspace.drafts";
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
+/** Two accounts, and the bucket a signed-out visitor writes under. */
+const ME = "user-me";
+const OTHER = "user-other";
+const ANON = "";
+
 function draftWith(over: Partial<ReviewDraft> = {}): ReviewDraft {
   return { ...EMPTY_REVIEW_DRAFT, message: "Half a thought", ...over };
 }
@@ -34,13 +39,16 @@ function draftWith(over: Partial<ReviewDraft> = {}): ReviewDraft {
  * course named is one this tab changed. The baseline is the whole point of the
  * second argument, so the tests that care about it pass their own.
  */
-function writeFresh(drafts: Record<string, ReviewDraft>) {
-  writeDrafts(drafts, {});
+function writeFresh(drafts: Record<string, ReviewDraft>, owner = ME) {
+  writeDrafts(drafts, {}, owner);
 }
 
-/** What is actually sitting in the browser, decoder and all bypassed. */
-function storedDrafts(): Record<string, { savedAt: number; draft: unknown }> {
-  return JSON.parse(localStorage.getItem(DRAFTS_KEY) ?? "{}");
+/** What is actually sitting in one owner's bucket, decoder bypassed. */
+function storedDrafts(
+  owner = ME,
+): Record<string, { savedAt: number; draft: unknown }> {
+  const buckets = JSON.parse(localStorage.getItem(DRAFTS_KEY) ?? "{}");
+  return buckets[owner] ?? {};
 }
 
 function storeRawDraft(
@@ -71,7 +79,7 @@ describe("drafts", () => {
 
     expect(localStorage.getItem(DRAFTS_KEY)).not.toBeNull();
     expect(sessionStorage.getItem(DRAFTS_KEY)).toBeNull();
-    expect(readDrafts().DD2380?.message).toBe("Half a thought");
+    expect(readDrafts(ME).DD2380?.message).toBe("Half a thought");
   });
 
   /**
@@ -109,19 +117,19 @@ describe("drafts", () => {
 
     writeFresh({ DD2380: ANSWERED });
 
-    expect(readDrafts().DD2380).toEqual(ANSWERED);
+    expect(readDrafts(ME).DD2380).toEqual(ANSWERED);
   });
 
   it("forgets a draft nobody came back to for a week", () => {
     storeRawDraft("DD2380", draftWith(), Date.now() - WEEK_MS - 1000);
 
-    expect(readDrafts()).toEqual({});
+    expect(readDrafts(ME)).toEqual({});
   });
 
   it("keeps one that is only a day old", () => {
     storeRawDraft("DD2380", draftWith(), Date.now() - 24 * 60 * 60 * 1000);
 
-    expect(readDrafts().DD2380?.message).toBe("Half a thought");
+    expect(readDrafts(ME).DD2380?.message).toBe("Half a thought");
   });
 
   /*
@@ -161,10 +169,10 @@ describe("drafts", () => {
     const held = { DD2380: draftWith(), SF1626: draftWith() };
     writeFresh(held);
 
-    writeDrafts({ ...held, DD2380: EMPTY_REVIEW_DRAFT }, held);
+    writeDrafts({ ...held, DD2380: EMPTY_REVIEW_DRAFT }, held, ME);
 
     expect(storedDrafts().DD2380).toBeUndefined();
-    expect(readDrafts().SF1626).toBeDefined();
+    expect(readDrafts(ME).SF1626).toBeDefined();
   });
 
   /*
@@ -177,28 +185,29 @@ describe("drafts", () => {
   it("does not write back a course it is only still holding", () => {
     // Tab 2 hydrates DD2380 as it stands.
     writeFresh({ DD2380: draftWith({ message: "First pass" }) });
-    const hydrated = readDrafts();
+    const hydrated = readDrafts(ME);
 
     // Tab 1 gets further with the same course.
     writeDrafts(
       { ...hydrated, DD2380: draftWith({ message: "Second pass" }) },
       hydrated,
+      ME,
     );
 
     // Tab 2, which never touched DD2380 again, saves a different course.
-    writeDrafts({ ...hydrated, SF1626: draftWith() }, hydrated);
+    writeDrafts({ ...hydrated, SF1626: draftWith() }, hydrated, ME);
 
-    expect(readDrafts().DD2380?.message).toBe("Second pass");
-    expect(readDrafts().SF1626?.message).toBe("Half a thought");
+    expect(readDrafts(ME).DD2380?.message).toBe("Second pass");
+    expect(readDrafts(ME).SF1626?.message).toBe("Half a thought");
   });
 
   it("still writes a course it did change since it synchronised", () => {
     writeFresh({ DD2380: draftWith({ message: "First pass" }) });
-    const hydrated = readDrafts();
+    const hydrated = readDrafts(ME);
 
-    writeDrafts({ DD2380: draftWith({ message: "Mine now" }) }, hydrated);
+    writeDrafts({ DD2380: draftWith({ message: "Mine now" }) }, hydrated, ME);
 
-    expect(readDrafts().DD2380?.message).toBe("Mine now");
+    expect(readDrafts(ME).DD2380?.message).toBe("Mine now");
   });
 
   /*
@@ -212,8 +221,8 @@ describe("drafts", () => {
 
     writeFresh({ DD2380: draftWith() });
 
-    expect(readDrafts().SF1626?.message).toBe("Written next door");
-    expect(readDrafts().DD2380?.message).toBe("Half a thought");
+    expect(readDrafts(ME).SF1626?.message).toBe("Written next door");
+    expect(readDrafts(ME).DD2380?.message).toBe("Half a thought");
   });
 
   it("survives a browser that refuses storage entirely", () => {
@@ -228,7 +237,7 @@ describe("drafts", () => {
         throw new Error("storage disabled");
       });
 
-    expect(readDrafts()).toEqual({});
+    expect(readDrafts(ME)).toEqual({});
     expect(() => writeFresh({ DD2380: draftWith() })).not.toThrow();
 
     getItem.mockRestore();
@@ -248,11 +257,11 @@ describe("drafts the previous release left behind", () => {
   it("brings a legacy draft across, once, and drops the old key", () => {
     sessionStorage.setItem(DRAFTS_KEY, JSON.stringify(LEGACY));
 
-    expect(readDrafts().DD2380?.message).toBe("From before");
+    expect(readDrafts(ME).DD2380?.message).toBe("From before");
     expect(sessionStorage.getItem(DRAFTS_KEY)).toBeNull();
-    expect(storedDrafts().DD2380.savedAt).toBeTypeOf("number");
+    expect(storedDrafts(ANON).DD2380.savedAt).toBeTypeOf("number");
     // And it is genuinely in the new home now, not read from the old one again.
-    expect(readDrafts().DD2380?.message).toBe("From before");
+    expect(readDrafts(ME).DD2380?.message).toBe("From before");
   });
 
   // A draft written since the deploy is the current one; the copy an old tab
@@ -261,7 +270,7 @@ describe("drafts the previous release left behind", () => {
     writeFresh({ DD2380: draftWith({ message: "Written since" }) });
     sessionStorage.setItem(DRAFTS_KEY, JSON.stringify(LEGACY));
 
-    expect(readDrafts().DD2380?.message).toBe("Written since");
+    expect(readDrafts(ME).DD2380?.message).toBe("Written since");
   });
 
   // The old build stored cleared drafts; this one does not. Carrying one across
@@ -272,7 +281,7 @@ describe("drafts the previous release left behind", () => {
       JSON.stringify({ DD2380: EMPTY_REVIEW_DRAFT }),
     );
 
-    expect(readDrafts()).toEqual({});
+    expect(readDrafts(ME)).toEqual({});
   });
 
   // Losing the legacy key before the new one is safely written would be the
@@ -285,7 +294,7 @@ describe("drafts the previous release left behind", () => {
         throw new Error("quota exceeded");
       });
 
-    expect(readDrafts().DD2380?.message).toBe("From before");
+    expect(readDrafts(ME).DD2380?.message).toBe("From before");
 
     setItem.mockRestore();
     expect(sessionStorage.getItem(DRAFTS_KEY)).not.toBeNull();
@@ -311,7 +320,7 @@ describe("a stored draft that does not quite fit", () => {
       shares: [60],
     });
 
-    const draft = readDrafts().DD2380;
+    const draft = readDrafts(ME).DD2380;
     expect(draft?.message).toBe("Half a thought");
     expect(draft?.workloadScore).toBe(8);
     expect(draft?.happyTook).toBe(true);
@@ -328,8 +337,8 @@ describe("a stored draft that does not quite fit", () => {
       shares: [60, 40],
     });
 
-    expect(readDrafts().DD2380?.methods).toEqual([]);
-    expect(readDrafts().DD2380?.message).toBe("Half a thought");
+    expect(readDrafts(ME).DD2380?.methods).toEqual([]);
+    expect(readDrafts(ME).DD2380?.message).toBe("Half a thought");
   });
 
   it("drops a split that does not add up to 100", () => {
@@ -339,7 +348,7 @@ describe("a stored draft that does not quite fit", () => {
       shares: [60, 30],
     });
 
-    expect(readDrafts().DD2380?.methods).toEqual([]);
+    expect(readDrafts(ME).DD2380?.methods).toEqual([]);
   });
 
   it("keeps a split that is entirely fine", () => {
@@ -349,20 +358,20 @@ describe("a stored draft that does not quite fit", () => {
       shares: [60, 40],
     });
 
-    expect(readDrafts().DD2380?.methods).toEqual(["exam", "labs"]);
-    expect(readDrafts().DD2380?.shares).toEqual([60, 40]);
+    expect(readDrafts(ME).DD2380?.methods).toEqual(["exam", "labs"]);
+    expect(readDrafts(ME).DD2380?.shares).toEqual([60, 40]);
   });
 
   it("ignores an entry that is not a draft at all", () => {
     localStorage.setItem(DRAFTS_KEY, JSON.stringify({ DD2380: "nope" }));
 
-    expect(readDrafts()).toEqual({});
+    expect(readDrafts(ME)).toEqual({});
   });
 
   it("ignores an entry with no stamp, which no build of this ever wrote", () => {
     localStorage.setItem(DRAFTS_KEY, JSON.stringify({ DD2380: draftWith() }));
 
-    expect(readDrafts()).toEqual({});
+    expect(readDrafts(ME)).toEqual({});
   });
 });
 
@@ -398,5 +407,77 @@ describe("what stayed in the tab", () => {
     expect(claimAwaitingSignIn("SF1626")).toBe(false);
     expect(claimAwaitingSignIn("DD2380")).toBe(true);
     expect(claimAwaitingSignIn("DD2380")).toBe(false);
+  });
+});
+
+/*
+ * `localStorage` is the browser's, not the account's. Before drafts were keyed
+ * by owner, signing out and signing in as somebody else on the same browser
+ * profile handed the second account the first one's unpublished review — which
+ * they could then edit and publish under their own name.
+ */
+describe("drafts belong to the account that wrote them", () => {
+  it("does not hand one account's draft to the next", () => {
+    writeFresh({ DD2380: draftWith({ message: "Mine alone" }) }, ME);
+
+    expect(readDrafts(OTHER)).toEqual({});
+  });
+
+  it("keeps two accounts' drafts for the same course apart", () => {
+    writeFresh({ DD2380: draftWith({ message: "Mine" }) }, ME);
+    writeFresh({ DD2380: draftWith({ message: "Theirs" }) }, OTHER);
+
+    expect(readDrafts(ME).DD2380?.message).toBe("Mine");
+    expect(readDrafts(OTHER).DD2380?.message).toBe("Theirs");
+  });
+
+  it("leaves another account's bucket alone when it writes", () => {
+    writeFresh({ SF1626: draftWith({ message: "Next door" }) }, OTHER);
+
+    writeFresh({ DD2380: draftWith() }, ME);
+
+    expect(readDrafts(OTHER).SF1626?.message).toBe("Next door");
+    expect(readDrafts(ME).SF1626).toBeUndefined();
+  });
+
+  // The whole reason drafts are in `localStorage`: the magic link opens a new
+  // tab, so a draft begun signed-out has to survive into the session.
+  it("carries a draft begun signed-out into the account that signs in", () => {
+    writeFresh({ DD2380: draftWith({ message: "Before signing in" }) }, ANON);
+
+    expect(readDrafts(ME).DD2380?.message).toBe("Before signing in");
+  });
+
+  it("moves the anonymous draft rather than copying it", () => {
+    writeFresh({ DD2380: draftWith({ message: "Before signing in" }) }, ANON);
+
+    writeFresh(readDrafts(ME), ME);
+
+    expect(readDrafts(ME).DD2380?.message).toBe("Before signing in");
+    expect(storedDrafts(ANON)).toEqual({});
+    expect(readDrafts(OTHER)).toEqual({});
+  });
+
+  it("prefers an account's own draft to one it would inherit", () => {
+    writeFresh({ DD2380: draftWith({ message: "Anonymous" }) }, ANON);
+    writeFresh({ DD2380: draftWith({ message: "Signed in" }) }, ME);
+
+    expect(readDrafts(ME).DD2380?.message).toBe("Signed in");
+  });
+
+  // Shipping the fix must not drop what the unowned release stored. No owner
+  // was recorded to restore, so the first account to read it claims it.
+  it("treats the previous release's unowned record as anonymous", () => {
+    localStorage.setItem(
+      DRAFTS_KEY,
+      JSON.stringify({
+        DD2380: {
+          savedAt: Date.now(),
+          draft: { ...EMPTY_REVIEW_DRAFT, message: "Unowned" },
+        },
+      }),
+    );
+
+    expect(readDrafts(ME).DD2380?.message).toBe("Unowned");
   });
 });

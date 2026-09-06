@@ -23,6 +23,10 @@ const useCourseSummaries = vi.fn();
 const useReviewList = vi.fn();
 const addReview = vi.fn();
 const useMe = vi.fn();
+const useSessionData = vi.fn();
+
+/** The signed-in account these tests run as, matching the `useMe` mock. */
+const OWNER = "u1";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
@@ -77,6 +81,10 @@ vi.mock("@/features/reviews", async () => ({
 vi.mock("@/features/auth", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/features/auth")>()),
   useMe: () => useMe(),
+  // The pane hydrates the bucket belonging to whoever is signed in, so the
+  // account is a fixture here rather than a constant: one test below changes
+  // it mid-mount.
+  useSessionData: () => useSessionData(),
 }));
 
 const DETAILS: CourseDetails = {
@@ -213,6 +221,8 @@ function renderPane(
 
 beforeEach(() => {
   sessionStorage.clear();
+  localStorage.clear();
+  useSessionData.mockReturnValue({ userId: OWNER, isPending: false });
   useCourseDetails.mockReturnValue({
     data: DETAILS,
     isLoading: false,
@@ -828,7 +838,7 @@ describe("a stored draft, and what mounting does to it", () => {
 
     renderPane([openCourse("details")]);
 
-    expect(readDrafts().SF1626?.message).toBe("Half a thought");
+    expect(readDrafts(OWNER).SF1626?.message).toBe("Half a thought");
   });
 
   it("hands a stored draft back to its tab, and leaves it in storage", async () => {
@@ -842,7 +852,7 @@ describe("a stored draft, and what mounting does to it", () => {
       await screen.findByRole("textbox", { name: "Write your review" }),
     ).toHaveValue("Half a thought");
     await waitFor(() =>
-      expect(readDrafts().DD2380?.message).toBe("Half a thought"),
+      expect(readDrafts(OWNER).DD2380?.message).toBe("Half a thought"),
     );
   });
 
@@ -873,7 +883,7 @@ describe("a stored draft, and what mounting does to it", () => {
     );
 
     await waitFor(() =>
-      expect(readDrafts().DD2380?.message).toBe("Half a thought"),
+      expect(readDrafts(OWNER).DD2380?.message).toBe("Half a thought"),
     );
   });
 });
@@ -925,8 +935,57 @@ describe("what the writer is told on the way back", () => {
  * one's from before the sign-in. The empty baseline says "nothing synchronised
  * yet", which is what a first write is.
  */
+/*
+ * Signing out and in again without a reload leaves the pane mounted, holding
+ * the previous account's drafts in state. Storage refuses to *read* across
+ * accounts on its own; nothing but the pane's own gate stops it writing what
+ * it is still holding into the account that just arrived.
+ */
+describe("an account change while the pane is mounted", () => {
+  const NEXT = "u2";
+
+  it("does not write one account's drafts into the next account's bucket", async () => {
+    storeDraft({ DD2380: { ...EMPTY_REVIEW_DRAFT, message: "Written by u1" } });
+
+    const { rerender, props } = renderPane([openCourse("review")]);
+    await waitFor(() =>
+      expect(readDrafts(OWNER).DD2380?.message).toBe("Written by u1"),
+    );
+
+    useSessionData.mockReturnValue({ userId: NEXT, isPending: false });
+    rerender(<WorkspacePane {...props} />);
+
+    await waitFor(() => expect(readDrafts(NEXT)).toEqual({}));
+    expect(readDrafts(OWNER).DD2380?.message).toBe("Written by u1");
+  });
+
+  it("hydrates the arriving account's own draft instead", async () => {
+    storeDraft({ DD2380: { ...EMPTY_REVIEW_DRAFT, message: "Written by u1" } });
+    writeDrafts(
+      { DD2380: { ...EMPTY_REVIEW_DRAFT, message: "Written by u2" } },
+      {},
+      NEXT,
+    );
+
+    const { rerender, props } = renderPane([openCourse("review")]);
+    expect(
+      await screen.findByRole("textbox", { name: "Write your review" }),
+    ).toHaveValue("Written by u1");
+
+    useSessionData.mockReturnValue({ userId: NEXT, isPending: false });
+    rerender(<WorkspacePane {...props} />);
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole("textbox", { name: "Write your review" }),
+      ).toHaveValue("Written by u2"),
+    );
+    expect(readDrafts(OWNER).DD2380?.message).toBe("Written by u1");
+  });
+});
+
 function storeDraft(drafts: Record<string, ReviewDraft>) {
-  writeDrafts(drafts, {});
+  writeDrafts(drafts, {}, OWNER);
 }
 
 /** The score tracks are range inputs behind the design's own bar. */

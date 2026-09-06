@@ -43,6 +43,27 @@ import {
  * no row anywhere, which is exactly why the browser is the right place for them.
  * A vote or a saved course would not belong here; those have tables.
  *
+ * ## A draft belongs to one account, and a browser is shared
+ *
+ * `localStorage` is the browser's, not the account's. Keyed by course alone, a
+ * draft written by whoever was signed in last is handed to whoever signs in
+ * next: they open the same course, hydrate someone else's unpublished text and
+ * answers, and can publish it under their own name. So the record is keyed by
+ * **owner first** — `{ [userId]: { [courseCode]: StoredDraft } }` - and a read
+ * is given only the bucket belonging to the account asking.
+ *
+ * The empty string is the owner key for a visitor, which is what
+ * `useSessionData` already reports as `userId` with no session, and is not a
+ * value Better Auth can issue. That bucket is the hand-off the paragraphs above
+ * exist for: a draft begun signed-out has no owner to protect, so the first
+ * account to read it **claims** it — the entries move into that account's
+ * bucket and the anonymous one is dropped, which keeps the sign-in promise
+ * without leaving a copy behind for the next account. The residue is narrow and
+ * deliberate: two people sharing a browser profile, both signed out, can still
+ * see each other's anonymous drafts. Nothing distinguishes them at that point,
+ * and refusing the hand-off would break the magic-link flow this file exists
+ * to serve.
+ *
  * ## Every read is defensive, and a failed read is not a delete
  *
  * What comes back is whatever was in storage, which may be from an older build,
@@ -162,25 +183,77 @@ interface StoredDraft {
   draft: ReviewDraft;
 }
 
+/** Whose drafts these are: a Better Auth user id, or `ANONYMOUS`. */
+export type DraftOwner = string;
+
 /**
- * Every stored draft that is still readable and still young enough, with its
- * stamp — the shape `readDrafts` presents and `writeDrafts` re-stamps against.
+ * The bucket a signed-out visitor writes under.
+ *
+ * `useSessionData` reports `userId: ""` with no session, so the empty string is
+ * already the value a caller has in hand, and no real id can collide with it.
  */
-function decodeStoredDrafts(): Record<string, StoredDraft> {
-  const value = read("local", DRAFTS_KEY);
+const ANONYMOUS: DraftOwner = "";
+
+/** Every account's drafts, kept apart. */
+type DraftBuckets = Record<DraftOwner, Record<string, StoredDraft>>;
+
+/** One owner's stored drafts: readable, and still young enough. */
+function decodeBucket(
+  value: unknown,
+  oldest: number,
+): Record<string, StoredDraft> {
   if (!isRecord(value)) return {};
 
-  const oldest = Date.now() - DRAFT_TTL_MS;
-  const stored: Record<string, StoredDraft> = {};
+  const bucket: Record<string, StoredDraft> = {};
   for (const [courseCode, entry] of Object.entries(value)) {
     if (!isRecord(entry)) continue;
     const { savedAt } = entry;
     if (typeof savedAt !== "number" || !Number.isFinite(savedAt)) continue;
     if (savedAt < oldest) continue;
     const draft = decodeReviewDraft(entry.draft);
-    if (draft) stored[courseCode] = { savedAt, draft };
+    if (draft) bucket[courseCode] = { savedAt, draft };
   }
-  return stored;
+  return bucket;
+}
+
+/**
+ * Whether this is the unowned record the previous release wrote.
+ *
+ * That shape was `{ [courseCode]: StoredDraft }`, so its values carry a numeric
+ * `savedAt`; a bucket's values are records of those and carry none. One stamped
+ * value is enough to tell them apart, and an empty record is neither.
+ */
+function isUnownedRecord(value: Record<string, unknown>): boolean {
+  return Object.values(value).some(
+    (entry) => isRecord(entry) && typeof entry.savedAt === "number",
+  );
+}
+
+/**
+ * Every stored draft that is still readable and still young enough, by owner.
+ *
+ * An unowned record from the previous release becomes the anonymous bucket, to
+ * be claimed by the first account that reads it. Dropping those instead would
+ * make shipping this fix the data loss it prevents — the same argument
+ * `adoptLegacyDrafts` makes below — and no owner was recorded to restore them
+ * to, so claiming is the only thing the format can honestly do with them.
+ */
+function decodeBuckets(): DraftBuckets {
+  const value = read("local", DRAFTS_KEY);
+  if (!isRecord(value)) return {};
+
+  const oldest = Date.now() - DRAFT_TTL_MS;
+  if (isUnownedRecord(value)) {
+    const inherited = decodeBucket(value, oldest);
+    return Object.keys(inherited).length > 0 ? { [ANONYMOUS]: inherited } : {};
+  }
+
+  const buckets: DraftBuckets = {};
+  for (const [owner, entries] of Object.entries(value)) {
+    const bucket = decodeBucket(entries, oldest);
+    if (Object.keys(bucket).length > 0) buckets[owner] = bucket;
+  }
+  return buckets;
 }
 
 /**
@@ -193,13 +266,19 @@ function decodeStoredDrafts(): Record<string, StoredDraft> {
  * simply being looked for in the wrong place. A migration is cheap and the
  * alternative is a one-off outage of exactly the thing this PR is about.
  *
- * Deliberately conservative. The new format wins for any course present in
- * both, so a draft written since the deploy is never overwritten by the stale
- * copy the old tab left behind. An untouched legacy draft is not carried at
- * all — the old build stored those, the new one does not, and resurrecting one
- * would put an entry back that the student had cleared. The legacy key is
- * removed only once the new one has actually been written, so a browser that
- * refuses the write keeps the old value and can try again on the next read.
+ * They arrive unowned, so they land in the anonymous bucket and are claimed by
+ * the first account to read them. The tab knew who was typing; the storage it
+ * wrote did not record it, and inventing an owner here would be a guess.
+ *
+ * Deliberately conservative. A course already held in **any** owner's bucket
+ * wins, so a draft written since the deploy is never overwritten by the stale
+ * copy the old tab left behind, and a tab's leftover copy can never displace a
+ * draft that now belongs to an account. An untouched legacy draft is not
+ * carried at all — the old build stored those, the new one does not, and
+ * resurrecting one would put an entry back that the student had cleared. The
+ * legacy key is removed only once the new one has actually been written, so a
+ * browser that refuses the write keeps the old value and can try again on the
+ * next read.
  *
  * It runs at most once per tab, which is where the old key lives: the first
  * read moves that tab's drafts across and drops its key, and thereafter there
@@ -207,33 +286,53 @@ function decodeStoredDrafts(): Record<string, StoredDraft> {
  * same treatment when it reloads into this build, and the rule above is what
  * keeps its staler copy from displacing what the first tab already moved.
  */
-function adoptLegacyDrafts(
-  stored: Record<string, StoredDraft>,
-): Record<string, StoredDraft> | null {
+function adoptLegacyDrafts(buckets: DraftBuckets): DraftBuckets | null {
   const legacy = read("session", DRAFTS_KEY);
   if (!isRecord(legacy)) return null;
 
   const now = Date.now();
-  const merged: Record<string, StoredDraft> = { ...stored };
+  const claimed = new Set(
+    Object.values(buckets).flatMap((bucket) => Object.keys(bucket)),
+  );
+  const anonymous = { ...(buckets[ANONYMOUS] ?? {}) };
   for (const [courseCode, candidate] of Object.entries(legacy)) {
-    if (courseCode in merged) continue;
+    if (claimed.has(courseCode)) continue;
     const draft = decodeReviewDraft(candidate);
     if (!draft || isUntouched(draft)) continue;
-    merged[courseCode] = { savedAt: now, draft };
+    anonymous[courseCode] = { savedAt: now, draft };
   }
 
+  const merged: DraftBuckets = { ...buckets };
+  if (Object.keys(anonymous).length > 0) merged[ANONYMOUS] = anonymous;
   if (write("local", DRAFTS_KEY, merged)) remove("session", DRAFTS_KEY);
   return merged;
 }
 
-function readStoredDrafts(): Record<string, StoredDraft> {
-  const stored = decodeStoredDrafts();
-  return adoptLegacyDrafts(stored) ?? stored;
+function readBuckets(): DraftBuckets {
+  const buckets = decodeBuckets();
+  return adoptLegacyDrafts(buckets) ?? buckets;
 }
 
-export function readDrafts(): Record<string, ReviewDraft> {
+/**
+ * What one owner may see: its own drafts, over any it is about to claim.
+ *
+ * The anonymous bucket is merged in underneath so a draft begun before signing
+ * in survives the redirect, and the owner's own entry wins where both hold the
+ * same course — that one was written by this account, knowingly.
+ */
+function visibleTo(
+  buckets: DraftBuckets,
+  owner: DraftOwner,
+): Record<string, StoredDraft> {
+  const inherited = owner === ANONYMOUS ? {} : (buckets[ANONYMOUS] ?? {});
+  return { ...inherited, ...(buckets[owner] ?? {}) };
+}
+
+export function readDrafts(owner: DraftOwner): Record<string, ReviewDraft> {
   const drafts: Record<string, ReviewDraft> = {};
-  for (const [courseCode, entry] of Object.entries(readStoredDrafts())) {
+  for (const [courseCode, entry] of Object.entries(
+    visibleTo(readBuckets(), owner),
+  )) {
     drafts[courseCode] = entry.draft;
   }
   return drafts;
@@ -303,8 +402,10 @@ function sameDraft(a: ReviewDraft, b: ReviewDraft): boolean {
 export function writeDrafts(
   drafts: Record<string, ReviewDraft>,
   synced: Record<string, ReviewDraft>,
+  owner: DraftOwner,
 ): void {
-  const stored = readStoredDrafts();
+  const buckets = readBuckets();
+  const stored = visibleTo(buckets, owner);
   const now = Date.now();
   const changed = (courseCode: string, draft: ReviewDraft) =>
     !sameDraft(synced[courseCode] ?? EMPTY_REVIEW_DRAFT, draft);
@@ -327,7 +428,15 @@ export function writeDrafts(
     next[courseCode] = { savedAt: now, draft };
   }
 
-  write("local", DRAFTS_KEY, next);
+  const nextBuckets: DraftBuckets = { ...buckets };
+  if (Object.keys(next).length > 0) nextBuckets[owner] = next;
+  else delete nextBuckets[owner];
+  // Claiming is a move, not a copy. Everything the anonymous bucket held is in
+  // `next` now — `visibleTo` put it there and the loops above carried it
+  // through untouched - so dropping it is what stops the next account in this
+  // browser from finding a second copy.
+  if (owner !== ANONYMOUS) delete nextBuckets[ANONYMOUS];
+  write("local", DRAFTS_KEY, nextBuckets);
 }
 
 /**

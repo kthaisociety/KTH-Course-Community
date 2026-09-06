@@ -7,6 +7,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useSessionData } from "@/features/auth";
 import { cn } from "@/lib/utils";
 import {
   type OpenCourse,
@@ -145,9 +146,25 @@ export function WorkspacePane({
    * would be `false` in both passes, because neither has re-rendered. So the
    * read is gated on a ref and the write on state, each on the only thing that
    * can do its job.
+   *
+   * Both gates carry the **owner** rather than a boolean, because "restored"
+   * is only true of one account. Drafts are per-account in storage, so an
+   * account change mid-mount — signing in without a redirect, signing out, the
+   * session resolving from pending — has to re-restore from the new bucket, and
+   * a ref that only says "already done" would refuse to. Holding the owner it
+   * restored for says "already done *for them*", which is the true statement.
+   *
+   * The mirror needs it more than the read does. On the commit where the owner
+   * changes, both effects run: the restore replaces `drafts` with the new
+   * account's, but the mirror in that same commit still closes over the *old*
+   * account's `drafts`, and would write them into the new account's bucket
+   * before the restore's state lands. Comparing `hydratedFor` — which only the
+   * restore sets — against the current owner is what holds the mirror until the
+   * two agree, so no account's drafts are ever written under another's name.
    */
-  const [hydrated, setHydrated] = useState(false);
-  const read = useRef(false);
+  const { userId: owner, isPending: sessionPending } = useSessionData();
+  const [hydratedFor, setHydratedFor] = useState<string | null>(null);
+  const restoredFor = useRef<string | null>(null);
   /**
    * What this pane and storage last agreed on, per course.
    *
@@ -162,24 +179,31 @@ export function WorkspacePane({
   const synced = useRef<Record<string, ReviewDraft>>({});
 
   useEffect(() => {
-    if (read.current) return;
-    read.current = true;
-    const restored = readDrafts();
+    // `userId` is "" both for a visitor and for a session still resolving, and
+    // those want opposite things: the first should hydrate the anonymous
+    // bucket, the second should wait rather than claim it on a signed-in
+    // reader's behalf.
+    if (sessionPending) return;
+    if (restoredFor.current === owner) return;
+    restoredFor.current = owner;
+    const restored = readDrafts(owner);
     synced.current = restored;
     setDrafts(restored);
     setPublished(readPublished());
-    setHydrated(true);
-  }, []);
+    setHydratedFor(owner);
+  }, [sessionPending, owner]);
 
   useEffect(() => {
-    if (!hydrated) return;
-    writeDrafts(drafts, synced.current);
+    if (hydratedFor !== owner) return;
+    writeDrafts(drafts, synced.current, owner);
     synced.current = drafts;
-  }, [hydrated, drafts]);
+  }, [hydratedFor, owner, drafts]);
 
   useEffect(() => {
-    if (hydrated) writePublished(published);
-  }, [hydrated, published]);
+    // Published is the tab's own note in `sessionStorage`, not an account's, so
+    // it needs the restore to have happened but not to match an owner.
+    if (hydratedFor !== null) writePublished(published);
+  }, [hydratedFor, published]);
 
   const active =
     openCourses.find((entry) => entry.id === activeId) ?? openCourses[0];
