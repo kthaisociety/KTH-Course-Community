@@ -46,13 +46,16 @@ import { cn } from "@/lib/utils";
  * Courses:44 — draw it as `background:#8bb3ef; color:#0a2449`. Landing:151 alone
  * still draws `#fff` / `#12417f`, which is where the old reading came from.
  *
- * So the button below is `bg-white text-cc-rail`, and that is what **no**
- * artboard draws: `--cc-rail` is `#1751a6` in light, not `#12417f`. Everything
- * else about it already matches — `mt-2.5`, `h-[34px]`, `rounded-[8px]`,
- * `13px/600`. Only the two colours are wrong, and they are not corrected here
- * because one rail component cannot follow two artboards; the export has to
- * agree with itself first. Tracked as the issue filed from #167, marked as
- * needing a design decision.
+ * The button was `bg-white text-cc-rail`, which is what **no** artboard draws:
+ * `--cc-rail` is `#1751a6` in light, not `#12417f`. That was left standing
+ * because one rail component cannot follow two artboards and the decision was
+ * a product call, not a code one. **The call has since been made, for the six.**
+ * The button is now `--cc-rail-btn` / `--cc-rail-btn-fg`, a pair that does not
+ * vary by theme because the artboards write one hex regardless of theme, and
+ * `globals.css` records why it is a literal rather than `--cc-btn` — the short
+ * version being that `--cc-btn` *is* `--cc-rail` in light, so the button would
+ * have vanished into the rail. Everything else already matched: `mt-2.5`,
+ * `h-[34px]`, `rounded-[8px]`, `13px/600`.
  *
  * The drawer renders this same component rather than a second one, so it keeps
  * the rail's metrics. The Mobile Preview draws slightly different ones — 56px of
@@ -275,7 +278,12 @@ export function Rail({ onRequestAuth, onDismiss }: Props) {
                 onDismiss?.();
                 onRequestAuth("sign-up");
               }}
-              className="mt-2.5 flex h-[34px] w-full cursor-pointer items-center justify-center rounded-[8px] bg-white font-semibold text-[13px] text-cc-rail"
+              /* `--cc-rail-btn`, not white and not `--cc-btn`: the six
+                 artboards that draw this button paint it `#8bb3ef` on
+                 `#0a2449`, and `--cc-btn` is `--cc-rail` itself in light theme.
+                 `globals.css` carries the full reasoning. `opacity:.9` on hover
+                 is the artboards' own. */
+              className="mt-2.5 flex h-[34px] w-full cursor-pointer items-center justify-center rounded-[8px] bg-cc-rail-btn font-semibold text-[13px] text-cc-rail-btn-fg hover:opacity-90"
             >
               Sign up
             </button>
