@@ -526,7 +526,7 @@ export function ReviewerCard({
             value={draft.message}
             onChange={(event) => patch({ message: event.target.value })}
             placeholder="What should they know before signing up?"
-            className="mt-2.5 block min-h-[74px] w-full resize-y rounded-[10px] border border-cc-rule3 bg-cc-surface p-3 text-[13.5px] text-cc-ink2 leading-[1.55] outline-none focus-visible:border-cc-hov"
+            className="mt-2.5 block min-h-[74px] w-full resize-y rounded-[10px] border border-cc-rule3 bg-cc-surface p-3 text-[13.5px] text-cc-ink2 leading-[1.55] outline-none"
           />
         </Section>
       </div>

@@ -19,9 +19,8 @@ const formSchema = z.object({
  * tall, 10px radius, 14px of side padding, `--rule3` around `--surface`, 14px
  * text. shadcn's `Input` is 32px at a 10px radius, which is what this was.
  *
- * Focus follows `feedback-form.tsx` for the reason recorded there — the
- * artboards draw no focus state, and `--cc-hov` is the palette's own emphasis
- * border, so a keyboard gets something to follow without a new colour.
+ * Focus is `globals.css`'s. The hand-rolled treatment that used to sit here
+ * answered an export that drew no focus state; the 2026-09-06 one does (#167).
  *
  * The invalid border is `--cc-danger`, matching `find-your-dot.tsx`, which is
  * the other place in this repo that asks for an email address and mails a link
@@ -31,7 +30,7 @@ const formSchema = z.object({
  * halves of "this is wrong" are the same colour.
  */
 const FIELD =
-  "h-10 w-full rounded-[10px] border border-cc-rule3 bg-cc-surface px-[14px] text-[14px] text-cc-ink outline-none focus-visible:border-cc-hov focus-visible:ring-2 focus-visible:ring-cc-hov/40 aria-invalid:border-cc-danger";
+  "h-10 w-full rounded-[10px] border border-cc-rule3 bg-cc-surface px-[14px] text-[14px] text-cc-ink outline-none aria-invalid:border-cc-danger";
 
 /**
  * The design's **Primary action**, same row: 38px tall, 9px radius, 16px of
@@ -39,7 +38,7 @@ const FIELD =
  * hover.
  */
 const SUBMIT =
-  "flex h-[38px] w-full cursor-pointer items-center justify-center gap-2 rounded-[9px] bg-cc-btn px-4 font-semibold text-[13.5px] text-cc-btn-fg outline-none hover:opacity-[0.88] focus-visible:ring-2 focus-visible:ring-cc-hov/40 disabled:cursor-not-allowed disabled:opacity-60";
+  "flex h-[38px] w-full cursor-pointer items-center justify-center gap-2 rounded-[9px] bg-cc-btn px-4 font-semibold text-[13.5px] text-cc-btn-fg outline-none hover:opacity-[0.88] disabled:cursor-not-allowed disabled:opacity-60";
 
 /**
  * The first thing wrong with the address, in the words `formSchema` gave it.

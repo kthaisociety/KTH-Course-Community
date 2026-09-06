@@ -242,6 +242,15 @@ export function WorkspacePane({
                   key={entry.id}
                   onSelect={() => onActivate(entry.id)}
                   className={cn(
+                    /*
+                      `focus:bg-cc-pill` is the menu *highlight*, not a focus
+                      ring — Radix moves DOM focus between items as the pointer
+                      or the arrow keys travel, and this is the wash that follows
+                      it. It survived #167's sweep of hand-rolled focus
+                      treatments for that reason: it sets a background, which the
+                      global `:focus-visible` rule does not touch, and removing
+                      it would leave the menu with no highlight at all.
+                    */
                     "gap-2.5 rounded-[7px] px-2.5 py-[7px] text-[12.5px] focus:bg-cc-pill",
                     entry.id === active.id
                       ? "font-semibold text-cc-brand"

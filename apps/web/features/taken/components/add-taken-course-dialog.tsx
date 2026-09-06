@@ -267,7 +267,7 @@ export function AddTakenCourseDialog({
                   onChange={(event) =>
                     setYear(event.target.value.replace(/\D/g, "").slice(0, 4))
                   }
-                  className="mt-1.5 box-border h-[34px] w-full rounded-[8px] border border-cc-rule3 bg-cc-surface px-[11px] text-[13px] text-cc-ink tabular-nums outline-none focus:border-cc-brand"
+                  className="mt-1.5 box-border h-[34px] w-full rounded-[8px] border border-cc-rule3 bg-cc-surface px-[11px] text-[13px] text-cc-ink tabular-nums outline-none"
                 />
               </div>
             </div>

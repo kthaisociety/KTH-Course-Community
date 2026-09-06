@@ -58,13 +58,13 @@ function problemWith(draft: Draft): string | null {
 const LABEL = "mb-1.5 block font-medium text-[12.5px] text-cc-ink2";
 
 /**
- * The artboard sets `outline:none` and draws no focus state at all, which would
- * leave a keyboard with nothing to follow. The border moves to `--cc-hov` — the
- * palette's own emphasis border — rather than a new colour, so the focus ring is
- * added without changing the design.
+ * Focus is `globals.css`'s. This file is where the app's hand-rolled focus
+ * border started, on the correct reading that the artboards then drew no focus
+ * state at all; the 2026-09-06 export draws one, so the local treatment is gone
+ * and the whole app follows the same ring (#167).
  */
 const CONTROL =
-  "w-full rounded-[9px] border border-cc-rule3 bg-cc-surface text-[14px] text-cc-ink outline-none focus-visible:border-cc-hov focus-visible:ring-2 focus-visible:ring-cc-hov/40";
+  "w-full rounded-[9px] border border-cc-rule3 bg-cc-surface text-[14px] text-cc-ink outline-none";
 
 export function FeedbackForm() {
   const submitFeedback = useSubmitFeedback();

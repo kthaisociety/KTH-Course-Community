@@ -98,6 +98,19 @@ function ForgotCheckbox({
       <span
         aria-hidden="true"
         className={cn(
+          /*
+            **Do not remove this ring as a duplicate of `globals.css`'s.** #167
+            deleted nine hand-rolled focus treatments that the global
+            `:focus-visible` rule had made redundant; this is the one that is
+            not, and the reason is not visible from the class list.
+
+            The focusable element here is the `peer` input above, which is
+            `sr-only` — clipped to a 1px box. The global rule draws its outline
+            and halo on *that*, where nothing can see them. This ring is painted
+            on a sibling that is never itself `:focus-visible`, so the global
+            rule does not reach it and does not override it. Delete it and the
+            checkbox has no visible focus indicator at all.
+          */
           "flex size-4 flex-none items-center justify-center rounded-[4px] border text-[10px] peer-focus-visible:ring-2 peer-focus-visible:ring-cc-hov",
           checked
             ? "border-cc-brand bg-cc-brand text-cc-btn-fg"
@@ -706,7 +719,7 @@ export function ReviewDraftPanel({
             onChange={(event) => patch({ message: event.target.value })}
             aria-label="Write your review"
             placeholder="What should the next student know before signing up?"
-            className="mt-2.5 block min-h-[104px] w-full resize-y rounded-[10px] border border-cc-rule3 bg-cc-surface p-3 text-[13.5px] text-cc-ink2 leading-[1.55] outline-none focus-visible:border-cc-hov"
+            className="mt-2.5 block min-h-[104px] w-full resize-y rounded-[10px] border border-cc-rule3 bg-cc-surface p-3 text-[13.5px] text-cc-ink2 leading-[1.55] outline-none"
           />
           <p className="mt-1.5 text-[11.5px] text-cc-muted">
             Be constructive and respectful

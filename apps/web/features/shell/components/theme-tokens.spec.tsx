@@ -234,3 +234,43 @@ describe("the shadcn primitives", () => {
     ).toEqual([]);
   });
 });
+
+/**
+ * The focus rule, which is a mirror of the export in the same way the tokens
+ * are — and carries one deliberate divergence that has to survive.
+ */
+describe("the focus treatment", () => {
+  it("mirrors `cc-theme.css`, including the on-rail pair", () => {
+    for (const declaration of [
+      "outline: 2px solid var(--cc-focus)",
+      "outline-offset: 2px",
+      "box-shadow: 0 0 0 4px var(--cc-focus-ring)",
+      "outline-color: var(--cc-rail-focus)",
+      "box-shadow: 0 0 0 4px var(--cc-rail-focus-ring)",
+    ]) {
+      expect(globals).toContain(declaration);
+    }
+    // The export scopes its rules under `[data-cc-theme]`; this app applies
+    // them everywhere, including the shadcn primitives that render outside a
+    // themed subtree. That is the one intended difference.
+    expect(design).toContain("[data-cc-theme] :focus-visible");
+  });
+
+  /**
+   * `tabindex="-1"` is how Radix marks a focus-trap container — `DialogContent`
+   * carries it — and a container is not a keyboard-focused control. Without the
+   * guard the rule paints a 2px ring around the whole modal and, because its
+   * halo is a `box-shadow`, replaces the artboard's drop shadow with it.
+   *
+   * Measured in Chrome rather than reasoned: a `tabindex="-1"` element focused
+   * by script matches `:focus-visible` when the interaction before it was the
+   * keyboard, and does not when it was the mouse. So the symptom is real and
+   * appears for keyboard users only, which is what makes it worth a test.
+   */
+  it("excludes focus-trap containers, so a dialog keeps its shadow", () => {
+    expect(globals).toContain(':focus-visible:not([tabindex="-1"])');
+    // Never the bare selector: that is the form that takes the shadow away.
+    expect(globals).not.toMatch(/^:focus-visible \{/m);
+    expect(globals).not.toMatch(/^\[data-cc-sidebar\] :focus-visible \{/m);
+  });
+});

@@ -336,9 +336,18 @@
      The rail is the one surface the design paints without tokens: there is no
      `--cc-rail-fg`, and the artboard draws on it in plain white at varying
      alpha in both themes. `rail.tsx` says the same and uses the same `white/nn`
-     values, so these mirror it — `.16` is the active nav item, `.20` the
-     divider above the signed-out block, and the filled button is white with
-     `--cc-rail` ink, which is the artboard's "Sign up". */
+     values, so these mirror it — `.16` is the active nav item and `.20` the
+     divider above the signed-out block.
+
+     `--sidebar-primary` is **not** the artboard's "Sign up", and this comment
+     used to claim it was. Six of the seven artboards that draw the rail give
+     that button `background:#8bb3ef; color:#0a2449`; the seventh, Landing,
+     gives it `#fff` / `#12417f`. Neither is white on `--cc-rail`. `bg-sidebar`
+     has no consumer, so nothing renders from these and nothing is wrong on
+     screen — but the note was being read as authority for what `rail.tsx`
+     paints, which is how it survived two passes. What the rail's Sign up should
+     actually be is a product decision, because the export disagrees with
+     itself; see the issue filed from #167. */
   --sidebar: var(--cc-rail);
   --sidebar-foreground: #ffffff;
   --sidebar-primary: #ffffff;
@@ -466,9 +475,44 @@
    The second rule exists because the rail is painted in `--cc-rail`, which in
    light *is* `--cc-brand` and therefore `--cc-focus` — a ring drawn in the page
    pair there is the same colour as its background. `AppShell` marks the rail
-   with `data-cc-sidebar` for this. Five hand-rolled focus treatments still sit
-   in `features/**` and are not yet removed; that is the rest of #167. */
-:focus-visible {
+   with `data-cc-sidebar` for this.
+
+   ## `:not([tabindex="-1"])`
+
+   `tabindex="-1"` means "focusable by script, not reachable by Tab". Radix puts
+   it on `DialogContent` so a dialog can take focus when it opens, which is a
+   focus *trap* and not a keyboard focus — and this rule would otherwise paint a
+   2px ring around the whole modal and, because the halo is `box-shadow`,
+   replace the artboard's drop shadow with it.
+
+   That is measured, not assumed. In Chrome, a `tabindex="-1"` element focused
+   by script matches `:focus-visible` when the interaction before it was the
+   keyboard and not when it was the mouse — so `getComputedStyle(content)
+   .boxShadow` returns the artboard's `0 18px 48px rgba(20,30,45,.24)` after a
+   click and this rule's `0 0 0 4px rgba(23,81,166,.25)` after Enter.
+
+   No dialog in the app reaches that state today: Radix hands focus on to the
+   first focusable descendant, and every one of ours has one — a button, a field
+   or the close control. The guard is here because the first text-only dialog
+   with `showCloseButton={false}` would land on it, and the symptom (a modal that
+   loses its shadow, but only for keyboard users) is close to unfindable.
+
+   Roving-tabindex is unaffected. `my-page.tsx`'s tab list is the only one, and
+   it sets `tabIndex={0}` on the selected tab, so the tab that has focus is never
+   the one this excludes.
+
+   ## Nine treatments removed, three kept
+
+   #167's residue was twelve hand-rolled treatments in `features/**`, not the
+   five this comment used to claim. Nine are gone. The three that remain are
+   deliberate and say so at their own call sites:
+   `review-draft-panel.tsx`'s checkbox ring (painted on a sibling of an
+   `sr-only` peer, which this rule cannot reach), `workspace-pane.tsx`'s
+   `focus:bg-cc-pill` (a menu highlight, not a ring), and
+   `search/components/explore.tsx`'s dead `focus-visible:outline-cc-brand`,
+   which this rule already overrides and which is left for the PR that owns
+   that file. */
+:focus-visible:not([tabindex="-1"]) {
   /* biome-ignore lint/complexity/noImportantStyles: it has to beat the 22 inline `outline:none` declarations the artboards carry, and the shadcn primitives' own ring. Without it a focus style exists everywhere except where it is needed. */
   outline: 2px solid var(--cc-focus) !important;
   /* biome-ignore lint/complexity/noImportantStyles: paired with the outline above; an offset that loses to an inline rule puts the ring under the control's own border. */
@@ -477,7 +521,7 @@
   box-shadow: 0 0 0 4px var(--cc-focus-ring) !important;
 }
 
-[data-cc-sidebar] :focus-visible {
+[data-cc-sidebar] :focus-visible:not([tabindex="-1"]) {
   /* biome-ignore lint/complexity/noImportantStyles: overrides the page pair above, which is itself `!important`; a plain declaration here would lose to it. */
   outline-color: var(--cc-rail-focus) !important;
   /* biome-ignore lint/complexity/noImportantStyles: as above — it replaces an `!important` halo, not a plain one. */

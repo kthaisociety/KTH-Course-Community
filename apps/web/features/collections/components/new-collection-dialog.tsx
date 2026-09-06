@@ -104,7 +104,7 @@ export function NewCollectionDialog({
           }}
           placeholder="Collection name"
           aria-label="Collection name"
-          className="mt-3.5 box-border h-[38px] w-full rounded-[9px] border border-cc-rule3 bg-cc-surface px-3 text-[13.5px] text-cc-ink outline-none focus:border-cc-brand"
+          className="mt-3.5 box-border h-[38px] w-full rounded-[9px] border border-cc-rule3 bg-cc-surface px-3 text-[13.5px] text-cc-ink outline-none"
         />
 
         {savedCourses.length > 0 ? (
@@ -114,7 +114,7 @@ export function NewCollectionDialog({
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Filter saved courses"
               aria-label="Filter saved courses"
-              className="mt-2 box-border h-[34px] w-full rounded-[9px] border border-cc-rule bg-cc-inset px-3 text-[12.5px] text-cc-ink outline-none focus:border-cc-brand"
+              className="mt-2 box-border h-[34px] w-full rounded-[9px] border border-cc-rule bg-cc-inset px-3 text-[12.5px] text-cc-ink outline-none"
             />
             <div className="scrollbar-subtle mt-2.5 max-h-[210px] overflow-auto rounded-[9px] border border-cc-rule">
               {matches.map((course) => {
