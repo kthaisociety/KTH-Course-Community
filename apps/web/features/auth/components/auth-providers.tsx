@@ -3,11 +3,26 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { GithubIcon, GoogleIcon } from "@/components/icon";
-import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { authClient } from "@/lib/auth-client";
 import type { OauthProvider } from "@/types";
 import { requestedReturnTo } from "../lib/return-to";
+
+/**
+ * The design's **Secondary** control, from the "Controls" row of
+ * `docs/design_ref/2026-09-05/Course Community - Design System.dc.html`: 38px
+ * tall, 9px radius, 15px of side padding, `--rule3` around `--surface`, 13.5px
+ * at 500 in `--ink`, and `--hov` on hover. shadcn's default button is 32px at a
+ * 10px radius, which is what stood here and what nothing else in the app looks
+ * like.
+ *
+ * The artboard sets no focus state — a mock cannot be tabbed through — so the
+ * hover border doubles as the focus border and picks up the ring
+ * `feedback-form.tsx` established, keeping a keyboard something to follow
+ * without introducing a colour the palette does not have.
+ */
+const PROVIDER_BUTTON =
+  "flex h-[38px] w-full cursor-pointer items-center justify-center gap-2 rounded-[9px] border border-cc-rule3 bg-cc-surface px-[15px] font-medium text-[13.5px] text-cc-ink outline-none hover:border-cc-hov focus-visible:border-cc-hov focus-visible:ring-2 focus-visible:ring-cc-hov/40 disabled:cursor-not-allowed disabled:opacity-60 [&>svg]:size-4 [&>svg]:shrink-0";
 
 export function AuthProviders() {
   const [isLoading, setIsLoading] = useState(false);
@@ -39,35 +54,37 @@ export function AuthProviders() {
   }
 
   return (
-    <div className="grid grid-cols-2 gap-4">
-      <Button
+    // Two words fit side by side in the card at any width worth calling a
+    // phone, so they stay a pair and stack only when the card itself drops
+    // under 20rem — a container query, because the card is what constrains
+    // them and it is 400px wide long before the viewport is.
+    <div className="grid grid-cols-1 gap-2 @xs:grid-cols-2">
+      <button
         disabled={isLoading}
-        variant="outline"
         type="button"
-        className="w-full"
+        className={PROVIDER_BUTTON}
         onClick={() => handleSubmit("google")}
       >
         {isLoading && providerClicked === "google" ? (
-          <Spinner data-icon="inline-start" />
+          <Spinner />
         ) : (
           <GoogleIcon />
         )}
         Google
-      </Button>
-      <Button
+      </button>
+      <button
         disabled={isLoading}
-        variant="outline"
         type="button"
-        className="w-full"
+        className={PROVIDER_BUTTON}
         onClick={() => handleSubmit("github")}
       >
         {isLoading && providerClicked === "github" ? (
-          <Spinner data-icon="inline-start" />
+          <Spinner />
         ) : (
           <GithubIcon />
         )}
         GitHub
-      </Button>
+      </button>
     </div>
   );
 }
