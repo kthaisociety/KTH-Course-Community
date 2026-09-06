@@ -74,11 +74,10 @@ import {
  *
  * The salvaging is `decodeReviewDraft`'s, in `./review-draft.ts`, which extends
  * `features/reviews/lib/review-draft.ts`'s decoder with the pane's two flags.
- * This file used to hold a second hand-written copy of it, and the fast-track
- * reviewer a third; #166 is what they cost. The three refusals left in this file
- * are its own and none of them is a field: an entry that is not an object, one
- * with no `savedAt`, and one whose stamp has expired. Those are deliberate, and
- * the last of them is the whole point of the stamp.
+ * Do not hand-write a second copy of it here. The three refusals this file does
+ * own are not fields: an entry that is not an object, one with no `savedAt`, and
+ * one whose stamp has expired. Those are deliberate, and the last of them is the
+ * whole point of the stamp.
  */
 
 const WORKSPACE_KEY = "cc.workspace.open";
@@ -259,12 +258,10 @@ function decodeBuckets(): DraftBuckets {
 /**
  * Drafts the previous release left in `sessionStorage`, brought across once.
  *
- * The release this replaces wrote `{ [courseCode]: ReviewDraft }` under the
- * same key in the tab's storage. Without this, shipping the fix is itself the
- * data loss it fixes: every student with a half-written review open at deploy
- * time reloads into a blank form, and their tab still had the draft — it was
- * simply being looked for in the wrong place. A migration is cheap and the
- * alternative is a one-off outage of exactly the thing this PR is about.
+ * An earlier release wrote `{ [courseCode]: ReviewDraft }` under the same key in
+ * the tab's storage. Without this, every student with a half-written review open
+ * at deploy time reloads into a blank form while their tab still holds the
+ * draft — it is simply being looked for in the wrong place.
  *
  * They arrive unowned, so they land in the anonymous bucket and are claimed by
  * the first account to read them. The tab knew who was typing; the storage it

@@ -80,7 +80,7 @@ describe("a signed-out visitor", () => {
   /**
    * The change this route exists to make. The artboard has a guest read a
    * transcript and meet the account at the *keep* step
-   * (`docs/design_ref/2026-09-06/Course Community - Taken Courses.dc.html:1305`),
+   * (`docs/design_ref/2026-09-06/Course Community - Taken Courses.dc.html`),
    * which needs a parse that answers without a session — and which is safe only
    * because this route writes nothing.
    */

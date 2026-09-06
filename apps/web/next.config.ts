@@ -25,10 +25,10 @@ const nextConfig: NextConfig = {
    * Routes that have been renamed, and the links already out in the world that
    * point at their old names.
    *
-   * `/favorites` was the Saved courses page until #90 moved it to `/saved`,
-   * closing the last of the three names ADR 0003 recorded for one concept.
-   * Bookmarks, history entries and anything anyone has shared still say
-   * `/favorites`, and without an entry here they land on the 404 page.
+   * `/favorites` was the Saved courses page before `/saved`, and it is the last
+   * of the three names ADR 0003 recorded for one concept. Bookmarks, history
+   * entries and anything anyone has shared still say `/favorites`, and without
+   * an entry here they land on the 404 page.
    *
    * `permanent` is a 308, which is what a rename is: the old path is not coming
    * back, and `CONTEXT.md` retires the word rather than freeing it for reuse.

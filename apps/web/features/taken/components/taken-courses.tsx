@@ -161,9 +161,9 @@ function importedSummary(added: number, filled: number): string {
  *
  * **A signed-out visitor gets the whole flow except the write.** The artboard
  * poses a guest on the empty screen rather than on a locked page
- * (`… - Taken Courses.dc.html:767`), lets them read a transcript, and asks for
+ * (`… - Taken Courses.dc.html`), lets them read a transcript, and asks for
  * the account at the *keep* step: the confirm button reads "Sign in to keep
- * this list" and the confirm is resumed once they are in (`:1305-1308`). That
+ * this list" and the confirm is resumed once they are in. That
  * is implementable only because parsing and writing are two calls —
  * `POST /api/user/transcript` parses and stores nothing, and
  * `transcript.confirm` is a `protectedProcedure` that nothing here weakens. The
@@ -292,7 +292,7 @@ export function TakenCourses() {
    * **The parameter carries a course.** `?review=<CODE>` starts the round on
    * that course with the rest dealt behind it, which is what a row on My Page's
    * prompt means and what it could not say while the parameter was the bare
-   * flag `1` (#157). `1` still means what it always did — open the reviewer, on
+   * flag `1`. `1` still means what it always did — open the reviewer, on
    * no particular course — so links already in the wild keep working;
    * `parseReviewDeepLink` is the whole contract.
    *
@@ -331,7 +331,7 @@ export function TakenCourses() {
 
   /**
    * Picks up the transcript a signed-out reader left behind on their way to
-   * sign in — the artboard's `pending: "confirm"` (`… - Taken Courses.dc.html:1307`).
+   * sign in — the artboard's `pending: "confirm"` (`… - Taken Courses.dc.html`).
    *
    * **Only for the sign-in that left it.** The record is claimable only by an
    * arrival carrying its handoff token, which the confirm below put in the
@@ -516,7 +516,7 @@ export function TakenCourses() {
    * Opens the by-hand form, or asks for the account it would write to.
    *
    * The artboard offers "Add courses manually instead" on the same empty screen
-   * it poses a guest on (`… - Taken Courses.dc.html:95`, `:767`), and its own
+   * it poses a guest on (`… - Taken Courses.dc.html`), and its own
    * handler just opens the form — its mock has no server to refuse the save.
    * Ours does: `taken.add` is a `protectedProcedure`. So a guest gets the
    * sign-in prompt here instead of a form whose Save cannot work.
@@ -660,7 +660,7 @@ export function TakenCourses() {
    * nowhere but here, and the only cheap way back is reading a transcript
    * again — which cannot restore a hand-entered course at all. The artboard
    * confirms *after*, with a note; the product owner settled on confirming
-   * before for every destructive action, and this is one of them (#155).
+   * before for every destructive action, and this is one of them.
    *
    * The note stays anyway. Confirming before is about not removing the wrong
    * row; Undo is about the row it was right to remove and wrong to lose.
@@ -952,7 +952,7 @@ export function TakenCourses() {
 
       {/*
         The artboard draws this gate as a screen of the page (`isAuth`,
-        `… - Taken Courses.dc.html:56-68`). It is a dialog here because that is
+        `… - Taken Courses.dc.html`). It is a dialog here because that is
         what the sign-in surface is everywhere else in this app — `auth.tsx`
         records that the design's own sign-in is "a panel over the page it
         interrupted" — and because `AuthReasonDialog` already carries the two

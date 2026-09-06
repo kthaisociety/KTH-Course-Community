@@ -31,9 +31,9 @@ export type { TakenCourse };
  * A taken course with no review, and the catalogue title to draw it with.
  *
  * The title is part of the answer rather than each screen's to fetch:
- * `user_taken_courses` stores only a code, so a host that forgot the lookup
- * rendered the code twice — which is exactly what My Page did (#157). There is
- * one host fewer to remember now, and no second place for the join to diverge.
+ * `user_taken_courses` stores only a code, so a host that forgets the lookup
+ * renders the code twice. Answering with the title is one host fewer to
+ * remember, and no second place for the join to diverge.
  *
  * `null` while `course.summary` is still in flight, or when it failed. The card
  * falls back to the code for it, which is why nothing here waits on a title:
@@ -56,7 +56,7 @@ export function useReviewList(courseCode: string | undefined) {
  * `UnreviewedCard` renders, shared by Taken courses and My Page.
  *
  * The difference is worked out here, in the client, deliberately: it is a
- * per-user set of at most a few dozen rows and #88 rules out a server procedure
+ * per-user set of at most a few dozen rows, and there is no server procedure
  * for it. That costs one `reviews.list` per taken course, in the same shape
  * Saved already uses for `course.summary`. The cheaper-looking alternative —
  * one unfiltered `reviews.list` — was rejected: `reviews.list` has no author
@@ -72,7 +72,7 @@ export function useReviewList(courseCode: string | undefined) {
  *
  * The catalogue title comes back with each course for the same reason the
  * difference does: it is the same join on both screens, and the host that had
- * to remember it was the host that forgot (#157).
+ * to remember it was the host that forgot.
  */
 export function useUnreviewedTakenCourses(): {
   courses: UnreviewedTakenCourse[];

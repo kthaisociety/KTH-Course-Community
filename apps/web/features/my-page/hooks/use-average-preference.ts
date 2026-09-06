@@ -21,8 +21,7 @@ const storageKeyFor = (userId: string) => `cc:myPage:showAverage:${userId}`;
  * about a viewer's data changes when it is flipped.
  *
  * It follows that the switch does not sync across devices, which the page says
- * out loud rather than implying otherwise. A `users` column would fix that and
- * is server work, outside #93.
+ * out loud rather than implying otherwise. A `users` column would fix that.
  *
  * The default is on, which is the artboard's own initial state. Reads and
  * writes are wrapped because storage can be unavailable — a private window, or

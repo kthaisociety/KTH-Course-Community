@@ -61,7 +61,7 @@ const LABEL = "mb-1.5 block font-medium text-[12.5px] text-cc-ink2";
  * Focus is `globals.css`'s. This file is where the app's hand-rolled focus
  * border started, on the correct reading that the artboards then drew no focus
  * state at all; the 2026-09-06 export draws one, so the local treatment is gone
- * and the whole app follows the same ring (#167).
+ * and the whole app follows the same ring.
  */
 const CONTROL =
   "w-full rounded-[9px] border border-cc-rule3 bg-cc-surface text-[14px] text-cc-ink outline-none";
@@ -110,7 +110,7 @@ export function FeedbackForm() {
       // ink and the PR reported the gap. The gap is closed: those three hexes
       // are now `--cc-success-tint`, `--cc-success-tint-border` and
       // `--cc-success-ink` verbatim, and the Design System artboard's `BANNERS`
-      // names this exact combination "Upload success banner" (#127 §1). The
+      // names this exact combination "Upload success banner". The
       // tick stays, because a colour is not what should carry "this worked".
       <output className="mt-4 flex animate-in items-start gap-[11px] rounded-[12px] border border-cc-success-tint-border bg-cc-success-tint px-4 py-[15px] duration-200 ease-out fade-in slide-in-from-bottom-[6px]">
         <CircleCheck
@@ -213,7 +213,7 @@ export function FeedbackForm() {
         </button>
         {/* The artboard's `#a3452a` is `--cc-danger-ink` exactly. It had no
             token when this was written, so the line borrowed `--cc-warn-ink`;
-            it has one now (#127 §1), and `--cc-warn-*` turns out to mean the
+            it has one now, and `--cc-warn-*` turns out to mean the
             review draft rather than anything that failed. `role="alert"` is
             still what carries the message — the hue only agrees with it. */}
         {error ? (

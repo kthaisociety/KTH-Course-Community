@@ -111,16 +111,16 @@ function openCourseId(courseCode: string, kind: OpenCourseKind): string {
  *
  * ## Opening an already-front tab returns the *same object*
  *
- * Not merely an equal one. Three separate unbounded render loops have shipped
- * on this branch, and every one of them was an effect that called into the
- * workspace and then re-ran because something it depended on had been rebuilt.
- * A transition that hands back a fresh `Workspace` for a no-op is the fuel:
- * `useState` bails out of a re-render when the next state is `Object.is`-equal
- * to the current one, and a spread is never that, so "open the course that is
- * already open and already in front" used to re-render every host of this
- * state — which rebuilds `setParams`, which re-runs the effect, which opens the
- * course again. The guards in `use-explore.ts` and `saved.tsx` each stop that
- * loop one caller at a time; this stops it at the value.
+ * Not merely an equal one, and this is load-bearing. Every unbounded render
+ * loop this workspace has produced was an effect that called in here and then
+ * re-ran because something it depended on had been rebuilt. A transition that
+ * hands back a fresh `Workspace` for a no-op is the fuel: `useState` bails out
+ * of a re-render only when the next state is `Object.is`-equal to the current
+ * one, and a spread never is — so "open the course that is already open and
+ * already in front" would re-render every host of this state, which rebuilds
+ * `setParams`, which re-runs the effect, which opens the course again. The
+ * guards in `use-explore.ts` and `saved.tsx` each stop that loop one caller at
+ * a time; this stops it at the value.
  *
  * The bail-out is deliberately narrow. Bringing a *background* tab forward is a
  * real change and still allocates, because `activeId` genuinely differs.

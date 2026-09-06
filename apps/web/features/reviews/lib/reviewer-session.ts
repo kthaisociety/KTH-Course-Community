@@ -16,21 +16,21 @@ import { decodeReviewDraft, type ReviewDraft } from "./review-draft";
  * still being there next week. Nothing kept here is data — an unsaved card has no
  * row — which is exactly why the browser is the right place for it.
  *
- * That file's *draft* has since moved to `localStorage`, and the difference is
- * worth naming rather than copying by habit: the workspace throws a guest out of
- * the tab to sign in, and the magic-link path lands them in a new one. Nothing
- * here does that. `/taken` opens to a signed-out visitor now, but a round is
- * dealt from *taken* courses and a guest has none — every card in this queue
- * belongs to an account that was already signed in when the round started, so
- * the tab they started in is the tab they finish in.
+ * That file's *draft* is in `localStorage` instead, and the difference is worth
+ * naming rather than copying by habit: the workspace sends a visitor out of the
+ * tab to sign in, and the magic-link path lands them in a new one. Nothing here
+ * does that. `/taken` opens to a signed-out visitor, but a round is dealt from
+ * *taken* courses and a visitor has none — every card in this queue belongs to
+ * an account that was already signed in when the round started, so the tab they
+ * started in is the tab they finish in.
  *
  * Every read is defensive. What comes back is whatever was in the tab's
  * storage, possibly written by an older build, so anything that does not match
  * the shape is dropped rather than trusted — but at the granularity the thing
  * is worth at. A round that is not a round is refused whole; a *draft* is
- * salvaged field by field by the shared `decodeReviewDraft`, because this file
- * once had its own copy of that decoder and the workspace pane had another, and
- * the two came to disagree about what a bad draft means (#166).
+ * salvaged field by field by the shared `decodeReviewDraft`, which is the one
+ * decoder both storage surfaces go through so they cannot disagree about what a
+ * bad draft means.
  *
  * **Being well-formed is not the same as being current.** Nothing in this file
  * knows which courses still need reviewing, so it cannot tell a round that was
@@ -114,20 +114,16 @@ export function readReviewerSession(): ReviewerSession | null {
   /**
    * Each card's answers, salvaged rather than vetted.
    *
-   * `decodeReviewDraft` drops a field it cannot read and keeps the rest, and
-   * this file used to do the opposite: a `methods`/`shares` pair that did not
-   * line up threw the whole card away — write-up, scores and all — on the
-   * reading that a half-understood round is worse than none.
+   * `decodeReviewDraft` drops a field it cannot read and keeps the rest. Do not
+   * make it throw the whole card away instead: dropping a draft does not drop
+   * the *card* — the code stays in `queue`, so the reviewer is dealt the same
+   * course with an empty form and no sign that anything was lost — and
+   * `reviewer.tsx` writes the whole session back in a `useEffect` keyed on
+   * `round`, which fires on the mount that follows the restore, so the
+   * discarded answers are gone from storage before the reviewer has typed
+   * anything.
    *
-   * That reading does not survive looking at what dropping a draft actually
-   * does. It does not drop the *card*: the code stays in `queue`, so the
-   * reviewer is dealt the same course with an empty form and no sign that
-   * anything was lost. And `reviewer.tsx` writes the whole session back in a
-   * `useEffect` keyed on `round`, which fires on the mount that follows the
-   * restore — so the discarded answers are gone from storage before the
-   * reviewer has typed anything, exactly as #180 found in the workspace pane.
-   *
-   * The round-level refusals below are a different thing and they stay: a
+   * The round-level refusals above are a different thing and they stay: a
    * missing or empty `queue` is genuinely not a round, and refusing one opens
    * no card and destroys no answers.
    */

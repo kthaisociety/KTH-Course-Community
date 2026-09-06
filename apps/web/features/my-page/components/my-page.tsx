@@ -92,10 +92,10 @@ type OpenEditor = { review: EditableReview; courseCode: string };
  *
  * `useUnreviewedTakenCourses` fetches one `reviews.list` per taken course;
  * `useAllReviews` fetches the unfiltered list once. They overlap, and the
- * overlap is deliberate — #93 forbids a second unreviewed-courses derivation,
- * and the upvoted column cannot be built from per-course lists of courses the
- * viewer happens to have taken. `useAllReviews` says what the unfiltered read
- * costs and what would fix it.
+ * overlap is deliberate: there is one derivation of "unreviewed" and this page
+ * does not get a second, while the upvoted column cannot be built from
+ * per-course lists of courses the viewer happens to have taken. `useAllReviews`
+ * says what the unfiltered read costs and what would fix it.
  */
 export function MyPage() {
   const router = useRouter();
@@ -188,12 +188,9 @@ export function MyPage() {
   }
 
   // Signed out, which is a state this page renders rather than a state it
-  // refuses. `My Page.dc.html:73` draws it: the panel below, inside the shell,
-  // with the rail beside it carrying its own guest banner. This page is no
-  // no longer redirected away by a proxy and no longer calls
-  // `useRequireSession`, so a guest arrives here instead of at `/auth` — and so
-  // does the stale-cookie case that used to be the only way to reach this
-  // branch.
+  // refuses. The My Page artboard draws it: the panel below, inside the shell,
+  // with the rail beside it carrying its own guest banner. Nothing gates the
+  // route, so a visitor arrives here rather than at `/auth`.
   if (!isSessionLoading && !isAuthenticated) {
     return (
       <PageColumn>
@@ -347,7 +344,7 @@ export function MyPage() {
                     a course and the URL carries it — `?review=<CODE>` — because
                     the row's whole contract is "open the reviewer on this one",
                     and a parameter that could only say "open the reviewer"
-                    discarded the course the reader named (#157). The button,
+                    discarded the course the reader named. The button,
                     which names no course, still writes the original
                     `?review=1`.
                   */
@@ -454,7 +451,7 @@ export function MyPage() {
 }
 
 /**
- * The artboard's signed-out panel (`… - My Page.dc.html:73-90`).
+ * The artboard's signed-out panel (`… - My Page.dc.html`).
  *
  * Two controls, as it draws: Sign up on `--btn`, Log in outlined beside it.
  * Both go to the same place — the artboard wires both of its own to `onSignIn`
@@ -567,7 +564,7 @@ function LoadFailed({ onRetry }: { onRetry: () => void }) {
   );
 }
 
-/** #97 settled the substitution: members, never students — it is app users who vote. */
+/** Members, never students: it is app users who vote, not everyone at KTH. */
 function upvoteNote(upvotes: number): string {
   if (upvotes === 0) return "no upvotes yet";
   return upvotes === 1

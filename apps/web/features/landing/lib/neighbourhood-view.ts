@@ -15,14 +15,11 @@
  * screenY = (node.y - centre.y) * scale + anchorY
  * ```
  *
- * The bug this file was written against — two members standing in the same
- * region of the graph seeing different pictures of it — was the **scale**. It
- * used to be fitted to the viewer's own neighbourhood extent, so the same two
- * dots rendered at different zooms for two different people. It is a constant
- * now, `VIEW_SCALE`, and it is not a function of anything.
+ * The **scale** is a constant, `VIEW_SCALE`, and not a function of anything —
+ * fit it to the viewer's own neighbourhood extent and two members standing in
+ * the same region of the graph see the same two dots at different zooms.
  *
- * The anchor was removed at the same time and that was collateral damage. It
- * is back, because it is provably not the same kind of thing:
+ * The **anchor** is provably not the same kind of thing:
  *
  * ```
  * screen(p) − screen(q) = (p − q) · s
@@ -273,11 +270,10 @@ const ANCHOR_STEPS = 12;
  * a padded rect puts the whole reveal about 50px from anything a reader is
  * looking at.
  *
- * The version of this function that was deleted in `2ca7f52` scored raw
- * distance instead, and the two ends of that are both wrong. Measured against
- * the rendered hero: on a 1920x600 frame it maximised out into a corner, and on
- * a 360x480 one — where the whole frame is close to the copy and no candidate
- * scores much — the centrality pull won outright and the anchor landed *inside
+ * Scoring raw distance instead is wrong at both ends, measured against the
+ * rendered hero: on a 1920x600 frame it maximises out into a corner, and on a
+ * 360x480 one — where the whole frame is close to the copy and no candidate
+ * scores much — the centrality pull wins outright and the anchor lands *inside
  * the headline*, `clearAt` 0.00. Saturating fixes both.
  */
 const ANCHOR_COMFORT = 25;
@@ -304,8 +300,7 @@ const ANCHOR_PULL = 0.35;
  * handed to `pushClear`, which is what turns "the best of eleven-by-eleven
  * guesses" into "actually clear", and which hands it back untouched when the
  * copy leaves nowhere within `MAX_PUSH` to stand — a hero whose copy covers its
- * whole frame therefore falls back to the middle of it, which is where this used
- * to be unconditionally.
+ * whole frame therefore falls back to the middle of it.
  *
  * **What is and is not promised across sessions.** For a given frame size and a
  * given copy layout this is deterministic, so a returning member finds their own

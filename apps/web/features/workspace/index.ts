@@ -1,7 +1,7 @@
 /**
  * The cross-feature API of the workspace feature.
  *
- * The **workspace pane** is the column Explore (#89) and Saved (#90) mount
+ * The **workspace pane** is the column Explore and Saved mount
  * beside their results: it holds every course the user has opened, one tab
  * each, either as course details or as a review draft. Since #68 §5 retired
  * `/course/<code>` it is the *only* place a course opens, so both hosts mount

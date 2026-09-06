@@ -137,25 +137,23 @@
   --cc-btn-fg: #ffffff;
   --cc-info: rgba(23, 81, 166, 0.07);
 
-  /* `--cc-warn-*` is the **review draft** family. It used to be documented here
-     as "the nudge to write a review", which #127 §4 flags as wrong: #88 showed
-     the actual nudge is `--cc-btn` on `--cc-surface`, and nothing amber appears
-     on it.
+  /* `--cc-warn-*` is the **review draft** family, not "the nudge to write a
+     review" — the nudge is `--cc-btn` on `--cc-surface` and nothing amber
+     appears on it.
 
      The tint half is the draft's header. The Design System artboard names
-     `--warn` "Review draft header" in both `TINTS` and `BANNERS`, and
-     `Course Community - Workspace Pane.dc.html` paints exactly it in its
-     `isReview` branch — `--warn` behind the draft's title block, `--warnInk` on
-     its "Review draft" eyebrow, and `--warnBorder` + `--warnSolid` as the
-     border and opaque backing of the progress row that sticks beneath it.
+     `--warn` "Review draft header" in both `TINTS` and `BANNERS`, and the
+     Workspace Pane artboard paints exactly it in its `isReview` branch —
+     `--warn` behind the draft's title block, `--warnInk` on its "Review draft"
+     eyebrow, and `--warnBorder` + `--warnSolid` as the border and opaque
+     backing of the progress row that sticks beneath it.
 
-     `--cc-warn-btn`/`--cc-warn-btn-fg` are a separate pair, and the one place
-     the old wording was not wrong: the Design System demos them under "Status
-     text & buttons" as a **"Write a review"** button. They are an accent, not a
-     banner tint — the filled progress segments and the submit button in
-     `review-draft-panel.tsx`, and the Review Card's accent for a review that
-     was not happy (`Review Card.dc.html:51`). Neither appears anywhere in the
-     Workspace Pane's `isReview` branch. */
+     `--cc-warn-btn`/`--cc-warn-btn-fg` are a separate pair: the Design System
+     demos them under "Status text & buttons" as a **"Write a review"** button.
+     They are an accent, not a banner tint — the filled progress segments and
+     the submit button in `review-draft-panel.tsx`, and the Review Card's accent
+     for a review that was not happy. Neither appears anywhere in the Workspace
+     Pane's `isReview` branch. */
   --cc-warn: #fdf7ea;
   --cc-warn-border: #f0e6d2;
   --cc-warn-ink: #7a5309;
@@ -174,12 +172,11 @@
      six tokens are the client half of that contract and the palette can be
      re-skinned here without a data migration.
 
-     Mirrored, like everything above: the revised `cc-theme.css` names all six
+     Mirrored, like everything above: `cc-theme.css` names all six
      (`--nodeAurora` … `--nodeViolet`), and the Design System artboard renders
      them under "Community graph nodes". They are *unassigned* rather than
      absent — #68 §3 settled that a node with no configured appearance is
-     `--cc-brand`, and these are the palette personalisation will draw from once
-     a tier writer exists. */
+     `--cc-brand`, and these are the palette personalisation draws from. */
   --cc-node-aurora: #2f9e8e;
   --cc-node-ember: #c96a4a;
   --cc-node-frost: #2f5fa8;
@@ -190,9 +187,8 @@
   /* The panel-tint families. A tint, its border and its ink are three separate
      tokens because a banner needs all three and none of them is derivable from
      `--cc-success` / `--cc-danger`: dark states them as alpha over the page,
-     light as flat mixes that are not a percentage of anything. Anything
-     deriving one with `color-mix` is reading the palette from before these
-     existed (#127 §1). */
+     light as flat mixes that are not a percentage of anything. Do not derive
+     one with `color-mix`. */
   --cc-success-tint: #e9f3ef;
   --cc-success-tint-border: #cfe4de;
   --cc-success-ink: #1c6b60;
@@ -209,71 +205,61 @@
 
      `--cc-focus` is `--cc-brand`, which is also `--cc-rail` — so a ring drawn in
      it on a sidebar control is the same colour as its background and cannot be
-     seen. That is the third instance of one pattern: `--cc-btn` on `--cc-rail`
-     gave an invisible Sign up button before the 2026-09-05 export fixed it. The
-     design answers it as a rule rather than a case, and so does this. */
+     seen. Every brand-blue token has this problem on the rail; the design
+     answers it as a rule rather than a case, and so does this. */
   --cc-focus: #1751a6;
   --cc-focus-ring: rgba(23, 81, 166, 0.25);
   --cc-rail-focus: #ffffff;
   --cc-rail-focus-ring: rgba(255, 255, 255, 0.35);
 
   /* The rail's "Sign up". The export disagrees with itself — six artboards
-     draw it `#8bb3ef`/`#0a2449`, Landing:151 draws `#fff`/`#12417f` — and the
-     decision the `--sidebar-primary` note below deferred is settled per theme:
-     white here, the six artboards' blue on the dark rail. Not `--cc-btn`,
-     which is `--cc-rail` itself in light. */
+     draw it `#8bb3ef`/`#0a2449`, Landing draws `#fff`/`#12417f` — and it is
+     settled per theme: white here, the six artboards' blue on the dark rail.
+     Not `--cc-btn`, which is `--cc-rail` itself in light. */
   --cc-rail-btn: #ffffff;
   --cc-rail-btn-fg: var(--cc-rail);
 
   /* The applied end of a theory/applied bar — the one colour on these screens
-     the design uses without ever having named (#173).
+     the design uses without ever having named.
 
-     `cc-theme.css` in the 2026-09-05 export contains no `9dbfe4` and declares no
-     token for it, while `Course Community - Workspace Pane.dc.html:115` writes
-     the hex inline as the applied half of the bar. Four other artboards reuse it
-     as a dashed "add something" border and as link text on a toast. So it is a
-     real colour of the design with no name, which is why this is the one `--cc-*`
-     token in the file that mirrors nothing. When an export finally names it,
-     this is the token to reconcile.
+     `cc-theme.css` declares no token for `#9dbfe4`, while the Workspace Pane
+     artboard writes the hex inline as the applied half of the bar and four
+     others reuse it as a dashed "add something" border and as link text on a
+     toast. So it is a real colour of the design with no name, which is why this
+     is the one `--cc-*` token in the file that mirrors nothing. When an export
+     finally names it, this is the token to reconcile.
 
      ## Why two literals and not one `color-mix`
 
-     `pane-parts.tsx` and `reviewer-card.tsx` each used to derive it as
-     `color-mix(in srgb, var(--cc-btn) 40%, var(--cc-surface))`, which was the
-     right substitution while nothing was named (#86's rule) and is the wrong
-     shape for a token. A mix is a standing promise that the derivation will keep
-     being correct, and nobody re-checks it: `--cc-btn` inverts between the
+     Deriving it as `color-mix(in srgb, var(--cc-btn) 40%, var(--cc-surface))` is
+     the wrong shape for a token. A mix is a standing promise that the derivation
+     keeps being correct, and nobody re-checks it: `--cc-btn` inverts between the
      themes — `#1751a6` light, `#8bb3ef` dark — so the mix silently re-resolves
      every time either input moves. Colours that quietly track each other are how
-     the light rail ended up painting a `--cc-btn` "Sign up" onto a `--cc-rail`
-     that is the same `#1751a6`; the rail block below is white on purpose for
-     that reason. Two flat values are checked once and reviewed when changed,
-     and they are what every other token here is.
+     a `--cc-btn` "Sign up" can land on a `--cc-rail` that is the same
+     `#1751a6`; the rail block below is white on purpose for that reason. Two
+     flat values are checked once and reviewed when changed.
 
-     Light is the artboard's own literal, so this stops approximating it: the mix
-     resolved to `#a2b9db`, which also held the "Applied" label (`--cc-brand`
+     Light is the artboard's own literal rather than an approximation of it: the
+     mix resolved to `#a2b9db`, which held the "Applied" label (`--cc-brand`
      `#1751a6`, 12px semibold) at 3.80:1 where the design's value gives 3.98:1.
 
      Dark is chosen for the dark page, by the design's own reflection: it moves
      `--cc-btn` from HSL lightness 37% to 74% and keeps hue and saturation, so
      this moves its light value (H211 S57% L75%) to L38% the same way. Pinning
-     `#9dbfe4` in dark was the one thing that could not work — at luminance 0.50
-     against `--cc-btn`'s 0.44 the quieter half of the bar would read *brighter*
-     than the brand half it sits beside, 1.12:1 apart.
+     `#9dbfe4` in dark cannot work — at luminance 0.50 against `--cc-btn`'s 0.44
+     the quieter half of the bar would read *brighter* than the brand half it
+     sits beside, 1.12:1 apart.
 
      ## What it is not for
 
-     The bar, and nothing else yet. #173 asked whether the draft's starter pills
-     should take it too — the artboard draws them with the same hex, dashed
-     (`Course Community - Workspace Pane.dc.html:274`), where
-     `review-draft-panel.tsx` uses `border-cc-hov`. They are left alone on
-     purpose: `Collections.dc.html:108` and `:134` draw the same dashed
-     `#9dbfe4` and `collections.tsx:524`/`:553` already map both onto
-     `--cc-hov`. Moving one of the three onto this token would replace one
-     inconsistency with a worse one — the same artboard element spelled two ways
-     — and this token is named for a fill in a bar, not for a border. If the
-     dashed border is worth its own name it is worth all three call sites and a
-     name of its own.
+     The bar, and nothing else. The Workspace Pane artboard draws the draft's
+     starter pills with the same hex, dashed, where `review-draft-panel.tsx`
+     uses `border-cc-hov`; the Collections artboard draws the same dashed
+     `#9dbfe4` twice and `collections.tsx` maps both onto `--cc-hov`. Moving one
+     of the three onto this token would spell the same artboard element two
+     ways, and this token is named for a fill in a bar, not for a border. If the
+     dashed border is worth its own name it is worth all three call sites.
 
      Resolved: light `#9dbfe4` — 1.91:1 on `--cc-surface`, 3.98:1 against the
      `--cc-btn` half beside it, and 3.98:1 under its `--cc-brand` label.
@@ -284,17 +270,13 @@
 
   /* ── shadcn primitives, expressed in Course Community tokens ──────────────
      `components/ui/**` is a stock shadcn set and styles itself against
-     `--background`, `--card`, `--muted` and friends. Those used to be a second,
-     unrelated neutral palette sitting beside `--cc-*` and disagreeing with it:
-     light `--background` was the design's cream while dark `--background` was a
-     blue-grey nothing like `--cc-pg`, and `--card` was pure white against a
-     `#0f172a` dark. That is the whole reason dark "worked better" than light —
-     the design's dark palette is self-consistent, so it was only in light that
-     the two systems sat side by side and every seam showed.
+     `--background`, `--card`, `--muted` and friends. Left on their stock
+     values those are a second, unrelated neutral palette sitting beside
+     `--cc-*` and disagreeing with it, and every seam shows.
 
-     So every shadcn token is now an alias onto the `--cc-*` token that means
-     the same thing. There is one palette, and a dialog, popover or button
-     inherits the theme without knowing the design exists.
+     So every shadcn token is an alias onto the `--cc-*` token that means the
+     same thing. There is one palette, and a dialog, popover or button inherits
+     the theme without knowing the design exists.
 
      The aliases are declared once, here, rather than repeated under `.dark`. A
      custom property is substituted at computed-value time, so `var(--cc-pg)`
@@ -349,16 +331,12 @@
      values, so these mirror it — `.16` is the active nav item and `.20` the
      divider above the signed-out block.
 
-     `--sidebar-primary` is **not** the artboard's "Sign up", and this comment
-     used to claim it was. Six of the seven artboards that draw the rail give
-     that button `background:#8bb3ef; color:#0a2449`; the seventh, Landing,
-     gives it `#fff` / `#12417f`. Neither is white on `--cc-rail`. `bg-sidebar`
-     has no consumer, so nothing renders from these and nothing is wrong on
-     screen — but the note was being read as authority for what `rail.tsx`
-     paints, which is how it survived two passes. That decision is now settled
-     per theme in `--cc-rail-btn` above, which is what `rail.tsx` paints. These
-     aliases stay white because they are shadcn's `Sidebar` contract and still
-     have no consumer. */
+     `--sidebar-primary` is **not** the artboard's "Sign up". Six of the seven
+     artboards that draw the rail give that button `background:#8bb3ef;
+     color:#0a2449`; the seventh, Landing, gives it `#fff` / `#12417f`. Neither
+     is white on `--cc-rail`. What `rail.tsx` paints is `--cc-rail-btn` above;
+     these aliases stay white because they are shadcn's `Sidebar` contract and
+     have no consumer. Do not read them as authority for the rail's button. */
   --sidebar: var(--cc-rail);
   --sidebar-foreground: #ffffff;
   --sidebar-primary: #ffffff;
@@ -483,8 +461,8 @@
 
    `:focus-visible` and not `:focus`, so a mouse click does not ring the control
    it just pressed — that is what gets a focus style deleted again a week later.
-   `!important` because the artboards carry 22 inline `outline:none`
-   declarations and this has to beat every one of them, and because it must also
+   `!important` because the artboards carry inline `outline:none` declarations
+   throughout and this has to beat every one of them, and because it must also
    reach hand-rolled `role="button"` divs, which are not focusable by default and
    get no help from the shadcn primitives' own ring.
 
@@ -517,17 +495,16 @@
    it sets `tabIndex={0}` on the selected tab, so the tab that has focus is never
    the one this excludes.
 
-   ## Nine treatments removed, three kept
+   ## The hand-rolled treatments that remain
 
-   #167's residue was twelve hand-rolled treatments in `features/**`, not the
-   five this comment used to claim. Nine are gone. The three that remain are
-   deliberate and say so at their own call sites:
-   `review-draft-panel.tsx`'s checkbox ring (painted on a sibling of an
+   This rule is meant to be the only focus treatment in the app. Three call
+   sites in `features/**` still carry their own, and each says why at the call
+   site: `review-draft-panel.tsx`'s checkbox ring (painted on a sibling of an
    `sr-only` peer, which this rule cannot reach), `workspace-pane.tsx`'s
    `focus:bg-cc-pill` (a menu highlight, not a ring), and
-   `search/components/explore.tsx`'s dead `focus-visible:outline-cc-brand`,
-   which this rule already overrides and which is left for the PR that owns
-   that file. */
+   `search/components/explore.tsx`'s `focus-visible:outline-cc-brand`, which
+   this rule already overrides and which is therefore dead. Anything else added
+   in `features/**` is a duplicate of this rule. */
 :focus-visible:not([tabindex="-1"]) {
   /* biome-ignore lint/complexity/noImportantStyles: it has to beat the 22 inline `outline:none` declarations the artboards carry, and the shadcn primitives' own ring. Without it a focus style exists everywhere except where it is needed. */
   outline: 2px solid var(--cc-focus) !important;
@@ -549,9 +526,8 @@
 
    The convention is that a scroll container picks one of these two utilities
    deliberately. Neither is the same as picking nothing: a container with no
-   utility renders the browser's default bar, which is what the artboards do not
-   draw and what this pass corrected across ten surfaces. If you add
-   `overflow-auto` anywhere, add one of these with it.
+   utility renders the browser's default bar, which the artboards never draw. If
+   you add `overflow-auto` anywhere, add one of these with it.
 
    `--border` is mapped onto `--cc-rule2`, so this tracks the theme on its own. */
 @utility scrollbar-subtle {

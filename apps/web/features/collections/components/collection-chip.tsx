@@ -104,12 +104,10 @@ export function CollectionChip({
               Rename
             </button>
             {/* The artboard's own pair — `#a4402a` on a `#fdf3ef` hover — which
-                is `--cc-danger-ink` over `--cc-danger-tint` now that the tint
-                family exists. This used to derive the hover with `color-mix`
-                against `--cc-danger`, because when the chip was built the
-                palette stopped at the solid colour (#127 §1). The derivation
-                was never the design's: dark states the tint as alpha over the
-                page, so no percentage of the solid reaches it. */}
+                is `--cc-danger-ink` over `--cc-danger-tint`. Not a `color-mix`
+                against `--cc-danger`: dark states the tint as alpha over the
+                page, so no percentage of the solid reaches it. See the
+                panel-tint note in `globals.css`. */}
             <button
               type="button"
               role="menuitem"

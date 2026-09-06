@@ -2,11 +2,8 @@
  * The hero's keep-out: where the landing copy is, how far a pixel is from it,
  * and where a thing drawn behind it has to go instead.
  *
- * This file used to place a synthetic field of drifting dots as well — an
- * illustration of a community rather than the community. That is retired: the
- * hero draws the real community graph and nothing else, so all that is left
- * here is geometry. Nothing in it knows what a **Node** is; it answers "how far
- * is this pixel from the headline" and stops there.
+ * Geometry only. Nothing in it knows what a **Node** is; it answers "how far is
+ * this pixel from the headline" and stops there.
  *
  * The rule it exists to enforce is the artboard's, and it is a *guarantee*
  * rather than a fade. `docs/design_ref/2026-09-06/Course Community -

@@ -19,12 +19,10 @@ import { cn } from "@/lib/utils";
  * The rail: the blue column every page renders beside.
  *
  * It is `--cc-rail` in both themes, but that token is **not** one colour in
- * both: `cc-theme.css` now calls it "the sidebar (darkens with the theme)" and
- * gives it `#1751a6` in light and `#0d2e5e` in dark. #85 was told the opposite
- * — "brand blue in both themes" — and #127 §2 corrects it. Nothing here changes
- * as a result; the token already swaps and the rail already reads it. Against
- * the revised dark page (`--cc-pg` `#071831`) the darker rail is still the
- * lighter of the two, so the column still separates from the content beside it
+ * both: `cc-theme.css` calls it "the sidebar (darkens with the theme)" and gives
+ * it `#1751a6` in light and `#0d2e5e` in dark. It is not brand blue in both.
+ * Against the dark page (`--cc-pg` `#071831`) the darker rail is still the
+ * lighter of the two, so the column separates from the content beside it
  * without the light theme's full brand blue glaring out of a dark screen.
  *
  * Its foreground is fixed even though its background is not. There is no
@@ -61,22 +59,16 @@ type NavItem = {
 };
 
 /**
- * "Taken courses" is back, which #85 deferred only because `/taken` did not
- * exist yet and it would not ship a link that 404s. #92 built the route, so the
- * rail is the artboard's four items again.
+ * The artboard's four items, in the artboard's order. "Taken courses" is
+ * **fourth**, after "My Page": `Course Community - Explore.dc.html` and
+ * `Course Community - Taken Courses.dc.html` both order the group Explore,
+ * Saved courses, My Page, Taken courses.
  *
- * It is **fourth**, after "My Page", which is where the artboards draw it —
- * `Course Community - Explore.dc.html` and `Course Community - Taken
- * Courses.dc.html` both order the group Explore, Saved courses, My Page, Taken
- * courses. #85's note said "third in the list" in the same breath as calling it
- * "the rail's fourth link"; the artboards settle it.
- */
-/**
- * "Collections" is deliberately *not* here, and #91's stopgap entry for it was
- * removed by #90. The artboard's rail has no such link: `Saved.dc.html` reaches
- * Collections by importing that artboard as a section of itself, and Saved now
- * does the same, so the design's own way in exists. `/collections` stays as the
- * route a `?collection=` permalink resolves to; nothing needs a second door.
+ * "Collections" is deliberately *not* here. The artboard's rail has no such
+ * link: `Saved.dc.html` reaches Collections by importing that artboard as a
+ * section of itself, and Saved does the same, so the design's own way in
+ * exists. `/collections` stays as the route a `?collection=` permalink resolves
+ * to; nothing needs a second door.
  */
 const NAV: readonly NavItem[] = [
   { href: "/search", label: "Explore", icon: Search, strokeWidth: 2.4 },

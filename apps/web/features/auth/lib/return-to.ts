@@ -2,12 +2,11 @@
  * Where a sign-in comes back to.
  *
  * Signing in is a round trip through somebody else's site, and Better Auth
- * needs to be told where to land afterwards. `AuthReasonDialog` has always told
- * it the truth — "You keep everything you were looking at" is a promise its
- * `callbackURL` keeps — while the two controls on `/auth` sent everyone to
- * `/search` regardless of where they came from. That is the difference between
- * a student returning to the draft they were writing and a student returning to
- * an empty search box, and it is the whole of what this file is for.
+ * needs to be told where to land afterwards. `AuthReasonDialog` promises "You
+ * keep everything you were looking at", and its `callbackURL` is what keeps
+ * that promise. The difference is a student returning to the draft they were
+ * writing rather than to an empty search box, and it is the whole of what this
+ * file is for.
  *
  * The route carries the destination in `?next=`, because the email path has no
  * other way to carry anything: the dialog navigates to `/auth`, `/auth` sends

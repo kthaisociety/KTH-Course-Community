@@ -61,7 +61,7 @@ function unmatchedTitle(count: number): string {
  * **Signed out, the button asks for the account instead of writing.**
  * `confirmCta: s.signedIn ? "Looks right" : "Sign in to keep this list"` is the
  * artboard's own line (`docs/design_ref/2026-09-06/Course Community - Taken
- * Courses.dc.html:1305`), and it is the whole shape of the guest flow: the
+ * Courses.dc.html`), and it is the whole shape of the guest flow: the
  * transcript is read, the rows are shown, and the account is asked for at the
  * step that would keep them. Nothing on this screen has been stored either way.
  */

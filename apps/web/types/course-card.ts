@@ -17,7 +17,7 @@
  * its buttons read "Add to comparison" / "Create new comparison". `CONTEXT.md`
  * bans "comparison" in identifiers and #68's settled decision 1 goes further:
  * there is no AI-comparison feature to name, so the word goes from the copy as
- * well. Identifier and label both say **Collection** (#90).
+ * well. Identifier and label both say **Collection**.
  */
 
 /**

@@ -113,7 +113,7 @@ type ReviewProps = {
   /**
    * Renders no trigger button of its own, leaving the opening to `openOnLoad`.
    *
-   * Taken courses (#92) walks a queue of unreviewed courses and mounts one of
+   * Taken courses walks a queue of unreviewed courses and mounts one of
    * these per course; the row the reader clicked is the trigger, so a second
    * "Add Review" button sitting under the list would open a dialog that is
    * already open. `editing` implies this — a review being rewritten is opened
@@ -207,12 +207,11 @@ export function Review({
         )}
         {/*
           The width is one `max-w-*` that already carries its own viewport
-          guard. It used to be `max-w-4xl min-w-3xl`, and the floor was the bug
-          (#165): `min-w-3xl` is 768px, min-width beats max-width in CSS, and it
-          therefore beat `DialogContent`'s own `max-w-[calc(100%-2rem)]` too — so
-          on any phone the dialog was wider than the screen and the page scrolled
-          sideways. This is reachable: it is the edit-review dialog, opened from
-          My Page.
+          guard. Do not add a `min-w-*` floor beside it: `min-w-3xl` is 768px,
+          min-width beats max-width in CSS, and it therefore beats
+          `DialogContent`'s own `max-w-[calc(100%-2rem)]` too — so on any phone
+          the dialog is wider than the screen and the page scrolls sideways.
+          This is reachable: it is the edit-review dialog, opened from My Page.
 
           `w-full` is what supplies the floor now, and it cannot fight the
           viewport the way a fixed `min-w-*` could: the element is `fixed`, so it

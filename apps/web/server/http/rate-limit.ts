@@ -6,7 +6,7 @@
  * request contains. It exists because `/api/user/transcript` now answers a
  * signed-out visitor — the Taken Courses artboard has a guest upload a
  * transcript and asks for the account at the *keep* step
- * (`docs/design_ref/2026-09-06/Course Community - Taken Courses.dc.html:1305`)
+ * (`docs/design_ref/2026-09-06/Course Community - Taken Courses.dc.html`)
  * — and a route that runs a PDF parser for anyone who asks needs a ceiling
  * that an account no longer provides.
  *

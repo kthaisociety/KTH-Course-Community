@@ -6,15 +6,10 @@ import type { AppRouter } from "@/server/api/root";
 import { type RouterOutputs, useTRPC } from "@/trpc/client";
 
 /**
- * The viewer's taken courses and the shape of one, both re-exported rather than
- * re-declared.
- *
- * This file used to hold a byte-identical copy of `useTakenCourses`, and that
- * was not a tidiness problem: `features/courses/index.ts` exports the hook
- * *specifically* so "both surfaces share one query key", and a second
- * declaration is a second `useQuery` call site building its own cache entry. My
- * Page and the course card were fetching `taken.list` twice and could disagree
- * about the answer.
+ * The viewer's taken courses and the shape of one, re-exported rather than
+ * re-declared: a second declaration is a second `useQuery` call site with its
+ * own cache entry, so My Page and the course card would fetch `taken.list`
+ * twice and could disagree about the answer.
  *
  * Both imports go to the module rather than the feature barrel, for the reason
  * `../../reviews/api/queries.ts` records: `@/features/courses` reaches the
@@ -35,17 +30,16 @@ export type { TakenCourse } from "@/features/taken/lib/taken-rows";
  * code and a viewer, and the viewer is only used to fill in `userVote`. So the
  * page reads the list once and differences it in the browser.
  *
- * That is a real cost and it is stated plainly rather than hidden: the whole
- * `reviews` table crosses the wire, carrying each review's author id. The
- * author id is already public on this procedure — the course page's own list
- * has always returned it — so this adds no exposure, only volume, and the fix
- * is an author/vote filter on `reviews.list`, which is server work outside
- * #93. Do not paper over it with a second client-side cache.
+ * That is a real cost, stated plainly rather than hidden: the whole `reviews`
+ * table crosses the wire, carrying each review's author id. The author id is
+ * already public on this procedure, so this adds volume and no exposure. The
+ * fix is an author/vote filter on `reviews.list`; do not paper over it with a
+ * second client-side cache.
  *
  * One list rather than one per course is what makes the upvoted set possible at
- * all: `userVote` comes back on every row, so "reviews I upvoted" is a real
- * server-side fact here instead of the `localStorage` array `cc-store.js`
- * keeps. There is no local vote state on this page.
+ * all: `userVote` comes back on every row, so "reviews I upvoted" is a
+ * server-side fact here rather than local state. There is no local vote state
+ * on this page.
  */
 export function useAllReviews(enabled: boolean) {
   const trpc = useTRPC();
@@ -79,9 +73,10 @@ export function useNodePersonalization(enabled: boolean) {
 /**
  * The app user has no row the tier could be derived from.
  *
- * #82 gives every account a graph node, so this is not the state a normal
- * account sits in; it is what an account deleted mid-session looks like, and
- * the "My dot" tab says so rather than drawing tier 0 as if it were measured.
+ * Every account is given a graph node at sign-up, so this is not the state a
+ * normal account sits in; it is what an account deleted mid-session looks like,
+ * and the "My dot" tab says so rather than drawing tier 0 as if it were
+ * measured.
  */
 export function isTierUnavailable(error: unknown): boolean {
   return (

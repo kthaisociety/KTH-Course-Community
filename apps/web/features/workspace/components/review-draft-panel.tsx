@@ -90,10 +90,10 @@ function ForgotCheckbox({
         aria-hidden="true"
         className={cn(
           /*
-            **Do not remove this ring as a duplicate of `globals.css`'s.** #167
-            deleted nine hand-rolled focus treatments that the global
-            `:focus-visible` rule had made redundant; this is the one that is
-            not, and the reason is not visible from the class list.
+            **Do not remove this ring as a duplicate of `globals.css`'s.** Most
+            hand-rolled focus treatments in `features/**` are redundant against
+            the global `:focus-visible` rule. This one is not, and the reason is
+            not visible from the class list.
 
             The focusable element here is the `peer` input above, which is
             `sr-only` — clipped to a 1px box. The global rule draws its outline
@@ -654,14 +654,14 @@ export function ReviewDraftPanel({
       </div>
 
       {/* The artboard's footer has two controls: a bordered "Save draft" beside
-          the post button (`Course Community - Workspace Pane.dc.html:301-303`).
+          the post button (`Course Community - Workspace Pane.dc.html`).
           Only the post button is here, deliberately.
 
           There is no unsaved state for a "Save draft" to resolve. Every
           keystroke goes `onDraftChange` → `patchDraft` → the `writeDrafts`
           effect in `workspace-pane.tsx`, so the button would either be a no-op
           or imply the draft had been at risk. The artboard's own reassurance is
-          kept: its `savedLabel` (`:170`, defined at `:645`) is the "Not saved
+          kept: its `savedLabel` is the "Not saved
           yet" / "Saved just now" line in this panel's header, word for word.
 
           Recorded because a deviation nobody wrote down is a deviation the next
@@ -701,12 +701,12 @@ export function ReviewDraftPanel({
           </p>
         )}
         {/* The success tint family, which is what the artboard draws:
-            `Course Community - Workspace Pane.dc.html:296-297` paints this
+            `Course Community - Workspace Pane.dc.html` paints this
             banner `var(--successTint)` with `var(--successInk)` on the text and
             the tick. This used to derive the fill from `--cc-success` at 12%
             and take the *solid* for the text; neither is reachable that way,
             because dark states the tint as alpha over the page and light as a
-            flat mix that is not a percentage of anything (#127 §1). */}
+            flat mix that is not a percentage of anything. */}
         {justPublished && (
           <p className="flex items-center gap-2.5 border-cc-rule border-b bg-cc-success-tint px-5 py-2.5 text-[12.5px] text-cc-success-ink">
             Published. Thanks — your review is live on the course.

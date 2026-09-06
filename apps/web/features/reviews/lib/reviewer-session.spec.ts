@@ -42,7 +42,7 @@ describe("a round the tab remembers", () => {
    * Both storages used to hand-decode a draft field by field over a spread of
    * `EMPTY_REVIEW_DRAFT`, which made the result structurally complete whether or
    * not the decoder had heard of every field — so a field added to `ReviewDraft`
-   * compiled, type-checked, and came back empty after a reload (#166). The
+   * compiled, type-checked, and came back empty after a reload. The
    * decoder no longer spreads the empty draft, so the omission is now a compiler
    * error; this is the same guarantee at runtime, for the day somebody puts the
    * spread back.

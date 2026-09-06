@@ -31,8 +31,8 @@ const EDITING = {
  * jsdom computes no layout — `getBoundingClientRect` is zeros and no Tailwind
  * stylesheet exists at test time — so the class list is the surface a test can
  * hold. It is not a proxy for the real thing either: this string is the output
- * of `cn`, which is where #178's bug lived, so a `sm:max-w-*` creeping back into
- * `DialogContent`'s base classes shows up here exactly as it would on screen.
+ * of `cn`, so a `sm:max-w-*` creeping back into `DialogContent`'s base classes
+ * shows up here exactly as it would on screen.
  */
 function widthClasses() {
   const content = document.querySelector('[data-slot="dialog-content"]');
@@ -82,7 +82,7 @@ describe("Review, as the edit-review dialog", () => {
       ),
     ).toBe(true);
 
-    // #178: `DialogContent` must contribute no width of its own. If it does, it
+    // `DialogContent` must contribute no width of its own. If it does, it
     // arrives as an `sm:max-w-*` — a different tailwind-merge group from the
     // `max-w-*` above, so it would not replace it and would silently win from
     // 640px up.

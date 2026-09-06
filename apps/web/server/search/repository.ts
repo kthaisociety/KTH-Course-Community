@@ -8,21 +8,16 @@ export type SearchHit = {
 };
 
 /**
- * `size` is the LIMIT, exactly. It used to be inflated to `size * 5` whenever a
- * minimum-rating filter was set, because the service thresholded ratings in
- * application code after the query and needed a window wide enough to survive
- * that pass. The rating filter is gone (it was in no artboard), so the window
- * has nothing to absorb: what is asked for is what is fetched. The department
- * filter needs no window at all — it is a SQL predicate below, so every row the
- * query returns already satisfies it.
+ * `size` is the LIMIT, exactly — never inflated to leave room for a filter
+ * applied after the query. Every filter here is a SQL predicate, so every row
+ * the query returns already satisfies it.
  *
- * The service now asks for a window that covers every page up to the one it is
- * serving, plus one row of lookahead (#148). That is still `size` meaning
- * `size` — it is a bigger number, not an inflated one — and it works only
- * because this query is *totally* ordered: the three-way bucket, then
- * `ts_rank`, then `courses.code ASC`. A LIMIT over a total order returns a
- * prefix, so a wider window returns a superset that begins with the narrower
- * one, and page 2 holds the same rows however deep the fetch went.
+ * The service asks for a window covering every page up to the one it is
+ * serving, plus one row of lookahead. That is a bigger number, not an inflated
+ * one, and it works only because this query is *totally* ordered: the three-way
+ * bucket, then `ts_rank`, then `courses.code ASC`. A LIMIT over a total order
+ * returns a prefix, so a wider window returns a superset that begins with the
+ * narrower one, and page 2 holds the same rows however deep the fetch went.
  */
 export async function searchByKeyword(
   query: string,
@@ -96,7 +91,7 @@ export async function searchByKeyword(
  * identical distance may come back in either order between two executions of
  * the same query. Under a plain LIMIT that is invisible — the same set, only
  * shuffled. Under pagination it is a bug: the service pages by slicing one
- * ordered prefix (#148), so a pair that swaps between the fetch for page 2 and
+ * ordered prefix, so a pair that swaps between the fetch for page 2 and
  * the fetch for page 3 puts one course on both pages and the other on neither.
  *
  * `courses.code` is the primary key, so appending it makes the order total, and

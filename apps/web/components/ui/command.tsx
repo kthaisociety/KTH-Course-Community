@@ -51,10 +51,9 @@ function CommandDialog({
       <DialogContent
         className={cn(
           /*
-            384px, stated rather than inherited. `DialogContent` used to carry an
-            `sm:max-w-sm` in its base classes, where it silently clamped every
-            caller that asked for something wider (#178). It is gone from there,
-            so the palette — which does want 384px — says so itself.
+            384px, stated rather than inherited: `DialogContent` has no width
+            opinion of its own, so the palette — which does want 384px — says so
+            itself.
           */
           "top-1/3 translate-y-0 overflow-hidden rounded-xl! p-0 sm:max-w-sm",
           className,

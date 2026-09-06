@@ -25,7 +25,7 @@ import { MagicLinkForm } from "./magic-link-form";
  * could lie to a first-time visitor, so the buttons keep the providers that do.
  *
  * Before this, `/auth` was shadcn's `login-02` block close to verbatim and the
- * only file under `features/` with no `--cc-*` class at all (#164). The visible
+ * only file under `features/` with no `--cc-*` class at all. The visible
  * cost was not only that it looked borrowed: `bg-muted` resolves through
  * `globals.css` to `--cc-pill`, which in dark theme is a 16% cream over
  * `--cc-pg` — a `#2d3a4d` grey ground standing behind the `#0b254c` card. The

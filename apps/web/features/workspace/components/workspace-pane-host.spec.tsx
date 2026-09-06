@@ -63,7 +63,7 @@ function host(openCourses: OpenCourse[]) {
 }
 
 /**
- * Explore and Saved mount the same column (#127 §3), so what it does with no
+ * Explore and Saved mount the same column, so what it does with no
  * open courses, and how wide it starts, is asserted once here rather than in
  * each host's screen test.
  */

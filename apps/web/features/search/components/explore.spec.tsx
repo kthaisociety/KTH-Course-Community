@@ -675,12 +675,12 @@ describe("Explore", () => {
     });
 
     /**
-     * `Course Community - Explore.dc.html:243` draws the panel's badge as
+     * `Course Community - Explore.dc.html` draws the panel's badge as
      * `#a3452a` over `#fbeceb` — `--cc-danger-ink` over `--cc-danger-tint`, the
      * pair the Design System artboard names as the error banner. It used to
      * derive the fill with
      * `color-mix(in srgb, var(--cc-danger) 12%, var(--cc-surface))` under a
-     * comment claiming no error surface token existed (#127 §1). It did, the
+     * comment claiming no error surface token existed. It did, the
      * mix landed on a pink rather than the token's warm peach, and no mix of
      * the solid could have reached it in dark, where the design states the tint
      * as alpha over the page instead.
@@ -702,7 +702,7 @@ describe("Explore", () => {
   });
 
   /**
-   * The artboard's pager, built on a lookahead rather than a count (#148).
+   * The artboard's pager, built on a lookahead rather than a count.
    *
    * The whole contract is `hasMore` plus the page the server says it served.
    * There is no total — one page of a de-duplicated union of a keyword ranking

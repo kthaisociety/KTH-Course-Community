@@ -29,13 +29,12 @@ import { fromPlainText } from "./review-text";
  *
  * ## The workspace pane writes through this model too
  *
- * `features/workspace/lib/review-draft.ts` used to carry a near-identical copy
- * of everything below — the same shape, the same bar arithmetic under the same
- * names. It no longer does: it now holds only the two flags that are genuinely
- * the pane's, `examinationForgotten` and `approachForgotten`, and extends this
- * shape with them. The pane draws explicit "I don't remember" checkboxes where
- * this card leaves the question alone, which is the one real difference between
- * the two surfaces.
+ * `features/workspace/lib/review-draft.ts` holds only the two flags that are
+ * genuinely the pane's, `examinationForgotten` and `approachForgotten`, and
+ * extends this shape with them. The pane draws explicit "I don't remember"
+ * checkboxes where this card leaves the question alone, which is the one real
+ * difference between the two surfaces. Everything else — the shape, the bar
+ * arithmetic — is here, once.
  *
  * That is why `toggleMethod`, `moveDivider` and `nudgeDivider` are generic over
  * the draft rather than typed to this exact shape. Each of them replaces
@@ -84,20 +83,16 @@ export const EMPTY_REVIEW_DRAFT: ReviewDraft = {
  *
  * Two screens keep an unpublished draft in the browser and read it back on the
  * next page load: the workspace pane, in `localStorage`, and the fast-track
- * reviewer, in its tab's `sessionStorage`. Until #166 each had written its own
- * decoder, field by field, and the two had drifted — first by four lines, then
- * by what a malformed record *means*. One salvaged, the other rejected. This is
- * the one decoder both now go through.
+ * reviewer, in its tab's `sessionStorage`. This is the one decoder both go
+ * through, so they cannot drift about what a malformed record means.
  *
  * ## Why it does not spread `EMPTY_REVIEW_DRAFT`
  *
- * Both old copies started `{ ...EMPTY_REVIEW_DRAFT, ... }` and then set the
- * fields they knew about. That spread is what made the duplication dangerous
- * rather than merely untidy: it makes the result structurally complete whether
- * or not the decoder has heard of every field, so a field added to `ReviewDraft`
- * compiles in both copies, passes the type checker in both copies, and comes
- * back as its empty value on the next reload — silently, and delayed until
- * someone reloads.
+ * `{ ...EMPTY_REVIEW_DRAFT, ... }` followed by the fields the decoder knows
+ * about makes the result structurally complete whether or not it has heard of
+ * every field — so a field added to `ReviewDraft` compiles, passes the type
+ * checker, and comes back as its empty value on the next reload, silently, and
+ * delayed until somebody reloads.
  *
  * The object literal below therefore names every field and defaults none of
  * them. Adding a field to `ReviewDraft` now fails to compile *here*, in the one
@@ -114,18 +109,17 @@ export const EMPTY_REVIEW_DRAFT: ReviewDraft = {
  * because there is nothing in a string to salvage.
  *
  * That is not a preference. Both screens mirror their state straight back over
- * storage — the workspace pane on the effect #180 rebuilt, the reviewer on
+ * storage — the workspace pane on its write effect, the reviewer on
  * `useEffect(… , [round])` in `reviewer.tsx`, which fires on the mount that
  * follows the restore — so a draft this function refuses is a draft *deleted*,
  * within a commit, permanently. Rejecting a whole draft over one unreadable
  * field burns the write-up and the scores to avoid drawing a bar wrong.
  *
- * `reviewer-session.ts` used to reject, on the reading that a half-understood
- * *round* is worse than none. The round-level check is real and it stays in
- * that file — an absent or empty queue is still no round. But it is a different
- * granularity: rejecting one draft never rejected the round, it dealt the same
- * card with the reviewer's answers thrown away. So there is no call site that
- * wants rejection, and there is deliberately no policy switch here to give one.
+ * Rejection at the *round* level is a different granularity and it is real:
+ * `reviewer-session.ts` still treats an absent or empty queue as no round.
+ * Rejecting one draft never rejects the round — it deals the same card with the
+ * reviewer's answers thrown away — so no call site wants it, and there is
+ * deliberately no policy switch here to give one.
  */
 
 /**
@@ -171,10 +165,10 @@ function isExaminationKey(value: unknown): value is ExaminationKey {
  * The stored examination split, or no split at all.
  *
  * `methods` and `shares` are parallel, always add up to 100, and name methods
- * *this* build knows about. A stored `"quiz"` from a build that offered one used
- * to be cast straight into `ExaminationKey[]` and reach the bar as a segment
- * with no colour and no label; a length mismatch used to reach `moveDivider` as
- * arithmetic over `undefined`.
+ * *this* build knows about. All three are checked rather than asserted: a
+ * stored `"quiz"` from a build that offered one would otherwise reach the bar
+ * as a segment with no colour and no label, and a length mismatch would reach
+ * `moveDivider` as arithmetic over `undefined`.
  *
  * Anything that fails drops the split and **nothing else**. A split we cannot
  * read is a question left unanswered; the rest of the review is still the

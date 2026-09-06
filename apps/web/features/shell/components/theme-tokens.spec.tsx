@@ -101,11 +101,11 @@ function ccNameFor(designToken: string): string {
  * before.
  *
  * - `--cc-applied` — the applied end of a theory/applied bar. The artboards
- *   write `#9dbfe4` inline for it (`Course Community - Workspace Pane.dc.html`
- *   at `:115`, and four other artboards reuse the hex for other things) and no
- *   export has ever given it a name. Three call sites derived it with
- *   `color-mix` instead; #173 named it here so the derivation cannot silently
- *   re-resolve when `--cc-btn` moves. Its dark value is the one `--cc-*` value
+ *   write `#9dbfe4` inline for it (the Workspace Pane artboard, and four others
+ *   that reuse the hex for other things) and no export has ever given it a
+ *   name. It is named here rather than derived with `color-mix` so the
+ *   derivation cannot silently re-resolve when `--cc-btn` moves; see
+ *   `globals.css`. Its dark value is the one `--cc-*` value
  *   in `globals.css` chosen locally, because the artboards hardcode the light
  *   hex in both themes. When an export names it, delete this entry and the
  *   parity check picks it up.

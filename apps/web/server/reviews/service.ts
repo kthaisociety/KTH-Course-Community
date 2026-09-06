@@ -104,8 +104,9 @@ export async function createReview(
     );
   }
 
-  // Publishing a first review is one of the two moments #161's ladder can move:
-  // it earns tier 1 outright, and it is what completes a transcript for tier 3.
+  // Publishing a first review is one of the two moments the personalization
+  // ladder can move (ADR 0005): it earns tier 1 outright, and it is what
+  // completes a transcript for tier 3.
   // The recompute reads the row this call just committed, raises the column and
   // never lowers it, and swallows its own failures — a review that was
   // published stays published even if the tier write does not land.

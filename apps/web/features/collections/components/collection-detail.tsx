@@ -26,13 +26,13 @@ type Props = {
    * The card's collapse ramp, measured by whoever owns the column these rows
    * are laid out in.
    *
-   * This used to be `EXPANDED_CARD_GEOMETRY`, pinned here on the grounds that
-   * the page column had nothing competing for its width. That was true of
-   * `/collections` and false of `/saved`, which embeds this component inside the
-   * very column the workspace pane narrows — so one card collapsed or did not
-   * depending only on which of the page's two lists it was in, and the surplus
-   * was clipped rather than scrolled because that column is `overflow-x-hidden`
-   * (#159). The decision belongs to the host, and both hosts now measure.
+   * Measured, never pinned to `EXPANDED_CARD_GEOMETRY`. Nothing competes for
+   * the column's width on `/collections`, but `/saved` embeds this component
+   * inside the very column the workspace pane narrows — pin it and one card
+   * collapses or does not depending only on which of that page's two lists it
+   * is in, with the surplus clipped rather than scrolled because that column is
+   * `overflow-x-hidden`. The decision belongs to the host, and both hosts
+   * measure.
    *
    * It is the *column's* width, not the card's: each row spends 36px on the
    * reorder buttons before the card starts, so the ramp here runs about 36px
@@ -74,7 +74,7 @@ const MOVE_BUTTON =
  * string assembled from its mock store; `period` and `school` are not fields the
  * schema has, and the card renders the same course from data that does exist —
  * so the codebase wins, as #68 has it, and the design's remove affordance
- * survives as the card's own `removeLabel` button, which #86 built for this page.
+ * survives as the card's own `removeLabel` button.
  * The geometry arrives as a prop; see {@link Props.geo} for why this component
  * is the wrong place to decide it.
  *

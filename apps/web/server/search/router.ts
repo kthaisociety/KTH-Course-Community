@@ -10,12 +10,10 @@ export const searchRouter = createTRPCRouter({
   /**
    * One page of the catalogue, and whether another one follows it.
    *
-   * `page` used to be accepted and dropped, and the reply carried
-   * `total: results.length` — the size of the page it had just built, offered
-   * as if it were the size of the matching set. Both are gone (#148): `page` is
-   * honoured, and `total` is not replaced by a truthful count because there is
-   * no truthful count to compute over a de-duplicated union of a keyword
-   * ranking and a semantic one. `service.ts` sets out why at length.
+   * There is no `total`, and adding one would mean inventing it: a
+   * de-duplicated union of a keyword ranking and a semantic one has no
+   * truthful count short of running both across the whole catalogue.
+   * `service.ts` sets out why at length.
    *
    * What a prev/next pager actually asks is "is there another page", and
    * `hasMore` answers exactly that, from one extra row rather than a second

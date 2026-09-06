@@ -18,12 +18,12 @@ type Props = {
  * The hand-off from browser to account, above the saved list.
  *
  * Four rows, one at a time, from
- * `docs/design_ref/2026-09-06/Course Community - Saved.dc.html:100-124`: the
+ * `docs/design_ref/2026-09-06/Course Community - Saved.dc.html`: the
  * offer (`pendingImport`), and the three `aria-live` results above it —
  * `importRunning`, `importDone`, `importDupes`.
  *
  * The offer shows only for a signed-in reader who still has codes in this
- * browser, which is the artboard's own condition at line 751 (`member &&
+ * browser, which is the artboard's own condition (`member &&
  * v.localSaves.length > 0 && v.importState !== "running"`). A guest sees
  * nothing here: their list *is* the page, and there is no account to move it
  * into yet.

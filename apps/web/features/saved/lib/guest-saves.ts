@@ -6,7 +6,7 @@
  * Browsing never needs an account, and neither does saving: the Saved artboard
  * models `localSaves` and `acctSaves` as two lists behind one page, and says
  * why — *"Guest saves have nowhere else to live, so they are kept under our own
- * key"* (`docs/design_ref/2026-09-06/Course Community - Saved.dc.html:322`).
+ * key"* (`docs/design_ref/2026-09-06/Course Community - Saved.dc.html`).
  *
  * It holds course *codes* and nothing else. A code is the one thing about a
  * course this app can re-fetch everything else from, so a stored list cannot go
@@ -16,9 +16,9 @@
  *
  * ## One key per course, not one key holding a list
  *
- * The artboard keeps its list as a JSON array under a single key, and this did
- * too until review found the consequence. A list under one key makes *every*
- * change a read-modify-write: to add one course you read the array, append, and
+ * The artboard keeps its list as a JSON array under a single key. This does
+ * not, and the reason is a deliberate deviation. A list under one key makes
+ * *every* change a read-modify-write: to add one course you read the array, append, and
  * write the whole thing back. `localStorage` is shared by every tab on the
  * origin and offers no compare-and-swap and no transaction, so two tabs doing
  * that at once lose whichever read first — and the write that loses is
@@ -191,8 +191,8 @@ export function setGuestSave(courseCode: string, saved: boolean): void {
  *
  * Called once the account writes have landed — the artboard's `runImport`
  * clears local storage in the same step that commits the merge, and comments
- * the ordering: *"the browser hand-off is cleared only now"* (line 594).
- * Clearing first would lose the list outright if the write then failed.
+ * the ordering: *"the browser hand-off is cleared only now"*. Clearing first
+ * would lose the list outright if the write then failed.
  *
  * **Named saves, not the whole list**, and one `removeItem` each. The artboard
  * can afford a wholesale `removeItem` there because its `localSaves` is
@@ -219,19 +219,17 @@ export function setGuestSave(courseCode: string, saved: boolean): void {
  * keeping, never the only copy of anything.
  *
  * That second bound is a fact about the caller, not about this function, and it
- * has been false once already: `useGuestSavesImport` used to retire a code on
- * the strength of the `user.me` cache listing it, and that cache is optimistic,
- * so a rejected write took the account's copy away after the browser's had
- * gone. The premise is stated in `useGuestSavesImport` and pinned by its tests
- * for that reason. If a caller ever hands this function a code without a
- * resolved write behind it, the bound is gone and so is the argument for
- * leaving the window open; the answer then is IndexedDB's transactions, not a
- * lock. Closing it needs mutual exclusion that every writer takes,
- * which means `navigator.locks` and an async `setGuestSave` reaching every Save
- * button in the app; that is both the lock this layout was chosen to do without
- * and the shape review already rejected upstream in this file, because where
- * the API is missing — older browsers, and jsdom, so every test here — the
- * fallback is this code with none of the locked path exercised.
+ * is easy to break: retiring a code on the strength of the optimistic `user.me`
+ * cache listing it means a rejected write takes the account's copy away after
+ * the browser's has gone. The premise is stated in `useGuestSavesImport` and
+ * pinned by its tests for that reason. If a caller ever hands this function a
+ * code without a resolved write behind it, the bound is gone and so is the
+ * argument for leaving the window open; the answer then is IndexedDB's
+ * transactions, not a lock. A lock needs mutual exclusion that every writer
+ * takes — `navigator.locks` and an async `setGuestSave` reaching every Save
+ * button in the app — and where that API is missing (older browsers, and jsdom,
+ * so every test here) the fallback is this code with none of the locked path
+ * exercised.
  */
 export function retireGuestSaves(saves: readonly GuestSave[]): void {
   if (!saves.length) return;

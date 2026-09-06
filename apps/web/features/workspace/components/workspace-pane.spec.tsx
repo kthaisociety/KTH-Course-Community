@@ -41,8 +41,8 @@ vi.mock("@/features/courses", () => ({
   useCourseSummaries: (codes: string[]) => useCourseSummaries(codes),
 }));
 
-// `ReviewList` is the reviews feature's own list of designed Review Cards
-// (#87). The pane's job is to hand it the course and its reviews, which is
+// `ReviewList` is the reviews feature's own list of designed Review Cards.
+// The pane's job is to hand it the course and its reviews, which is
 // what this asserts; how a card draws itself is that feature's test.
 // The palette and the review-draft model are the real ones — the pane draws
 // the same examination bar the Review Card does, and since the pane's draft
@@ -471,11 +471,11 @@ describe("the review draft tab", () => {
       message: "<p>Hard but worth it.</p>",
     });
     /*
-     * `Course Community - Workspace Pane.dc.html:296-297` paints this banner
+     * `Course Community - Workspace Pane.dc.html` paints this banner
      * `var(--successTint)` with `var(--successInk)`. It used to derive the fill
      * from `--cc-success` at 12% in an inline `style` and take the solid for
      * the text, which no mix could reach in dark, where the design states the
-     * tint as alpha over the page (#127 §1). Classes rather than computed
+     * tint as alpha over the page. Classes rather than computed
      * colours: jsdom runs no Tailwind, so what is assertable is the token the
      * component asked for — and that the derivation is not back in a `style`.
      */

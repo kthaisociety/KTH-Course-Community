@@ -30,11 +30,9 @@ import {
  *
  * The model itself — the picked methods, the parallel shares, the scores, the
  * write-up — and every piece of the examination bar's arithmetic live in
- * `features/reviews/lib/review-draft.ts`. This file used to carry a second copy
- * of all of it. It no longer does, because there is nothing about the pane that
- * makes a divider move differently: a review draft is one concept with two
- * presentations, and the model belongs to the feature that owns reviews rather
- * than to whichever screen was built first.
+ * `features/reviews/lib/review-draft.ts`. Nothing about the pane makes a
+ * divider move differently: a review draft is one concept with two
+ * presentations, and the model belongs to the feature that owns reviews.
  *
  * ## What is genuinely the pane's
  *
@@ -74,7 +72,7 @@ export const EMPTY_REVIEW_DRAFT: ReviewDraft = {
  * The record guard is shared rather than repeated so that the flags come off a
  * value TypeScript has *checked* is a record — the alternative is decoding the
  * answers first and then asserting that the input must have been a record after
- * all, which is the kind of unchecked cast #166 set out to remove.
+ * all, which is an unchecked cast.
  *
  * Nothing is defaulted from `EMPTY_REVIEW_DRAFT`. Adding a field to this
  * interface fails to compile here, and adding one to `ReviewAnswers` fails to

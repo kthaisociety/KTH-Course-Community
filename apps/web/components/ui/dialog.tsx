@@ -42,23 +42,18 @@ function DialogOverlay({
           The artboards' modal scrim, as the default rather than as an override
           each dialog remembers to pass.
 
-          `rgba(20,30,45,.34)` is what all eight artboards that draw a modal use
-          — Collections, Explore, Landing, My Page, Saved, Saved copy, Taken
-          Courses and Workspace Pane. It was shadcn's blurred `bg-black/10` here,
-          and six dialogs each carried an `overlayClassName` to get back to the
-          design; four of those six had copied Landing's one-off
-          `rgba(14,26,44,.34)` by mistake, which is how a single scrim became
-          four values in the app. A default nobody has to remember is what stops
-          that recurring.
+          `rgba(20,30,45,.34)` is what every artboard that draws a modal uses.
+          It is the default here rather than shadcn's blurred `bg-black/10`
+          because a scrim each dialog has to remember to pass is a scrim that
+          ends up spelled several ways.
 
           Flat, with no blur: what is behind a dialog is the thing the dialog is
-          about, and it has to stay readable while the reader decides. Every one
-          of those six overrides had already turned the blur off.
+          about, and it has to stay readable while the reader decides.
 
           Two scrims legitimately differ and still say so at the call site: the
-          mobile drawer is `rgba(20,30,45,.4)` (`Mobile Preview.dc.html:242`) and
+          mobile drawer is `rgba(20,30,45,.4)` (`Mobile Preview.dc.html`) and
           Find your dot is `rgba(14,26,44,.34)`, dropping to `.08` while the dot
-          is revealing (`Landing.dc.html:164,1493`).
+          is revealing (`Landing.dc.html`).
         */
         "fixed inset-0 isolate z-50 bg-[rgba(20,30,45,0.34)] duration-100 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
         className,
@@ -87,18 +82,16 @@ function DialogContent({
         className={cn(
           /*
             `max-w-[calc(100%-2rem)]` is the phone guard, and it is the only
-            opinion this primitive has about width. There used to be an
-            `sm:max-w-sm` beside it, and it was a trap (#178).
+            opinion this primitive has about width. **Do not add a responsive
+            clamp beside it.**
 
             tailwind-merge keeps `sm:max-w-*` and plain `max-w-*` in different
             groups, so neither a caller's `w-[440px]` nor its `max-w-4xl`
-            replaced it: from the `sm` breakpoint up the dialog rendered at
-            384px, whatever it had asked for. Nothing errored and no test failed,
-            so it only showed up if someone measured — and two dialogs were wrong
-            on screen for it while two more carried an `sm:max-w-[440px]` to work
-            around a clamp that is invisible from the call site.
+            replaces one: from the `sm` breakpoint up the dialog renders at the
+            clamp's width, whatever it asked for. Nothing errors and no test
+            fails, so it only shows up if someone measures.
 
-            So a caller now states its own width and gets it. A caller that wants
+            A caller states its own width and gets it. A caller that wants
             a *cap* rather than a width overrides this class and takes the phone
             guard with it, so it should state both at once —
             `max-w-[min(56rem,calc(100vw-2rem))]`, the way `Review` does. The two

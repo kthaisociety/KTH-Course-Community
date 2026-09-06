@@ -20,7 +20,7 @@ const formSchema = z.object({
  * text. shadcn's `Input` is 32px at a 10px radius, which is what this was.
  *
  * Focus is `globals.css`'s. The hand-rolled treatment that used to sit here
- * answered an export that drew no focus state; the 2026-09-06 one does (#167).
+ * answered an export that drew no focus state; the 2026-09-06 one does.
  *
  * The invalid border is `--cc-danger`, matching `find-your-dot.tsx`, which is
  * the other place in this repo that asks for an email address and mails a link

@@ -30,8 +30,7 @@ export function useGuestSaves(): readonly string[] {
 /**
  * How far the hand-off from browser to account has got.
  *
- * The four states are the Saved artboard's own, at
- * `docs/design_ref/2026-09-06/Course Community - Saved.dc.html:747-752`:
+ * The four states are the Saved artboard's own:
  * `pending` is its `pendingImport` row, and `running` / `done` / `dupes` are
  * the three `aria-live` banners above it. `dupes` is a state rather than a
  * flavour of `done` because it says something different — nothing was added,
@@ -55,8 +54,8 @@ type ImportOptions = {
  * Moves the guest list into the account, once the reader asks.
  *
  * **Asked, not automatic.** The artboard auto-runs this only in its own
- * scenario poser (line 578, seeding a preview fixture); the control a reader
- * actually sees is the `pendingImport` row's "Add to my account" button. That
+ * scenario poser, seeding a preview fixture; the control a reader actually
+ * sees is the `pendingImport` row's "Add to my account" button. That
  * is also the safer of the two: signing in is not consent to write a list of
  * courses to an account, and somebody who signed in on a shared browser should
  * not silently inherit whatever the last person saved on it.
@@ -78,11 +77,11 @@ type ImportOptions = {
  * **Every snapshotted code is written, including ones the account looks like it
  * already has.** `accountCodes` is the `user.me` cache behind the page, and
  * that cache is optimistic: `useSetCourseSaved` puts a code into it before the
- * account has answered and takes it back out if the write is rejected. A run
- * that read the cache as proof retired the browser's copy of such a code
- * without writing anything of its own — and when the earlier write then rolled
- * back, the course was in neither place. So the cache decides only the number
- * the banner reports, never what leaves the browser. `saved.save` is idempotent
+ * account has answered and takes it back out if the write is rejected. Treating
+ * the cache as proof would retire the browser's copy of such a code without
+ * writing anything of its own, and a rolled-back earlier write then leaves the
+ * course in neither place. So the cache decides only the number the banner
+ * reports, never what leaves the browser. `saved.save` is idempotent
  * (`insertSavedCourse` uses `onConflictDoNothing`), so a redundant write costs
  * one request and changes nothing, which is a great deal cheaper than the
  * course it was losing.

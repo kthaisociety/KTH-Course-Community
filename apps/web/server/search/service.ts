@@ -95,8 +95,8 @@ async function searchWithEmbedding(
 /**
  * How deep Explore can page, in pages.
  *
- * This is the one judgement call in #148 rather than something the data
- * dictates. The semantic leg has no relevance floor: its `WHERE` is effectively
+ * A judgement call rather than something the data dictates. The semantic leg
+ * has no relevance floor: its `WHERE` is effectively
  * "has an embedding", so every course in the catalogue is a hit at *some*
  * distance and the LIMIT is the only thing that makes the result a set rather
  * than the catalogue. Page 20 of that is not more results, it is courses sorted
@@ -148,23 +148,17 @@ function clampPage(page: number | undefined): number {
  *
  * ## `department` is the only filter, and it is deliberate
  *
- * There used to be a second one — a minimum-rating dropdown, "at least N
- * stars", thresholding the learning mean. It has been removed. It was in no
- * artboard: `docs/design_ref/2026-09-06/Course Community - Explore.dc.html`
- * draws no filter row at all, and the control was invented to satisfy #89.
- * With no design behind it there was nothing to be right about, so it went
- * rather than staying as a permanent, undesigned deviation.
+ * **A filter this domain cannot express in SQL does not belong here.** A
+ * minimum-rating filter is the tempting one, and it cannot be: the scores live
+ * in the reviews domain, so the threshold would have to be applied after the
+ * query came back, over an over-fetched window — and when more of that window
+ * misses the threshold than the window has slack for, the caller silently gets
+ * fewer results than it asked for with nothing on the wire saying more exist.
+ * `Course Community - Explore.dc.html` draws no filter row at all, so there is
+ * no design asking for one either.
  *
- * It also took a live bug with it. It could not be expressed in SQL — the
- * scores live in the reviews domain, so the threshold was applied here, in
- * application code, *after* the query had come back. To leave something to
- * filter, the query over-fetched `size * 5`. If more than four fifths of that
- * window missed the threshold the caller silently got fewer results than it
- * asked for, with nothing on the wire saying more existed. That failure mode
- * left with the feature, and the over-fetch went with it.
- *
- * `department` stays, and is still a deviation from the artboard — but a cheap
- * and honest one. It filters in SQL (`department ILIKE`, in the repository),
+ * `department` is a deviation from the artboard, but a cheap and honest one. It
+ * filters in SQL (`department ILIKE`, in the repository),
  * so the database does the narrowing, every returned row already satisfies it,
  * and it applies to the whole window rather than to one page. That is what
  * makes it survive paging: page 3 of a filtered search is page 3 of the
@@ -172,9 +166,7 @@ function clampPage(page: number | undefined): number {
  *
  * ## Paging with a lookahead, because there is no total to have
  *
- * `total` used to be returned here as `results.length` — the size of what had
- * just been returned, which is not a total of anything. It is gone rather than
- * corrected, because the honest version cannot be computed:
+ * There is no `total`, and there is no honest one to add:
  *
  * - the result set is the union of two independent rankings, de-duplicated in
  *   application code, so neither leg's count is the answer and the union's
@@ -194,10 +186,10 @@ function clampPage(page: number | undefined): number {
  * It does, for two reasons that have to hold together:
  *
  * - each leg is a LIMIT over a *totally* ordered query, so a wider LIMIT
- *   returns a superset beginning with the narrower one. The keyword leg has
- *   always ended `courses.code ASC`; the semantic leg does now, and #148 is
- *   where that was fixed — ordering on distance alone let equidistant rows
- *   swap between two fetches, which puts a course on two pages or on none.
+ *   returns a superset beginning with the narrower one. Both legs end
+ *   `courses.code ASC`, and the semantic one must: ordering on distance alone
+ *   lets equidistant rows swap between two fetches, which puts a course on two
+ *   pages or on none.
  * - the union of the two is itself prefix-stable. Where the keyword leg fills
  *   the window, the first `size` rows *are* keyword rows and the semantic leg
  *   cannot reach them; where it does not fill the window, it is exhausted and

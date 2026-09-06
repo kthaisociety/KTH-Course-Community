@@ -35,7 +35,7 @@ describe("CollectionTile", () => {
   /**
    * Same pair as the chip's, from the same artboard rows — `--cc-danger-ink`
    * over a `--cc-danger-tint` hover. Both were `color-mix` derivations against
-   * `--cc-danger` before the tint family existed (#127 §1), and both are
+   * `--cc-danger` before the tint family existed, and both are
    * asserted separately because they are two components that happen to agree,
    * not one shared control.
    */

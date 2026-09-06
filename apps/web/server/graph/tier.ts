@@ -13,9 +13,9 @@ import { selectUnreviewedCourses } from "../reviews/unreviewed";
  * touching a service or a query. They are one policy seen from two ends —
  * earning and decay — which is why they share a file rather than a layer.
  *
- * The rule itself is #161's settled ladder, and the two halves are deliberately
- * asymmetric: see `deriveEarnedTier` on why a non-monotonic condition still
- * produces a column that only ever rises.
+ * The ladder is settled in `docs/adr/0005-personalization-tier-earning.md`, and
+ * the two halves are deliberately asymmetric: see `deriveEarnedTier` on why a
+ * non-monotonic condition still produces a column that only ever rises.
  */
 
 /** Complete months of inactivity that cost one tier step. */
@@ -42,7 +42,7 @@ export type EarnedTierInputs = {
 /**
  * The tier an app user's contributions have earned, right now.
  *
- * The ladder, settled in #161:
+ * The ladder, settled in ADR 0005:
  *
  * - **1** — they have published a review. The 0→1 step, and the contribution
  *   the product most wants.
@@ -79,7 +79,9 @@ export function deriveEarnedTier(inputs: EarnedTierInputs): number {
   const hasImported = inputs.transcriptImportedCourses.length > 0;
   // The one definition of "unreviewed", narrowed to imported courses. Tier 3
   // falls out of the same arithmetic the "Fast track all N" count uses; a
-  // second version of it written in SQL is exactly the duplication #161 forbids.
+  // second version written in SQL could disagree with the UI in the worst
+  // possible place — telling a member they had finished while the tier said
+  // they had not.
   const unreviewedImported = selectUnreviewedCourses(
     inputs.transcriptImportedCourses,
     inputs.reviews,

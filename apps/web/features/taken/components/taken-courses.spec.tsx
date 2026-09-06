@@ -176,7 +176,7 @@ function takenCourse(overrides: Partial<TakenCourse> = {}): TakenCourse {
 /**
  * One unreviewed course as the hook now hands it over: the taken row plus the
  * catalogue title. The lookup moved into `useUnreviewedTakenCourses` so neither
- * host has to remember it, and My Page was the host that forgot (#157).
+ * host has to remember it, and My Page was the host that forgot.
  */
 function unreviewedCourse(
   overrides: Partial<TakenCourse> = {},
@@ -527,7 +527,7 @@ describe("adding by hand", () => {
 /**
  * Everything on a taken row is self-reported — `CONTEXT.md` says so — and a
  * transcript re-read is the only cheap way back, so the mutation waits behind a
- * confirmation (#155). The artboard confirms after; the product owner settled
+ * confirmation. The artboard confirms after; the product owner settled
  * on before for every destructive action.
  */
 describe("removing", () => {
@@ -1155,7 +1155,7 @@ describe("arriving with ?review=…", () => {
   });
 
   /**
-   * The defect this contract was widened for (#157): a row on My Page's prompt
+   * The defect this contract was widened for: a row on My Page's prompt
    * names a course, and the round has to start on it rather than on whatever
    * the unreviewed set happens to list first.
    */
@@ -1215,10 +1215,10 @@ describe("arriving with ?review=…", () => {
 /**
  * The signed-out flow the artboard draws, and the two halves that make it safe.
  *
- * `docs/design_ref/2026-09-06/Course Community - Taken Courses.dc.html:767`
- * poses a guest on the **empty** screen rather than on a locked page, and
- * `:1305-1308` puts the account at the *keep* step: the confirm reads "Sign in
- * to keep this list", and the confirm is resumed once they are in. Everything
+ * `docs/design_ref/2026-09-06/Course Community - Taken Courses.dc.html`
+ * poses a guest on the **empty** screen rather than on a locked page, and puts
+ * the account at the *keep* step: the confirm reads "Sign in to keep this
+ * list", and the confirm is resumed once they are in. Everything
  * up to that button is a read — `POST /api/user/transcript` stores nothing —
  * and everything past it is `transcript.confirm`, which is a
  * `protectedProcedure` and is not called here.
