@@ -6,7 +6,7 @@
  * DOM rather than moving somewhere it does not belong — the same note
  * `features/saved/lib/guest-saves.spec.ts` makes for the same reason.
  */
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import type { TranscriptProposal } from "@/server/ingest/transcript/service";
 import {
   clearGuestProposal,
@@ -44,7 +44,6 @@ function proposal(
 
 beforeEach(() => {
   localStorage.clear();
-  vi.useRealTimers();
 });
 
 describe("holding a proposal across a sign-in", () => {
@@ -120,18 +119,37 @@ describe("holding a proposal across a sign-in", () => {
 });
 
 describe("a record that cannot be trusted", () => {
+  /**
+   * The moment the record says it was written, which is the only fixed point
+   * either boundary below can be measured from.
+   *
+   * Reading `Date.now()` after the write instead — which these two did — makes
+   * the "survives" case a race: a single millisecond ticking between `savedAt`
+   * being stamped and the test reading the clock puts the offset at `TTL + 1`,
+   * the record expires exactly as it should, and the test fails for a reason
+   * that has nothing to do with what it is checking. `readGuestProposal` takes
+   * `now` for this, so the boundary is stated rather than raced for.
+   */
+  function savedAt(): number {
+    const raw = localStorage.getItem(KEY);
+    if (raw === null) throw new Error("nothing was written");
+    return JSON.parse(raw).savedAt;
+  }
+
   it("expires, so a transcript read on a shared machine does not linger", () => {
     const handoff = writeGuestProposal(proposal(), true);
-    vi.setSystemTime(Date.now() + GUEST_PROPOSAL_TTL_MS + 1);
 
-    expect(readGuestProposal(handoff)).toBeNull();
+    expect(
+      readGuestProposal(handoff, savedAt() + GUEST_PROPOSAL_TTL_MS + 1),
+    ).toBeNull();
   });
 
   it("survives right up to the expiry", () => {
     const handoff = writeGuestProposal(proposal(), true);
-    vi.setSystemTime(Date.now() + GUEST_PROPOSAL_TTL_MS);
 
-    expect(readGuestProposal(handoff)).not.toBeNull();
+    expect(
+      readGuestProposal(handoff, savedAt() + GUEST_PROPOSAL_TTL_MS),
+    ).not.toBeNull();
   });
 
   it.each([
@@ -259,9 +277,11 @@ describe("claimable only by the sign-in it was written for", () => {
 
   it("still refuses the right token once the record is expired", () => {
     const handoff = writeGuestProposal(proposal(), true);
-    vi.setSystemTime(Date.now() + GUEST_PROPOSAL_TTL_MS + 1);
+    const written = JSON.parse(localStorage.getItem(KEY) ?? "{}").savedAt;
 
-    expect(readGuestProposal(handoff)).toBeNull();
+    expect(
+      readGuestProposal(handoff, written + GUEST_PROPOSAL_TTL_MS + 1),
+    ).toBeNull();
   });
 });
 
