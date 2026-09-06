@@ -22,9 +22,16 @@ const formSchema = z.object({
  * Focus follows `feedback-form.tsx` for the reason recorded there — the
  * artboards draw no focus state, and `--cc-hov` is the palette's own emphasis
  * border, so a keyboard gets something to follow without a new colour.
+ *
+ * The invalid border is `--cc-danger`, matching `find-your-dot.tsx`, which is
+ * the other place in this repo that asks for an email address and mails a link
+ * back. The Landing artboard draws that border as a saturated `#c2410c` rather
+ * than a tint, and no `--cc-*` token is that colour; `--cc-danger` is the one
+ * the sibling settled on and the one the message underneath uses, so the two
+ * halves of "this is wrong" are the same colour.
  */
 const FIELD =
-  "h-10 w-full rounded-[10px] border border-cc-rule3 bg-cc-surface px-[14px] text-[14px] text-cc-ink outline-none focus-visible:border-cc-hov focus-visible:ring-2 focus-visible:ring-cc-hov/40 aria-invalid:border-cc-danger-tint-border";
+  "h-10 w-full rounded-[10px] border border-cc-rule3 bg-cc-surface px-[14px] text-[14px] text-cc-ink outline-none focus-visible:border-cc-hov focus-visible:ring-2 focus-visible:ring-cc-hov/40 aria-invalid:border-cc-danger";
 
 /**
  * The design's **Primary action**, same row: 38px tall, 9px radius, 16px of
@@ -163,7 +170,7 @@ export function MagicLinkForm() {
                 <p
                   id={`${id}-email-error`}
                   role="alert"
-                  className="mt-2 text-[12.5px] text-cc-danger-ink"
+                  className="mt-2 text-[12.5px] text-cc-danger"
                 >
                   {message}
                 </p>

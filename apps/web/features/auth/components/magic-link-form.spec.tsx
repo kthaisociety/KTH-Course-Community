@@ -85,7 +85,10 @@ describe("MagicLinkForm", () => {
 
       const message = await screen.findByRole("alert");
       expect(message).toHaveTextContent("Enter a valid email address.");
-      expect(message).toHaveClass("text-cc-danger-ink");
+      expect(message).toHaveClass("text-cc-danger");
+      // The border says the same thing the message does, in the same colour —
+      // which is what `find-your-dot.tsx` does with the same artboard.
+      expect(field()).toHaveClass("aria-invalid:border-cc-danger");
     });
 
     it("points the field at the message so a screen reader reaches it", async () => {
