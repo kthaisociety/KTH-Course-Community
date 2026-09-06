@@ -109,13 +109,10 @@ function ccNameFor(designToken: string): string {
  *   in `globals.css` chosen locally, because the artboards hardcode the light
  *   hex in both themes. When an export names it, delete this entry and the
  *   parity check picks it up.
- * - `--cc-rail-btn`, `--cc-rail-btn-fg` — the rail's "Sign up". Six artboards
- *   write `background:#8bb3ef; color:#0a2449` inline for it (About:44,
- *   Explore:45, My Page:45, Saved:45, Saved copy:45, Taken Courses:44) and
- *   `cc-theme.css` names neither; `--btn` is the in-page primary, and in light
- *   it is `#1751a6`, which is `--rail` itself. Like `--cc-applied` these are
- *   declared once rather than per theme, because the artboards write one hex
- *   whatever the theme is. When an export names them, delete this entry.
+ * - `--cc-rail-btn`, `--cc-rail-btn-fg` — the rail's "Sign up". `cc-theme.css`
+ *   names neither, and the artboards disagree: six write `#8bb3ef`/`#0a2449`
+ *   inline, Landing:151 writes `#fff`/`#12417f`. Settled per theme, so the two
+ *   blocks differ. When an export names them, delete this entry.
  */
 const UNNAMED_BY_THE_DESIGN = new Set([
   "--cc-applied",

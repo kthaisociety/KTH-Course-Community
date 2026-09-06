@@ -217,23 +217,13 @@
   --cc-rail-focus: #ffffff;
   --cc-rail-focus-ring: rgba(255, 255, 255, 0.35);
 
-  /* The rail's "Sign up", which is the same colour on both rails.
-
-     This is the product decision the `--sidebar-primary` note below deferred,
-     now taken: six of the seven artboards that draw the rail give the button
-     `background:#8bb3ef; color:#0a2449` as a flat literal — About, Explore, My
-     Page, Saved, Saved copy and Taken Courses, all at their line 44-45 — and
-     the seventh, Landing, gives `#fff` / `#12417f` at line 151. The six win.
-
-     It is a literal and not `var(--cc-btn)` for the reason recorded above:
-     `--cc-btn` is `#1751a6` in light, which is exactly `--cc-rail`, so the
-     button would disappear into the rail it sits on. It is also not declared
-     twice, unlike `--cc-rail-focus`: the artboards write one hex regardless of
-     theme, and `#8bb3ef` clears both the `#1751a6` light rail (3.6:1) and the
-     `#0d2e5e` dark one comfortably, with near-black `#0a2449` label on top of
-     it either way. A pair that does not vary is the honest shape for that. */
-  --cc-rail-btn: #8bb3ef;
-  --cc-rail-btn-fg: #0a2449;
+  /* The rail's "Sign up". The export disagrees with itself — six artboards
+     draw it `#8bb3ef`/`#0a2449`, Landing:151 draws `#fff`/`#12417f` — and the
+     decision the `--sidebar-primary` note below deferred is settled per theme:
+     white here, the six artboards' blue on the dark rail. Not `--cc-btn`,
+     which is `--cc-rail` itself in light. */
+  --cc-rail-btn: #ffffff;
+  --cc-rail-btn-fg: var(--cc-rail);
 
   /* The applied end of a theory/applied bar — the one colour on these screens
      the design uses without ever having named (#173).
@@ -365,11 +355,10 @@
      gives it `#fff` / `#12417f`. Neither is white on `--cc-rail`. `bg-sidebar`
      has no consumer, so nothing renders from these and nothing is wrong on
      screen — but the note was being read as authority for what `rail.tsx`
-     paints, which is how it survived two passes. That product decision has
-     since been taken in favour of the six — see `--cc-rail-btn` above, which is
-     what `rail.tsx` now paints. These aliases stay white because they are
-     shadcn's `Sidebar` contract and still have no consumer; they are not the
-     rail's Sign up and must not be read as it. */
+     paints, which is how it survived two passes. That decision is now settled
+     per theme in `--cc-rail-btn` above, which is what `rail.tsx` paints. These
+     aliases stay white because they are shadcn's `Sidebar` contract and still
+     have no consumer. */
   --sidebar: var(--cc-rail);
   --sidebar-foreground: #ffffff;
   --sidebar-primary: #ffffff;
@@ -474,13 +463,8 @@
      reflected between the two palettes. */
   --cc-applied: #2a5f98;
 
-  /* Restated, not inherited, and deliberately the *same* pair as light. The
-     rail is dark in both themes — `#1751a6` light, `#0d2e5e` dark — and the six
-     artboards that draw this button write one flat `#8bb3ef` on `#0a2449`
-     whatever the theme is. Every other `--cc-*` is declared in both blocks, so
-     this is too: a token that varies by nothing should say so where a reader
-     looks for its dark value, rather than leave them to discover it is missing.
-     The light block carries the argument. */
+  /* The six artboards' pair. White was too loud on the dark rail for what is
+     only a secondary invitation; light keeps it. */
   --cc-rail-btn: #8bb3ef;
   --cc-rail-btn-fg: #0a2449;
 }
