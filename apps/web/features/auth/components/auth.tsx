@@ -6,7 +6,7 @@ import { MagicLinkForm } from "./magic-link-form";
  *
  * No artboard draws it, and that is not an oversight: the design's sign-in
  * surface is a panel over the page it interrupted —
- * `docs/design_ref/2026-09-05/Course Community - Landing.dc.html` draws it as a
+ * `docs/design_ref/2026-09-06/Course Community - Landing.dc.html` draws it as a
  * 400px card on `--surface` at a 14px radius, which `AuthReasonDialog` renders.
  * This route exists because one branch of that panel cannot stay a panel: the
  * link we mail is opened in a new tab, so the email path has to survive leaving
@@ -16,7 +16,7 @@ import { MagicLinkForm } from "./magic-link-form";
  * same `--cc-surface` inside `--cc-rule2`, same kicker → title → body block; it
  * rests on `--cc-pg` under the artboards' own resting-card shadow rather than
  * floating over a darkened page. Control metrics come from the "Controls" row
- * of `docs/design_ref/2026-09-05/Course Community - Design System.dc.html`,
+ * of `docs/design_ref/2026-09-06/Course Community - Design System.dc.html`,
  * which is the authority for the numbers no other artboard states.
  *
  * What it deliberately does *not* copy is the artboard's labels. The Landing

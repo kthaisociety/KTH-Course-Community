@@ -10,7 +10,7 @@ import { requestedReturnTo } from "../lib/return-to";
 
 /**
  * The design's **Secondary** control, from the "Controls" row of
- * `docs/design_ref/2026-09-05/Course Community - Design System.dc.html`: 38px
+ * `docs/design_ref/2026-09-06/Course Community - Design System.dc.html`: 38px
  * tall, 9px radius, 15px of side padding, `--rule3` around `--surface`, 13.5px
  * at 500 in `--ink`, and `--hov` on hover. shadcn's default button is 32px at a
  * 10px radius, which is what stood here and what nothing else in the app looks

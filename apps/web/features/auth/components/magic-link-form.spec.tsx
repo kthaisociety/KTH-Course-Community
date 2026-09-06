@@ -47,7 +47,7 @@ async function send(address: string) {
 
 describe("MagicLinkForm", () => {
   // The "Controls" row of
-  // `docs/design_ref/2026-09-05/Course Community - Design System.dc.html`: a
+  // `docs/design_ref/2026-09-06/Course Community - Design System.dc.html`: a
   // field is 40px at a 10px radius, a primary button 38px at 9px. Both were
   // shadcn's 32px at 10px.
   describe("control metrics", () => {

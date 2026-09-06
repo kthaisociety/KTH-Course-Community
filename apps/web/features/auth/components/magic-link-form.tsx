@@ -15,7 +15,7 @@ const formSchema = z.object({
 
 /**
  * The design's **field**, from the "Controls" row of
- * `docs/design_ref/2026-09-05/Course Community - Design System.dc.html`: 40px
+ * `docs/design_ref/2026-09-06/Course Community - Design System.dc.html`: 40px
  * tall, 10px radius, 14px of side padding, `--rule3` around `--surface`, 14px
  * text. shadcn's `Input` is 32px at a 10px radius, which is what this was.
  *

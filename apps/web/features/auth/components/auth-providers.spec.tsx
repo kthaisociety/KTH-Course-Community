@@ -43,7 +43,7 @@ function google() {
 
 describe("AuthProviders", () => {
   // The numbers the "Controls" row of
-  // `docs/design_ref/2026-09-05/Course Community - Design System.dc.html` gives
+  // `docs/design_ref/2026-09-06/Course Community - Design System.dc.html` gives
   // for its Secondary button. shadcn's default is 32px at a 10px radius, which
   // is what these were and what nothing else on any other screen looks like.
   it("wears the design's secondary control, not shadcn's default", () => {

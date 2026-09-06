@@ -100,7 +100,7 @@ async function searchWithEmbedding(
  *
  * There used to be a second one — a minimum-rating dropdown, "at least N
  * stars", thresholding the learning mean. It has been removed. It was in no
- * artboard: `docs/design_ref/2026-09-05/Course Community - Explore.dc.html`
+ * artboard: `docs/design_ref/2026-09-06/Course Community - Explore.dc.html`
  * draws no filter row at all, and the control was invented to satisfy #89.
  * With no design behind it there was nothing to be right about, so it went
  * rather than staying as a permanent, undesigned deviation.
