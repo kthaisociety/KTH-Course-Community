@@ -13,10 +13,11 @@
  * is re-exported here because placement writes the unconfigured state on join
  * and every existing importer of these names came through this module.
  *
- * **Nobody is assigned a colour.** Placement used to hash every app user onto a
- * palette name, which gave everyone a colour nobody chose, and a node profile is
- * personalisation: a colour is chosen, never dealt out. `graph.setAppearance` is
- * the only writer of a chosen value, and it is driven by a member clicking one.
+ * **Nobody is assigned a colour.** Placement writes the unconfigured state and
+ * never hashes an app user onto a palette name: a node profile is
+ * personalisation, so a colour is chosen, never dealt out. `graph.setAppearance`
+ * is the only writer of a chosen value, and it is driven by a member clicking
+ * one.
  */
 export {
   DEFAULT_NODE_COLOR,

@@ -37,21 +37,15 @@ import { useExplore } from "../hooks/use-explore";
  *
  * ## Where it departs from the artboard, and why
  *
- * - The artboard's **pager** is built, and turns pages without ever
- *   claiming how many there are. `search.courses` used to accept a `page` and
- *   drop it, and to report `total: results.length` — the size of the page it
- *   had just built. A pager over that would have invented pages, which is the
- *   same error class as scoring an unreviewed course 0%, so it stayed unbuilt.
- *   The fix was not the `COUNT` that was assumed: a de-duplicated union of a
+ * - The artboard's **pager** is built, and turns pages without ever claiming
+ *   how many there are. There is no count to claim: a de-duplicated union of a
  *   keyword ranking and a semantic one has no count to take, and the semantic
  *   leg matches every course with an embedding at some distance, so there is
  *   nothing to count *up to*. What a prev/next control asks is only "is there
- *   another page", and the server answers it with one extra row. `total` is
- *   gone rather than corrected; `hasMore` replaced it.
+ *   another page", and the server answers that with one extra row.
  *   `server/search/service.ts` carries the reasoning.
- * - The artboard's pager **labels the page it is on**
- *   (`docs/design_ref/2026-09-06/Course Community - Explore.dc.html`, whose
- *   `pageLabel` is built at :1289) and this keeps that label, minus the
+ * - The artboard's pager **labels the page it is on** (its `pageLabel`) and this
+ *   keeps that label, minus the
  *   `of M`. Dropping only the half the data cannot support is the smallest edit
  *   that leaves the control the artboard drew — three items centred with a
  *   14px gap — intact, and "Page 3" asserts nothing about a total. It is also
@@ -60,10 +54,9 @@ import { useExplore } from "../hooks/use-explore";
  * - The artboard's **filter row does not exist** at all; its search block is the
  *   field alone. One filter is built here anyway — **school** — in the
  *   artboard's own control vocabulary. It earns the deviation by filtering in
- *   SQL, so it is cheap, exact, and does not distort the result count. A
- *   minimum-rating dropdown was built beside it for #89 and has since been
- *   removed: it had no design behind it and could only be applied after the
- *   query, which made searches silently return short.
+ *   SQL, so it is cheap, exact, and does not distort the result count. A filter
+ *   that cannot be expressed in SQL does not belong beside it — see
+ *   `server/search/service.ts`.
  * - The artboard narrows its **search bar** by 236px while tabs are open
  *   (`searchBarMargin`) so the field stays centred over the results
  *   rather than over the whole row. Not built: the bar is centred inside a
@@ -292,15 +285,9 @@ export function Explore() {
  *
  * The artboard says "12 courses match “x”", counting the whole catalogue behind
  * its own mock store. The server cannot answer that question: `search.courses`
- * returns one page and reports `total` as the length of that page, and that
- * page is a de-duplicated union of a keyword ranking and a semantic one, which
- * has no count short of running both unbounded. "Showing" is the smallest
- * edit that keeps the sentence true.
- *
- * The rating filter used to be a third reason — it thresholded rows *after* the
- * fetch, so the page could come back shorter than the window it was cut from.
- * It is gone, and the sentence is no less true for it: the school filter runs
- * in SQL and removes nothing after the fact.
+ * returns one page and no total, because the page is a de-duplicated union of a
+ * keyword ranking and a semantic one, which has no count short of running both
+ * unbounded. "Showing" is the smallest edit that keeps the sentence true.
  */
 function resultsLabel(explore: ReturnType<typeof useExplore>): string {
   if (explore.isError) return "Catalogue unavailable";
@@ -449,14 +436,12 @@ function StartHere({ onSuggest }: { onSuggest: (query: string) => void }) {
  * The artboard's error panel.
  *
  * Its tinted circle is the danger tint family, not a derivation of the solid.
- * This comment used to claim `cc-theme.css` carried no error surface and mix
- * the fill from `--cc-danger` at 12%; that was wrong twice over. The Design
- * System artboard names `--dangerTint` as *the* error banner surface
- * (`Course Community - Design System.dc.html`, alongside its border and
- * its ink), and none of the three is derivable from the solid — dark states
- * them as alpha over the page, light as flat mixes that are not a percentage of
- * anything (`globals.css:182-187`, #127 §1). In light the difference showed:
- * the mix landed on a pink, the token is a warm peach.
+ * The Design System artboard names `--dangerTint` as *the* error banner surface
+ * (`Course Community - Design System.dc.html`, alongside its border and its
+ * ink), and none of the three is derivable from the solid — dark states them as
+ * alpha over the page, light as flat mixes that are not a percentage of
+ * anything; see the panel-tint note in `globals.css`. In light the difference
+ * is visible: a `--cc-danger` mix lands on a pink, the token is a warm peach.
  *
  * The icon takes `--cc-danger-ink` for the same reason, and it is also literally
  * what the artboard draws — `Course Community - Explore.dc.html` strokes it
@@ -540,11 +525,11 @@ const SELECT_CLASS =
  * native control is keyboard- and screen-reader-correct on every platform
  * without a portal.
  *
- * A "Minimum rating" select stood beside it until it was removed. It was in no
- * artboard, and unlike school it could not be pushed into SQL — the scores live
- * in the reviews domain — so it was applied after the query over an inflated
- * window, and a search could come back short with nothing saying so. School
- * stays because `department ILIKE` runs in the query itself.
+ * School is the only filter this page can honestly offer, because
+ * `department ILIKE` runs in the query itself. A filter over review scores
+ * cannot — those live in the reviews domain, so it would be applied after the
+ * query over an inflated window and a search could come back short with nothing
+ * saying so.
  */
 function Filters({ explore }: { explore: ReturnType<typeof useExplore> }) {
   return (

@@ -188,11 +188,10 @@ export async function joinCommunityGraphOnSignUp(
  * An app user without a node is placed rather than refused, so this read can
  * write on its first call for them.
  *
- * It returns a window and nothing else. It used to carry the effective
- * personalization tier as well, from a time when it was read only if somebody
- * opened **Find your dot**; the landing draws the graph on load now, so that
- * would be two extra queries on every visit for a number this page does not
- * use. `graph.effectiveTier` is where My Page asks for it.
+ * It returns a window and nothing else — no personalization tier. The landing
+ * draws the graph on load, so carrying the tier here would be two extra queries
+ * on every visit for a number this page does not use. `graph.effectiveTier` is
+ * where My Page asks for it.
  */
 export async function getNeighbourhood(userId: string): Promise<GraphWindow> {
   // Sign-up placement is the primary pathway, but it cannot cover everyone:
@@ -235,12 +234,12 @@ export type NodePersonalization = {
 /**
  * Both personalization tier numbers for an app user.
  *
- * **Two numbers, not one, and that is the point.** This read used to answer with
- * the effective tier alone, which left My Page unable to tell a *dormant* axis —
- * earned, decayed, pick still stored — from a *locked* one that was never
- * earned. The artboard has three badges and the UI could only draw two, so it
- * collapsed dormant into "Locked" and told members they had lost something the
- * database still holds. The earned number closes that and does nothing else.
+ * **Two numbers, not one, and that is the point.** The effective tier alone
+ * cannot tell a *dormant* axis — earned, decayed, pick still stored — from a
+ * *locked* one that was never earned, and the artboard draws three badges. With
+ * one number the UI can only draw two, and it collapses dormant into "Locked",
+ * telling members they have lost something the database still holds. The earned
+ * number closes that and does nothing else.
  *
  * Read-only by construction: the earned tier is the highest ever reached and
  * decay is derived from it, never written back.
@@ -386,10 +385,10 @@ const TIER_BACKFILL_PAGE = 200;
 /**
  * Give every app user who already contributed the tier they already earned.
  *
- * The writer above only fires on a *new* review or a *new* import, so on the
- * day this ships, everybody who reviewed or imported before it exists is still
- * at the column default and still sees three locked axes until they contribute
- * again. This is the one-off that fixes that, and it is safe to run whenever
+ * The writer above only fires on a *new* review or a *new* import, so anybody
+ * who reviewed or imported before it existed sits at the column default and
+ * sees three locked axes until they contribute again. This is the one-off that
+ * fixes that, and it is safe to run whenever
  * anybody doubts the column: it derives from the same `deriveEarnedTier`, it
  * raises through the same `greatest`, so a second run is a no-op and a run
  * racing a live contribution cannot lower anything.
@@ -398,7 +397,8 @@ const TIER_BACKFILL_PAGE = 200;
  * `findTierCandidateUserIds` — and pages on the user id, so a review published
  * mid-run cannot make it skip somebody. One app user at a time rather than a
  * single statement, because the rule that decides a tier is TypeScript and
- * expressing it again in SQL is exactly the second definition #161 forbids.
+ * expressing it again in SQL would be a second definition that can disagree
+ * with the first (ADR 0005).
  *
  * Unlike the per-contribution path this does **not** swallow: a backfill that
  * half-ran and reported success is worse than one that stops and says where.
@@ -456,7 +456,7 @@ export async function backfillEarnedPersonalizationTiers(
  * a lower tier true, and the column does not go down, so there is nothing to
  * write. Removing an imported course can also complete a transcript and make
  * tier 3 true; that raise waits for the next contribution rather than putting a
- * tier write on a delete path, and #161 settles the ladder, not its latency.
+ * tier write on a delete path.
  */
 export async function recordEarnedPersonalizationTierOnContribution(
   userId: string,
