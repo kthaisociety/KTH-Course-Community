@@ -39,9 +39,8 @@
  *   an artifact of the artboard's template language, not a piece of the card's
  *   model: `<sc-if>` has no `else`, so the artboard needs a second, inverted
  *   boolean to draw the branch where the reader is *not* naming a new
- *   collection. JSX writes that as a ternary on `creating`, so nothing ever
- *   read the inverse — it was computed by the mapper, carried in the type and
- *   never looked at.
+ *   collection. JSX writes that as a ternary on `creating`, so nothing reads
+ *   the inverse.
  * - The artboard's `comparisons` / `hasComparisons` / `onNewComparison` are its
  *   word for **collections**. `CONTEXT.md` bans "comparison" in identifiers and
  *   #68 settles the concept as Collection, so they are renamed here and

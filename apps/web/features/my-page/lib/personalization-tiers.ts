@@ -11,7 +11,7 @@
  * *same* `PERSONALIZATION_AXES` — offering an option the server would refuse is
  * exactly what a second copy would produce.
  *
- * Two rules govern the numbers, both from `CONTEXT.md` and #93.
+ * Two rules govern the numbers, both from `CONTEXT.md`.
  *
  * **What may be edited is the effective tier.** `users.personalization_tier_
  * earned` holds the highest tier ever reached and is never lowered;
@@ -22,9 +22,8 @@
  * anything and it is never phrased as a loss. It exists here so that an axis
  * somebody earned and has gone quiet on reads as **Dormant** — its pick still
  * stored, waiting — rather than as **Locked**, which would tell them they had
- * lost something the database still holds. This tab used to collapse the two
- * because `graph.effectiveTier` returned a single number; it returns both now,
- * and the limitation is gone rather than documented.
+ * lost something the database still holds. Telling the two apart needs both
+ * numbers, which is why `graph.personalization` returns both.
  */
 
 import {

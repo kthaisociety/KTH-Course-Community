@@ -141,7 +141,7 @@ export async function confirmTranscriptImport(
       ? await fillTranscriptCourseFields(userId, fillInputs)
       : 0;
 
-  // The other moment #161's ladder can move: an import earns tier 2, and it
+  // The other moment the personalization ladder can move: an import earns 2, and it
   // earns tier 3 outright for somebody who had already reviewed everything on
   // it. It runs even when nothing was inserted, because a confirmation that
   // only filled fields still tells us the stored rows are worth re-reading, and

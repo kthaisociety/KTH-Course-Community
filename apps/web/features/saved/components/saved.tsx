@@ -46,11 +46,10 @@ const SAVED_HEADING_ID = "saved-courses-heading";
  * pane with the same contract Explore uses, and computes the card's
  * `geo` from what the pane leaves of the row exactly as Explore
  * does. So the geometry is measured here rather than pinned: with no tab open
- * the column is wide and the ramp lands on its expanded end, which is the fixed
- * object this page used to hand out, and with a tab open the cards collapse
- * instead of overflowing a column that just lost 504px. #90's "Saved pins the
- * card's `geo` to the fully collapsed end" was decided when this page had no
- * pane to yield to; it has one now, and the artboard interpolates.
+ * the column is wide and the ramp lands on its expanded end, and with a tab
+ * open the cards collapse instead of overflowing a column that just lost 504px.
+ * Pinning either end here — as a page with no pane to yield to could — is what
+ * the artboard's interpolation replaces.
  *
  * **Unsaving removes the save and its collection memberships, and nothing
  * else.** The trash control calls `saved.unsave`, whose repository deletes one
@@ -66,8 +65,8 @@ const SAVED_HEADING_ID = "saved-courses-heading";
  *
  * **Collections is a section of this page, not a link away from it.** The
  * artboard imports the Collections artboard with `compact`, which is
- * the design's only way in to collections — its rail has no entry for them, and
- * #91's stopgap rail link went when this landed. Opening a collection from the
+ * the design's only way in to collections — its rail has no entry for them.
+ * Opening a collection from the
  * chips opens its detail *here*, and the saved list gets out of its way, which
  * is the artboard's own `showSavedSection: !collectionsOpenDetail`. It is also
  * why a course opened from inside a collection comes back to this route as
@@ -78,11 +77,10 @@ const SAVED_HEADING_ID = "saved-courses-heading";
  * takes nothing out of this list, and a course may be in several at once. The
  * chips above **narrow** the list — opening one swaps this list for that
  * collection's — rather than relocating anything out of it. The artboard says
- * the same thing: `savedCards` over every saved code and
- * `hasSaved` where the previous export had `unorganized` and `hasUnorganized`,
- * and no "Every saved course is in a collection" panel, because there is no
- * state in which this list can be empty while saves exist. #156 settled it;
- * #90's deferral and the split it deferred are both gone.
+ * the same thing: `savedCards` over every saved code and `hasSaved`, with no
+ * "Every saved course is in a collection" panel, because there is no state in
+ * which this list can be empty while saves exist. There is deliberately no
+ * organized/unorganized split.
  *
  * The `h2` comes back with the subtitle that earns it. It repeats the `h1`, and
  * that is the artboard's own doing — but the section under it is now one of two
@@ -154,17 +152,13 @@ export function Saved({ openCollectionId = null, openCourse = null }: Props) {
   /**
    * The request this page has already acted on, so it acts on it exactly once.
    *
-   * This used to be load-bearing, and said so. `openCourse` was not idempotent
-   * at the state level — re-opening a tab that was already open and already in
-   * front still returned a *new* workspace — so every run of the effect below
-   * re-rendered this component, and any dependency whose identity is not stable
-   * across that render sent the effect round again immediately. `router` is
-   * exactly such a dependency. That was an unbounded loop allocating a workspace
-   * per turn, and it surfaced as an out-of-memory crash rather than as a failed
-   * assertion. #154 fixed it at the value: a no-op open now returns the very
-   * same `Workspace`, `useState` bails out, and the loop has no fuel.
+   * The unbounded render loop this could feed is closed at the value instead:
+   * `openCourse` returns the very same `Workspace` for a no-op open, so
+   * `useState` bails out rather than re-rendering this component and sending the
+   * effect below round again through a dependency — `router` — whose identity is
+   * not stable. See `features/workspace/lib/open-courses.ts`.
    *
-   * The guard stays, demoted to belt-and-braces. What it still defends against
+   * The guard is belt-and-braces. What it defends against
    * is a *second* instruction rather than the loop — the same `?open=` surviving
    * one more render before `router.replace` has taken it back out of the URL
    * would reopen a tab the reader may already have closed. Next's `router` is
@@ -341,9 +335,9 @@ export function Saved({ openCollectionId = null, openCourse = null }: Props) {
               className="flex flex-col gap-3.5 pt-[18px] pb-5 @max-[440px]:gap-3 @max-[440px]:pt-3"
             >
               {/*
-                The artboard's own heading and line. The line is
-                the whole of what #156 settled, said to the reader: a collection
-                groups saved courses, it does not take them out of this list.
+                The artboard's own heading and line. The line says the rule to
+                the reader: a collection groups saved courses, it does not take
+                them out of this list.
               */}
               <div>
                 <h2

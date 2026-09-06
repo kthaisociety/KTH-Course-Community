@@ -36,10 +36,8 @@ const COMPACT_HEADING_ID = "collections-section-heading";
  * compare." — and the "New collection" tile beside it reads "Group specific
  * courses and compare them side by side." Neither is true: there is no
  * comparison surface anywhere in the app, and #68's settled decision 1 is that
- * there is no AI-comparison feature to build one for. #91 already dropped the
- * promise from the tile; this is the same substitution finished, so the page
- * does not head itself with a promise its own tile has stopped making. The
- * wording is the tile's, so the two agree.
+ * there is no AI-comparison feature to build one for. So neither the heading
+ * nor the tile promises one, and both use the same wording.
  *
  * It is a copy change against the visual authority, which is the narrow case
  * `CLAUDE.md` allows: the design loses to the schema on what exists, and it is
@@ -107,7 +105,7 @@ type Props = {
    *
    * `/saved` embeds this inside the very column `WorkspacePaneHost` narrows, so
    * the geometry it computes for its own list is the geometry these cards need
-   * too — one card behaving two ways in one page is what #159 reports. Left
+   * too, or one card behaves two ways on one page. Left
    * out, this component measures the column it is standing in itself, which is
    * what the `/collections` route does; see {@link Collections} for why that is
    * a measurement there rather than the pinned expanded end.
@@ -136,11 +134,9 @@ type Props = {
  * ## Where it sits
  *
  * `Course Community - Saved.dc.html` imports the Collections artboard as a
- * section of the Saved page, in its `compact` variant. That embedding is Saved's
- * to build; this is the same component as a page of its own, so the
- * feature is reachable and usable before Saved exists. The `compact` chip row
- * is built and Saved is its caller — the sentence that used to stand here said
- * it had none, which stopped being true when #90 landed.
+ * section of the Saved page, in its `compact` variant. This is that same
+ * component as a page of its own, so the feature is reachable both ways. Saved
+ * is the caller of the `compact` chip row.
  *
  * ## What the writes do about failure
  *
@@ -156,8 +152,8 @@ type Props = {
  *
  * All three ways to delete a collection — the detail's button, the tile's menu
  * and the chip's menu — hand the collection to one confirmation rather than to
- * the mutation. The artboards confirm *after*, with a note; #155 settled that
- * they lose here, because what is destroyed cannot be put back. Restoring a
+ * the mutation. The artboards confirm *after*, with a note; a deliberate
+ * deviation, because what is destroyed cannot be put back. Restoring a
  * deleted collection means `create` and then one `addCourse` per course in
  * order — `reorderCollectionCourses` throws `NotFoundError` for a code that is
  * not already a member, so it can never add one — and `addCourseToCollection`

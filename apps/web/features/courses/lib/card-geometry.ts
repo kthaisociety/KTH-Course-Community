@@ -7,12 +7,10 @@
  * end of the ramp instead. That split is the reason the card is one component
  * and not two.
  *
- * This used to name Saved and Collections as the two that pin, and Saved has
- * not pinned since #90's decision was reversed — `saved.tsx` ramps from its own
- * results width, and says so at length. Naming screens here is how the two
- * comments came to state opposite things about the same page, so the list is
- * gone: `courseCardGeometry`'s callers are who ramps, and the two pinned
- * constants below are who does not.
+ * **Do not name the screens that pin here.** Doing so is how this comment and
+ * `saved.tsx` came to state opposite things about the same page.
+ * `courseCardGeometry`'s callers are who ramps, and the two pinned constants
+ * below are who does not.
  *
  * Every number here is the artboard's:
  * `docs/design_ref/2026-09-06/Course Community - Explore.dc.html` computes exactly this ramp,
@@ -127,10 +125,10 @@ export function courseCardGeometry(
  * yield to starts from.
  *
  * Saved's own artboard passes a fully expanded geometry with a taller
- * `summaryMax` (57px, three lines) than this ramp ever reaches, which #68's body
- * — saying Saved pins the *collapsed* end — also disagrees with. Both ends are
- * exported so #90 can settle that against its own artboard; nothing here
- * forecloses either.
+ * `summaryMax` (57px, three lines) than this ramp ever reaches, which #68's
+ * body — saying Saved pins the *collapsed* end — also disagrees with. Both ends
+ * are exported so that disagreement can be settled against the artboard;
+ * nothing here forecloses either.
  */
 export const EXPANDED_CARD_GEOMETRY = courseCardGeometry(
   Number.POSITIVE_INFINITY,

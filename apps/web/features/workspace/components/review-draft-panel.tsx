@@ -90,10 +90,10 @@ function ForgotCheckbox({
         aria-hidden="true"
         className={cn(
           /*
-            **Do not remove this ring as a duplicate of `globals.css`'s.** #167
-            deleted nine hand-rolled focus treatments that the global
-            `:focus-visible` rule had made redundant; this is the one that is
-            not, and the reason is not visible from the class list.
+            **Do not remove this ring as a duplicate of `globals.css`'s.** Most
+            hand-rolled focus treatments in `features/**` are redundant against
+            the global `:focus-visible` rule. This one is not, and the reason is
+            not visible from the class list.
 
             The focusable element here is the `peer` input above, which is
             `sr-only` — clipped to a 1px box. The global rule draws its outline

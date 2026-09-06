@@ -269,9 +269,9 @@ export function findReviewedCourses(
 /**
  * The courses this app user got from a transcript import.
  *
- * `transcript_imported_at is not null` is the whole test, and it is the one
- * #161 names: a course typed in by hand carries no import stamp and cannot earn
- * tier 2 or 3. The primary key on `(user_id, course_code)` leads with
+ * `transcript_imported_at is not null` is the whole test, and it is the one the
+ * ladder names (ADR 0005): a course typed in by hand carries no import stamp
+ * and cannot earn tier 2 or 3. The primary key on `(user_id, course_code)` leads with
  * `user_id`, so this read is indexed.
  *
  * It reads `user_taken_courses`, which belongs to the taken domain, and it is
@@ -334,7 +334,7 @@ export async function findTierCandidateUserIds(
  * what makes it hold under concurrency: two contributions landing at once
  * cannot have the slower one write a stale, smaller number over the faster
  * one's, and a recompute that answers 2 where the column already says 3 — which
- * #161's ladder allows, because tier 3's condition stops holding the moment a
+ * the ladder allows, because tier 3's condition stops holding the moment a
  * further transcript is imported — is a no-op rather than a demotion. The `<`
  * in the `WHERE` only spares the row a write it does not need; delete it and
  * the column is still correct.

@@ -15,7 +15,7 @@ import { useEffect, useState } from "react";
  * **The icon is chosen by CSS, not by React.** Nothing about the resolved theme
  * is knowable on the server, so a component that renders one glyph has to pick
  * the light one and correct itself after mount — a moon visibly flipping to a
- * sun on every dark-theme page load, which is the flash #127 asks about.
+ * sun on every dark-theme page load.
  * Rendering *both* glyphs and letting the `dark:` variant hide one moves the
  * decision into the stylesheet, and `next-themes` writes `.dark` onto `<html>`
  * from a blocking script before first paint, so the right glyph is the only one

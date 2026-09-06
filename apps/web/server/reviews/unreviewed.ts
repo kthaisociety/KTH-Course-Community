@@ -16,8 +16,7 @@ import type { Review } from "@/types";
  * figure. The server asks the same question of transcript-imported courses to
  * decide personalization tier 3 (`server/graph/tier.ts`). If those two ever
  * disagreed, a member would be told they had finished while the tier said they
- * had not. That is the shape of the duplicated `ReviewDraft` decoder the #134
- * audit found, and one function is how it stays impossible.
+ * had not. One function is how that stays impossible.
  */
 
 /**

@@ -92,10 +92,10 @@ type OpenEditor = { review: EditableReview; courseCode: string };
  *
  * `useUnreviewedTakenCourses` fetches one `reviews.list` per taken course;
  * `useAllReviews` fetches the unfiltered list once. They overlap, and the
- * overlap is deliberate — #93 forbids a second unreviewed-courses derivation,
- * and the upvoted column cannot be built from per-course lists of courses the
- * viewer happens to have taken. `useAllReviews` says what the unfiltered read
- * costs and what would fix it.
+ * overlap is deliberate: there is one derivation of "unreviewed" and this page
+ * does not get a second, while the upvoted column cannot be built from
+ * per-course lists of courses the viewer happens to have taken. `useAllReviews`
+ * says what the unfiltered read costs and what would fix it.
  */
 export function MyPage() {
   const router = useRouter();
@@ -564,7 +564,7 @@ function LoadFailed({ onRetry }: { onRetry: () => void }) {
   );
 }
 
-/** #97 settled the substitution: members, never students — it is app users who vote. */
+/** Members, never students: it is app users who vote, not everyone at KTH. */
 function upvoteNote(upvotes: number): string {
   if (upvotes === 0) return "no upvotes yet";
   return upvotes === 1

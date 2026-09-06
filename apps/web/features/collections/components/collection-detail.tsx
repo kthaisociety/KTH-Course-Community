@@ -74,7 +74,7 @@ const MOVE_BUTTON =
  * string assembled from its mock store; `period` and `school` are not fields the
  * schema has, and the card renders the same course from data that does exist —
  * so the codebase wins, as #68 has it, and the design's remove affordance
- * survives as the card's own `removeLabel` button, which #86 built for this page.
+ * survives as the card's own `removeLabel` button.
  * The geometry arrives as a prop; see {@link Props.geo} for why this component
  * is the wrong place to decide it.
  *

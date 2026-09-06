@@ -103,15 +103,11 @@ export function useExplore({ onOpenCourse }: ExploreOptions = {}) {
   /**
    * School, the only filter.
    *
-   * `?rating=` used to be read here too, into a minimum-star threshold. The
-   * artboard drew no filter row at all, so that control was invented; it is
-   * gone, along with the post-fetch filtering in `server/search/service.ts`
-   * that made it quietly return short pages.
-   *
-   * Nothing replaces the read, and nothing strips the parameter: an old shared
-   * `?rating=4` link is simply a parameter this page does not look at. It opens
-   * on unfiltered results, with no error and no warning — a link someone sent
-   * last month should still work, just without a filter that no longer exists.
+   * `?rating=` is deliberately not read, and deliberately not stripped either:
+   * an old shared `?rating=4` link is simply a parameter this page ignores. It
+   * opens on unfiltered results, with no error and no warning — a link somebody
+   * sent months ago should still work, just without a filter this app does not
+   * have. `server/search/service.ts` says why it does not have one.
    */
   const department = searchParams.get("department") ?? "";
 
@@ -227,16 +223,12 @@ export function useExplore({ onOpenCourse }: ExploreOptions = {}) {
   /**
    * The request this hook has already spent, so it spends it exactly once.
    *
-   * This used to be load-bearing. `setParams` is rebuilt whenever the URL
-   * changes and whenever `router` changes identity, and the handler above
-   * re-renders the host — and `openCourse` returned a new workspace even for a
-   * tab that was already open and already in front, so those facts closed a
-   * loop that allocated on every turn and ended in an out-of-memory crash
-   * rather than a failed assertion. #154 fixed that at the value: a no-op open
-   * now returns the very same `Workspace`, `useState` bails out, and the fuel
-   * is gone.
+   * The render loop this once fed is closed at the value instead: `openCourse`
+   * returns the very same `Workspace` for a no-op open, so `useState` bails out
+   * rather than re-rendering the host, rebuilding `setParams` and re-running
+   * the effect. See `features/workspace/lib/open-courses.ts`.
    *
-   * The guard stays, demoted to belt-and-braces. It defends against a *second*
+   * The guard is belt-and-braces. It defends against a *second*
    * instruction rather than against the loop — the same `?open=` surviving one
    * more render before `router.replace` has taken it back out of the URL would
    * reopen a tab the reader may already have closed. Next's `router` is stable
