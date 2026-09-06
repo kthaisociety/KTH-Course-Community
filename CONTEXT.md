@@ -154,26 +154,44 @@ _Avoid_: parent, host, neighbour
 **Backbone edge**:
 The stored attachment between a node and its anchor. Its direction records
 placement history — newer to older — and the UI may draw it undirected. It is
-not a friendship and carries no social meaning.
+not a friendship and carries no social meaning. The landing hero nonetheless
+draws **signals** travelling along it, which ADR 0006 settles as a deliberate
+dramatisation and not a claim about the data.
 _Avoid_: friendship, connection, follow, link, relationship
+
+**Graph window**:
+The bounded slice of the **community graph** a surface draws: a limited set of
+nodes and the **backbone edges** that run between them. A member's window is
+centred on their own node and is the one place "neighbourhood" means; a
+visitor's is centred on the community origin. It is derived per read and never
+stored, and an edge with one end outside it is not part of it.
+_Avoid_: viewport, camera, subgraph, cluster
 
 **Node profile**:
 A node's appearance, stored separately from graph topology.
 _Avoid_: avatar, skin, theme
 
 **Signal**:
-The moving trail rendered along a node. A visual state, never a stored event.
-A signal is ongoing: a node either carries one or it does not. A **one-shot
+A trail of light travelling along a **backbone edge**, from one node to the node
+at its other end. A visual state and never a stored event: nothing about a
+signal is written anywhere and none of it outlives the frame. A **one-shot
 reveal** — the ring **Find your dot** draws once on the viewer's own node — is a
-different thing, and *pulse* is its name. So `scene.pulse` is not a signal by
-another word, and the two are not interchangeable.
-_Today_: it does not move. `users_node_profiles.signal_style` stores the axis and
-`hero-network.tsx` draws each style standing still, because that canvas paints
-when an input changes rather than every frame and the pulse is the only frame
-loop it has. The ongoing/one-shot distinction still holds — a signal is painted
-whenever its node is, a pulse only while the label is up. Closed by whatever
-gives the hero a bounded loop a signal can ride on.
-_Avoid_: ping, animation, activity
+different thing, and *pulse* is its name. The two are not interchangeable.
+_Avoid_: ping, animation, activity, message
+
+**Signal style**:
+The shape of the wake a node's signals leave behind them. A **node profile**
+axis, the third and last one a **personalization tier** unlocks. The node owns
+the style; the edge carries the signal.
+_Avoid_: signal type, trail, effect
+
+**Burst**:
+The fan of signals a node sends at once, along every **backbone edge** it has
+within the drawn **graph window**, because somebody clicked it. A node near the
+window's rim is attached to nodes outside it; those edges are not part of the
+window and the burst does not reach them. Every node bursts; the tier decides
+only what its signals look like, never whether they go.
+_Avoid_: explosion, broadcast, emit, ripple
 
 **Personalization tier**:
 How far an app user has unlocked node personalisation, held as the highest value
