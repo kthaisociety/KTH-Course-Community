@@ -2,10 +2,12 @@
 
 import { useCallback, useState, useSyncExternalStore } from "react";
 import {
+  type GuestSave,
   guestSavesServerSnapshot,
   readGuestSaves,
   retireGuestSaves,
   setGuestSave,
+  snapshotGuestSaves,
   subscribeGuestSaves,
 } from "../lib/guest-saves";
 
@@ -64,19 +66,21 @@ type ImportOptions = {
  * whatever did not land is still in the browser, the banner says so, and the
  * button is still there.
  *
- * **Only the codes this run imported leave.** `localStorage` is shared by every
- * tab on the origin and the writes below are awaited, so the list can grow
+ * **Only the saves this run imported leave.** `localStorage` is shared by every
+ * tab on the origin and the writes below are awaited, so the list can change
  * underneath a run in progress; the snapshot taken at the top is what gets
- * retired, never "whatever storage holds now". `retireGuestSaves` is where that
- * subtraction lives, and it re-reads storage rather than trusting the snapshot
- * to still be the whole of it.
+ * retired, never "whatever storage holds now". It is a snapshot of saves rather
+ * than of codes because another tab can unsave and re-save the same course
+ * meanwhile, and only the marker distinguishes that new save from the one this
+ * run imported. `retireGuestSaves` compares each marker back against storage
+ * and leaves behind anything that has moved.
  */
 export function useGuestSavesImport() {
   const [state, setState] = useState<GuestImportState>({ status: "idle" });
   const guestCodes = useGuestSaves();
 
   const run = useCallback(async ({ accountCodes, save }: ImportOptions) => {
-    const local = readGuestSaves();
+    const local = snapshotGuestSaves();
     if (!local.length) {
       setState({ status: "idle" });
       return;
@@ -86,19 +90,19 @@ export function useGuestSavesImport() {
     // Only what the account does not already hold is written. The rest is
     // not an error and not a duplicate write — it is the same course saved
     // twice, once in each place, and the account's copy already won.
-    const fresh = local.filter((code) => !accountCodes.includes(code));
+    const fresh = local.filter(({ code }) => !accountCodes.includes(code));
     // Already in the account before this ran, so already accounted for: these
     // leave the browser whether or not the writes below succeed.
-    const held = local.filter((code) => accountCodes.includes(code));
+    const held = local.filter(({ code }) => accountCodes.includes(code));
     // What this run has actually put in the account, in order. Built as the
     // writes land rather than assumed from `fresh`, because a run that fails
     // half way has genuinely imported the half that already answered.
-    const imported: string[] = [];
+    const imported: GuestSave[] = [];
 
     try {
-      for (const code of fresh) {
-        await save(code);
-        imported.push(code);
+      for (const entry of fresh) {
+        await save(entry.code);
+        imported.push(entry);
       }
     } catch {
       // What landed is retired; what did not is left exactly where it was, so
@@ -109,7 +113,7 @@ export function useGuestSavesImport() {
       return;
     }
 
-    // `local`, not the current list: a course saved in another tab during the
+    // `local`, not the current list: a save made in another tab during the
     // awaits above is in storage and was never part of this import, and
     // retiring it would delete a save that no account ever received.
     retireGuestSaves(local);

@@ -10,10 +10,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   GUEST_SAVE_PREFIX,
+  type GuestSave,
   readGuestSaves,
   resetGuestSavesCache,
   retireGuestSaves,
   setGuestSave,
+  snapshotGuestSaves,
   subscribeGuestSaves,
   writeGuestSaves,
 } from "./guest-saves";
@@ -22,6 +24,11 @@ beforeEach(() => {
   window.localStorage.clear();
   resetGuestSavesCache();
 });
+
+/** What an import would hold on to: the named saves, markers and all. */
+function snapshotOf(...codes: string[]): readonly GuestSave[] {
+  return snapshotGuestSaves().filter(({ code }) => codes.includes(code));
+}
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -95,7 +102,7 @@ describe("the guest saves store", () => {
 
   it("leaves nothing behind once the list is emptied", () => {
     writeGuestSaves(["DD2380"]);
-    retireGuestSaves(["DD2380"]);
+    retireGuestSaves(snapshotOf("DD2380"));
 
     expect(readGuestSaves()).toEqual([]);
     expect(
@@ -109,7 +116,7 @@ describe("the guest saves store", () => {
     it("removes only what it was asked to remove", () => {
       writeGuestSaves(["DD2380", "DD2421", "DD1337"]);
 
-      retireGuestSaves(["DD2380", "DD1337"]);
+      retireGuestSaves(snapshotOf("DD2380", "DD1337"));
 
       expect(readGuestSaves()).toEqual(["DD2421"]);
     });
@@ -121,8 +128,8 @@ describe("the guest saves store", () => {
      * snapshot, or the newcomer is deleted having never reached an account.
      */
     it("keeps a code another tab added after the snapshot was taken", () => {
-      const snapshot = ["DD2380", "DD2421"];
-      writeGuestSaves(snapshot);
+      writeGuestSaves(["DD2380", "DD2421"]);
+      const snapshot = snapshotOf("DD2380", "DD2421");
 
       // The other tab, mid-import.
       setGuestSave("DD1337", true);
@@ -132,15 +139,36 @@ describe("the guest saves store", () => {
       expect(readGuestSaves()).toEqual(["DD1337"]);
     });
 
-    it("ignores codes that are not in the list", () => {
-      writeGuestSaves(["DD2380"]);
+    /**
+     * The same finding one turn further in, and the reason the snapshot has to
+     * carry markers. Another tab can unsave and re-save a course this run is
+     * importing, and by code alone the survivor is indistinguishable from the
+     * save that was imported — so it was deleted, having never reached an
+     * account. The re-save wrote a new marker, so the key no longer answers
+     * with what was snapshotted and is left where it is.
+     */
+    it("keeps a save another tab replaced under the same code", () => {
+      writeGuestSaves(["DD2380", "DD2421"]);
+      const snapshot = snapshotOf("DD2380", "DD2421");
 
-      retireGuestSaves(["DD9999"]);
+      // The other tab, mid-import: off, then on again.
+      setGuestSave("DD2380", false);
+      setGuestSave("DD2380", true);
+
+      retireGuestSaves(snapshot);
 
       expect(readGuestSaves()).toEqual(["DD2380"]);
     });
 
-    it("does nothing, and notifies nobody, when given no codes", () => {
+    it("ignores codes that are not in the list", () => {
+      writeGuestSaves(["DD2380"]);
+
+      retireGuestSaves([{ code: "DD9999", marker: "1" }]);
+
+      expect(readGuestSaves()).toEqual(["DD2380"]);
+    });
+
+    it("does nothing, and notifies nobody, when given no saves", () => {
       writeGuestSaves(["DD2380"]);
       const onChange = vi.fn();
       subscribeGuestSaves(onChange);
@@ -255,13 +283,14 @@ describe("the guest saves store", () => {
     it("keeps a save another tab made, while this one retires an import", () => {
       writeGuestSaves(["DD2380"]);
       readGuestSaves();
+      const snapshot = snapshotOf("DD2380");
 
       window.localStorage.setItem(
         `${GUEST_SAVE_PREFIX}DD1337`,
         String(Date.now() + 1000),
       );
 
-      retireGuestSaves(["DD2380"]);
+      retireGuestSaves(snapshot);
 
       expect(readGuestSaves()).toEqual(["DD1337"]);
     });
@@ -282,15 +311,21 @@ describe("the guest saves store", () => {
 
     // No mutation reads the list, so there is no window between a read and a
     // write for another tab to slip into, and no lock needed to close one.
+    // Retiring reads, but only the one key it is about to drop, and only to
+    // ask whether that key still holds the save it imported.
     it("never reads the list in order to change it", () => {
       writeGuestSaves(["DD2380"]);
       const reads = vi.spyOn(Storage.prototype, "getItem");
 
       setGuestSave("DD2421", true);
       setGuestSave("DD2380", false);
-      retireGuestSaves(["DD2421"]);
-
       expect(reads).not.toHaveBeenCalled();
+
+      retireGuestSaves([{ code: "DD2421", marker: "1" }]);
+
+      expect(reads).toHaveBeenCalledExactlyOnceWith(
+        `${GUEST_SAVE_PREFIX}DD2421`,
+      );
     });
   });
 

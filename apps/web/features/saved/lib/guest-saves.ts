@@ -33,7 +33,10 @@
  * read that races a write merely repaints.
  *
  * The value stored is a sequence number, so the list keeps the order courses
- * were saved in rather than whatever order the browser hands keys back.
+ * were saved in rather than whatever order the browser hands keys back. It is
+ * also what identifies one save from another: unsaving and re-saving a course
+ * writes a fresh number under the same key, which is the only way anything
+ * here can tell the save it read from the different save that replaced it.
  *
  * ## Why a store and not `useState`
  *
@@ -84,20 +87,23 @@ function same(a: readonly string[], b: readonly string[]): boolean {
   return a.length === b.length && a.every((code, at) => code === b[at]);
 }
 
+/** One saved course, with the exact marker stored against it. */
+export type GuestSave = { readonly code: string; readonly marker: string };
+
 /**
- * Every stored code, oldest save first.
+ * Every stored save, oldest first, or `null` when storage would not answer.
  *
  * Every access to `localStorage` in this file is wrapped: it throws outright —
  * not returns null — in a browser set to block site data, and in Safari's
  * private mode. A reader who has turned storage off gets an app that cannot
  * remember their guest saves, which is the right failure; it is not an app that
- * refuses to render the page.
+ * refuses to render the page. `null` says that happened, which is a different
+ * answer from the empty list an untouched browser gives.
  */
-export function readGuestSaves(): readonly string[] {
-  let found: { code: string; at: number }[];
+function collect(): { code: string; marker: string; at: number }[] | null {
+  const found: { code: string; marker: string; at: number }[] = [];
   try {
     const store = window.localStorage;
-    found = [];
     for (let index = 0; index < store.length; index += 1) {
       const key = store.key(index);
       if (!key?.startsWith(GUEST_SAVE_PREFIX)) continue;
@@ -106,23 +112,44 @@ export function readGuestSaves(): readonly string[] {
       // Anything can write to this origin's storage. A value that is not a
       // number still marks the course as saved; it just sorts last, which is
       // better than dropping a save over its ordering hint.
-      const at = Number(store.getItem(key));
+      const marker = store.getItem(key) ?? "";
+      const at = Number(marker);
       found.push({
         code,
+        marker,
         at: Number.isFinite(at) ? at : Number.MAX_SAFE_INTEGER,
       });
     }
   } catch {
-    return cache ?? EMPTY;
+    return null;
   }
 
   found.sort((a, b) => a.at - b.at || a.code.localeCompare(b.code));
+  return found;
+}
+
+/** Every stored code, oldest save first. */
+export function readGuestSaves(): readonly string[] {
+  const found = collect();
+  if (!found) return cache ?? EMPTY;
+
   const next: readonly string[] = found.length
     ? Object.freeze(found.map((entry) => entry.code))
     : EMPTY;
   if (cache && same(cache, next)) return cache;
   cache = next;
   return next;
+}
+
+/**
+ * The same list, carrying each save's marker — what an import retires against.
+ *
+ * Not cached, and deliberately not what the components read: a marker is of no
+ * interest to anything rendering a list, and holding one is only meaningful for
+ * as long as the caller intends to compare it back against storage.
+ */
+export function snapshotGuestSaves(): readonly GuestSave[] {
+  return (collect() ?? []).map(({ code, marker }) => ({ code, marker }));
 }
 
 /** Tells this tab's readers that the store moved. */
@@ -166,17 +193,27 @@ export function setGuestSave(courseCode: string, saved: boolean): void {
  * the ordering: *"the browser hand-off is cleared only now"* (line 594).
  * Clearing first would lose the list outright if the write then failed.
  *
- * **Named courses, not the whole list**, and one `removeItem` each. The
- * artboard can afford a wholesale `removeItem` there because its `localSaves`
- * is component state that nothing else writes; ours is shared storage, and an
+ * **Named saves, not the whole list**, and one `removeItem` each. The artboard
+ * can afford a wholesale `removeItem` there because its `localSaves` is
+ * component state that nothing else writes; ours is shared storage, and an
  * import is a run of awaited network writes long enough for another tab to save
  * something that was never part of it.
+ *
+ * **Named saves, not named courses**, for the same reason one step further in.
+ * Another tab can unsave a course this run imported and save it again while the
+ * writes are still going, and the course code alone cannot tell the two apart —
+ * so retiring by code deletes a save no account ever received. The marker can:
+ * the re-save wrote a new one, so a key whose value has moved is left alone and
+ * offered again. Reading it back is not a read-modify-write of the list; it is
+ * one key answering whether it still holds the save that was imported.
  */
-export function retireGuestSaves(codes: readonly string[]): void {
-  if (!codes.length) return;
+export function retireGuestSaves(saves: readonly GuestSave[]): void {
+  if (!saves.length) return;
   try {
-    for (const code of codes) {
-      window.localStorage.removeItem(`${GUEST_SAVE_PREFIX}${code}`);
+    const store = window.localStorage;
+    for (const { code, marker } of saves) {
+      const key = `${GUEST_SAVE_PREFIX}${code}`;
+      if (store.getItem(key) === marker) store.removeItem(key);
     }
   } catch {
     /* storage unavailable — nothing to retire from */

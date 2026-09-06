@@ -8,6 +8,7 @@ import type { CourseStats } from "@/types";
 import {
   readGuestSaves,
   resetGuestSavesCache,
+  setGuestSave,
   writeGuestSaves,
 } from "../lib/guest-saves";
 import { Saved } from "./saved";
@@ -739,7 +740,7 @@ describe("Saved", { timeout: 20_000 }, () => {
       writeGuestSaves(["DD2380"]);
       // The second tab writes while the first is waiting on its account write.
       setSaved.mockImplementationOnce(async () => {
-        writeGuestSaves([...readGuestSaves(), "DD1337"]);
+        setGuestSave("DD1337", true);
       });
       render(<Saved />);
 
@@ -751,6 +752,33 @@ describe("Saved", { timeout: 20_000 }, () => {
       // it is still here and still offered.
       expect(setSaved).toHaveBeenCalledExactlyOnceWith("DD2380", true);
       expect(readGuestSaves()).toEqual(["DD1337"]);
+    });
+
+    /**
+     * The same finding a turn further in. The second tab can unsave and re-save
+     * the *same* course while the first is awaiting its account write, and the
+     * course code alone cannot tell that replacement apart from the save this
+     * run imported — so retirement deleted it, and a course the reader had just
+     * saved vanished on the next repaint. Each snapshotted save carries the
+     * marker it was stored under, and a key whose marker has moved is kept.
+     */
+    it("keeps a course another tab re-saved while the import runs", async () => {
+      saved();
+      writeGuestSaves(["DD2380"]);
+      setSaved.mockImplementationOnce(async () => {
+        setGuestSave("DD2380", false);
+        setGuestSave("DD2380", true);
+      });
+      render(<Saved />);
+
+      await userEvent.click(
+        screen.getByRole("button", { name: "Add to my account" }),
+      );
+
+      // The account holds the save this run imported; the browser holds the
+      // newer one, which no account has been told about.
+      expect(setSaved).toHaveBeenCalledExactlyOnceWith("DD2380", true);
+      expect(readGuestSaves()).toEqual(["DD2380"]);
     });
 
     // A run that fails half way has still imported the half that answered.
