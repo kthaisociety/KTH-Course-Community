@@ -8,6 +8,10 @@ type Props = {
   proposal: TranscriptProposal;
   /** The reader's grades switch, applied to what is shown and to what is written. */
   includeGrades: boolean;
+  /** Whether there is an account to write to. Decides the confirm's wording. */
+  isSignedIn: boolean;
+  /** Whether these rows came back across a sign-in rather than off a fresh read. */
+  isResumed?: boolean;
   isConfirming: boolean;
   /**
    * Set when a confirm did not finish. Some of it may already have landed, so
@@ -22,6 +26,12 @@ type Props = {
 
 function headline(count: number): string {
   return count === 1 ? "1 course read" : `${count} courses read`;
+}
+
+/** The artboard's `confirmCta`, plus the in-flight word this page needs. */
+function confirmLabel(isSignedIn: boolean, isConfirming: boolean): string {
+  if (!isSignedIn) return "Sign in to keep this list";
+  return isConfirming ? "Saving…" : "Looks right";
 }
 
 function unmatchedTitle(count: number): string {
@@ -47,10 +57,19 @@ function unmatchedTitle(count: number): string {
  * The candidate rows are listed, which the artboard's own preview does not do:
  * it shows only a count. A screen whose one button writes to a reader's record
  * has to show what it is about to write.
+ *
+ * **Signed out, the button asks for the account instead of writing.**
+ * `confirmCta: s.signedIn ? "Looks right" : "Sign in to keep this list"` is the
+ * artboard's own line (`docs/design_ref/2026-09-06/Course Community - Taken
+ * Courses.dc.html:1305`), and it is the whole shape of the guest flow: the
+ * transcript is read, the rows are shown, and the account is asked for at the
+ * step that would keep them. Nothing on this screen has been stored either way.
  */
 export function TranscriptProposalReview({
   proposal,
   includeGrades,
+  isSignedIn,
+  isResumed = false,
   isConfirming,
   error,
   onConfirm,
@@ -130,6 +149,16 @@ export function TranscriptProposalReview({
           </p>
         )}
 
+        {isResumed ? (
+          // The artboard resumes the confirm itself once the account appears.
+          // This says where the rows came from instead, because the click is
+          // still the reader's — `taken-courses.tsx` says why it stays theirs.
+          <output className="mt-4 block rounded-[10px] border border-cc-rule2 bg-cc-pill px-[13px] py-[11px] text-[12.5px] text-cc-ink2 leading-[1.5]">
+            You are signed in, and the transcript you read is still here.
+            Confirm it to keep these courses.
+          </output>
+        ) : null}
+
         {error ? (
           <p
             role="alert"
@@ -146,7 +175,7 @@ export function TranscriptProposalReview({
             disabled={isConfirming || candidates.length === 0}
             className="flex h-11 cursor-pointer items-center rounded-[9px] bg-cc-btn px-5 font-semibold text-[14px] text-cc-btn-fg hover:opacity-[0.88] disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {isConfirming ? "Saving…" : "Looks right"}
+            {confirmLabel(isSignedIn, isConfirming)}
           </button>
           <button
             type="button"

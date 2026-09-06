@@ -4,6 +4,11 @@ import { StrictMode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { UnreviewedTakenCourse } from "@/features/reviews/api/queries";
 import type { TranscriptProposal } from "@/server/ingest/transcript/service";
+import {
+  GUEST_PROPOSAL_TTL_MS,
+  readGuestProposal,
+  writeGuestProposal,
+} from "../lib/guest-proposal";
 import type { TakenCourse } from "../lib/taken-rows";
 import { TakenCourses } from "./taken-courses";
 
@@ -36,6 +41,10 @@ const routerReplace = vi.fn();
 const routerPush = vi.fn();
 /** The round the page hands the reviewer, so a test can see what it pruned. */
 const restoredProp = vi.fn();
+/** The session this render sees. Guests are a state of this page now. */
+const me = vi.fn<() => { isLoading: boolean; isAuthenticated: boolean }>();
+/** Which reason the page last asked for an account with, or nothing. */
+const authReasonProp = vi.fn();
 
 // One object, as Next's own `useRouter` returns: a fresh one every call would
 // make every effect that depends on the router run on every render, which is
@@ -47,12 +56,27 @@ vi.mock("next/navigation", () => ({
 }));
 
 vi.mock("@/features/auth", () => ({
-  useMe: () => ({ isLoading: false, isAuthenticated: true }),
-  useRequireSession: () => ({}),
+  useMe: () => me(),
+  // Faithful rather than a no-op: the redirect is the thing these tests are
+  // about, so a stub that could not perform it would let the gate come back
+  // without a single test noticing.
+  useRequireSession: () => {
+    if (!me().isAuthenticated) routerReplace("/auth");
+    return {};
+  },
+  AuthReasonDialog: ({ reason }: { reason: string | null }) => {
+    authReasonProp(reason);
+    return reason === null ? null : (
+      <div data-testid="auth-prompt">Asking for an account: {reason}</div>
+    );
+  },
 }));
 vi.mock("@/features/courses", () => ({
-  useTakenCourses: () => ({
-    data: takenList(),
+  // `enabled` is honoured, because `taken.list` is a protected procedure and a
+  // signed-out reader genuinely has no list — a mock that answered anyway
+  // would hide the whole guest screen behind somebody else's courses.
+  useTakenCourses: (enabled: boolean) => ({
+    data: enabled ? takenList() : undefined,
     isPending: false,
     isError: listFailed(),
     // The screen re-reads the list before it plans an import, so the mock has
@@ -187,12 +211,40 @@ async function uploadPdf() {
   await userEvent.upload(screen.getByLabelText("Ladok transcript PDF"), PDF());
 }
 
+/**
+ * The token the page minted for whatever is in storage now.
+ *
+ * Read off the raw record because the page mints it internally and hands it to
+ * the sign-in rather than to us — which is the whole point of it.
+ */
+function storedHandoff(): string | null {
+  const raw = localStorage.getItem("kth-cc:taken-proposal");
+  return raw === null ? null : JSON.parse(raw).handoff;
+}
+
+/**
+ * A proposal left for a sign-in, arrived at the way a real sign-in comes back:
+ * on `/taken` carrying the record's handoff token. Nothing else reopens it.
+ */
+function arriveFromSignIn(includeGrades = false): string {
+  const handoff = writeGuestProposal(proposal(), includeGrades);
+  window.history.replaceState({}, "", `/taken?resume=${handoff}`);
+  return handoff ?? "";
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   // `?review=1` and an interrupted round are both read off the browser, so
-  // each test starts on a clean URL and an empty tab store.
+  // each test starts on a clean URL and an empty tab store. `localStorage`
+  // goes too: a transcript left for a sign-in is kept there.
   window.history.replaceState({}, "", "/taken");
   sessionStorage.clear();
+  localStorage.clear();
+  // One test moves the clock past a stored proposal's expiry; leaving it moved
+  // would silently expire the next test's, so the reset is here rather than at
+  // the end of that test, where a failure would skip it.
+  vi.useRealTimers();
+  me.mockReturnValue({ isLoading: false, isAuthenticated: true });
   takenList.mockReturnValue([takenCourse()]);
   listFailed.mockReturnValue(false);
   refetchTaken.mockImplementation(() =>
@@ -1158,5 +1210,280 @@ describe("arriving with ?review=…", () => {
       ),
     );
     expect(routerReplace).toHaveBeenCalledTimes(1);
+  });
+});
+/**
+ * The signed-out flow the artboard draws, and the two halves that make it safe.
+ *
+ * `docs/design_ref/2026-09-06/Course Community - Taken Courses.dc.html:767`
+ * poses a guest on the **empty** screen rather than on a locked page, and
+ * `:1305-1308` puts the account at the *keep* step: the confirm reads "Sign in
+ * to keep this list", and the confirm is resumed once they are in. Everything
+ * up to that button is a read — `POST /api/user/transcript` stores nothing —
+ * and everything past it is `transcript.confirm`, which is a
+ * `protectedProcedure` and is not called here.
+ */
+describe("a signed-out visitor", () => {
+  beforeEach(() => {
+    me.mockReturnValue({ isLoading: false, isAuthenticated: false });
+    takenList.mockReturnValue([]);
+  });
+
+  it("is not sent to /auth", () => {
+    render(<TakenCourses />);
+
+    expect(routerReplace).not.toHaveBeenCalledWith("/auth");
+  });
+
+  it("lands on the drop zone, which is the artboard's empty screen", () => {
+    render(<TakenCourses />);
+
+    expect(screen.getByLabelText("Ladok transcript PDF")).toBeInTheDocument();
+  });
+
+  it("reads a transcript and is offered the rows, with nothing written", async () => {
+    render(<TakenCourses />);
+    await uploadPdf();
+
+    expect(await screen.findByText("1 course read")).toBeInTheDocument();
+    expect(uploadTranscript).toHaveBeenCalledTimes(1);
+    expect(confirmImport).not.toHaveBeenCalled();
+  });
+
+  it("asks for the account at the keep step rather than writing", async () => {
+    render(<TakenCourses />);
+    await uploadPdf();
+    await userEvent.click(
+      await screen.findByRole("button", {
+        name: "Sign in to keep this list",
+      }),
+    );
+
+    expect(await screen.findByTestId("auth-prompt")).toHaveTextContent(
+      "keep-course-list",
+    );
+    expect(confirmImport).not.toHaveBeenCalled();
+  });
+
+  it("holds the rows for the sign-in, and keeps grades out of the record", async () => {
+    render(<TakenCourses />);
+    await uploadPdf();
+    await userEvent.click(
+      await screen.findByRole("button", {
+        name: "Sign in to keep this list",
+      }),
+    );
+
+    const held = readGuestProposal(storedHandoff());
+    expect(held?.proposal.candidates).toEqual([
+      expect.objectContaining({ courseCode: "DD1337", grade: null }),
+    ]);
+  });
+
+  it("keeps the grades when the reader turned the switch on", async () => {
+    render(<TakenCourses />);
+    await userEvent.click(screen.getByRole("switch", { name: /grade/i }));
+    await uploadPdf();
+    await userEvent.click(
+      await screen.findByRole("button", {
+        name: "Sign in to keep this list",
+      }),
+    );
+
+    expect(
+      readGuestProposal(storedHandoff())?.proposal.candidates[0].grade,
+    ).toBe("B");
+  });
+
+  it("asks for an account instead of opening the by-hand form", async () => {
+    render(<TakenCourses />);
+    await userEvent.click(
+      screen.getByRole("button", { name: /Add courses manually/i }),
+    );
+
+    expect(await screen.findByTestId("auth-prompt")).toHaveTextContent(
+      "sign-up",
+    );
+    expect(addTaken).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * Coming back with an account, which is the artboard's `pending: "confirm"`.
+ *
+ * It stops one step short of the artboard, which writes the moment the account
+ * appears: the rows are put back on the preview and the reader presses the
+ * button. `use-guest-saves.ts` settled the same question the same way — signing
+ * in is not consent to write a list of courses to an account — and here the
+ * record it would write from is `localStorage`, which anything on this origin
+ * can put rows into.
+ */
+describe("coming back from a sign-in", () => {
+  beforeEach(() => takenList.mockReturnValue([]));
+
+  it("puts the transcript back on the preview", async () => {
+    arriveFromSignIn();
+    render(<TakenCourses />);
+
+    expect(await screen.findByText("1 course read")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Looks right" }),
+    ).toBeInTheDocument();
+    expect(confirmImport).not.toHaveBeenCalled();
+  });
+
+  it("writes only once the reader confirms, and then forgets the record", async () => {
+    const handoff = arriveFromSignIn();
+    render(<TakenCourses />);
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Looks right" }),
+    );
+
+    await waitFor(() => expect(confirmImport).toHaveBeenCalledTimes(1));
+    expect(readGuestProposal(handoff)).toBeNull();
+  });
+
+  /**
+   * A spent capability has no business staying in the address bar, in history,
+   * or in a URL the reader pastes to somebody. Taken back out the same way
+   * `?review=` is.
+   */
+  it("takes the token back out of the URL", async () => {
+    arriveFromSignIn();
+    render(<TakenCourses />);
+
+    await waitFor(() => expect(routerReplace).toHaveBeenCalledWith("/taken"));
+  });
+
+  it("drops a record that has gone stale rather than reviving it", async () => {
+    arriveFromSignIn();
+    vi.setSystemTime(Date.now() + GUEST_PROPOSAL_TTL_MS + 1000);
+    render(<TakenCourses />);
+
+    expect(
+      await screen.findByLabelText("Ladok transcript PDF"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("1 course read")).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * The shared browser, which is what the handoff token is for.
+ *
+ * Guest A reads a transcript on a library machine and never finishes signing
+ * in. Their record sits in `localStorage` for up to half an hour. Everything
+ * below is somebody *else* arriving at that browser inside the window, and none
+ * of them may be shown A's courses — the record is claimable only by an arrival
+ * carrying its token, which only A's own sign-in was given.
+ *
+ * Greptile reported the signed-in case as a P1 on #200 and reproduced it. It
+ * was real: the pickup keyed on nothing but "is there a session", so B saw A's
+ * rows with "Looks right" under them. The untokened *signed-out* read had to go
+ * with it, and that is the subtler half — B being shown the rows while signed
+ * out could press "Sign in to keep this list", which mints a fresh token bound
+ * to B's own sign-in over A's data, and lands right back at the same place.
+ */
+describe("a transcript left behind on a shared browser", () => {
+  beforeEach(() => takenList.mockReturnValue([]));
+
+  /** Guest A's record, with no token given to whoever arrives next. */
+  function leftByGuestA(includeGrades = true) {
+    writeGuestProposal(proposal(), includeGrades);
+    window.history.replaceState({}, "", "/taken");
+  }
+
+  it("is not shown to a different account signing in on the same browser", async () => {
+    leftByGuestA();
+    me.mockReturnValue({ isLoading: false, isAuthenticated: true });
+    render(<TakenCourses />);
+
+    expect(
+      await screen.findByLabelText("Ladok transcript PDF"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("1 course read")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Looks right" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("keeps the grades off that account's screen too", async () => {
+    leftByGuestA(true);
+    me.mockReturnValue({ isLoading: false, isAuthenticated: true });
+    render(<TakenCourses />);
+
+    await screen.findByLabelText("Ladok transcript PDF");
+    expect(screen.queryByText("B")).not.toBeInTheDocument();
+  });
+
+  /** Refused, not consumed: A's own sign-in can still come back for it. */
+  it("leaves the record for the sign-in it was written for", async () => {
+    leftByGuestA();
+    const handoff = storedHandoff();
+    me.mockReturnValue({ isLoading: false, isAuthenticated: true });
+    render(<TakenCourses />);
+
+    await screen.findByLabelText("Ladok transcript PDF");
+    expect(readGuestProposal(handoff)).not.toBeNull();
+  });
+
+  it("is not shown to the next signed-out visitor either", async () => {
+    leftByGuestA();
+    me.mockReturnValue({ isLoading: false, isAuthenticated: false });
+    render(<TakenCourses />);
+
+    expect(
+      await screen.findByLabelText("Ladok transcript PDF"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("1 course read")).not.toBeInTheDocument();
+  });
+
+  /**
+   * The token is a capability, so a guessed one is worth no more than none.
+   */
+  it("is not shown to an arrival carrying the wrong token", async () => {
+    leftByGuestA();
+    window.history.replaceState({}, "", "/taken?resume=not-the-token");
+    me.mockReturnValue({ isLoading: false, isAuthenticated: true });
+    render(<TakenCourses />);
+
+    expect(
+      await screen.findByLabelText("Ladok transcript PDF"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("1 course read")).not.toBeInTheDocument();
+  });
+
+  /** Nothing above may cost A their own resume. */
+  it("still comes back for the sign-in that left it", async () => {
+    arriveFromSignIn();
+    me.mockReturnValue({ isLoading: false, isAuthenticated: true });
+    render(<TakenCourses />);
+
+    expect(await screen.findByText("1 course read")).toBeInTheDocument();
+  });
+
+  /**
+   * The token is single-use, so a claim destroys the record even when the
+   * sign-in behind it did not produce a session. Otherwise a failed sign-in
+   * would leave a second still-valid claim in the browser for the next person
+   * to arrive with that URL.
+   */
+  it("spends the record even when the sign-in did not take", async () => {
+    const handoff = arriveFromSignIn();
+    me.mockReturnValue({ isLoading: false, isAuthenticated: false });
+    render(<TakenCourses />);
+
+    // The reader still gets their own parse back on screen …
+    expect(await screen.findByText("1 course read")).toBeInTheDocument();
+    // … but nothing is left in the browser for a second claim.
+    expect(readGuestProposal(handoff)).toBeNull();
+  });
+
+  it("spends it on a claim by an account too", async () => {
+    const handoff = arriveFromSignIn();
+    me.mockReturnValue({ isLoading: false, isAuthenticated: true });
+    render(<TakenCourses />);
+
+    await screen.findByText("1 course read");
+    expect(readGuestProposal(handoff)).toBeNull();
   });
 });

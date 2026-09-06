@@ -481,9 +481,9 @@ export function Saved({ openCollectionId = null, openCourse = null }: Props) {
       />
 
       {/*
-        `proxy.ts` only checks that a session cookie exists, so a stale one
-        reaches this page signed out. The card's controls then ask for a session
-        the way they do everywhere else rather than failing silently.
+        Nothing redirects a signed-out reader away from this page, so its
+        controls ask for a session themselves rather than failing silently —
+        the same prompt they raise everywhere else in the app.
       */}
       <AuthReasonDialog
         reason={authReason}

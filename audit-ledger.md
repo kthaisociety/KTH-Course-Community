@@ -1182,6 +1182,21 @@ invented, because `user_taken_courses.course_code` is a foreign key to
 `courses.code`. **Confidence: high** (read off the client; the parser itself is
 `server/**` and out of scope).
 
+> **Superseded in part.** Opening `/taken` to signed-out visitors added one
+> named exception to "never in `localStorage`":
+> `features/taken/lib/guest-proposal.ts` holds a *parsed proposal* — never the
+> file — for the length of one sign-in, with grades stripped unless the reader
+> turned them on, and with a thirty-minute expiry. Everything else in T-04 still
+> holds: the file is still never kept, and nothing is written until the reader
+> confirms.
+>
+> Note also that this section cites `docs/design_ref_new/`, a path that no
+> longer exists. The artboards are **revised** at each export, not merely moved,
+> so the design claims above were made against a revision that may differ from
+> `docs/design_ref/2026-09-06/`. The paths are left as written rather than
+> rewritten, because rewriting them would make claims about an older revision
+> read as current.
+
 ---
 
 # Route 6 — My Page (`/profile`)
