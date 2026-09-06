@@ -363,7 +363,9 @@ function Pager({ explore }: { explore: ReturnType<typeof useExplore> }) {
         disabled={!explore.canPrevPage}
         className={PAGER_BUTTON_CLASS}
       >
-        ← Previous
+        {/* The arrows are the artboard's, and decoration: hidden so the button
+            is announced "Previous" rather than "left arrow Previous". */}
+        <span aria-hidden>←&nbsp;</span>Previous
       </button>
       {/* `aria-live`: the buttons keep focus across a turn, so without it a
           screen reader is told nothing about the page having changed. */}
@@ -379,7 +381,7 @@ function Pager({ explore }: { explore: ReturnType<typeof useExplore> }) {
         disabled={!explore.canNextPage}
         className={PAGER_BUTTON_CLASS}
       >
-        Next →
+        Next<span aria-hidden>&nbsp;→</span>
       </button>
     </nav>
   );

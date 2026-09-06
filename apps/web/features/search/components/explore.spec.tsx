@@ -704,8 +704,11 @@ describe("Explore", () => {
    * about *whether there is another page*, never about how many there are.
    */
   describe("the pager", () => {
-    const NEXT = { name: /Next/ } as const;
-    const PREVIOUS = { name: /Previous/ } as const;
+    // Exact names: the artboard's arrows are decoration and are hidden from
+    // the accessibility tree, so the buttons are announced "Previous" and
+    // "Next" rather than "left arrow Previous".
+    const NEXT = { name: "Next" } as const;
+    const PREVIOUS = { name: "Previous" } as const;
 
     function pager() {
       return screen.queryByRole("navigation", {
