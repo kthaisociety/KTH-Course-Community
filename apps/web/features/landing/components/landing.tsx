@@ -386,11 +386,17 @@ export function Landing() {
           <div className="flex w-full max-w-[720px] flex-col items-center text-center">
             {/* The artboard's 70px, and it is load-bearing: it grows the
                 centred column at the top, which is what sits the hero copy
-                where the artboard has it rather than 64px higher. */}
+                where the artboard has it rather than 64px higher.
+
+                Desktop takes 58 instead — 12 off the top, given back to the
+                bar's own margin below. A deliberate divergence: the artboard's
+                19px headline-to-bar gap read too tight once built, and this is
+                the half of the trade that moves the copy up. Mobile keeps the
+                70, along with its own untouched 16px gap. */}
             <motion.p
               variants={HERO_EXIT}
               data-hero-clear
-              className="mt-[70px] mb-0 font-semibold text-[11px] text-cc-dim uppercase tracking-[0.09em]"
+              className="mt-[70px] @lg:mt-[58px] mb-0 font-semibold text-[11px] text-cc-dim uppercase tracking-[0.09em]"
             >
               Run by students at KTH
             </motion.p>
@@ -420,7 +426,14 @@ export function Landing() {
                 19 + 42 + 36 = 97. The sum has to hold, or the centred column
                 changes height and every line in the hero moves; the 19 is what
                 puts the bar's top back on the artboard's 400px, 334px below the
-                header. Both measured against the artboard, not derived. */}
+                header. Both measured against the artboard, not derived.
+
+                Desktop now runs 31 + 42 + 36 = 109, with the extra 12 taken off
+                the kicker's top margin above. That keeps the column the same
+                height and the bar on the same 400px — only the copy above it
+                moves, which is the point: the artboard's 19 read too tight in
+                the built page. The 97 is still what the artboard says, and this
+                is knowingly 12 off it. */}
             <form
               ref={barRef}
               data-hero-clear
@@ -428,7 +441,7 @@ export function Landing() {
                 event.preventDefault();
                 submitSearch(query);
               }}
-              className="mt-4 @lg:mt-[19px] flex h-[42px] w-full @lg:max-w-[560px] items-center gap-2.5 rounded-[10px] border border-cc-rule3 bg-cc-surface px-3.5"
+              className="mt-4 @lg:mt-[31px] flex h-[42px] w-full @lg:max-w-[560px] items-center gap-2.5 rounded-[10px] border border-cc-rule3 bg-cc-surface px-3.5"
             >
               <Search
                 size={16}
