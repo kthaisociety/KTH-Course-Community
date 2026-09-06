@@ -203,6 +203,18 @@
   --cc-checked-tint: rgba(23, 81, 166, 0.08);
   --cc-checked-hover-tint: rgba(23, 81, 166, 0.14);
 
+  /* Keyboard focus, and the rail's own pair because brand blue vanishes on it.
+
+     `--cc-focus` is `--cc-brand`, which is also `--cc-rail` — so a ring drawn in
+     it on a sidebar control is the same colour as its background and cannot be
+     seen. That is the third instance of one pattern: `--cc-btn` on `--cc-rail`
+     gave an invisible Sign up button before the 2026-09-05 export fixed it. The
+     design answers it as a rule rather than a case, and so does this. */
+  --cc-focus: #1751a6;
+  --cc-focus-ring: rgba(23, 81, 166, 0.25);
+  --cc-rail-focus: #ffffff;
+  --cc-rail-focus-ring: rgba(255, 255, 255, 0.35);
+
   /* The applied end of a theory/applied bar — the one colour on these screens
      the design uses without ever having named (#173).
 
@@ -415,6 +427,14 @@
   --cc-checked-tint: rgba(142, 194, 255, 0.22);
   --cc-checked-hover-tint: rgba(142, 194, 255, 0.32);
 
+  /* The rail darkens with the theme, so the page pair already reads on it and
+     both are the same value here — see the light block for why they diverge
+     there. */
+  --cc-focus: #8bb3ef;
+  --cc-focus-ring: rgba(139, 179, 239, 0.3);
+  --cc-rail-focus: #8bb3ef;
+  --cc-rail-focus-ring: rgba(139, 179, 239, 0.3);
+
   /* The applied end of a theory/applied bar, chosen for this page rather than
      mixed for it — see the light block. The artboards hardcode the light hex
      here too, which is what makes this the one value in the file that no export
@@ -431,6 +451,37 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* One focus treatment for the whole app, mirroring `cc-theme.css` in the
+   2026-09-06 export.
+
+   `:focus-visible` and not `:focus`, so a mouse click does not ring the control
+   it just pressed — that is what gets a focus style deleted again a week later.
+   `!important` because the artboards carry 22 inline `outline:none`
+   declarations and this has to beat every one of them, and because it must also
+   reach hand-rolled `role="button"` divs, which are not focusable by default and
+   get no help from the shadcn primitives' own ring.
+
+   The second rule exists because the rail is painted in `--cc-rail`, which in
+   light *is* `--cc-brand` and therefore `--cc-focus` — a ring drawn in the page
+   pair there is the same colour as its background. `AppShell` marks the rail
+   with `data-cc-sidebar` for this. Five hand-rolled focus treatments still sit
+   in `features/**` and are not yet removed; that is the rest of #167. */
+:focus-visible {
+  /* biome-ignore lint/complexity/noImportantStyles: it has to beat the 22 inline `outline:none` declarations the artboards carry, and the shadcn primitives' own ring. Without it a focus style exists everywhere except where it is needed. */
+  outline: 2px solid var(--cc-focus) !important;
+  /* biome-ignore lint/complexity/noImportantStyles: paired with the outline above; an offset that loses to an inline rule puts the ring under the control's own border. */
+  outline-offset: 2px !important;
+  /* biome-ignore lint/complexity/noImportantStyles: the halo is what carries the ring across surfaces of differing contrast, so it must win wherever the outline does. */
+  box-shadow: 0 0 0 4px var(--cc-focus-ring) !important;
+}
+
+[data-cc-sidebar] :focus-visible {
+  /* biome-ignore lint/complexity/noImportantStyles: overrides the page pair above, which is itself `!important`; a plain declaration here would lose to it. */
+  outline-color: var(--cc-rail-focus) !important;
+  /* biome-ignore lint/complexity/noImportantStyles: as above — it replaces an `!important` halo, not a plain one. */
+  box-shadow: 0 0 0 4px var(--cc-rail-focus-ring) !important;
 }
 
 /* The default for every scroll container in the app: thin and muted, so a pane

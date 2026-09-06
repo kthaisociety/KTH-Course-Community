@@ -136,7 +136,14 @@ export function Rail({ onRequestAuth, onDismiss }: Props) {
   const { name, initials } = identity(user);
 
   return (
-    <div className="flex h-full w-full flex-col gap-1.5 bg-cc-rail px-2.5 py-3.5 text-white">
+    // `data-cc-sidebar` is the hook `globals.css` scopes the on-rail focus ring
+    // to. It is here rather than a class because it marks what this surface *is*
+    // — the one region painted in the brand colour — and the page's own focus
+    // pair is invisible against it.
+    <div
+      data-cc-sidebar
+      className="flex h-full w-full flex-col gap-1.5 bg-cc-rail px-2.5 py-3.5 text-white"
+    >
       <div className="flex items-center justify-between gap-2 pr-1">
         <Link
           href="/"
