@@ -143,7 +143,7 @@ export function ReviewCard({
 
   return (
     <article
-      className="rounded-xl border border-cc-rule border-l-[3px] bg-cc-surface px-4 pt-4 pb-3 transition-colors hover:border-cc-hov"
+      className="rounded-[12px] border border-cc-rule border-l-[3px] bg-cc-surface px-4 pt-4 pb-3 transition-colors hover:border-cc-hov"
       style={{ borderLeftColor: accent }}
     >
       <button
@@ -235,7 +235,7 @@ export function ReviewCard({
 
       {expanded ? (
         <div id={detailId} className="mt-3.5 flex flex-col gap-3.5">
-          <div className="rounded-xl border border-cc-rule bg-cc-pg px-4 pt-[15px] pb-3.5">
+          <div className="rounded-[12px] border border-cc-rule bg-cc-pg px-4 pt-[15px] pb-3.5">
             <div className="font-semibold text-[10.5px] text-cc-dim uppercase tracking-[0.09em]">
               Format
             </div>
@@ -294,7 +294,7 @@ export function ReviewCard({
             )}
           </div>
 
-          <div className="flex flex-col gap-3.5 rounded-xl border border-cc-rule bg-cc-pg px-4 pt-[15px] pb-3.5">
+          <div className="flex flex-col gap-3.5 rounded-[12px] border border-cc-rule bg-cc-pg px-4 pt-[15px] pb-3.5">
             <div className="font-semibold text-[10.5px] text-cc-dim uppercase tracking-[0.09em]">
               Course profile
             </div>
@@ -313,7 +313,7 @@ export function ReviewCard({
           </div>
 
           {review.message ? (
-            <div className="prose prose-sm max-w-none rounded-xl border border-cc-rule bg-cc-pg px-4 pt-[15px] pb-3.5 text-[14px] text-cc-ink2 leading-[1.6]">
+            <div className="prose prose-sm max-w-none rounded-[12px] border border-cc-rule bg-cc-pg px-4 pt-[15px] pb-3.5 text-[14px] text-cc-ink2 leading-[1.6]">
               {parse(sanitizeHtml(review.message))}
             </div>
           ) : null}

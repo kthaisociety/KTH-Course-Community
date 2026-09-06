@@ -76,7 +76,7 @@ export function NodeProfile({
 
   return (
     <div className="flex flex-col gap-3.5 px-7 pt-[22px] @max-[440px]:px-[14px] @max-[440px]:pt-3">
-      <section className="rounded-xl border border-cc-rule bg-cc-surface px-[17px] pt-4 pb-[15px]">
+      <section className="rounded-[12px] border border-cc-rule bg-cc-surface px-[17px] pt-4 pb-[15px]">
         <h2 className="m-0 font-semibold text-[15.5px]">
           Your node on the landing page
         </h2>
@@ -87,19 +87,19 @@ export function NodeProfile({
       </section>
 
       {saveFailed ? (
-        <output className="block rounded-xl border border-cc-rule bg-cc-surface px-[17px] py-4 text-[12.5px] text-cc-dim">
+        <output className="block rounded-[12px] border border-cc-rule bg-cc-surface px-[17px] py-4 text-[12.5px] text-cc-dim">
           That choice could not be saved. Your node still looks the way it did —
           nothing was changed.
         </output>
       ) : null}
 
       {isUnavailable ? (
-        <output className="block rounded-xl border border-cc-rule bg-cc-surface px-[17px] py-4 text-[12.5px] text-cc-dim">
+        <output className="block rounded-[12px] border border-cc-rule bg-cc-surface px-[17px] py-4 text-[12.5px] text-cc-dim">
           Your unlock progress could not be read just now. Nothing you have
           earned is affected — this is a read.
         </output>
       ) : (
-        <ul className="m-0 list-none overflow-hidden rounded-xl border border-cc-rule bg-cc-surface p-0">
+        <ul className="m-0 list-none overflow-hidden rounded-[12px] border border-cc-rule bg-cc-surface p-0">
           {rows.map((row, index) => (
             <li
               key={row.key}

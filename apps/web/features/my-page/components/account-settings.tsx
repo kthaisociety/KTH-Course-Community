@@ -122,7 +122,7 @@ export function AccountSettings({
 
   return (
     <div className="flex flex-col gap-3.5 px-7 pt-[22px] @max-[440px]:px-[14px] @max-[440px]:pt-3">
-      <section className="rounded-xl border border-cc-rule bg-cc-surface px-[17px] pt-4 pb-[15px]">
+      <section className="rounded-[12px] border border-cc-rule bg-cc-surface px-[17px] pt-4 pb-[15px]">
         <h2 className="m-0 font-semibold text-[10.5px] text-cc-dim uppercase tracking-[0.09em]">
           What others see
         </h2>
@@ -150,7 +150,7 @@ export function AccountSettings({
         </ul>
       </section>
 
-      <section className="overflow-hidden rounded-xl border border-cc-rule bg-cc-surface">
+      <section className="overflow-hidden rounded-[12px] border border-cc-rule bg-cc-surface">
         <div className="border-cc-rule border-b px-[18px] pt-4 pb-3.5">
           <h2 className="m-0 font-semibold text-[15.5px]">GPA and grades</h2>
           <p className="m-0 mt-[5px] text-[13px] text-cc-muted leading-[1.5]">
@@ -218,7 +218,7 @@ export function AccountSettings({
         </div>
       </section>
 
-      <section className="flex items-center justify-between gap-4 rounded-xl border border-cc-rule bg-cc-surface px-[18px] py-4">
+      <section className="flex items-center justify-between gap-4 rounded-[12px] border border-cc-rule bg-cc-surface px-[18px] py-4">
         <div className="min-w-0">
           <h2 className="m-0 font-semibold text-[14px]">Delete my account</h2>
           <p className="m-0 mt-1 text-[12.5px] text-cc-muted leading-[1.5]">

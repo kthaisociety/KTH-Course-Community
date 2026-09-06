@@ -10,7 +10,6 @@ import {
   type Collection,
   type CourseCardCourse,
   CourseCardItem,
-  CourseItemSkeleton,
 } from "@/features/courses";
 import type { CardGeometry, CourseStats } from "@/types";
 import { EmptyPanel } from "./empty-panel";
@@ -260,7 +259,9 @@ export function CollectionDetail({
                       onRequestAuth={onRequestAuth}
                     />
                   ) : (
-                    <CourseItemSkeleton />
+                    // A course card that has not arrived yet, in the shape
+                    // Saved already uses for the same card.
+                    <div className="h-[236px] animate-pulse rounded-[11px] border border-cc-rule bg-cc-surface" />
                   )}
                 </div>
               </li>

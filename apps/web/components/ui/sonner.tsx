@@ -29,14 +29,20 @@ const Toaster = ({ ...props }: ToasterProps) => {
           "--normal-bg": "var(--popover)",
           "--normal-text": "var(--popover-foreground)",
           "--normal-border": "var(--border)",
-          "--border-radius": "var(--radius)",
+          /*
+            10px, because `Course Community - My Page.dc.html:415` draws the
+            toast at `border-radius:10px`.
+
+            It was `var(--radius)`, which is 0.625rem and therefore also 10px —
+            so this changes nothing on screen and is not a fix. It is stated
+            because the agreement was a coincidence: `--radius` is the base of
+            the shadcn ramp and moves for reasons that have nothing to do with
+            this component, and a value that is right by accident is one nobody
+            knows to re-check.
+          */
+          "--border-radius": "10px",
         } as React.CSSProperties
       }
-      toastOptions={{
-        classNames: {
-          toast: "cn-toast",
-        },
-      }}
       {...props}
     />
   );

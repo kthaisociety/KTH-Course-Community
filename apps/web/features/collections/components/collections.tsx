@@ -12,7 +12,6 @@ import {
 } from "@/features/collections/lib/collection-model";
 import {
   type Collection,
-  CourseItemSkeleton,
   courseCardGeometry,
   useCollectionMutations,
   useCollections,
@@ -421,10 +420,20 @@ export function Collections({
         ) : null}
 
         {isLoading ? (
-          <ul className="flex list-none flex-col gap-3 p-0">
+          /*
+            The tile's own silhouette — `CollectionTile` is `min-h-[150px]` at a
+            11px radius — in the app's loading idiom: a pulsing block the size of
+            what is coming, the way Saved, Explore, My Page and Taken all do it.
+
+            This was `CourseItemSkeleton`, a 280px two-column shadcn `Card` whose
+            own docstring called it legacy and which drew a course card, not a
+            collection. It was the wrong shape, the wrong height and the wrong
+            palette, and it is gone.
+          */
+          <ul className="flex list-none flex-col gap-3.5 p-0">
             {SKELETON_KEYS.map((key) => (
               <li key={key}>
-                <CourseItemSkeleton />
+                <div className="h-[150px] animate-pulse rounded-[11px] border border-cc-rule bg-cc-surface" />
               </li>
             ))}
           </ul>
