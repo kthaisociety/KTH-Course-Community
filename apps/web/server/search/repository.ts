@@ -91,23 +91,28 @@ export async function searchByKeyword(
 /**
  * Nearest neighbours by cosine distance — and, on ties, by course code.
  *
- * The tiebreak is not cosmetic. Distance alone is not a total order: two
- * courses at the identical distance may come back in either order between two
- * executions of this query, because nothing in the plan is obliged to break the
- * tie the same way twice. Under a LIMIT that is invisible — the set is the
- * same, only shuffled. Under pagination it is a bug: the service pages by
- * slicing one ordered prefix (#148), so a pair that swaps between the fetch for
- * page 2 and the fetch for page 3 puts one course on both pages and the other
- * on neither.
- *
- * Identical distances are not exotic here. Courses that share an ingested
- * description — a course re-established under a new code, a round duplicated
- * across schools — embed to the same vector and so sit at exactly the same
- * distance from every query.
+ * The tiebreak is not cosmetic. Distance alone is not a total order, and an
+ * ORDER BY that is not total obliges the executor to nothing: two rows at the
+ * identical distance may come back in either order between two executions of
+ * the same query. Under a plain LIMIT that is invisible — the same set, only
+ * shuffled. Under pagination it is a bug: the service pages by slicing one
+ * ordered prefix (#148), so a pair that swaps between the fetch for page 2 and
+ * the fetch for page 3 puts one course on both pages and the other on neither.
  *
  * `courses.code` is the primary key, so appending it makes the order total, and
  * total is what makes a LIMIT a stable prefix. `searchByKeyword` above already
- * ends this way for the same reason.
+ * ends this way for the same reason. The distance stays the leading key, so the
+ * HNSW index still provides the ordering and only the ties above it are sorted;
+ * the second key does not turn this into an alphabetical search.
+ *
+ * What it does *not* buy is exactness, and the comment would be dishonest
+ * without saying so. `course_explore_embedding_idx` is HNSW — approximate by
+ * construction, with a search list pgvector widens as the LIMIT grows — so a
+ * 61-row fetch is not *formally* guaranteed to begin with the same rows as a
+ * 21-row one, however reliably it does at this catalogue size. The tiebreak
+ * removes the one source of drift that is entirely ours. What bounds the rest
+ * is that this leg only ever supplies the tail: the service puts the exact
+ * keyword ranking first and appends these behind it.
  */
 export async function searchByEmbedding(
   embedding: number[],

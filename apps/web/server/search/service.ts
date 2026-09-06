@@ -203,8 +203,17 @@ function clampPage(page: number | undefined): number {
  *   cannot reach them; where it does not fill the window, it is exhausted and
  *   identical at every width, so the semantic tail extends rather than shifts.
  *
- * The cost of that is a discarded prefix: page 5 fetches 101 rows and drops 80.
- * At this catalogue size that is cheap, and `MAX_SEARCH_PAGES` bounds it.
+ * One honest caveat. The semantic leg reads an HNSW index, which is approximate
+ * and whose search list widens with the LIMIT, so its prefix is stable in
+ * practice rather than by construction — `repository.ts` says what the tiebreak
+ * does and does not buy. The exposure is bounded: the keyword leg is exact and
+ * comes first, so it is only the tail of a deep page that an ANN wobble could
+ * reshuffle, and no page a reader reaches by clicking Next is built from a
+ * different fetch than the one that offered it.
+ *
+ * The cost of the whole scheme is a discarded prefix: page 5 fetches 101 rows
+ * and drops 80. At this catalogue size that is cheap, and `MAX_SEARCH_PAGES`
+ * bounds it.
  */
 export async function searchCourses(
   query: string,
