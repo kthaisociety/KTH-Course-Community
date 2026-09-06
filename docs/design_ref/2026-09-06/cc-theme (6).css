@@ -58,6 +58,8 @@
   --nodeViolet: #6a4ea8;
   --checkedTint: rgba(23, 81, 166, .08);
   --checkedHoverTint: rgba(23, 81, 166, .14);
+  --focus: #1751a6;
+  --focusRing: rgba(23, 81, 166, .25);
 }
 
 [data-cc-theme="dark"] {
@@ -107,6 +109,8 @@
   --nodeViolet: #bda2f0;
   --checkedTint: rgba(142, 194, 255, .22);
   --checkedHoverTint: rgba(142, 194, 255, .32);
+  --focus: #8bb3ef;
+  --focusRing: rgba(139, 179, 239, .3);
 }
 
 /* Colour changes cross-fade; nothing else about a page animates from here. */
@@ -115,3 +119,12 @@
 }
 
 input::placeholder { color: var(--dim); }
+
+/* One focus treatment for the whole app: a visible ring on keyboard focus only,
+   overriding any inline outline:none. Applies to every focusable element —
+   native controls and hand-rolled role="button" divs alike. */
+[data-cc-theme] :focus-visible {
+  outline: 2px solid var(--focus) !important;
+  outline-offset: 2px !important;
+  box-shadow: 0 0 0 4px var(--focusRing) !important;
+}
