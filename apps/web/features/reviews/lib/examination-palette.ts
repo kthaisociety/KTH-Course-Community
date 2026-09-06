@@ -8,7 +8,7 @@ type ExaminationKey = (typeof EXAMINATION_DISTRIBUTION_KEYS)[number];
 
 /**
  * Fill colours for the examination split, extracted from `EXAMINATION_COLORS`
- * in `docs/design_ref/2026-09-05/cc-store.js`.
+ * in `docs/design_ref/2026-09-06/cc-store.js`.
  *
  * These are literal hexes rather than `--cc-*` tokens on purpose, and it is the
  * one place in this feature that is not styled against a token. A stacked bar

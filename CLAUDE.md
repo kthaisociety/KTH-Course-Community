@@ -63,7 +63,7 @@ apps/web/
 - Tests colocate as `*.spec.ts` next to server code; mock repositories, not the database.
 - Domain words: `CONTEXT.md`. Decisions: `docs/adr/NNNN-slug.md`.
 - Design: `docs/design_ref/` holds the artboards, in one dated folder per export.
-  **The newest dated folder is the authority** — today `docs/design_ref/2026-09-05/`.
+  **The newest dated folder is the authority** — today `docs/design_ref/2026-09-06/`.
   It governs layout, spacing, type, colour, copy, states and responsive behaviour.
   Where it contradicts the schema or `CONTEXT.md`, those win and the design adapts by
   the smallest edit that keeps it intact. Style against the `--cc-*` tokens, which

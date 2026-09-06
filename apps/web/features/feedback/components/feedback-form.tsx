@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import { useSubmitFeedback } from "../api/mutations";
 
 /**
- * The **Feedback form** — `docs/design_ref/2026-09-05/Course Community - Contact Form.dc.html`,
+ * The **Feedback form** — `docs/design_ref/2026-09-06/Course Community - Contact Form.dc.html`,
  * which the About artboard imports as a section and `/contact` renders on its
  * own.
  *

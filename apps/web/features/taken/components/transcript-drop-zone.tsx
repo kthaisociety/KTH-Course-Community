@@ -20,7 +20,7 @@ type Props = {
 };
 
 /**
- * Where a Ladok transcript goes in — `docs/design_ref/2026-09-05/Course Community -
+ * Where a Ladok transcript goes in — `docs/design_ref/2026-09-06/Course Community -
  * Taken Courses.dc.html`, the `isEmpty` screen and the `isUpdateModal` body,
  * which draw the same zone at two sizes.
  *

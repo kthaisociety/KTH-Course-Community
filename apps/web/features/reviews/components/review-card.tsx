@@ -16,7 +16,7 @@ import { toExcerpt } from "../lib/review-text";
 /**
  * What a reviewer who answered "I don't remember" gets drawn in place of a
  * chart. Copy from the review detail in
- * `docs/design_ref/2026-09-05/Course Community - My Page.dc.html`, with its "student"
+ * `docs/design_ref/2026-09-06/Course Community - My Page.dc.html`, with its "student"
  * changed to the reviewer, who is the one person the sentence is actually
  * about.
  */

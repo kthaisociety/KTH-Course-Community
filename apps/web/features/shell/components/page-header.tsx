@@ -10,7 +10,7 @@ type Props = {
  * The one page-title block every wide-shell page uses — same padding, size and
  * spacing everywhere, so no page hand-writes its own header markup.
  *
- * Straight from `docs/design_ref/2026-09-05/Course Community - Page Header.dc.html`, which is
+ * Straight from `docs/design_ref/2026-09-06/Course Community - Page Header.dc.html`, which is
  * the whole of that artboard.
  */
 export function PageHeader({ title, subtitle }: Props) {

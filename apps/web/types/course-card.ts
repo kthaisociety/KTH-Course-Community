@@ -1,7 +1,7 @@
 /**
  * The course card's prop shape.
  *
- * Extracted from `docs/design_ref/2026-09-05/Course Community - Course Card.dc.html` — the
+ * Extracted from `docs/design_ref/2026-09-06/Course Community - Course Card.dc.html` — the
  * `data-props` attribute on its trailing `<script type="text/x-dc">` block names
  * `c: CourseCardModel` and `geo: CardGeometry`, and the markup below it is what
  * reads each field. `apps/web/data/course-card-sample.ts` carries the artboard's

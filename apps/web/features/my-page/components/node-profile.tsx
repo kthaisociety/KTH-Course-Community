@@ -39,7 +39,7 @@ type Props = {
 /**
  * How far the viewer has unlocked their **node profile** — a node's appearance,
  * stored separately from graph topology — and the surface where they choose it.
- * This is the tab the artboard labels "My dot" (`docs/design_ref/2026-09-05/
+ * This is the tab the artboard labels "My dot" (`docs/design_ref/2026-09-06/
  * Course Community - My Page.dc.html`, its `isDot` branch); `CONTEXT.md`
  * licenses "dot" for the **Find your dot** flow's copy alone, so the label stays
  * and the identifiers say what the glossary says.

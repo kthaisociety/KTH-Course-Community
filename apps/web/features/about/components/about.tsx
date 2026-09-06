@@ -3,7 +3,7 @@ import { FeedbackForm } from "@/features/feedback";
 import { PageColumn, PageHeader } from "@/features/shell";
 
 /**
- * `/about` — `docs/design_ref/2026-09-05/Course Community - About.dc.html`.
+ * `/about` — `docs/design_ref/2026-09-06/Course Community - About.dc.html`.
  *
  * The artboard is one page called "About & contact": a page header, the
  * open-source card, and the Contact Form artboard imported underneath it. So the

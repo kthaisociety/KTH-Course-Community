@@ -12,7 +12,7 @@
  *
  * **Names, never hex.** The server stores a name on every axis and the client
  * maps it onto a `--cc-*` custom property, so the palette can be re-skinned in
- * CSS without a data migration. `docs/design_ref/2026-09-05/cc-store.js` inverts
+ * CSS without a data migration. `docs/design_ref/2026-09-06/cc-store.js` inverts
  * that — its `NODE_COLORS` is five raw hex strings — and is wrong about the
  * shape rather than about the colours.
  *

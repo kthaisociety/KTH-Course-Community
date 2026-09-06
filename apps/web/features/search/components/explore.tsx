@@ -23,7 +23,7 @@ import {
  * Explore: the search-and-browse workspace, and the app's front door to the
  * catalogue.
  *
- * From `docs/design_ref/2026-09-05/Course Community - Explore.dc.html`. Three things
+ * From `docs/design_ref/2026-09-06/Course Community - Explore.dc.html`. Three things
  * about it are this page's alone:
  *
  * - **It owns the course card's collapse ramp.** `courseCardGeometry` turns the

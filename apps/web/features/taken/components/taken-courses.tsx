@@ -117,7 +117,7 @@ function importedSummary(added: number, filled: number): string {
 }
 
 /**
- * The reader's taken courses — `docs/design_ref/2026-09-05/Course Community - Taken
+ * The reader's taken courses — `docs/design_ref/2026-09-06/Course Community - Taken
  * Courses.dc.html`.
  *
  * Four things about this screen are worth knowing before changing it.

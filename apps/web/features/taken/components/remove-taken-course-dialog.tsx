@@ -35,7 +35,7 @@ function bodyFor(row: TakenRow): string {
 
 /**
  * Confirming the removal of a taken course —
- * `docs/design_ref/2026-09-05/Course Community - My Page.dc.html:426-438`, which
+ * `docs/design_ref/2026-09-06/Course Community - My Page.dc.html:426-438`, which
  * is where this design lives: a 440px panel at 14px radius and 22px padding,
  * a brand eyebrow over a 19px/600 title, a 13.5px body, and two 38px buttons
  * ranged right over an `rgba(20,30,45,.34)` scrim.

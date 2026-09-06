@@ -66,7 +66,7 @@ export interface ReviewerProps {
 
 /**
  * The **fast-track reviewer** — the full-screen card stack drawn by the
- * `isReviewer` branch of `docs/design_ref/2026-09-05/Course Community - Taken
+ * `isReviewer` branch of `docs/design_ref/2026-09-06/Course Community - Taken
  * Courses.dc.html`, reached from the unreviewed prompt, from My Page's own
  * prompt via `/taken?review=1`, and from a row in either.
  *

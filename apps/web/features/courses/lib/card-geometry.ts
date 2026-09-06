@@ -15,9 +15,9 @@
  * constants below are who does not.
  *
  * Every number here is the artboard's:
- * `docs/design_ref/2026-09-05/Course Community - Explore.dc.html` computes exactly this ramp,
+ * `docs/design_ref/2026-09-06/Course Community - Explore.dc.html` computes exactly this ramp,
  * and at full width it lands on the `SAMPLE_GEO` literal in
- * `docs/design_ref/2026-09-05/Course Community - Course Card.dc.html`, which the fixture
+ * `docs/design_ref/2026-09-06/Course Community - Course Card.dc.html`, which the fixture
  * mirrors — `card-geometry.spec.ts` holds those two together.
  */
 

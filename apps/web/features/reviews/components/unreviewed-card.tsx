@@ -83,7 +83,7 @@ function CourseRowContent({ course }: { course: UnreviewedCourse }) {
 
 /**
  * The prompt shown for courses the viewer marked taken but never reviewed —
- * `docs/design_ref/2026-09-05/Course Community - Unreviewed Card.dc.html`.
+ * `docs/design_ref/2026-09-06/Course Community - Unreviewed Card.dc.html`.
  *
  * It is an invitation, not a warning, which is why it wears the ordinary card
  * surface and the brand button rather than the `--cc-warn-*` nudge palette; the

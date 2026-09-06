@@ -2,7 +2,7 @@
  * What the mobile header calls the page you are on.
  *
  * The Mobile Preview derives this from the route, not from anything the page
- * hands upward — `docs/design_ref/2026-09-05/Course Community - Mobile Preview.dc.html`
+ * hands upward — `docs/design_ref/2026-09-06/Course Community - Mobile Preview.dc.html`
  * line 414 is one map keyed by page:
  *
  *   pageTitle: { landing: "Course Community", explore: "Explore courses",

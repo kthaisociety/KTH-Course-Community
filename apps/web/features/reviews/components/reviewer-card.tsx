@@ -156,7 +156,7 @@ export interface ReviewerCardProps {
 
 /**
  * One course's card in the fast-track reviewer —
- * `docs/design_ref/2026-09-05/Course Community - Taken Courses.dc.html`, its
+ * `docs/design_ref/2026-09-06/Course Community - Taken Courses.dc.html`, its
  * `revActive` branch.
  *
  * The card is presentation and nothing else. It edits a `ReviewDraft` and hands

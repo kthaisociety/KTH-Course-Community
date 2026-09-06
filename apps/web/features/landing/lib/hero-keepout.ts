@@ -9,7 +9,7 @@
  * is this pixel from the headline" and stops there.
  *
  * The rule it exists to enforce is the artboard's, and it is a *guarantee*
- * rather than a fade. `docs/design_ref/2026-09-05/Course Community -
+ * rather than a fade. `docs/design_ref/2026-09-06/Course Community -
  * Landing.dc.html` generates its field by rejection — `clearAt(x, y, 5) < 1`
  * throws a candidate away and it tries again — so no dot it draws is ever
  * within `FEATHER` of the copy, and the `clearAt` multiplier it then applies to

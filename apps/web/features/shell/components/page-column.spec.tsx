@@ -10,7 +10,7 @@ describe("PageColumn", () => {
       </PageColumn>,
     );
     const column = screen.getByText("Page body").parentElement;
-    // `PAGE_MAX_WIDTH` in docs/design_ref/2026-09-05/cc-store.js.
+    // `PAGE_MAX_WIDTH` in docs/design_ref/2026-09-06/cc-store.js.
     expect(column).toHaveClass("max-w-[1216px]");
   });
 
