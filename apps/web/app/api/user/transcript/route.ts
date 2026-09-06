@@ -71,7 +71,7 @@ const UNATTRIBUTED = "unattributed";
  * **A signed-out visitor may parse, and may not write.** The artboard has a
  * guest drop a transcript in, read what came out, and meet the account at the
  * *keep* step — "Sign in to keep this list"
- * (`docs/design_ref/2026-09-06/Course Community - Taken Courses.dc.html:1305-1308`)
+ * (`docs/design_ref/2026-09-06/Course Community - Taken Courses.dc.html`)
  * — and that flow is implementable only because parsing and writing are two
  * calls. This one is open; `transcript.confirm` stays a `protectedProcedure`
  * and is the only thing in the flow that touches a row. Nothing a signed-out

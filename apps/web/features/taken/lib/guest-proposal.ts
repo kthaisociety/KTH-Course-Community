@@ -13,7 +13,7 @@ import type {
  * PDF in, reads what came out, and the confirm button says "Sign in to keep
  * this list" — then `{ screen: "auth", returnTo: "list", pending: "confirm" }`,
  * and after the sign-in "the action that asked for the account finishes itself"
- * (`docs/design_ref/2026-09-06/Course Community - Taken Courses.dc.html:1305-1308`,
+ * (`docs/design_ref/2026-09-06/Course Community - Taken Courses.dc.html`,
  * `:1247-1250`).
  *
  * In the artboard that resume is free, because its sign-in is a `setState`. Ours
@@ -38,7 +38,7 @@ import type {
  * **Grades are dropped unless the reader asked to keep them.** With the grades
  * switch off, `planTranscriptImport` throws the grades away at confirm time
  * anyway, and the artboard's own copy for that state is "no grade of yours is
- * stored anywhere" (`… - Taken Courses.dc.html:1296`). Carrying them through a
+ * stored anywhere" (`… - Taken Courses.dc.html`). Carrying them through a
  * sign-in would make that false for the sake of data the confirm is going to
  * discard, so they are stripped before the write rather than after the read.
  *

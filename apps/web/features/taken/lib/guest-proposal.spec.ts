@@ -69,7 +69,7 @@ describe("holding a proposal across a sign-in", () => {
 
   /**
    * The grades switch off means "no grade of yours is stored anywhere"
-   * (`docs/design_ref/2026-09-06/Course Community - Taken Courses.dc.html:1296`),
+   * (`docs/design_ref/2026-09-06/Course Community - Taken Courses.dc.html`),
    * and `planTranscriptImport` drops them at confirm time anyway. Writing them
    * down for the sake of data the confirm will discard would make that copy
    * false for the one storage the reader cannot see.

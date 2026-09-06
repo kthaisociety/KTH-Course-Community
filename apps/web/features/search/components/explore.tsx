@@ -24,7 +24,7 @@ import { useExplore } from "../hooks/use-explore";
  *
  * - **It owns the course card's collapse ramp.** `courseCardGeometry` turns the
  *   measured results-column width into the card's `geo`; the artboard computes
- *   the same ramp off the width the workspace pane leaves behind (line 1061).
+ *   the same ramp off the width the workspace pane leaves behind.
  *   The card measures nothing, which is why the geometry is a prop.
  * - **It is where a course opens.** #68 §5 retired the course page, so
  *   `/course/<code>` now redirects here carrying `?open=<code>&kind=…` and the
@@ -50,7 +50,7 @@ import { useExplore } from "../hooks/use-explore";
  *   gone rather than corrected; `hasMore` replaced it.
  *   `server/search/service.ts` carries the reasoning.
  * - The artboard's pager **labels the page it is on**
- *   (`docs/design_ref/2026-09-06/Course Community - Explore.dc.html:264`, whose
+ *   (`docs/design_ref/2026-09-06/Course Community - Explore.dc.html`, whose
  *   `pageLabel` is built at :1289) and this keeps that label, minus the
  *   `of M`. Dropping only the half the data cannot support is the smallest edit
  *   that leaves the control the artboard drew — three items centred with a
@@ -65,12 +65,12 @@ import { useExplore } from "../hooks/use-explore";
  *   removed: it had no design behind it and could only be applied after the
  *   query, which made searches silently return short.
  * - The artboard narrows its **search bar** by 236px while tabs are open
- *   (`searchBarMargin`, line 1351) so the field stays centred over the results
+ *   (`searchBarMargin`) so the field stays centred over the results
  *   rather than over the whole row. Not built: the bar is centred inside a
  *   `max-w-[560px]` box that is already narrower than the results column at
  *   every width the pane can open at, so the correction has nothing to correct.
  * - The artboard's **shared-element handoff from the landing hero** (its
- *   `pickUpSharedBar()`, line 856) *is* built, and is the one place in the app
+ *   `pickUpSharedBar()`) *is* built, and is the one place in the app
  *   authorised to improve on the artboard rather than match it.
  *   `useSearchBarArrival` below is the receiving end: when this mount is
  *   continuing a search the reader submitted on `/`, the bar animates out of the
@@ -326,14 +326,14 @@ const PAGER_BUTTON_CLASS =
 /**
  * The artboard's pager: Previous, the page it is on, Next.
  *
- * `docs/design_ref/2026-09-06/Course Community - Explore.dc.html:261-267`
+ * `docs/design_ref/2026-09-06/Course Community - Explore.dc.html`
  * draws exactly this — a 34px
  * pill either side of a `--muted` label, centred with a 14px gap, each pill
  * `--ink` when it can be used and `--dim2` when it cannot. Two things here are
  * not literal transcriptions of it:
  *
  * - **The label loses its "of M".** The artboard's store computes
- *   `"Page " + (page + 1) + " of " + pageCount` (line 1289) because its mock
+ *   `"Page " + (page + 1) + " of " + pageCount` because its mock
  *   store is the whole catalogue and can count it. The server cannot: one page
  *   of a de-duplicated union of a keyword ranking and a semantic one has no
  *   total behind it, and the semantic leg matches every course with an
@@ -452,14 +452,14 @@ function StartHere({ onSuggest }: { onSuggest: (query: string) => void }) {
  * This comment used to claim `cc-theme.css` carried no error surface and mix
  * the fill from `--cc-danger` at 12%; that was wrong twice over. The Design
  * System artboard names `--dangerTint` as *the* error banner surface
- * (`Course Community - Design System.dc.html:175-177`, alongside its border and
+ * (`Course Community - Design System.dc.html`, alongside its border and
  * its ink), and none of the three is derivable from the solid — dark states
  * them as alpha over the page, light as flat mixes that are not a percentage of
  * anything (`globals.css:182-187`, #127 §1). In light the difference showed:
  * the mix landed on a pink, the token is a warm peach.
  *
  * The icon takes `--cc-danger-ink` for the same reason, and it is also literally
- * what the artboard draws — `Course Community - Explore.dc.html:243` strokes it
+ * what the artboard draws — `Course Community - Explore.dc.html` strokes it
  * `#a3452a`, which is the ink, over the tint. Neither hex is pinned here: both
  * are light-mode values that would go invisible on the dark page.
  */

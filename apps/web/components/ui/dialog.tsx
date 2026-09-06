@@ -56,9 +56,9 @@ function DialogOverlay({
           of those six overrides had already turned the blur off.
 
           Two scrims legitimately differ and still say so at the call site: the
-          mobile drawer is `rgba(20,30,45,.4)` (`Mobile Preview.dc.html:242`) and
+          mobile drawer is `rgba(20,30,45,.4)` (`Mobile Preview.dc.html`) and
           Find your dot is `rgba(14,26,44,.34)`, dropping to `.08` while the dot
-          is revealing (`Landing.dc.html:164,1493`).
+          is revealing (`Landing.dc.html`).
         */
         "fixed inset-0 isolate z-50 bg-[rgba(20,30,45,0.34)] duration-100 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
         className,

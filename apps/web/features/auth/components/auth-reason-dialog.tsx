@@ -57,10 +57,10 @@ const REASONS: Record<
   },
   /**
    * The Taken Courses gate. Its kicker and title are the artboard's own —
-   * `docs/design_ref/2026-09-06/Course Community - Taken Courses.dc.html:58-59`
-   * draws "ONE STEP LEFT" over "Sign in to keep this list", and `:1305` puts
-   * the second of those on the confirm button that opens this. The body is the
-   * artboard's `authReturnLine` for a reader who has rows waiting (`:1245`).
+   * `docs/design_ref/2026-09-06/Course Community - Taken Courses.dc.html`
+   * draws "ONE STEP LEFT" over "Sign in to keep this list", and puts the second
+   * of those on the confirm button that opens this. The body is the artboard's
+   * `authReturnLine` for a reader who has rows waiting.
    */
   "keep-course-list": {
     kicker: "One step left",

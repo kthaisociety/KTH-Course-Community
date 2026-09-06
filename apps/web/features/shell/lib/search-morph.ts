@@ -16,9 +16,9 @@
  * else, which is what lets it be a genuine move instead of a dissolve pretending
  * to be one.
  *
- * `Course Community - Landing.dc.html`'s `toExplore()` (line 501) stashes the
+ * `Course Community - Landing.dc.html`'s `toExplore()` stashes the
  * rect under this same key and `Course Community - Explore.dc.html`'s
- * `pickUpSharedBar()` (line 855) reads it back, so the key and the shape are the
+ * `pickUpSharedBar()` reads it back, so the key and the shape are the
  * artboards'. What is not the artboards' is how the two ends are driven — see
  * `components/search-morph.tsx`.
  *

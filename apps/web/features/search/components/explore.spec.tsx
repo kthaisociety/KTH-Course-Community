@@ -675,7 +675,7 @@ describe("Explore", () => {
     });
 
     /**
-     * `Course Community - Explore.dc.html:243` draws the panel's badge as
+     * `Course Community - Explore.dc.html` draws the panel's badge as
      * `#a3452a` over `#fbeceb` — `--cc-danger-ink` over `--cc-danger-tint`, the
      * pair the Design System artboard names as the error banner. It used to
      * derive the fill with

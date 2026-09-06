@@ -662,7 +662,7 @@ describe("MyPage my dot", () => {
   });
 
   /**
-   * The signed-out panel, which `My Page.dc.html:73-90` draws inside the shell
+   * The signed-out panel, which `My Page.dc.html` draws inside the shell
    * rather than as a redirect. It was unreachable until `/profile` stopped
    * being redirected away and this page stopped calling `useRequireSession`.
    */

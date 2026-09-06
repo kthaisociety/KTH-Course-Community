@@ -78,7 +78,7 @@ describe("ConfirmDialog", () => {
     open();
     const classes = widthClasses();
 
-    // `My Page.dc.html:428` draws the confirmation at `width:440px`. This
+    // `My Page.dc.html` draws the confirmation at `width:440px`. This
     // component used to state that twice — `w-[440px]` plus an
     // `sm:max-w-[440px]` — because `DialogContent` carried an `sm:max-w-sm` that
     // a plain width could not merge away. #178 removed the clamp, so the second

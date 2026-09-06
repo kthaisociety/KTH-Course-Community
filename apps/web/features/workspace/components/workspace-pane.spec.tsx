@@ -471,7 +471,7 @@ describe("the review draft tab", () => {
       message: "<p>Hard but worth it.</p>",
     });
     /*
-     * `Course Community - Workspace Pane.dc.html:296-297` paints this banner
+     * `Course Community - Workspace Pane.dc.html` paints this banner
      * `var(--successTint)` with `var(--successInk)`. It used to derive the fill
      * from `--cc-success` at 12% in an inline `style` and take the solid for
      * the text, which no mix could reach in dark, where the design states the

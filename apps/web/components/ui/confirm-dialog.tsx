@@ -55,7 +55,7 @@ type Props = {
  *
  * ## Why this exists rather than `components/ui/alert-dialog`
  *
- * `Course Community - My Page.dc.html` lines 426-436 draw this dialog properly —
+ * `Course Community - My Page.dc.html` draws this dialog properly —
  * 440px, a 14px radius, 22px of padding, a brand eyebrow over a 19px/600 title,
  * an `rgba(20,30,45,.34)` scrim and 38px buttons. The stock `AlertDialogContent`
  * hands its buttons to `Button`'s variants and clamps its own width:

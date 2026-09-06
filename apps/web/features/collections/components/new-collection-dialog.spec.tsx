@@ -42,7 +42,7 @@ describe("NewCollectionDialog", () => {
     open();
     const classes = widthClasses();
 
-    // `Collections.dc.html:183` draws this dialog at `width:440px`. It rendered
+    // `Collections.dc.html` draws this dialog at `width:440px`. It rendered
     // at 384px until #178, because the primitive's `sm:max-w-sm` outlived this
     // `w-[440px]` from the `sm` breakpoint up.
     expect(classes).toContain("w-[440px]");

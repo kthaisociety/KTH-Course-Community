@@ -30,7 +30,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
           "--normal-text": "var(--popover-foreground)",
           "--normal-border": "var(--border)",
           /*
-            10px, because `Course Community - My Page.dc.html:415` draws the
+            10px, because `Course Community - My Page.dc.html` draws the
             toast at `border-radius:10px`.
 
             It was `var(--radius)`, which is 0.625rem and therefore also 10px —

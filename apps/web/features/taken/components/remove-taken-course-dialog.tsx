@@ -43,7 +43,7 @@ function bodyFor(row: TakenRow): string {
  * `components/ui/`"* — and this was the third screen.
  *
  * Two deliberate departures from
- * `docs/design_ref/2026-09-06/Course Community - My Page.dc.html:426-438`, both
+ * `docs/design_ref/2026-09-06/Course Community - My Page.dc.html`, both
  * recorded on the PR that made them.
  *
  * **It confirms before the write, not after.** The artboard removes on the click

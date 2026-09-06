@@ -235,7 +235,7 @@ describe("Saved", { timeout: 20_000 }, () => {
       ).toBeNull();
     });
 
-    // The artboard's own heading and line (lines 129-131). The line is what
+    // The artboard's own heading and line. The line is what
     // distinguishes this section from the `h1` of the same words above it.
     it("heads the list the way the artboard heads it", () => {
       saved("DD2380");
@@ -320,7 +320,7 @@ describe("Saved", { timeout: 20_000 }, () => {
   });
 
   /**
-   * `Course Community - Saved.dc.html` line 82 imports the Collections artboard
+   * `Course Community - Saved.dc.html` imports the Collections artboard
    * with `compact`. That embedding is the design's only way in to collections —
    * the artboard's rail has no entry for them — so it is part of this page
    * rather than a link away from it.
@@ -617,7 +617,7 @@ describe("Saved", { timeout: 20_000 }, () => {
    * The page a signed-out reader gets.
    *
    * `Saved.dc.html` draws this as a working page rather than a locked one: the
-   * list is the browser's (line 322, 517) and the hand-off into an account is
+   * list is the browser's and the hand-off into an account is
    * offered afterwards (119-124). Until this, `/saved` redirected a guest to
    * `/auth` from two places at once and none of it was reachable.
    */

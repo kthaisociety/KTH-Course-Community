@@ -20,7 +20,7 @@ function Switch({
         /*
           The artboard's switch: a 42×24 track at a 99px radius with 3px of
           inset, holding an 18px round thumb that travels 18px.
-          `Course Community - My Page.dc.html:324,331` draws both of them.
+          `Course Community - My Page.dc.html` draws both of them.
 
           The stock metrics were 32×18.4 with a 16px thumb and a
           `calc(100%-2px)` travel that worked out to 14px, so every number was

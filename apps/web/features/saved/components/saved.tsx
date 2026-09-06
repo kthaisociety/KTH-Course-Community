@@ -43,8 +43,8 @@ const SAVED_HEADING_ID = "saved-courses-heading";
  * about it are worth knowing before changing anything here.
  *
  * **It hosts the workspace pane, so its cards ramp.** The artboard imports the
- * pane at line 161 with the same contract Explore uses, and computes the card's
- * `geo` from what the pane leaves of the row (line 836) exactly as Explore
+ * pane with the same contract Explore uses, and computes the card's
+ * `geo` from what the pane leaves of the row exactly as Explore
  * does. So the geometry is measured here rather than pinned: with no tab open
  * the column is wide and the ramp lands on its expanded end, which is the fixed
  * object this page used to hand out, and with a tab open the cards collapse
@@ -65,7 +65,7 @@ const SAVED_HEADING_ID = "saved-courses-heading";
  * emptying (#155).
  *
  * **Collections is a section of this page, not a link away from it.** The
- * artboard imports the Collections artboard at line 82 with `compact`, which is
+ * artboard imports the Collections artboard with `compact`, which is
  * the design's only way in to collections — its rail has no entry for them, and
  * #91's stopgap rail link went when this landed. Opening a collection from the
  * chips opens its detail *here*, and the saved list gets out of its way, which
@@ -78,7 +78,7 @@ const SAVED_HEADING_ID = "saved-courses-heading";
  * takes nothing out of this list, and a course may be in several at once. The
  * chips above **narrow** the list — opening one swaps this list for that
  * collection's — rather than relocating anything out of it. The artboard says
- * the same thing at lines 129-135: `savedCards` over every saved code and
+ * the same thing: `savedCards` over every saved code and
  * `hasSaved` where the previous export had `unorganized` and `hasUnorganized`,
  * and no "Every saved course is in a collection" panel, because there is no
  * state in which this list can be empty while saves exist. #156 settled it;
@@ -96,7 +96,7 @@ const SAVED_HEADING_ID = "saved-courses-heading";
  * does the same job exactly rather than approximately — and, decisively, keeps
  * an open collection's detail scrollable. A fixed-height block above a row that
  * owns the page's only scroll would clip a long collection instead.
- * `resultsMax` (line 962) is computed by the artboard and never read by its
+ * `resultsMax` is computed by the artboard and never read by its
  * markup, so there is nothing to follow.
  */
 type Props = {
@@ -216,7 +216,7 @@ export function Saved({ openCollectionId = null, openCourse = null }: Props) {
    *
    * For a guest, the browser's own list. These are the artboard's `acctSaves`
    * and `localSaves`, and `savedVals` picks between them by exactly this test
-   * (`… - Saved.dc.html:517`). They are never merged for display: a reader who
+   * (`… - Saved.dc.html`). They are never merged for display: a reader who
    * has just signed in sees their account, and the banner above offers them the
    * browser list separately rather than showing a total that is not stored
    * anywhere.
@@ -341,7 +341,7 @@ export function Saved({ openCollectionId = null, openCourse = null }: Props) {
               className="flex flex-col gap-3.5 pt-[18px] pb-5 @max-[440px]:gap-3 @max-[440px]:pt-3"
             >
               {/*
-                The artboard's own heading and line, at lines 129-131. The line is
+                The artboard's own heading and line. The line is
                 the whole of what #156 settled, said to the reader: a collection
                 groups saved courses, it does not take them out of this list.
               */}

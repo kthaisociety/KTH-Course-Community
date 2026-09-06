@@ -133,7 +133,7 @@ export function useCourseCard({
    * A guest's save is not deferred behind sign-in any more: the Saved artboard
    * keeps a signed-out reader's list in the browser under its own key and
    * offers to move it into an account later
-   * (`docs/design_ref/2026-09-06/Course Community - Saved.dc.html:322`, and the
+   * (`docs/design_ref/2026-09-06/Course Community - Saved.dc.html`, and the
    * `pendingImport` row at 119-124). Interrupting a save to ask for an account
    * contradicted both that and the app's own line that browsing never needs
    * one.

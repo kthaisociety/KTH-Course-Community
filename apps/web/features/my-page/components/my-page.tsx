@@ -451,7 +451,7 @@ export function MyPage() {
 }
 
 /**
- * The artboard's signed-out panel (`… - My Page.dc.html:73-90`).
+ * The artboard's signed-out panel (`… - My Page.dc.html`).
  *
  * Two controls, as it draws: Sign up on `--btn`, Log in outlined beside it.
  * Both go to the same place — the artboard wires both of its own to `onSignIn`
