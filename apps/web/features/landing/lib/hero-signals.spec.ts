@@ -9,6 +9,7 @@ import {
   envelope,
   type HeroField,
   hitTest,
+  type SignalPaint,
   signalPaint,
   syncField,
   trailStyleOf,
@@ -527,25 +528,62 @@ describe("trail geometry", () => {
    * same edge, the same sender and the same progress, the four styles must
    * agree on where the head is and how bright it is, and differ only behind it.
    */
-  it("puts the head in the same place, at the same brightness, for all four", () => {
-    const heads = (["default", "comet", "fade", "dashed"] as const).map(
-      (style) => {
-        const field = fieldOf(chain(2, { signalStyle: "none" }));
-        burstAt(field, field.nodes[0]);
-        field.signals[0].style = style;
-        field.signals[0].p = 0.5;
-        const paint = signalPaint(field, field.signals[0]);
-        if (!paint) throw new Error("expected a visible signal");
-        return paint;
-      },
-    );
+  const STYLES = ["default", "comet", "fade", "dashed"] as const;
+
+  function paintAt(style: (typeof STYLES)[number], p: number) {
+    const field = fieldOf(chain(2, { signalStyle: "none" }));
+    burstAt(field, field.nodes[0]);
+    field.signals[0].style = style;
+    field.signals[0].p = p;
+    const paint = signalPaint(field, field.signals[0]);
+    if (!paint) throw new Error("expected a visible signal");
+    return paint;
+  }
+
+  it("puts the head in the same place for all four", () => {
+    const heads = STYLES.map((style) => paintAt(style, 0.5));
 
     for (const paint of heads.slice(1)) {
       expect(paint.headX).toBeCloseTo(heads[0].headX, 10);
       expect(paint.headY).toBeCloseTo(heads[0].headY, 10);
-      expect(paint.halo).toEqual(heads[0].halo);
     }
   });
+
+  /**
+   * The other half of "nobody's node reads as more important than anybody
+   * else's": one envelope drives all four, so every style brightens and fades
+   * in the same proportion even though they peak at different values — the
+   * tapering trail runs to `1.1 * k` at its very tip, where `fade` and `comet`
+   * lead at `k`.
+   *
+   * This used to be asserted as the four having an *identical* head, which was
+   * true only because the halo was one mark all four drew the same way. The
+   * halo is gone — it read as a circular glow around every signal and is not in
+   * the design — so the shared envelope is asserted directly, which is what the
+   * fairness rule actually means.
+   *
+   * Both samples sit early enough in the flight that the tip's `1.1` has not
+   * clipped at 1; past that the clamp flattens the ratio and would hide a style
+   * genuinely running on its own clock.
+   */
+  it("brightens every style from the one envelope", () => {
+    const growth = STYLES.map(
+      (style) =>
+        leadAlpha(paintAt(style, 0.35)) / leadAlpha(paintAt(style, 0.25)),
+    );
+
+    expect(Math.min(...growth)).toBeGreaterThan(1);
+    for (const rate of growth) expect(rate).toBeCloseTo(growth[0], 10);
+  });
+
+  /** The brightest thing a style draws, whichever kind of mark it draws it as. */
+  function leadAlpha(paint: SignalPaint): number {
+    return Math.max(
+      ...(paint.trail?.stops.map((stop) => stop.alpha) ?? []),
+      ...paint.strokes.map((stroke) => stroke.alpha),
+      ...paint.rings.map((ring) => ring.alpha),
+    );
+  }
 
   it("gives each style the wake its name promises", () => {
     // A long edge on purpose. A wake is clamped to what the signal has actually
@@ -565,30 +603,55 @@ describe("trail geometry", () => {
     // `fade` is rings dropped behind the head, and nothing stroked.
     const fade = paintWith("fade");
     expect(fade.strokes).toHaveLength(0);
+    expect(fade.trail).toBeNull();
     expect(fade.rings.length).toBeGreaterThan(1);
     const radii = fade.rings.map((ring) => ring.radius);
     expect(radii).toEqual([...radii].sort((a, b) => a - b));
     expect(Math.min(...radii)).toBeGreaterThan(NODE_RADIUS);
 
-    // `dashed` is the same trail, stroked through a pattern.
+    /*
+      `default` is one tapering stroke, and since the halo came off it is the
+      only thing a plain signal draws. It is a **gradient**, not a run of
+      sub-strokes: eight round-capped segments abutting end to end beaded at
+      every joint and read as crumbs, which is the defect this shape fixes.
+    */
+    const plain = paintWith("default");
+    expect(plain.trail).not.toBeNull();
+    expect(plain.strokes).toHaveLength(0);
+    expect(plain.rings).toHaveLength(0);
+    expect(plain.dash).toBeNull();
+    // Tail transparent, head bright, rising all the way — one smooth taper.
+    const stops = plain.trail?.stops ?? [];
+    expect(stops.length).toBeGreaterThan(2);
+    expect(stops[0].alpha).toBe(0);
+    const alphas = stops.map((stop) => stop.alpha);
+    expect(alphas).toEqual([...alphas].sort((a, b) => a - b));
+
+    // `dashed` is that same trail, traced through a pattern. A personalization
+    // tier a member chose, and the only dashing left on this canvas.
     const dashed = paintWith("dashed");
     expect(dashed.dash).not.toBeNull();
+    expect(dashed.trail).not.toBeNull();
     expect(dashed.rings).toHaveLength(0);
-    expect(paintWith("default").dash).toBeNull();
 
-    // `comet` is the same stroke, run further back.
+    // `comet` is its own three segments, run further back.
     const comet = paintWith("comet");
-    const plain = paintWith("default");
+    expect(comet.trail).toBeNull();
     expect(reach(comet)).toBeGreaterThan(reach(plain));
   });
 
   /** How far behind the head the furthest piece of a wake sits. */
-  function reach(paint: {
-    headX: number;
-    headY: number;
-    strokes: { fromX: number; fromY: number }[];
-  }) {
+  function reach(paint: SignalPaint) {
+    const tail = paint.trail
+      ? [
+          Math.hypot(
+            paint.trail.fromX - paint.headX,
+            paint.trail.fromY - paint.headY,
+          ),
+        ]
+      : [];
     return Math.max(
+      ...tail,
       ...paint.strokes.map((stroke) =>
         Math.hypot(stroke.fromX - paint.headX, stroke.fromY - paint.headY),
       ),
@@ -630,7 +693,10 @@ describe("trail geometry", () => {
     const stranger = build(false);
     const undimmed = signalPaint(stranger, stranger.signals[0]);
     const dimmed = signalPaint(stranger, stranger.signals[0], { dim: true });
-    expect(dimmed?.halo[0].alpha).toBeLessThan(undimmed?.halo[0].alpha ?? 0);
+    // Read off the trail's head, which is what the halo used to stand in for.
+    const headAlpha = (paint: SignalPaint | null) =>
+      paint?.trail?.stops.at(-1)?.alpha ?? 0;
+    expect(headAlpha(dimmed)).toBeLessThan(headAlpha(undimmed));
 
     const viewer = build(true);
     expect(signalPaint(viewer, viewer.signals[0], { dim: true })).toEqual(
@@ -649,8 +715,20 @@ describe("trail geometry", () => {
       field.signals[0].p = p;
       const paint = signalPaint(field, field.signals[0]);
       if (!paint) continue;
-      for (const stroke of paint.strokes) {
-        const along = Math.hypot(stroke.fromX - from.x, stroke.fromY - from.y);
+      // The trail's own tail counts: since the halo came off, it is the whole
+      // of what a plain signal draws, and `strokes` is empty for it.
+      const tails = [
+        ...paint.strokes.map((stroke) => ({
+          x: stroke.fromX,
+          y: stroke.fromY,
+        })),
+        ...(paint.trail
+          ? [{ x: paint.trail.fromX, y: paint.trail.fromY }]
+          : []),
+      ];
+      expect(tails.length).toBeGreaterThan(0);
+      for (const tail of tails) {
+        const along = Math.hypot(tail.x - from.x, tail.y - from.y);
         expect(along).toBeGreaterThanOrEqual(-1e-9);
         expect(along).toBeLessThanOrEqual(length + 1e-9);
       }

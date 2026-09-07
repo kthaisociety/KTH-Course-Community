@@ -10,6 +10,7 @@ import {
   type FieldNode,
   hitTest,
   type Signal,
+  type SignalPaint,
   signalPaint,
   syncField,
 } from "../lib/hero-signals";
@@ -425,11 +426,14 @@ function drawSignal(scene: Scene, palette: Palette, signal: Signal) {
 
   ctx.fillStyle = colour;
   ctx.strokeStyle = colour;
-  for (const disc of paint.halo) {
-    ctx.globalAlpha = disc.alpha;
-    ctx.beginPath();
-    ctx.arc(disc.x, disc.y, disc.radius, 0, Math.PI * 2);
-    ctx.fill();
+
+  // The head has no halo. It used to carry three filled discs of falling alpha
+  // out to a 14px radius, which read as a circular glow around every signal and
+  // is not in the design. The head is the bright end of the trail and nothing
+  // else.
+  if (paint.trail) {
+    drawTrail(ctx, colour, paint.trail, paint.dash);
+    ctx.strokeStyle = colour;
   }
 
   if (paint.dash) ctx.setLineDash?.(paint.dash);
@@ -455,6 +459,92 @@ function drawSignal(scene: Scene, palette: Palette, signal: Signal) {
     ctx.arc(ring.x, ring.y, ring.radius, 0, Math.PI * 2);
     ctx.stroke();
   }
+}
+
+/**
+ * `#rrggbb` as `"r, g, b"`, or `null` for anything this cannot read.
+ *
+ * Every colour a node draws in is a `--cc-node-*` or `--cc-brand`, and all
+ * seven are plain six-digit hex in `globals.css`. Three-digit hex is accepted
+ * because it is the one other form a hand-edited token plausibly takes. A
+ * palette read that found nothing returns `"currentColor"`, which is why this
+ * has to be allowed to fail rather than assume.
+ */
+function rgbChannels(colour: string): string | null {
+  const hex = colour.trim();
+  if (!hex.startsWith("#")) return null;
+  const digits = hex.slice(1);
+  const full =
+    digits.length === 3
+      ? digits
+          .split("")
+          .map((d) => d + d)
+          .join("")
+      : digits;
+  if (full.length !== 6 || !/^[0-9a-fA-F]{6}$/.test(full)) return null;
+  const channel = (at: number) => Number.parseInt(full.slice(at, at + 2), 16);
+  return `${channel(0)}, ${channel(2)}, ${channel(4)}`;
+}
+
+/**
+ * The wake, as one stroke through one gradient.
+ *
+ * This replaces eight equal sub-strokes each drawn under its own
+ * `globalAlpha`, which is what used to make a signal read as a row of crumbs:
+ * round caps on segments that abut end to end overlap by half a line width at
+ * every joint, and two different alphas overlapping composite to a darker bead
+ * — eight beads, with eight flat brightness steps between them. One stroke has
+ * no joints, so it has neither.
+ *
+ * `createLinearGradient` needs a colour whose alpha it can vary, and
+ * `hero-signals.ts` long carried a note saying that was unaffordable because
+ * every colour here is an opaque token. It is not: the tokens are hex, so the
+ * channels come off them directly. A colour that will not parse — a palette
+ * read that failed, and so returned `currentColor` — falls back to the flat
+ * stroke it would have had anyway, at the head's own alpha.
+ */
+function drawTrail(
+  ctx: CanvasRenderingContext2D,
+  colour: string,
+  trail: NonNullable<SignalPaint["trail"]>,
+  dash: number[] | null,
+) {
+  const channels = rgbChannels(colour);
+  const head = trail.stops.at(-1)?.alpha ?? 1;
+
+  if (channels === null) {
+    ctx.globalAlpha = head;
+    ctx.strokeStyle = colour;
+  } else {
+    ctx.globalAlpha = 1;
+    const gradient = ctx.createLinearGradient?.(
+      trail.fromX,
+      trail.fromY,
+      trail.toX,
+      trail.toY,
+    );
+    if (!gradient) {
+      ctx.globalAlpha = head;
+    } else {
+      for (const stop of trail.stops) {
+        gradient.addColorStop(stop.at, `rgba(${channels}, ${stop.alpha})`);
+      }
+      ctx.strokeStyle = gradient;
+    }
+  }
+
+  ctx.lineWidth = trail.width;
+  // Round, and only here: one stroke's caps are its two ends, so there are no
+  // interior joints for them to bead at. It is what rounds the head's tip.
+  ctx.lineCap = "round";
+  if (dash) ctx.setLineDash?.(dash);
+  ctx.beginPath();
+  ctx.moveTo(trail.fromX, trail.fromY);
+  ctx.lineTo(trail.toX, trail.toY);
+  ctx.stroke();
+  if (dash) ctx.setLineDash?.([]);
+  ctx.lineCap = "butt";
+  ctx.globalAlpha = 1;
 }
 
 /**
