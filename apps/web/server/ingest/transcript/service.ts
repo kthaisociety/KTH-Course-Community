@@ -88,6 +88,15 @@ export type ConfirmedTranscriptRow = Omit<
   "attendancePeriods"
 >;
 
+function toTakenCourseInput(row: ConfirmedTranscriptRow): TakenCourseInput {
+  return {
+    courseCode: row.courseCode.trim().toUpperCase(),
+    grade: row.grade ?? null,
+    earnedCredits: row.earnedCredits ?? null,
+    attendanceYear: row.attendanceYear ?? null,
+  };
+}
+
 /**
  * Writes the courses the user confirmed, and only those.
  *
@@ -106,20 +115,10 @@ export async function confirmTranscriptImport(
   importedAt: Date,
   fills: ConfirmedTranscriptRow[] = [],
 ): Promise<{ inserted: number; updated: number }> {
-  const inputs: TakenCourseInput[] = rows.map((row) => ({
-    courseCode: row.courseCode.trim().toUpperCase(),
-    grade: row.grade ?? null,
-    earnedCredits: row.earnedCredits ?? null,
-    attendanceYear: row.attendanceYear ?? null,
-  }));
+  const inputs = rows.map(toTakenCourseInput);
   if (inputs.length === 0) return { inserted: 0, updated: 0 };
 
-  const fillInputs: TakenCourseInput[] = fills.map((row) => ({
-    courseCode: row.courseCode.trim().toUpperCase(),
-    grade: row.grade ?? null,
-    earnedCredits: row.earnedCredits ?? null,
-    attendanceYear: row.attendanceYear ?? null,
-  }));
+  const fillInputs = fills.map(toTakenCourseInput);
   const codes = [...inputs, ...fillInputs].map((input) => input.courseCode);
   const known = new Set(
     (await getSummariesByCodes(codes)).map((summary) => summary.courseCode),
