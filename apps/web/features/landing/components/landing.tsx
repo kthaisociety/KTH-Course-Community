@@ -8,6 +8,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   type AuthReason,
   AuthReasonDialog,
+  UserAvatar,
   useLogout,
   useSessionData,
 } from "@/features/auth";
@@ -17,6 +18,7 @@ import {
   ThemeToggle,
 } from "@/features/shell";
 import { dismissKeyboard } from "@/lib/dismiss-keyboard";
+import { displayNameOf } from "@/lib/identity";
 import { isUnplaced, useNeighbourhood, usePublicWindow } from "../api/queries";
 import { FindYourDot, type FindYourDotStatus } from "./find-your-dot";
 import { HeroNetwork } from "./hero-network";
@@ -319,11 +321,13 @@ export function Landing() {
           {sessionPending ? null : user ? (
             <div className="flex items-center gap-2">
               <span className="flex h-[34px] items-center gap-2 rounded-[8px] bg-cc-pill py-0 pr-[11px] pl-[5px]">
-                <span className="flex size-6 items-center justify-center rounded-full bg-cc-btn font-bold text-[10px] text-cc-btn-fg">
-                  {initials(user)}
-                </span>
+                <UserAvatar
+                  user={user}
+                  className="size-6"
+                  fallbackClassName="bg-cc-btn font-bold text-[10px] text-cc-btn-fg"
+                />
                 <span className="max-w-[10rem] truncate font-medium text-[13px]">
-                  {displayName(user)}
+                  {displayNameOf(user.name ?? "", user.email ?? "")}
                 </span>
               </span>
               <button
@@ -649,20 +653,4 @@ function dotStatus(input: {
   if (isUnplaced(input.error)) return "unplaced";
   if (input.isError) return "unavailable";
   return "locating";
-}
-
-function displayName(user: { name?: string | null; email?: string | null }) {
-  return user.name?.trim() || (user.email?.trim().split("@")[0] ?? "");
-}
-
-function initials(user: { name?: string | null; email?: string | null }) {
-  const name = user.name?.trim() ?? "";
-  const fromName = name
-    .split(/\s+/)
-    .filter(Boolean)
-    .map((part) => part[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
-  return fromName || user.email?.trim().charAt(0).toUpperCase() || "?";
 }

@@ -4,8 +4,7 @@ import { RotateCw, TriangleAlert } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useRef, useState } from "react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { authHref, SignInPrompt, useMe } from "@/features/auth";
+import { authHref, SignInPrompt, UserAvatar, useMe } from "@/features/auth";
 import { UnreviewedCard, useUnreviewedTakenCourses } from "@/features/reviews";
 import { PageColumn, PageHeader } from "@/features/shell";
 // The module, not `@/features/taken`: the barrel holds that feature's write
@@ -13,8 +12,6 @@ import { PageColumn, PageHeader } from "@/features/shell";
 // route contract is one pure function and this is the half of it that builds
 // a link — `/taken` owns the half that reads one.
 import { reviewHref } from "@/features/taken/lib/review-deep-link";
-import { initialsOf } from "@/lib/initials";
-import type { Me } from "@/lib/user";
 import { useSetNodeAppearance } from "../api/mutations";
 import {
   isTierUnavailable,
@@ -250,7 +247,11 @@ export function MyPage() {
               className="size-11 flex-none animate-pulse rounded-full bg-cc-pill"
             />
           ) : (
-            <ProfileAvatar user={user} />
+            <UserAvatar
+              user={user}
+              className="size-11"
+              fallbackClassName="bg-cc-pill font-semibold text-[15px] text-cc-brand"
+            />
           )
         }
       />
@@ -493,32 +494,6 @@ export function MyPage() {
         />
       ) : null}
     </PageColumn>
-  );
-}
-
-/**
- * The reader's picture, beside their name in the page header.
- *
- * Whatever the sign-in provider handed Better Auth: Google and GitHub supply an
- * image with the profile, magic-link sign-in supplies none, and nothing in this
- * app writes the column. So an email-only account shows initials, which is what
- * the rail has always shown for everyone — the two now compute them from one
- * helper so they cannot disagree.
- *
- * `alt=""` because the name is the `h1` immediately beside it. Announcing the
- * picture would read the same account twice.
- */
-function ProfileAvatar({ user }: { user: Me | null }) {
-  return (
-    <Avatar className="size-11 flex-none">
-      {user?.image ? <AvatarImage src={user.image} alt="" /> : null}
-      {/* Radix falls through to this whenever the provider's URL fails to
-          load, so an expired or blocked image degrades to initials rather
-          than to a broken picture. */}
-      <AvatarFallback className="bg-cc-pill font-semibold text-[15px] text-cc-brand">
-        {initialsOf(user?.name ?? "", user?.email ?? "")}
-      </AvatarFallback>
-    </Avatar>
   );
 }
 
