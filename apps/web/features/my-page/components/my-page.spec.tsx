@@ -43,7 +43,6 @@ vi.mock("@/features/auth", async () => ({
     .SignInPrompt,
 }));
 
-vi.mock("@/lib/user", () => ({ uploadProfilePicture: vi.fn() }));
 vi.mock("sonner", () => ({
   toast: { error: vi.fn(), success: vi.fn(), info: vi.fn() },
 }));

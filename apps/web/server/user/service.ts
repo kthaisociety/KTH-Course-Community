@@ -14,10 +14,6 @@ export function getSavedCourseCodes(id: string): Promise<string[]> {
   return listSavedCourseCodes(id);
 }
 
-export function updateImage(id: string, imageURL: string) {
-  return userRepo.updateImage(id, imageURL);
-}
-
 export function deleteUser(id: string): Promise<void> {
   return userRepo.deleteById(id);
 }

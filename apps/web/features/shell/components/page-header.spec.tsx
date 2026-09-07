@@ -29,6 +29,30 @@ describe("PageHeader", () => {
     expect(container.querySelector("h1")?.nextElementSibling).toBeNull();
   });
 
+  it("draws a leading slot before the title", () => {
+    render(
+      <PageHeader
+        title="Elsa Lindqvist"
+        subtitle="Private to you."
+        leading={<span data-testid="avatar" />}
+      />,
+    );
+    const avatar = screen.getByTestId("avatar");
+    const heading = screen.getByRole("heading", { level: 1 });
+    expect(
+      avatar.compareDocumentPosition(heading) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  // The five routes that pass no slot must keep the header they had, so the
+  // row collapses to the title block alone rather than leaving an empty cell.
+  it("adds nothing to the row when there is no leading slot", () => {
+    const { container } = render(<PageHeader title="Explore" />);
+    const row = container.querySelector("h1")?.parentElement?.parentElement;
+    expect(row?.children).toHaveLength(1);
+  });
+
   it("uses the named shell breakpoint so tablet containers cannot lose the title", () => {
     const { container } = render(<PageHeader title="Explore courses" />);
     expect(container.firstElementChild).toHaveClass("hidden");
