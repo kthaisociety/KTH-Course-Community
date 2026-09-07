@@ -545,17 +545,15 @@
 
    ## The hand-rolled treatments that remain
 
-   This rule is meant to be the only focus treatment in the app. Three call
-   sites in `features/**` still carry their own, and each says why at the call
+   This rule is meant to be the only focus treatment in the app. Two call sites
+   in `features/**` still carry their own, and each says why at the call
    site: `review-draft-panel.tsx`'s checkbox ring (painted on a sibling of an
    `sr-only` peer, which this rule cannot reach), `workspace-pane.tsx`'s
-   `focus:bg-cc-pill` (a menu highlight, not a ring), and
-   `search/components/explore.tsx`'s `focus-visible:outline-cc-brand`, which
-   this rule already overrides and which is therefore dead. Anything else added
-   in `features/**` is a duplicate of this rule — with one exception, which is
-   the `data-cc-field` rule below and is not a duplicate but a *move*: the two
-   search bars draw this treatment on the box the reader sees instead of on the
-   input inside it. */
+   `focus:bg-cc-pill` (a menu highlight, not a ring). Anything else added in
+   `features/**` is a duplicate of this rule — with one exception, which is the
+   `data-cc-field` rule below and is not a duplicate but a *move*: the two search
+   bars draw this treatment on the box the reader sees instead of on the input
+   inside it. */
 :focus-visible:not([tabindex="-1"]) {
   /* biome-ignore lint/complexity/noImportantStyles: it has to beat the 22 inline `outline:none` declarations the artboards carry, and the shadcn primitives' own ring. Without it a focus style exists everywhere except where it is needed. */
   outline: 2px solid var(--cc-focus) !important;
