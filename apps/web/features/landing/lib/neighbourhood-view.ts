@@ -6,7 +6,7 @@
  * `graph.publicWindow` hand back the persisted world positions untouched;
  * everything in this file is derived at read time and thrown away on the next
  * resize. Nothing here is ever written back, exactly as
- * `docs/landing_docs/personal-community-viewport.md` requires.
+ * `docs/landing_docs/shared-community-viewport.md` requires.
  *
  * The projection is that document's, taken literally:
  *
@@ -32,12 +32,23 @@
  * keep-out adjustment" the viewport document lists as derived and never written
  * back. `pickViewportCentre` below is that function.
  *
- * What it buys, beyond the copy staying readable, is that the viewer's own node
- * lands *on* the anchor by identity: `input.centre` **is** their persisted
- * world position, so their offset from it is zero. No search for their dot, no
- * special case, nothing stored. It holds across sessions for as long as the
- * frame and the copy layout hold — a resize or a reworded headline moves the
- * anchor, and that is a responsive adjustment rather than a broken promise.
+ * **Nobody is drawn at the middle of their own community.** `input.centre` is
+ * `COMMUNITY_ORIGIN` for a member and a visitor alike, so a member's dot sits
+ * wherever their world position puts it — somewhere specific, and not special.
+ * The window used to be centred on the reader, which drew every one of them at
+ * the centre; put two members' screens side by side and both are the middle,
+ * and the graph stops reading as one community and starts reading as something
+ * generated per viewer. The arrangement two friends compare is now the same
+ * arrangement, with two different dots lit up in it.
+ *
+ * Finding yourself is `fitViewerInFrame`'s job: the camera is nudged by the
+ * fewest pixels that put your dot on the canvas, and by nothing more. A pan
+ * translates every node equally, so it changes which part of the graph is on
+ * screen and never what the graph looks like. For most members it moves nothing
+ * at all and their page is the visitor's page exactly. It holds across sessions
+ * for as long as the frame and the copy layout hold — a resize or a reworded
+ * headline moves the anchor, and that is a responsive adjustment rather than a
+ * broken promise.
  *
  * Keep-out is no longer only a fade. `pushClear` walks a node out from under
  * the copy first, and the fade is what is left for the case it refuses; see
@@ -236,7 +247,7 @@ export type GraphWindowView = {
 /**
  * Pixels per world unit. A **constant**, and that is the whole point.
  *
- * `personal-community-viewport.md` calls the visible-node maximum "a
+ * `shared-community-viewport.md` calls the visible-node maximum "a
  * frontend/query policy", so the number is ours to choose — but it may not be a
  * function of who is looking or of what their neighbourhood happens to contain,
  * or two people in one region of the graph see it at two different zooms.
@@ -372,6 +383,86 @@ export function pickViewportCentre(
 }
 
 /**
+ * How much room a panned-in dot keeps between itself and the frame edge, in px.
+ *
+ * Sized for the largest mark the canvas draws on a node rather than for a node:
+ * **Find your dot** replaces the viewer's dot with a radius-7.5 shape inside a
+ * 12.5px ring, so a dot 14px in can still wear its reveal whole.
+ */
+export const VIEWER_MARGIN = 14;
+
+/**
+ * The viewer's projected offset from the window centre, or `null` if this
+ * window has no "You" in it — every visitor's window, and a member's until the
+ * server flags their node.
+ */
+function viewerOffset(
+  input: GraphWindowInput,
+): { x: number; y: number } | null {
+  const me = input.nodes.find((node) => node.isViewer);
+  if (!me) return null;
+  return {
+    x: (me.x - input.centre.x) * VIEW_SCALE,
+    y: (me.y - input.centre.y) * VIEW_SCALE,
+  };
+}
+
+/**
+ * Nudge the camera just far enough that the viewer's own dot is on the canvas.
+ *
+ * **The smallest possible nudge, and the smallness is the design.** Every
+ * window is centred on `COMMUNITY_ORIGIN` now — nobody is drawn at the middle of
+ * their own community, because two members comparing screens would both be the
+ * centre and the graph would read as generated per viewer rather than as one
+ * place they are both in. This is what keeps that true while still letting
+ * somebody find themselves: it moves the camera by the fewest pixels that put
+ * their dot in frame, so their neighbours come with them, in the arrangement
+ * everybody else sees them in. Pan further and the page starts being about the
+ * viewer again.
+ *
+ * A pan translates every node equally, so it cannot change what the graph looks
+ * like — only which part of it is on screen. Nodes pushed off the far edge by
+ * the nudge are **not** a failure: a member out at the rim seeing the community
+ * from the rim is the honest picture, and the rest of it is still there, just
+ * not in this viewport.
+ *
+ * On-canvas is the whole test. It deliberately does not try to keep the dot
+ * clear of the copy — `pushClear` already walks any node out from under the
+ * headline, and a camera that also chased legibility would move further than
+ * "just enough" and start composing a personal view.
+ *
+ * A window with no viewer in it returns the anchor untouched, which is every
+ * visitor's page.
+ */
+export function fitViewerInFrame(args: {
+  anchor: { x: number; y: number };
+  viewer: { x: number; y: number } | null;
+  width: number;
+  height: number;
+}): { x: number; y: number } {
+  const { anchor, viewer, width, height } = args;
+  if (!viewer) return anchor;
+  return {
+    x: anchor.x + nudge(anchor.x + viewer.x, width),
+    y: anchor.y + nudge(anchor.y + viewer.y, height),
+  };
+}
+
+/**
+ * How far one axis has to move to bring `at` inside the frame, and 0 when it is
+ * already there.
+ *
+ * A frame narrower than its own two margins has no inside to reach; the dot is
+ * left where it is rather than being shuffled between two impossible bounds.
+ */
+function nudge(at: number, extent: number): number {
+  if (extent < VIEWER_MARGIN * 2) return 0;
+  if (at < VIEWER_MARGIN) return VIEWER_MARGIN - at;
+  if (at > extent - VIEWER_MARGIN) return extent - VIEWER_MARGIN - at;
+  return 0;
+}
+
+/**
  * Project a bounded window onto a canvas of `width` by `height`.
  *
  * The result is pure derivation: `input` is not mutated, and nothing computed
@@ -384,7 +475,15 @@ export function projectGraphWindow(args: {
   keepOut: Rect[];
 }): GraphWindowView {
   const { window: input, width, height, keepOut } = args;
-  const centre = pickViewportCentre(width, height, keepOut);
+  // Where the camera would sit for a visitor, then the smallest nudge that
+  // brings the viewer's own dot onto the canvas. For most people the second
+  // step changes nothing and their page is the visitor's page exactly.
+  const centre = fitViewerInFrame({
+    anchor: pickViewportCentre(width, height, keepOut),
+    viewer: viewerOffset(input),
+    width,
+    height,
+  });
 
   const byId = new Map<string, ScreenNode>();
   const nodes = input.nodes.map((node) => {

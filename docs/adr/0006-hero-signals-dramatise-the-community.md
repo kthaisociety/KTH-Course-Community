@@ -57,7 +57,7 @@ would have made the feature invisible on a community where personalisation has
 close to no writers, which is the situation #68 recorded and accepted.
 
 **A friendship must never be drawn as an edge on this canvas, and must never emit
-a signal.** `docs/landing_docs/personal-community-viewport.md` defers a real
+a signal.** `docs/landing_docs/shared-community-viewport.md` defers a real
 friend feature whose mechanism is a "wormhole" that *moves the camera* to a
 friend's neighbourhood without touching either user's placement or backbone
 connections. That language — camera movement, not travelling light — stays

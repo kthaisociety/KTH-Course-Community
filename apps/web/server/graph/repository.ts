@@ -2,8 +2,10 @@ import {
   and,
   count,
   eq,
+  gt,
   inArray,
   isNotNull,
+  isNull,
   lt,
   max,
   ne,
@@ -103,6 +105,49 @@ export async function countNodes(): Promise<number> {
     .select({ value: count() })
     .from(schema.usersGraphNodes);
   return row?.value ?? 0;
+}
+
+/**
+ * A page of the app users who have no node in the community graph at all.
+ *
+ * This set is exactly the people neither placement path reached: accounts
+ * created before the graph existed and so never seen by the sign-up hook, and
+ * accounts whose hook swallowed a failure — it is written to swallow, so a
+ * placement can be lost without anything else noticing. A member's own first
+ * read repairs their row, which is why the set is usually small and is only
+ * ever people who have not signed in since.
+ *
+ * Paged on the user id with a cursor rather than an offset, for a reason the
+ * tier backfill does not have: placing somebody **removes them from this set**,
+ * so every page shifts the rows underneath an offset and it would step over
+ * whoever slid into the gap. The cursor is also what makes the walk terminate
+ * if a placement ever silently does not take, instead of re-reading the same
+ * app user for ever.
+ *
+ * An anti-join rather than a `not exists`: both sides are keyed on the user id,
+ * so it is an index scan either way, and this is the shape the rest of this
+ * file reads in.
+ */
+export async function findUnplacedUserIds(
+  after: string | null,
+  limit: number,
+): Promise<string[]> {
+  const rows = await db
+    .select({ userId: schema.users.id })
+    .from(schema.users)
+    .leftJoin(
+      schema.usersGraphNodes,
+      eq(schema.usersGraphNodes.userId, schema.users.id),
+    )
+    .where(
+      and(
+        isNull(schema.usersGraphNodes.userId),
+        after === null ? undefined : gt(schema.users.id, after),
+      ),
+    )
+    .orderBy(schema.users.id)
+    .limit(limit);
+  return rows.map((row) => row.userId);
 }
 
 /**

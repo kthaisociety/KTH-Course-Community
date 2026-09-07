@@ -10,6 +10,7 @@ import {
 import type { BackboneEdge, NeighbourNode, PlacementWrite } from "./repository";
 import * as graphRepo from "./repository";
 import {
+  backfillCommunityGraphPlacements,
   backfillEarnedPersonalizationTiers,
   COMMUNITY_ORIGIN,
   getNeighbourhood,
@@ -18,8 +19,7 @@ import {
   getPublicWindow,
   joinCommunityGraph,
   joinCommunityGraphOnSignUp,
-  MAX_NEIGHBOURHOOD_NODES,
-  MAX_PUBLIC_WINDOW_NODES,
+  MAX_WINDOW_NODES,
   recordEarnedPersonalizationTier,
   recordEarnedPersonalizationTierOnContribution,
   setNodeAppearance,
@@ -320,26 +320,78 @@ describe("getNeighbourhood", () => {
     });
   }
 
-  it("bounds the node set to the neighbourhood maximum", async () => {
+  it("bounds the node set to the window maximum", async () => {
     placedViewer();
     vi.mocked(graphRepo.findNearestNodes).mockResolvedValue([viewer]);
 
     await getNeighbourhood("viewer");
 
     expect(graphRepo.findNearestNodes).toHaveBeenCalledWith(
-      { x: 100, y: 100 },
-      MAX_NEIGHBOURHOOD_NODES,
+      COMMUNITY_ORIGIN,
+      MAX_WINDOW_NODES,
     );
   });
 
-  it("centres the window on the viewer's own world position", async () => {
+  /**
+   * The requirement, as a test. A window centred on whoever is reading it draws
+   * every member at the middle of their own community, and two members
+   * comparing screens would both be the centre — which makes the graph read as
+   * something generated per viewer. Everyone gets the origin; finding yourself
+   * is the camera's job, on the client.
+   */
+  it("centres the window on the community origin, not on the viewer", async () => {
     placedViewer();
     vi.mocked(graphRepo.findNearestNodes).mockResolvedValue([viewer]);
 
-    expect((await getNeighbourhood("viewer")).centre).toEqual({
-      x: 100,
-      y: 100,
-    });
+    expect((await getNeighbourhood("viewer")).centre).toEqual(COMMUNITY_ORIGIN);
+  });
+
+  it("serves a member and a visitor the same window, differing only in the flag", async () => {
+    placedViewer();
+    vi.mocked(graphRepo.findNearestNodes).mockResolvedValue([
+      viewer,
+      neighbour("them", 300, -80),
+    ]);
+
+    const mine = await getNeighbourhood("viewer");
+    const theirs = await getPublicWindow();
+
+    expect(mine.centre).toEqual(theirs.centre);
+    expect(mine.nodes.map((node) => [node.x, node.y])).toEqual(
+      theirs.nodes.map((node) => [node.x, node.y]),
+    );
+    expect(mine.nodes.filter((node) => node.isViewer)).toHaveLength(1);
+    expect(theirs.nodes.filter((node) => node.isViewer)).toHaveLength(0);
+  });
+
+  /**
+   * The window is the nodes nearest the *origin*, a set the caller has no claim
+   * on — so a member out past `MAX_WINDOW_NODES` would not be in it at all, and
+   * no camera pan can show a dot that is not in the payload. Before, when the
+   * window was centred on them, they were in it by construction.
+   */
+  it("appends the viewer's own node when the bounded read did not reach them", async () => {
+    placedViewer();
+    vi.mocked(graphRepo.findNearestNodes).mockResolvedValue([
+      neighbour("near-the-origin", 0, 0),
+    ]);
+    vi.mocked(graphRepo.findNodeProfile).mockResolvedValue(undefined);
+
+    const { nodes } = await getNeighbourhood("viewer");
+
+    const me = nodes.find((node) => node.isViewer);
+    expect(me).toMatchObject({ x: 100, y: 100 });
+    // Unconfigured, which is what the column defaults would have said anyway.
+    expect(me).toMatchObject({ color: "default", style: "default" });
+  });
+
+  it("spends no extra query on a viewer the bounded read already returned", async () => {
+    placedViewer();
+    vi.mocked(graphRepo.findNearestNodes).mockResolvedValue([viewer]);
+
+    await getNeighbourhood("viewer");
+
+    expect(graphRepo.findNodeProfile).not.toHaveBeenCalled();
   });
 
   it("includes the viewer's own node, flagged, so they can find their dot", async () => {
@@ -455,7 +507,7 @@ describe("getPublicWindow", () => {
 
     expect(graphRepo.findNearestNodes).toHaveBeenCalledWith(
       COMMUNITY_ORIGIN,
-      MAX_PUBLIC_WINDOW_NODES,
+      MAX_WINDOW_NODES,
     );
     expect(window.centre).toEqual({ x: 0, y: 0 });
   });
@@ -792,6 +844,111 @@ describe("backfillEarnedPersonalizationTiers", () => {
     await expect(backfillEarnedPersonalizationTiers()).rejects.toThrow(
       "neon is having a day",
     );
+  });
+});
+
+/**
+ * Sign-up placement swallows its failures and accounts older than the graph
+ * never saw it, so a real account can exist with no dot on the hero. These
+ * cover what makes one pass over those people safe: it visits each of them
+ * once, it pages until the pages run out, a second run is a no-op — and,
+ * the property with teeth, it places them one at a time so no two are
+ * computed against the same node count.
+ */
+describe("backfillCommunityGraphPlacements", () => {
+  /** Unplaced app users served a page at a time, as the repository serves them. */
+  function unplaced(userIds: string[], pageSize: number) {
+    vi.mocked(graphRepo.findUnplacedUserIds).mockImplementation(
+      async (after, limit) => {
+        const start = after === null ? 0 : userIds.indexOf(after) + 1;
+        return userIds.slice(start, start + Math.min(limit, pageSize));
+      },
+    );
+  }
+
+  it("places every unplaced app user, following the cursor across pages", async () => {
+    unplaced(["u1", "u2", "u3", "u4", "u5"], 2);
+
+    expect(await backfillCommunityGraphPlacements(2)).toEqual({ placed: 5 });
+
+    const placed = vi
+      .mocked(graphRepo.persistPlacement)
+      .mock.calls.map((call) => call[0].node.userId);
+    expect(placed).toEqual(["u1", "u2", "u3", "u4", "u5"]);
+  });
+
+  it("does nothing when every app user already has a node", async () => {
+    unplaced([], 100);
+
+    expect(await backfillCommunityGraphPlacements()).toEqual({ placed: 0 });
+    expect(graphRepo.persistPlacement).not.toHaveBeenCalled();
+  });
+
+  /**
+   * The one that matters. `computeWorldPosition` reads the node count before
+   * the write, so anything that placed a page concurrently would compute the
+   * same radius for all of it — and at index 0 the identical point, because a
+   * jittered angle times a zero radius is still the origin. Two people would
+   * then share a dot, which is the exact failure this backfill exists to undo.
+   */
+  it("places one at a time, so no two land on the same radius", async () => {
+    inMemoryCommunity();
+    unplaced(["u1", "u2", "u3", "u4"], 100);
+
+    await backfillCommunityGraphPlacements();
+
+    const radii = vi
+      .mocked(graphRepo.persistPlacement)
+      .mock.calls.map((call) => Math.hypot(call[0].node.x, call[0].node.y));
+    expect(radii).toHaveLength(4);
+    for (let i = 1; i < radii.length; i++) {
+      expect(radii[i]).toBeGreaterThan(radii[i - 1] as number);
+    }
+  });
+
+  it("is a no-op on a second run, because joining is idempotent", async () => {
+    inMemoryCommunity();
+    unplaced(["u1", "u2"], 100);
+    await backfillCommunityGraphPlacements();
+    vi.mocked(graphRepo.persistPlacement).mockClear();
+
+    // Everybody has a node now, so the repository reports nobody unplaced.
+    unplaced([], 100);
+
+    expect(await backfillCommunityGraphPlacements()).toEqual({ placed: 0 });
+    expect(graphRepo.persistPlacement).not.toHaveBeenCalled();
+  });
+
+  it("stops rather than reporting a half-finished run", async () => {
+    unplaced(["u1", "u2"], 100);
+    vi.mocked(graphRepo.countNodes).mockRejectedValue(
+      new Error("neon is having a day"),
+    );
+
+    await expect(backfillCommunityGraphPlacements()).rejects.toThrow(
+      "neon is having a day",
+    );
+  });
+
+  /**
+   * The count is rows this run wrote, not app users it walked past.
+   *
+   * Somebody selected as unplaced can be placed by their own sign-up or first
+   * read in the moment before the backfill's insert, and the placement then
+   * returns the winner's node rather than failing. Counting that would have the
+   * command report a repair it did not perform — which defeats the only reason
+   * the number is printed.
+   */
+  it("does not count an app user a concurrent placement got to first", async () => {
+    unplaced(["u1"], 100);
+    // Selected as unplaced, but their own first read commits while this run is
+    // computing a position: the insert finds a row and returns nothing.
+    vi.mocked(graphRepo.persistPlacement).mockResolvedValue(undefined);
+    vi.mocked(graphRepo.findNode)
+      .mockResolvedValueOnce(undefined)
+      .mockResolvedValue({ userId: "u1", x: 7, y: -3 });
+
+    expect(await backfillCommunityGraphPlacements()).toEqual({ placed: 0 });
   });
 });
 
