@@ -27,7 +27,7 @@ These are documented in `CLAUDE.md` and partly enforced by Biome. A violation is
 - **`features/<name>/index.ts` is the cross-feature API.** Other features import hooks and shared UI from `@/features/<name>`, not from its internals.
 - **No tRPC routers under `features/`.**
 - **Feature `api/` exposes wrapped `useQuery`/`useMutation` hooks**, not raw queryOptions factories.
-- **Multipart uploads do not go through tRPC** — see `app/api/user/profile-picture/route.ts` for the pattern.
+- **Multipart uploads do not go through tRPC** — see `app/api/user/transcript/route.ts` for the pattern, including the `capRequestBody` call that must precede `formData()`.
 
 Biome fails the build on the router/repository import rules, so those get caught automatically. The rest are on you.
 

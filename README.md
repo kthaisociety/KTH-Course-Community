@@ -52,7 +52,6 @@ Copy `apps/web/.env.example` to `apps/web/.env.local` and fill in:
 - `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` / `AWS_REGION` (SES magic-link email)
 - `SES_SENDER` / `SES_REPLY_TO`
 - `AI_GATEWAY_API_KEY` (embeddings for search/ingest)
-- `BLOB_READ_WRITE_TOKEN` (profile pictures)
 
 Google OAuth authorised redirect URI: `${BETTER_AUTH_URL}/api/auth/callback/google`.
 GitHub OAuth authorised callback URL: `${BETTER_AUTH_URL}/api/auth/callback/github`.
