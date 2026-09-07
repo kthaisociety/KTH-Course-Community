@@ -6,7 +6,7 @@
  * pure-logic suite into the component project just to borrow a global.
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { EMPTY_REVIEW_DRAFT, type ReviewDraft } from "./review-draft";
+import { EMPTY_REVIEW_ANSWERS, type ReviewAnswers } from "./review-answers";
 import {
   clearReviewerSession,
   type ReviewerSession,
@@ -29,7 +29,7 @@ describe("a round the tab remembers", () => {
   it("comes back the way it went in", () => {
     const round = session({
       done: { DD2424: "skipped" },
-      drafts: { SF1918: { ...EMPTY_REVIEW_DRAFT, happyTook: true } },
+      drafts: { SF1918: { ...EMPTY_REVIEW_ANSWERS, happyTook: true } },
     });
     writeReviewerSession(round);
 
@@ -40,19 +40,19 @@ describe("a round the tab remembers", () => {
    * The guard against a new field being dropped on the way back in.
    *
    * Both storages used to hand-decode a draft field by field over a spread of
-   * `EMPTY_REVIEW_DRAFT`, which made the result structurally complete whether or
-   * not the decoder had heard of every field — so a field added to `ReviewDraft`
+   * `EMPTY_REVIEW_ANSWERS`, which made the result structurally complete whether or
+   * not the decoder had heard of every field — so a field added to `ReviewAnswers`
    * compiled, type-checked, and came back empty after a reload. The
    * decoder no longer spreads the empty draft, so the omission is now a compiler
    * error; this is the same guarantee at runtime, for the day somebody puts the
    * spread back.
    *
-   * `ANSWERED` is typed `ReviewDraft`, so a new field cannot be left out of the
+   * `ANSWERED` is typed `ReviewAnswers`, so a new field cannot be left out of the
    * fixture either — it has to be given a value, and that value then has to
    * survive the trip.
    */
   it("brings every field of a fully answered draft back", () => {
-    const ANSWERED: ReviewDraft = {
+    const ANSWERED: ReviewAnswers = {
       methods: ["exam", "labs"],
       shares: [60, 40],
       approachTheoryPercent: 35,
@@ -65,7 +65,7 @@ describe("a round the tab remembers", () => {
     // difference rather than coincidentally matching the default.
     for (const [field, value] of Object.entries(ANSWERED)) {
       expect(value, field).not.toEqual(
-        EMPTY_REVIEW_DRAFT[field as keyof ReviewDraft],
+        EMPTY_REVIEW_ANSWERS[field as keyof ReviewAnswers],
       );
     }
 
@@ -254,7 +254,7 @@ describe("storage that cannot be believed", () => {
       }),
     );
 
-    expect(readReviewerSession()?.drafts.DD2424).toEqual(EMPTY_REVIEW_DRAFT);
+    expect(readReviewerSession()?.drafts.DD2424).toEqual(EMPTY_REVIEW_ANSWERS);
   });
 });
 

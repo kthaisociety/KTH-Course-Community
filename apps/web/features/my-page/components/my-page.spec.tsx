@@ -1,4 +1,10 @@
-import { cleanup, render, screen, within } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Review } from "@/types";
@@ -13,6 +19,7 @@ const taken = vi.fn();
 const reviews = vi.fn();
 const personalization = vi.fn();
 const setAppearance = vi.fn();
+const editReview = vi.fn();
 const unreviewed = vi.fn();
 
 vi.mock("next/navigation", () => ({
@@ -65,11 +72,24 @@ vi.mock("../api/mutations", () => ({
 }));
 
 /**
- * The reviews feature is stood in for so that this suite is about My Page: the
- * card and the prompt have their own specs, and the editor dialog drags a
- * rich-text editor in with it.
+ * Half the reviews feature is stood in for and half of it is real.
+ *
+ * The stubs are the parts with their own specs — the Review Card and the
+ * unreviewed prompt — and the one mutation, because what a click sends is this
+ * suite's subject and where it lands is not.
+ *
+ * The review editor, the blocks a review is read in and the draft model are
+ * the real ones. The point of the Reviews tab is that it edits a review in the
+ * same form every other surface writes one in, and a stubbed editor would
+ * assert that My Page renders a stub.
  */
-vi.mock("@/features/reviews", () => ({
+vi.mock("@/features/reviews", async () => ({
+  ...(await import("@/features/reviews/lib/review-answers")),
+  ...(await import("@/features/reviews/lib/review-draft")),
+  ...(await import("@/features/reviews/components/review-detail-blocks")),
+  ...(await import("@/features/reviews/components/review-draft-editor")),
+  ...(await import("@/features/reviews/components/score-controls")),
+  useEditReview: () => editReview,
   useUnreviewedTakenCourses: () => unreviewed(),
   UnreviewedCard: ({
     courses,
@@ -94,25 +114,31 @@ vi.mock("@/features/reviews", () => ({
         </button>
       </div>
     ),
-  ReviewCard: ({
-    review,
-    onDelete,
-  }: {
-    review: Review;
-    onDelete?: () => void;
-  }) => (
+  ReviewCard: ({ review, onOpen }: { review: Review; onOpen?: () => void }) => (
     <article>
-      <span>{review.courseCode}</span>
-      {onDelete ? (
-        <button type="button" onClick={onDelete}>
-          Delete review
+      {onOpen ? (
+        <button type="button" onClick={onOpen}>
+          Open {review.courseCode}
         </button>
-      ) : null}
+      ) : (
+        <span>{review.courseCode}</span>
+      )}
     </article>
   ),
-  Review: () => null,
-  toEditableReview: (review: Review) => review,
   useRemoveReview: () => vi.fn(),
+}));
+
+// The detail names the course above the review. Nothing else on this page
+// asks the catalogue anything.
+vi.mock("@/features/courses", () => ({
+  useCourseDetails: () => ({
+    data: {
+      courseCode: "DD1337",
+      titleEng: "Programming",
+      credits: 9,
+      department: "EECS",
+    },
+  }),
 }));
 
 function makeReview(overrides: Partial<Review>): Review {
@@ -264,6 +290,140 @@ describe("MyPage tabs", () => {
 
     await userEvent.keyboard("{ArrowRight}");
     expect(screen.getByText("Taken courses")).toBeVisible();
+  });
+
+  /*
+   * The Reviews tab's second state, and the point of it: a review opens into
+   * the space the artboard reserves for one (`isDetail`), and Edit review turns
+   * that space into the review editor the workspace pane and the fast-track
+   * card both write in. There is no dialog anywhere in this; the retired one
+   * was the only thing in the app still asking for a review in a modal.
+   */
+  describe("one review, opened on its own", () => {
+    const MINE = makeReview({
+      id: "mine",
+      userId: "u1",
+      courseCode: "DD1337",
+      workloadScore: 8,
+      learningScore: 6,
+      happyTook: true,
+      message: "<p>Do the labs early.</p>",
+      examinationDistribution: {
+        exam: 60,
+        assignments: 0,
+        labs: 40,
+        projects: 0,
+        seminars: 0,
+        other: 0,
+      },
+      approachTheoryPercent: 70,
+      upvoteCount: 3,
+      downvoteCount: 1,
+    });
+
+    async function openTheReview() {
+      reviews.mockReturnValue(settled([MINE]));
+      render(<MyPage />);
+      await openTab(/^Reviews/);
+      await userEvent.click(
+        screen.getByRole("button", { name: "Open DD1337" }),
+      );
+    }
+
+    it("replaces the columns with the review, and reads it back", async () => {
+      await openTheReview();
+
+      expect(
+        screen.getByRole("heading", { name: "Programming" }),
+      ).toBeVisible();
+      expect(screen.getByText("2 helpful")).toBeVisible();
+      expect(screen.getByText("Do the labs early.")).toBeVisible();
+      // The columns are gone while a review is open, which is what makes the
+      // 760px the artboard draws available to it.
+      expect(screen.queryByText("Reviews you upvoted")).not.toBeInTheDocument();
+    });
+
+    it("comes back to the columns", async () => {
+      await openTheReview();
+
+      await userEvent.click(
+        screen.getByRole("button", { name: /Back to your reviews/ }),
+      );
+
+      expect(screen.getByText("Reviews you upvoted")).toBeVisible();
+    });
+
+    it("edits it in the same form every other surface writes one in", async () => {
+      editReview.mockResolvedValue(true);
+      await openTheReview();
+      await userEvent.click(
+        screen.getByRole("button", { name: /Edit review/ }),
+      );
+
+      // The stored answers, in the editor's own controls.
+      expect(screen.getByRole("slider", { name: /How demanding/ })).toHaveValue(
+        "8",
+      );
+      expect(
+        screen.getByDisplayValue("Do the labs early."),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("slider", { name: /Share between Exam and Labs/ }),
+      ).toHaveAttribute("aria-valuenow", "60");
+
+      fireEvent.change(screen.getByRole("slider", { name: /How demanding/ }), {
+        target: { value: "3" },
+      });
+      await userEvent.click(
+        screen.getByRole("button", { name: "Save changes" }),
+      );
+
+      expect(editReview).toHaveBeenCalledWith("mine", {
+        happyTook: true,
+        workloadScore: 3,
+        learningScore: 6,
+        examinationDistribution: {
+          exam: 60,
+          assignments: 0,
+          labs: 40,
+          projects: 0,
+          seminars: 0,
+          other: 0,
+        },
+        approachTheoryPercent: 70,
+        message: "<p>Do the labs early.</p>",
+      });
+    });
+
+    it("throws an abandoned edit away rather than saving it", async () => {
+      await openTheReview();
+      await userEvent.click(
+        screen.getByRole("button", { name: /Edit review/ }),
+      );
+
+      fireEvent.change(screen.getByRole("slider", { name: /How demanding/ }), {
+        target: { value: "3" },
+      });
+      await userEvent.click(
+        screen.getByRole("button", { name: /Discard changes/ }),
+      );
+
+      expect(editReview).not.toHaveBeenCalled();
+      // Back to reading the row, with the answer that was stored.
+      expect(screen.getByText("8 / 10")).toBeVisible();
+    });
+
+    it("offers nothing on a review the viewer only upvoted", async () => {
+      reviews.mockReturnValue(
+        settled([makeReview({ id: "theirs", userId: "u2", userVote: "up" })]),
+      );
+      render(<MyPage />);
+      await openTab(/^Reviews/);
+
+      expect(
+        screen.queryByRole("button", { name: /^Open / }),
+      ).not.toBeInTheDocument();
+    });
   });
 
   it("counts both review columns on the Reviews tab", () => {

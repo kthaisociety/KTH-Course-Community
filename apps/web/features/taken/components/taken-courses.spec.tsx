@@ -90,13 +90,6 @@ vi.mock("@/features/courses", () => ({
 vi.mock("@/features/reviews/api/queries", () => ({
   useUnreviewedTakenCourses: () => unreviewed(),
 }));
-// The review dialog is not on this screen any more, but the reviews barrel
-// still exports it — and with it the rich-text editor and its stylesheet,
-// which jsdom has no business loading for a test about a course list.
-vi.mock("@/features/reviews/components/review", () => ({
-  Review: () => null,
-  toEditableReview: (review: unknown) => review,
-}));
 // Stubbed so the real `UnreviewedCard` still renders: these tests are about
 // which courses the page queues, not about the card stack's own form, which
 // has its own suite next to it.

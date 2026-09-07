@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
+import { Kicker } from "@/components/ui/kicker";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCourseDetails, useCourseSummaries } from "@/features/courses";
 import {
@@ -14,7 +15,6 @@ import { sanitizeCourseHtml } from "@/lib/sanitize-html";
 import { cn } from "@/lib/utils";
 import type { CourseReviewStats } from "@/types";
 import { EXAMINATION_DISTRIBUTION_LABELS, MAX_REVIEW_SCORE } from "@/types";
-import { Kicker } from "./pane-parts";
 
 function Figure({ label, value }: { label: string; value: string }) {
   return (
@@ -412,7 +412,14 @@ export function CourseDetailsPanel({
                     Could not load the reviews for this course. Try again.
                   </p>
                 ) : reviews.isSuccess ? (
-                  <ReviewList courseCode={courseCode} reviews={reviews.data} />
+                  <ReviewList
+                    reviews={reviews.data}
+                    // The author's pencil opens this course's review tab,
+                    // which is where the form lives. `onWriteReview` is the
+                    // same call the "Write a review" button makes: the tab it
+                    // opens loads whatever review the viewer already has.
+                    onEditReview={onWriteReview}
+                  />
                 ) : (
                   <Skeleton className="h-24 w-full" />
                 )}

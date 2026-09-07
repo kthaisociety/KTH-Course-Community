@@ -6,13 +6,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useRef, useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { authHref, SignInPrompt, useMe } from "@/features/auth";
-import {
-  type EditableReview,
-  Review,
-  toEditableReview,
-  UnreviewedCard,
-  useUnreviewedTakenCourses,
-} from "@/features/reviews";
+import { UnreviewedCard, useUnreviewedTakenCourses } from "@/features/reviews";
 import { PageColumn, PageHeader } from "@/features/shell";
 // The module, not `@/features/taken`: the barrel holds that feature's write
 // path, and this page links to the screen rather than writing anything. The
@@ -37,6 +31,7 @@ import { AccountSettings } from "./account-settings";
 import { DeleteReviewDialog, type PendingDelete } from "./delete-review-dialog";
 import { NodeProfile } from "./node-profile";
 import { ReviewColumn } from "./review-column";
+import { ReviewDetail } from "./review-detail";
 import { StatCard } from "./stat-card";
 
 // "node" rather than the artboard's "dot": `CONTEXT.md` licenses "dot" for
@@ -62,9 +57,6 @@ const TAB_KEY_STEPS: Record<string, number | "first" | "last" | undefined> = {
   Home: "first",
   End: "last",
 };
-
-/** Which review the editor is open on. The dialog is per-course, so it carries one. */
-type OpenEditor = { review: EditableReview; courseCode: string };
 
 /**
  * My Page — the signed-in reader's own page, at `/profile`.
@@ -109,7 +101,16 @@ export function MyPage() {
   } = useMe();
 
   const [view, setView] = useState<MyPageView>("overview");
-  const [editing, setEditing] = useState<OpenEditor | null>(null);
+  /**
+   * Which of the viewer's reviews is open on its own, if any.
+   *
+   * An id rather than the review, so that the panel always draws the row as the
+   * list currently holds it: saving an edit invalidates every `reviews.list`,
+   * and a copy taken when the card was clicked would go stale the moment the
+   * writer changed it. A review that is gone — deleted from the panel's own
+   * footer — simply stops resolving, and the columns come back.
+   */
+  const [openReviewId, setOpenReviewId] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(
     null,
   );
@@ -133,6 +134,7 @@ export function MyPage() {
           : VIEWS[(at + step + VIEWS.length) % VIEWS.length];
 
     setView(next);
+    setOpenReviewId(null);
     tabRefs.current[next]?.focus();
   }
 
@@ -155,6 +157,11 @@ export function MyPage() {
   // Someone else's review that this viewer upvoted. Their own reviews are
   // excluded even if they voted on one: this column is for what they kept, and
   // it already sits beside the column of what they wrote.
+  const openReview =
+    openReviewId === null
+      ? null
+      : (myReviews.find((review) => review.id === openReviewId) ?? null);
+
   const upvotedReviews = useMemo(
     () =>
       allReviews.filter(
@@ -272,7 +279,10 @@ export function MyPage() {
               tabRefs.current[key] = node;
             }}
             onKeyDown={onTabKeyDown}
-            onClick={() => setView(key)}
+            onClick={() => {
+              setView(key);
+              setOpenReviewId(null);
+            }}
             className={`flex h-10 flex-none cursor-pointer items-center gap-2 whitespace-nowrap border-b-2 px-[13px] text-[13.5px] ${
               view === key
                 ? "border-cc-brand font-semibold text-cc-ink"
@@ -405,39 +415,42 @@ export function MyPage() {
             ) : null}
 
             {view === "reviews" ? (
-              <div className="grid grid-cols-[1fr_1px_1fr] gap-6 px-7 pt-[22px] @max-[860px]:grid-cols-1 @max-[440px]:px-[14px] @max-[440px]:pt-3">
-                <ReviewColumn
-                  heading="Your reviews"
-                  reviews={myReviews}
-                  emptyTitle="Nothing written yet"
-                  emptyBody="Reviews you publish land here, with how many members found them helpful."
-                  emptyAction={{
-                    label: "Find a course to review",
-                    onClick: () => router.push("/search"),
-                  }}
-                  onEdit={(review) =>
-                    setEditing({
-                      review: toEditableReview(review),
-                      courseCode: review.courseCode,
-                    })
-                  }
-                  onDelete={(review) =>
+              openReview ? (
+                <ReviewDetail
+                  key={openReview.id}
+                  review={openReview}
+                  onBack={() => setOpenReviewId(null)}
+                  onDelete={() =>
                     setPendingDelete({
-                      id: review.id,
-                      courseCode: review.courseCode,
+                      id: openReview.id,
+                      courseCode: openReview.courseCode,
                     })
                   }
                 />
+              ) : (
+                <div className="grid grid-cols-[1fr_1px_1fr] gap-6 px-7 pt-[22px] @max-[860px]:grid-cols-1 @max-[440px]:px-[14px] @max-[440px]:pt-3">
+                  <ReviewColumn
+                    heading="Your reviews"
+                    reviews={myReviews}
+                    emptyTitle="Nothing written yet"
+                    emptyBody="Reviews you publish land here, with how many members found them helpful."
+                    emptyAction={{
+                      label: "Find a course to review",
+                      onClick: () => router.push("/search"),
+                    }}
+                    onOpen={(review) => setOpenReviewId(review.id)}
+                  />
 
-                <div aria-hidden className="bg-cc-rule @max-[860px]:hidden" />
+                  <div aria-hidden className="bg-cc-rule @max-[860px]:hidden" />
 
-                <ReviewColumn
-                  heading="Reviews you upvoted"
-                  reviews={upvotedReviews}
-                  emptyTitle="No upvoted reviews"
-                  emptyBody="Upvoting a review on a course page keeps it here, so you can find it again."
-                />
-              </div>
+                  <ReviewColumn
+                    heading="Reviews you upvoted"
+                    reviews={upvotedReviews}
+                    emptyTitle="No upvoted reviews"
+                    emptyBody="Upvoting a review on a course page keeps it here, so you can find it again."
+                  />
+                </div>
+              )
             ) : null}
 
             {view === "node" ? (
@@ -472,15 +485,6 @@ export function MyPage() {
         Credits, grades and any average shown here are your own entries — not an
         official KTH record.
       </p>
-
-      {editing ? (
-        <Review
-          key={editing.review.id}
-          courseCode={editing.courseCode}
-          editing={editing.review}
-          onClose={() => setEditing(null)}
-        />
-      ) : null}
 
       {pendingDelete ? (
         <DeleteReviewDialog

@@ -1,4 +1,4 @@
-import { decodeReviewDraft, type ReviewDraft } from "./review-draft";
+import { decodeReviewAnswers, type ReviewAnswers } from "./review-answers";
 
 /**
  * What the fast-track reviewer keeps across a reload of `/taken`, and why.
@@ -28,7 +28,7 @@ import { decodeReviewDraft, type ReviewDraft } from "./review-draft";
  * storage, possibly written by an older build, so anything that does not match
  * the shape is dropped rather than trusted — but at the granularity the thing
  * is worth at. A round that is not a round is refused whole; a *draft* is
- * salvaged field by field by the shared `decodeReviewDraft`, which is the one
+ * salvaged field by field by the shared `decodeReviewAnswers`, which is the one
  * decoder both storage surfaces go through so they cannot disagree about what a
  * bad draft means.
  *
@@ -52,7 +52,7 @@ export interface ReviewerSession {
   /** Cards already dealt with this round, by course code. */
   done: Record<string, CardOutcome>;
   /** Answers typed but not yet saved, by course code. */
-  drafts: Record<string, ReviewDraft>;
+  drafts: Record<string, ReviewAnswers>;
 }
 
 const OUTCOMES: CardOutcome[] = ["saved", "skipped"];
@@ -114,7 +114,7 @@ export function readReviewerSession(): ReviewerSession | null {
   /**
    * Each card's answers, salvaged rather than vetted.
    *
-   * `decodeReviewDraft` drops a field it cannot read and keeps the rest. Do not
+   * `decodeReviewAnswers` drops a field it cannot read and keeps the rest. Do not
    * make it throw the whole card away instead: dropping a draft does not drop
    * the *card* — the code stays in `queue`, so the reviewer is dealt the same
    * course with an empty form and no sign that anything was lost — and
@@ -127,10 +127,10 @@ export function readReviewerSession(): ReviewerSession | null {
    * missing or empty `queue` is genuinely not a round, and refusing one opens
    * no card and destroys no answers.
    */
-  const drafts: Record<string, ReviewDraft> = {};
+  const drafts: Record<string, ReviewAnswers> = {};
   if (isRecord(value.drafts)) {
     for (const [code, candidate] of Object.entries(value.drafts)) {
-      const draft = decodeReviewDraft(candidate);
+      const draft = decodeReviewAnswers(candidate);
       if (draft) drafts[code] = draft;
     }
   }

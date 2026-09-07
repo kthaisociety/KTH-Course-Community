@@ -1,16 +1,16 @@
 import {
+  decodeReviewDraft,
+  EMPTY_REVIEW_DRAFT,
+  isUntouched,
+  type ReviewDraft,
+} from "@/features/reviews/lib/review-draft";
+import {
   EMPTY_WORKSPACE,
   type OpenCourse,
   type OpenCourseKind,
   type Workspace,
   type WorkspaceScope,
 } from "./open-courses";
-import {
-  decodeReviewDraft,
-  EMPTY_REVIEW_DRAFT,
-  isUntouched,
-  type ReviewDraft,
-} from "./review-draft";
 
 /**
  * What the workspace keeps across a page load, and why it has to.
@@ -73,9 +73,10 @@ import {
  * storage, so anything this file refuses to decode is deleted a keystroke later.
  * A draft therefore salvages what it can, instead of failing whole.
  *
- * The salvaging is `decodeReviewDraft`'s, in `./review-draft.ts`, which extends
- * `features/reviews/lib/review-draft.ts`'s decoder with the pane's two flags.
- * Do not hand-write a second copy of it here. The three refusals this file does
+ * The salvaging is `decodeReviewDraft`'s, in
+ * `features/reviews/lib/review-draft.ts`, which extends the answers decoder
+ * next to it with the editor's two flags. Do not hand-write a second copy of it
+ * here. The three refusals this file does
  * own are not fields: an entry that is not an object, one with no `savedAt`, and
  * one whose stamp has expired. Those are deliberate, and the last of them is the
  * whole point of the stamp.

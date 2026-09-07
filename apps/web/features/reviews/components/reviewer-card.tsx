@@ -21,9 +21,9 @@ import {
   MIN_SHARE,
   moveDivider,
   nudgeDivider,
-  type ReviewDraft,
+  type ReviewAnswers,
   toggleMethod,
-} from "../lib/review-draft";
+} from "../lib/review-answers";
 import {
   APPLIED_FILL,
   ScoreSlider,
@@ -67,7 +67,7 @@ export interface ReviewerCardCourse {
 
 export interface ReviewerCardProps {
   course: ReviewerCardCourse;
-  draft: ReviewDraft;
+  draft: ReviewAnswers;
   /** "3 more after this" — the artboard's `revStackLabel`. */
   stackLabel: string;
   /** Whether this is the last card, which changes the save button's wording. */
@@ -75,7 +75,7 @@ export interface ReviewerCardProps {
   isSaving: boolean;
   /** The last save's failure, still on screen with the answers it could not send. */
   saveError: string | null;
-  onDraftChange: (draft: ReviewDraft) => void;
+  onDraftChange: (draft: ReviewAnswers) => void;
   onSkip: () => void;
   onSave: () => void;
 }
@@ -85,7 +85,7 @@ export interface ReviewerCardProps {
  * `docs/design_ref/2026-09-06/Course Community - Taken Courses.dc.html`, its
  * `revActive` branch.
  *
- * The card is presentation and nothing else. It edits a `ReviewDraft` and hands
+ * The card is presentation and nothing else. It edits a `ReviewAnswers` and hands
  * it back; it holds no mutation, decides nothing about whether a review may be
  * written, and cannot save anything by itself. `Reviewer` owns the queue and
  * the write, which goes through `useAddReview` like every other review in the
@@ -114,13 +114,13 @@ export function ReviewerCard({
    * starting draft stays a correct base for every step — recomputing from the
    * live one would compound rounding as the pointer moves.
    */
-  const drag = useRef<{ index: number; rect: DOMRect; from: ReviewDraft }>(
+  const drag = useRef<{ index: number; rect: DOMRect; from: ReviewAnswers }>(
     null,
   );
   const answered = isAnswered(draft);
   const cuts = dividerPositions(draft);
 
-  function patch(changes: Partial<ReviewDraft>) {
+  function patch(changes: Partial<ReviewAnswers>) {
     onDraftChange({ ...draft, ...changes });
   }
 

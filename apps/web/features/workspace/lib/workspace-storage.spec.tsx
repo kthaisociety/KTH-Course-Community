@@ -1,6 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  EMPTY_REVIEW_DRAFT,
+  type ReviewDraft,
+} from "@/features/reviews/lib/review-draft";
 import { EMPTY_WORKSPACE } from "./open-courses";
-import { EMPTY_REVIEW_DRAFT, type ReviewDraft } from "./review-draft";
 import {
   claimAwaitingSignIn,
   markAwaitingSignIn,

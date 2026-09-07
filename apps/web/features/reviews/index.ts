@@ -17,20 +17,35 @@ export {
   useReviewList,
   useUnreviewedTakenCourses,
 } from "./api/queries";
-export {
-  type EditableReview,
-  Review,
-  type ReviewFormData,
-  toEditableReview,
-} from "./components/review";
 /** One published review, and the list that wires it to the API. */
 export { ReviewCard, type ReviewCardProps } from "./components/review-card";
+/**
+ * The blocks a stored review is read in: its examination split, its
+ * theory/applied bar, and its two 1-10 meters.
+ *
+ * Shared because a review is read back in two places that are not the same
+ * component — the expanded Review Card, and My Page's review detail — and the
+ * artboards draw one set of blocks for both. `UnansweredPanel` is exported with
+ * them because "I don't remember" has to look the same wherever it is read.
+ */
+export {
+  ExaminationBlock,
+  Meter,
+  ProfileBlock,
+  SectionHead,
+  UnansweredPanel,
+} from "./components/review-detail-blocks";
+/** The form a review is written and rewritten in, and the two hosts that draw it. */
+export {
+  ReviewDraftEditor,
+  type ReviewDraftEditorProps,
+} from "./components/review-draft-editor";
 export { ReviewList } from "./components/review-list";
 /** The fast-track card stack, and the shape of one course in its queue. */
 export { Reviewer, type ReviewerProps } from "./components/reviewer";
 export type { ReviewerCardCourse } from "./components/reviewer-card";
 /**
- * The score controls, exported because the workspace pane draws the same 1-10
+ * The score controls, exported because the review editor draws the same 1-10
  * score the reviewer card does. They were two near-verbatim copies that had
  * drifted three ways, one of them a dark-theme-only wrong fill colour; see
  * `components/score-controls.tsx` for what each divergence was.
@@ -57,34 +72,52 @@ export {
   examinationSplitLabel,
 } from "./lib/examination-palette";
 /**
- * The review draft: the shape a review has while it is still being written,
- * and the arithmetic behind the draggable examination bar.
+ * The answers in a review being written, and the arithmetic behind the
+ * draggable examination bar.
  *
- * Two surfaces write a review through this — the fast-track card stack here,
- * and the workspace pane's review-draft panel, whose draft is this shape plus
- * its two "I don't remember" flags. It is exported for that second one: the
- * pane used to carry its own copy of the model and every bar transform, and a
- * second copy is a second thing to keep in step with the column it writes to.
- * `toReviewFormData` is the only way either of them becomes something writable,
- * and it is what escapes a plain-text write-up into the markup
- * `reviews.message` holds.
+ * `isAnswered` is the rule both forms apply before they offer to send anything.
+ * The bar transforms are exported for nothing outside this feature today — the
+ * one editor that drives them lives here — but they are the model's public
+ * surface and they belong beside it.
  */
 export {
   APPROACH_MAX,
   APPROACH_MIDPOINT,
   APPROACH_MIN,
   dividerPositions,
-  EMPTY_REVIEW_DRAFT,
+  EMPTY_REVIEW_ANSWERS,
   type ExaminationKey,
   isAnswered,
-  isUntouched,
   MIN_SHARE,
   moveDivider,
   nudgeDivider,
-  type ReviewDraft,
+  type ReviewAnswers,
   toggleMethod,
+} from "./lib/review-answers";
+/**
+ * The review draft: a review being written or rewritten in the full editor,
+ * which is the answers above plus the two "I don't remember" flags the editor
+ * draws checkboxes for.
+ *
+ * `toReviewDraft` is what makes editing possible at all — a stored `Review`,
+ * back in the form that writes one — and `toReviewFormData` is the only way
+ * either shape becomes something writable.
+ *
+ * The pure modules that hold a draft in browser storage import
+ * `./lib/review-draft` by path rather than through this barrel. Types are
+ * erased and cost nothing, but the barrel's *values* reach the components above
+ * and drag React and a DOM into a module that is arithmetic — and into the
+ * `logic` vitest project, whose whole point is a node environment with neither.
+ */
+export {
+  EMPTY_REVIEW_DRAFT,
+  REVIEW_DRAFT_SECTIONS,
+  type ReviewDraft,
+  sectionsDone,
+  toReviewDraft,
   toReviewFormData,
 } from "./lib/review-draft";
+export type { ReviewFormData } from "./lib/review-form-schema";
 /**
  * The reviewer's round, as the tab remembers it. `/taken` reads it to reopen a
  * round a reload interrupted — after checking that its courses are still

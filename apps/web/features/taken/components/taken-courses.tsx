@@ -154,8 +154,7 @@ function importedSummary(added: number, filled: number): string {
  * while a round runs — progress segments, peeked cards, "Skip for now", the
  * save-error row and the done screen. It is presentation only: it maps a card
  * onto `ReviewFormData` and hands it to `useAddReview`, which is the same hook
- * the workspace pane and the review dialog write through and the one place
- * `reviewFormSchema` runs. `?review=…` opens it on arrival — that is My Page's
+ * the workspace pane writes through and the one place `reviewFormSchema` runs. `?review=…` opens it on arrival — that is My Page's
  * deep link, and it carries the course a row named — and the parameter is taken
  * back out so a reload does not replay it.
  *

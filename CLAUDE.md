@@ -51,7 +51,7 @@ apps/web/
 
 - `app/` only routes. A page imports the route component from `features/<name>/components`, not from the feature barrel.
 - Feature `index.ts` is the cross-feature API. Other features import hooks/shared UI from `@/features/<name>`.
-- A feature route is one component (data + layout). Split a child only when it has its own name (`CourseCard`, `Review`), not a Screen/View pair.
+- A feature route is one component (data + layout). Split a child only when it has its own name (`CourseCard`, `ReviewCard`), not a Screen/View pair.
 - Do not put tRPC routers under `features/`.
 - Server code is grouped **by domain, not by layer**: everything for one domain lives in `server/<domain>/`. Adding an endpoint means editing one folder.
 - Layers within a domain: router → service → repository → `db`. Routers stay thin: validate input, pick `baseProcedure` or `protectedProcedure`, call the service. Services hold business logic. Repositories import `db` and run queries.
