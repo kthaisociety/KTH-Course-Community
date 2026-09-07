@@ -3,9 +3,14 @@ import type { CourseSummary } from "@/types";
 import { embedSingle } from "../ai";
 import { getSummariesByCodes } from "../course/service";
 import { getAggregatesByCourseCodes } from "../reviews/service";
-import { searchByEmbedding, searchByKeyword } from "./repository";
+import {
+  listDepartments,
+  searchByEmbedding,
+  searchByKeyword,
+} from "./repository";
 import {
   DEFAULT_SEARCH_PAGE_SIZE,
+  getDepartments,
   MAX_SEARCH_PAGES,
   searchCourses,
 } from "./service";
@@ -333,5 +338,63 @@ describe("searchCourses", () => {
       DEFAULT_SEARCH_PAGE_SIZE + 1,
       null,
     );
+  });
+});
+
+/**
+ * The invariant these tests are really about: an option list in which no two
+ * options mean the same query. The catalogue's `department` column has ~100
+ * distinct values and `resolveDepartmentFilter` collapses them onto at most
+ * six, so offering the column raw gave a reader twenty ways to ask for EECS.
+ */
+describe("getDepartments", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  /** Department strings shaped the way KOPPS actually ships them. */
+  const kopps = [
+    "EECS/Skolan för elektroteknik och datavetenskap",
+    "EECS/Datavetenskap",
+    "ITM/Skolan för industriell teknik och management",
+    "ABE/Skolan för arkitektur och samhällsbyggnad",
+  ];
+
+  it("collapses a school's departments to the one option that filters", async () => {
+    vi.mocked(listDepartments).mockResolvedValue(kopps);
+
+    expect(await getDepartments()).toEqual(["ABE", "EECS", "ITM"]);
+  });
+
+  it("offers only the schools the catalogue actually has courses under", async () => {
+    vi.mocked(listDepartments).mockResolvedValue([
+      "EECS/Skolan för elektroteknik och datavetenskap",
+    ]);
+
+    // Not the five hardcoded abbreviations: an option that returns nothing is
+    // worse than no option.
+    expect(await getDepartments()).toEqual(["EECS"]);
+  });
+
+  it("keeps a department that carries no school abbreviation", async () => {
+    vi.mocked(listDepartments).mockResolvedValue([...kopps, "Mathematics"]);
+
+    // It filters on itself in SQL, so it is a distinct result set and earns a
+    // row. Dropping it would make the filter narrower than the query it drives.
+    expect(await getDepartments()).toEqual([
+      "ABE",
+      "EECS",
+      "ITM",
+      "Mathematics",
+    ]);
+  });
+
+  it("is stable under a value that has already been resolved", async () => {
+    // What the browser sends back is an option this function produced, and the
+    // server resolves it again on the way into the query. If that were not a
+    // fixed point, picking "EECS" would filter on something else.
+    vi.mocked(listDepartments).mockResolvedValue(["EECS", "ITM"]);
+
+    expect(await getDepartments()).toEqual(["EECS", "ITM"]);
   });
 });

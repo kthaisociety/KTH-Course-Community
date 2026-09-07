@@ -609,6 +609,47 @@ describe("Explore", () => {
     });
 
     /**
+     * The options are the values that filter *differently* — the five schools
+     * — rather than the ~100 raw department names the catalogue holds, because
+     * `resolveDepartmentFilter` collapses those onto each other before the
+     * query runs. Links carrying a full department name were shareable while
+     * the raw list existed, and they are still out there.
+     *
+     * The server still honours such a link, so the results on screen really are
+     * filtered. Without an option to match it the select would fall back to
+     * showing "All schools" over filtered results — a filter the reader can
+     * neither see nor clear. So the value gets an option of its own.
+     */
+    it("shows a department from an old shared link that is not in the option list", async () => {
+      search = "q=graphs&department=EECS%2FDatavetenskap";
+      render(<Explore />);
+
+      const school = screen.getByLabelText("School");
+      expect(school).toHaveValue("EECS/Datavetenskap");
+      expect(school).not.toHaveValue("");
+      expect(
+        within(school).getByRole("option", { name: "EECS/Datavetenskap" }),
+      ).toBeInTheDocument();
+
+      // And the escape hatch is reachable, which is the whole point.
+      await userEvent.click(
+        screen.getByRole("button", { name: "Clear filters" }),
+      );
+      expect(replace).toHaveBeenCalledWith("/search?q=graphs", {
+        scroll: false,
+      });
+    });
+
+    it("adds no extra option when the value is already one of the schools", () => {
+      search = "q=graphs&department=EECS";
+      render(<Explore />);
+
+      const school = screen.getByLabelText("School");
+      // "All schools", EECS, ITM — and nothing duplicated onto the end.
+      expect(within(school).getAllByRole("option")).toHaveLength(3);
+    });
+
+    /**
      * The minimum-rating filter was removed — it was in no artboard, and it was
      * applied after the query, so it could silently return short results. Links
      * carrying `?rating=` were shareable while it existed, and they are still
