@@ -54,9 +54,6 @@ type Props = {
   onShowAverageChange: (next: boolean) => void;
 };
 
-const SWITCH_CLASS =
-  "h-6 w-[42px] data-checked:bg-cc-btn data-unchecked:bg-cc-rule3 [&_[data-slot=switch-thumb]]:size-[18px]";
-
 /**
  * The Settings tab — `docs/design_ref/2026-09-06/Course Community - My Page.dc.html`,
  * the `isSettings` branch.
@@ -162,7 +159,6 @@ export function AccountSettings({
 
         <div className="flex items-start gap-[13px] border-cc-rule border-b px-[18px] py-4">
           <Switch
-            className={SWITCH_CLASS}
             checked={hasStoredGrades}
             disabled={isClearing}
             aria-label="Store grades from my transcript"
@@ -194,7 +190,6 @@ export function AccountSettings({
           }`}
         >
           <Switch
-            className={SWITCH_CLASS}
             checked={hasStoredGrades && showAverage}
             disabled={!hasStoredGrades}
             aria-label="Calculate my average"
