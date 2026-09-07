@@ -381,6 +381,23 @@ describe("toReviewDraft", () => {
   });
 
   /*
+   * Inline formatting sits inside a word as often as around one, so its tags
+   * have to leave nothing behind. `toPlainText` puts a space where every tag
+   * was — right for an excerpt, wrong here: it read `<b>foo</b><i>bar</i>` as
+   * "foo bar", and the next save wrote that back, splitting a word in two by
+   * an edit its author never made. `toEditableText` is the inverse of the
+   * mapper that stored it, and this is why the two are not interchangeable.
+   */
+  it("does not put a space inside a word that had formatting in it", () => {
+    const stored = review({ message: "<p><b>foo</b><i>bar</i></p>" });
+
+    expect(toReviewDraft(stored).message).toBe("foobar");
+    expect(toReviewFormData(toReviewDraft(stored))?.message).toBe(
+      "<p>foobar</p>",
+    );
+  });
+
+  /*
    * The round trip is the contract editing rests on: whatever is not touched
    * in the form goes back exactly as it came out. Anything that failed here
    * would be a field silently rewritten by opening the editor and saving.

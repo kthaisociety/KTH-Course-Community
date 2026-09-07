@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { Kicker } from "@/components/ui/kicker";
 import { cn } from "@/lib/utils";
 import {
@@ -132,6 +132,20 @@ export function ReviewDraftEditor({
   onChange,
 }: Readonly<ReviewDraftEditorProps>) {
   const examTrackRef = useRef<HTMLDivElement>(null);
+  /**
+   * How to end a drag that is still running, or `null` when none is.
+   *
+   * A drag lives on `window`, not on the bar, because the pointer leaves the
+   * 38px track almost immediately. That outlives this component unless someone
+   * takes it down: a reviewer who drags a divider and — mid-drag — has the
+   * editor taken out from under them (the pane's tab closed, My Page's Save or
+   * back link, a course switched) leaves listeners holding the draft as it was
+   * and the `onChange` of a host that is gone, still firing on every mouse
+   * move until the button comes up.
+   */
+  const endDrag = useRef<(() => void) | null>(null);
+  useEffect(() => () => endDrag.current?.(), []);
+
   const cuts = dividerPositions(draft);
   const examDisabled = draft.examinationForgotten;
   const approachDisabled = draft.approachForgotten;
@@ -147,6 +161,10 @@ export function ReviewDraftEditor({
     const track = examTrackRef.current;
     if (!track) return;
     event.preventDefault();
+    // A second drag cannot start while one is running, but a pointer that was
+    // captured elsewhere can leave one behind. Ending it first keeps at most
+    // one set of listeners alive.
+    endDrag.current?.();
     const rect = track.getBoundingClientRect();
     // Only segments `index` and `index + 1` move, so the draft captured here
     // stays a correct base for every step of the drag.
@@ -155,12 +173,19 @@ export function ReviewDraftEditor({
       const percent = ((moveEvent.clientX - rect.left) / rect.width) * 100;
       onChange(moveDivider(start, index, percent));
     };
+    // `pointercancel` as well as `pointerup`: a touch drag interrupted by the
+    // browser — a scroll taking over the gesture, a call arriving — never
+    // sends `pointerup` at all.
     const up = () => {
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerup", up);
+      window.removeEventListener("pointercancel", up);
+      endDrag.current = null;
     };
+    endDrag.current = up;
     window.addEventListener("pointermove", move);
     window.addEventListener("pointerup", up);
+    window.addEventListener("pointercancel", up);
   }
 
   return (

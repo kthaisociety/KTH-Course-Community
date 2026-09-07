@@ -12,7 +12,7 @@ import {
   type ReviewAnswers,
 } from "./review-answers";
 import type { ReviewFormData } from "./review-form-schema";
-import { toPlainText } from "./review-text";
+import { toEditableText } from "./review-text";
 
 /**
  * A **review draft**: a review being written or rewritten in the full editor,
@@ -191,13 +191,15 @@ function toExaminationSplit(
  * narrower form than the draft holds:
  *
  * - **The write-up.** `reviews.message` is markup and the editor's textarea is
- *   plain text, so it comes back through `toPlainText`. A review whose message
- *   was written in the retired rich-text dialog therefore loses its bold and
- *   its lists on the way in — the text survives, the formatting does not, and
- *   saving stores the plain-text version escaped by `fromPlainText`. That is
- *   the same trade the fast-track card and the pane already make when they
- *   publish, and there is no editor left in the app that can produce the
- *   markup.
+ *   plain text, so it comes back through `toEditableText` — the inverse of the
+ *   `fromPlainText` that stored it, and deliberately *not* `toPlainText`, which
+ *   leaves a space where every tag was and would rewrite
+ *   `<strong>foo</strong><em>bar</em>` as "foo bar". A review whose message was
+ *   written in the retired rich-text dialog still loses its bold and its lists
+ *   on the way in: the text survives, the formatting does not, and there is no
+ *   editor left in the app that could produce that markup again. Anything
+ *   written in a textarea — which is everything the app can write now — makes
+ *   the trip unchanged.
  *
  * - **The approach.** `reviews.approach_theory_percent` accepts the whole 0–100
  *   range; the track the editor drags along stops at `APPROACH_MIN` and
@@ -226,6 +228,6 @@ export function toReviewDraft(review: Review): ReviewDraft {
     workloadScore: review.workloadScore,
     learningScore: review.learningScore,
     happyTook: review.happyTook,
-    message: toPlainText(review.message),
+    message: toEditableText(review.message),
   };
 }

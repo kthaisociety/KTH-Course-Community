@@ -104,13 +104,21 @@ left alone as the "I don't remember" answer and has nowhere to put a flag.
    sees the value they are about to save rather than having it moved under them
    at the moment of saving.
 3. **The write-up.** `reviews.message` is markup; the editor's textarea is plain
-   text. A message comes in through `toPlainText` and goes back out through
-   `fromPlainText`. A one-paragraph write-up therefore round-trips byte for
-   byte, and the bold runs and lists that only the rich-text dialog could
-   produce do not survive being edited. This is accepted rather than mitigated:
-   there is no editor left in the app that can produce that markup, so the
-   alternative is preserving formatting that can never again be authored or
-   corrected.
+   text. A message comes in through `toEditableText` and goes back out through
+   `fromPlainText`. Anything a textarea could have written — which is everything
+   the app can write now — round-trips exactly, in both directions, and the bold
+   runs and lists that only the rich-text dialog could produce do not survive
+   being edited. That loss is accepted rather than mitigated: there is no editor
+   left in the app that can produce that markup, so the alternative is
+   preserving formatting nobody can ever author or correct again.
+
+   `toEditableText` is a second function rather than a reuse of `toPlainText`,
+   which sits beside it and is what the excerpt goes through. `toPlainText`
+   leaves a space where every tag was — correct for measuring and cutting one
+   line, and wrong for anything written back, because inline formatting sits
+   inside a word as often as around it. It read `<b>foo</b><i>bar</i>` as "foo
+   bar", and the next save stored that: a word split in two by an edit its
+   author never made. Only the tags that genuinely end a line become one now.
 
 Everything else round-trips exactly, which is asserted directly —
 `review-draft.spec.ts` sends an untouched review through both mappers and

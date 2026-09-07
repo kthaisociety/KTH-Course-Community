@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   fromPlainText,
+  toEditableText,
   toExcerpt,
   toPlainText,
   toStoredMessage,
@@ -80,5 +81,85 @@ describe("fromPlainText", () => {
   it("keeps the only structure a textarea can express", () => {
     expect(fromPlainText("One\nTwo")).toBe("<p>One<br />Two</p>");
     expect(fromPlainText("One\n\nTwo")).toBe("<p>One</p><p>Two</p>");
+  });
+});
+
+/*
+ * The inverse of `fromPlainText`, and the one thing editing a stored review
+ * rests on. `toPlainText` is next door and is not interchangeable with it: it
+ * puts a space where every tag was, which is what an excerpt wants and what a
+ * write-back must not do.
+ */
+describe("toEditableText", () => {
+  it("is empty for a review nobody wrote", () => {
+    expect(toEditableText(null)).toBe("");
+    expect(toEditableText(undefined)).toBe("");
+    expect(toEditableText("")).toBe("");
+  });
+
+  /**
+   * The bug this function exists for. `<strong>foo</strong><em>bar</em>`
+   * renders as "foobar", so an author who opened that review to correct a
+   * score and saved would have had a word split in two by an edit they never
+   * made.
+   */
+  it("does not put a space inside a word that had formatting in it", () => {
+    expect(toEditableText("<p><strong>foo</strong><em>bar</em></p>")).toBe(
+      "foobar",
+    );
+    expect(toPlainText("<p><strong>foo</strong><em>bar</em></p>")).toBe(
+      "foo bar",
+    );
+  });
+
+  it("keeps the spaces that were really there", () => {
+    expect(toEditableText("<p><strong>Do</strong> the labs early.</p>")).toBe(
+      "Do the labs early.",
+    );
+  });
+
+  it("brings back the structure a textarea can hold", () => {
+    expect(toEditableText("<p>One<br />Two</p>")).toBe("One\nTwo");
+    expect(toEditableText("<p>One</p><p>Two</p>")).toBe("One\n\nTwo");
+  });
+
+  /** Only the retired dialog could write these, and they come back as prose. */
+  it("flattens what a textarea cannot express", () => {
+    expect(
+      toEditableText("<h2>Labs</h2><ul><li>One</li><li>Two</li></ul>"),
+    ).toBe("Labs\n\nOne\n\nTwo");
+  });
+
+  it("decodes the entities that escaping put there", () => {
+    expect(toEditableText("<p>Theory &amp; practice, 5 &lt; 10</p>")).toBe(
+      "Theory & practice, 5 < 10",
+    );
+  });
+
+  /*
+   * The contract editing rests on: anything written in a textarea — which is
+   * everything this app can write — survives being opened and saved. Both
+   * directions are asserted, because either one alone can be right while the
+   * pair still loses a character.
+   */
+  it("round-trips a write-up in both directions", () => {
+    for (const text of [
+      "Theory & practice, 5 < 10",
+      "One\nTwo",
+      "One\n\nTwo",
+      "Use <vector> & <map>.",
+      "Do the labs early.",
+    ]) {
+      expect(toEditableText(fromPlainText(text)), text).toBe(text);
+    }
+
+    for (const html of [
+      "<p>Do the labs early.</p>",
+      "<p>One<br />Two</p>",
+      "<p>One</p><p>Two</p>",
+      "<p>Use &lt;vector&gt; &amp; &lt;map&gt;.</p>",
+    ]) {
+      expect(fromPlainText(toEditableText(html)), html).toBe(html);
+    }
   });
 });
