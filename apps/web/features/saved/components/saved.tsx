@@ -8,19 +8,15 @@ import { type AuthReason, AuthReasonDialog, useMe } from "@/features/auth";
 import { Collections } from "@/features/collections";
 import {
   CourseCardItem,
-  courseCardGeometry,
   NO_COURSE_STATS,
   useCourseStats,
   useCourseSummaries,
 } from "@/features/courses";
 import { PageColumn, PageHeader } from "@/features/shell";
 import {
-  MobileWorkspaceSheetHost,
   type OpenCourseRequest,
-  useResultsWidth,
-  useWorkspacePane,
-  useWorkspacePresentation,
-  WorkspacePaneHost,
+  useWorkspaceHost,
+  WorkspaceHost,
 } from "@/features/workspace";
 import { useSetCourseSaved } from "../api/mutations";
 import { toggleGuestSave, useGuestSavesImport } from "../hooks/use-guest-saves";
@@ -43,13 +39,14 @@ const SAVED_HEADING_ID = "saved-courses-heading";
  * about it are worth knowing before changing anything here.
  *
  * **It hosts the workspace pane, so its cards ramp.** The artboard imports the
- * pane with the same contract Explore uses, and computes the card's
- * `geo` from what the pane leaves of the row exactly as Explore
- * does. So the geometry is measured here rather than pinned: with no tab open
- * the column is wide and the ramp lands on its expanded end, and with a tab
- * open the cards collapse instead of overflowing a column that just lost 504px.
- * Pinning either end here — as a page with no pane to yield to could — is what
- * the artboard's interpolation replaces.
+ * pane with the same contract Explore uses, and computes the card's `geo` from
+ * what the pane leaves of the row exactly as Explore does — which is why both
+ * pages get all of it from one `useWorkspaceHost` call. So the geometry is
+ * measured rather than pinned: with no tab open the column is wide and the ramp
+ * lands on its expanded end, and with a tab open the cards collapse instead of
+ * overflowing a column that just lost 504px. Pinning either end here — as a
+ * page with no pane to yield to could — is what the artboard's interpolation
+ * replaces.
  *
  * **Unsaving removes the save and its collection memberships, and nothing
  * else.** The trash control calls `saved.unsave`, whose repository deletes one
@@ -145,12 +142,8 @@ export function Saved({ openCollectionId = null, openCourse = null }: Props) {
   const [openDetail, setOpenDetail] = useState<string | null>(openCollectionId);
   useEffect(() => setOpenDetail(openCollectionId), [openCollectionId]);
 
-  const containerRef = useRef<HTMLDivElement>(null);
-  const rowRef = useRef<HTMLDivElement>(null);
-  const presentation = useWorkspacePresentation(containerRef);
-  const workspace = useWorkspacePane("saved");
-  const [resultsRef, resultsWidth] = useResultsWidth();
-  const geo = courseCardGeometry(resultsWidth);
+  const host = useWorkspaceHost("saved");
+  const { containerRef, geo, resultsRef, rowRef, workspace } = host;
 
   const requestedCode = openCourse?.courseCode ?? null;
   const requestedKind = openCourse?.kind ?? null;
@@ -450,30 +443,11 @@ export function Saved({ openCollectionId = null, openCourse = null }: Props) {
           )}
         </div>
 
-        {/* Two presentations of one open list, and never both at once — the
-            column until the container has been measured as narrow, the sheet
-            after. See `useWorkspacePresentation` for why `null` is not
-            "narrow". */}
-        {presentation === "sheet" ? null : (
-          <WorkspacePaneHost
-            rowRef={rowRef}
-            openCourses={workspace.openCourses}
-            activeId={workspace.activeId}
-            onActivate={workspace.activate}
-            onClose={workspace.close}
-            onOpen={workspace.open}
-          />
-        )}
+        {/* The pane, or the sheet, or neither — `WorkspaceHost` owns that
+            branch for both pages. It sits inside the row because that is where
+            the column is laid out; the sheet portals out of here. */}
+        <WorkspaceHost host={host} />
       </div>
-
-      {presentation === "sheet" ? (
-        <MobileWorkspaceSheetHost
-          openCourses={workspace.openCourses}
-          activeId={workspace.activeId}
-          onClose={workspace.close}
-          onOpen={workspace.open}
-        />
-      ) : null}
 
       {/*
         Asked before the write, not confirmed after it. The body names
