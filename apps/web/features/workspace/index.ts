@@ -7,6 +7,9 @@
  * `/course/<code>` it is the *only* place a course opens, so both hosts mount
  * it and everything a host needs to do that is exported here:
  *
+ * - `useWorkspaceHost` and `WorkspaceHost`, which are the two halves a page
+ *   actually wants: the state a host needs, and the presentation branch. A new
+ *   host should reach for these and nothing below them;
  * - `WorkspacePaneHost` and `MobileWorkspaceSheetHost`, the two presentations,
  *   with `useWorkspacePresentation` deciding which of them renders;
  * - `useWorkspacePane`, the open list — the host owns it because the host has
@@ -15,15 +18,20 @@
  *   both hosts feed to the course card's collapse ramp;
  * - `openCourseRequest`, how a host reads `?open=` off its own route.
  *
- * `WorkspacePane` itself stays exported for the tests and for anything that
- * wants the bare tab strip; hosts should reach for `WorkspacePaneHost`, which
- * carries the column's width policy and its drag handle.
+ * The four pieces under `useWorkspaceHost` stay exported because the tests
+ * reach for them and because a page with an unusual shape may still assemble
+ * its own host; `WorkspacePane` likewise, for anything that wants the bare tab
+ * strip without the column's width policy or its drag handle.
  */
 
 export {
   MobileWorkspaceSheetHost,
   type MobileWorkspaceSheetHostProps,
 } from "./components/mobile-workspace-sheet-host";
+export {
+  WorkspaceHost,
+  type WorkspaceHostProps,
+} from "./components/workspace-host";
 export type { WorkspacePaneProps } from "./components/workspace-pane";
 export { WorkspacePane } from "./components/workspace-pane";
 export {
@@ -31,6 +39,10 @@ export {
   type WorkspacePaneHostProps,
 } from "./components/workspace-pane-host";
 export { useResultsWidth } from "./hooks/use-results-width";
+export {
+  useWorkspaceHost,
+  type WorkspaceHostState,
+} from "./hooks/use-workspace-host";
 export { useWorkspacePane } from "./hooks/use-workspace-pane";
 export {
   useWorkspacePresentation,

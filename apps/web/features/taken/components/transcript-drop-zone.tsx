@@ -2,6 +2,7 @@
 
 import { FileText, Info, Upload } from "lucide-react";
 import { type DragEvent, useId, useRef, useState } from "react";
+import { Switch } from "@/components/ui/switch";
 import { MAX_TRANSCRIPT_LABEL } from "../api/transcript";
 
 type Props = {
@@ -101,23 +102,18 @@ export function TranscriptDropZone({
               : "Grades are dropped when you confirm, so no grade of yours is stored. Credits, names and years are still read."}
           </p>
         </div>
-        <button
-          type="button"
+        {/* The app's one switch. This used to be a hand-rolled `role="switch"`
+            button with the same metrics and colours written out again, which
+            is how the app came to have two switches that did not match: the
+            shared one's state classes were addressed to the wrong data
+            attribute, so its track never took a colour, and only this copy
+            looked right. Fixing the shared one is what let this go. */}
+        <Switch
           id={switchId}
-          role="switch"
-          aria-checked={includeGrades}
-          onClick={() => onIncludeGradesChange(!includeGrades)}
-          className={`flex h-6 w-[42px] flex-none cursor-pointer items-center rounded-full p-[3px] transition-colors ${
-            includeGrades
-              ? "justify-end bg-cc-brand"
-              : "justify-start bg-cc-rule3"
-          }`}
-        >
-          <span
-            aria-hidden
-            className="size-[18px] rounded-full bg-cc-surface shadow-[0_1px_2px_rgba(20,30,45,.28)]"
-          />
-        </button>
+          className="flex-none cursor-pointer"
+          checked={includeGrades}
+          onCheckedChange={onIncludeGradesChange}
+        />
       </div>
 
       <button

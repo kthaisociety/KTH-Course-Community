@@ -176,30 +176,29 @@ const CLEAR_SLICES = 30;
 const TRAIL_BASE = 16;
 const TRAIL_GAIN = 74;
 
-/** The head's halo radius, in px: `5 + 9 * k` (:1375). */
-const HALO_BASE = 5;
-const HALO_GAIN = 9;
-
-/** How many discs the halo is drawn as, and how bright its core is at `k = 1`.
- * `PAL.haloA` in the export's palette. See `haloDiscs`. */
-const HALO_STEPS = 3;
-const HALO_ALPHA = 0.85;
-
 /** The stroke width along the whole trail: `1.1 + 1.9 * k` (:1387). */
 const WIDTH_BASE = 1.1;
 const WIDTH_GAIN = 1.9;
 
 /**
- * The artboard's gradient (:1382-1386), as stops rather than as a gradient.
+ * The artboard's gradient (:1382-1386), as the stops of a real gradient.
  *
- * `createLinearGradient` needs a colour it can vary the alpha of, and every
- * colour on this canvas is a `--cc-*` token read as an opaque string — so
- * matching the export's four stops would mean parsing CSS colour syntax at draw
- * time, or interpolating from `transparent`, which canvas does in
- * non-premultiplied sRGB and which greys the tail. Sampling the same stop curve
- * into a handful of sub-strokes under `globalAlpha` produces the same taper
- * with neither, and it is the technique `COMET_SEGMENTS` already uses in this
- * hero. `at` is the fraction from tail to head; `alpha` multiplies `k`.
+ * `at` is the fraction from tail to head; `alpha` multiplies `k`.
+ *
+ * These were once *sampled* into eight equal sub-strokes, each stroked
+ * separately under its own `globalAlpha`, to avoid varying the alpha of a
+ * `--cc-*` token. That is what made a signal read as a row of crumbs rather
+ * than as one tapering streak: eight round-capped segments abutting end to end
+ * overlap by half a line width at every joint, and where two different alphas
+ * overlap the compositing leaves a visibly darker bead — eight beads, plus the
+ * eight flat brightness steps between them. Both artefacts were the sampling's,
+ * not the design's; the artboard strokes one line through one gradient.
+ *
+ * The colour arithmetic that was being avoided turned out not to exist: every
+ * `--cc-node-*` and `--cc-brand` is a plain six-digit hex, so the painter reads
+ * three channels off it and builds the stops. See `trailGradient` in
+ * `hero-network.tsx`, which also keeps the old behaviour as the fallback for a
+ * colour it cannot read.
  */
 const TRAIL_STOPS: { at: number; alpha: number }[] = [
   { at: 0, alpha: 0 },
@@ -207,9 +206,6 @@ const TRAIL_STOPS: { at: number; alpha: number }[] = [
   { at: 0.9, alpha: 0.9 },
   { at: 1, alpha: 1.1 },
 ];
-
-/** How many sub-strokes the stop curve above is sampled into. */
-const TRAIL_STEPS = 8;
 
 /**
  * `fade`: the ring radii and alphas of the standing-still mark, reused moving.
@@ -846,8 +842,22 @@ export type TrailRing = {
   alpha: number;
 };
 
-/** One filled disc of the head's halo. */
-export type TrailDisc = { x: number; y: number; radius: number; alpha: number };
+/**
+ * The wake as one tapering stroke, traced through a gradient.
+ *
+ * `stops` runs tail to head and its alphas are already scaled by the envelope,
+ * so the painter varies nothing itself. `null` for the styles that draw their
+ * wake some other way — `fade` leaves rings, `comet` leaves three segments of
+ * its own widths.
+ */
+export type TrailGradient = {
+  fromX: number;
+  fromY: number;
+  toX: number;
+  toY: number;
+  width: number;
+  stops: { at: number; alpha: number }[];
+};
 
 /**
  * Everything one signal asks the canvas for, as data.
@@ -861,9 +871,18 @@ export type SignalPaint = {
   colorVar: string;
   headX: number;
   headY: number;
-  /** The head, identical across all four styles. */
-  halo: TrailDisc[];
-  /** The wake as strokes. Empty for `fade`. */
+  /**
+   * The wake as one gradient stroke — `default` and `dashed`. `null` for the
+   * two styles that describe their wake as `strokes` or `rings` instead.
+   *
+   * There is deliberately **no halo**. The head used to carry three filled
+   * discs of falling alpha, up to a 14px radius, standing in for the export's
+   * `createRadialGradient`. It read as a circular glow around every signal,
+   * which is not in the design, so it is gone: the head is now simply the
+   * bright end of the trail.
+   */
+  trail: TrailGradient | null;
+  /** The wake as strokes. Empty for `fade` and for the gradient styles. */
   strokes: TrailStroke[];
   /** The wake as rings. Empty for everything but `fade`. */
   rings: TrailRing[];
@@ -972,7 +991,7 @@ export function signalPaint(
     colorVar: sender.node.colorVar,
     headX: head.x,
     headY: head.y,
-    halo: haloDiscs(head.x, head.y, k),
+    trail: null,
     strokes: [],
     rings: [],
     dash: signal.style === "dashed" ? DASHED_TRAIL_DASH : null,
@@ -1013,59 +1032,20 @@ export function signalPaint(
     return paint;
   }
 
-  // `default` and `dashed`: the artboard's single tapering stroke, sampled off
-  // `TRAIL_STOPS` into sub-strokes so the taper needs no colour arithmetic.
-  for (let i = 0; i < TRAIL_STEPS; i++) {
-    const a = i / TRAIL_STEPS;
-    const b = (i + 1) / TRAIL_STEPS;
-    paint.strokes.push({
-      fromX: tail.x + (head.x - tail.x) * a,
-      fromY: tail.y + (head.y - tail.y) * a,
-      toX: tail.x + (head.x - tail.x) * b,
-      toY: tail.y + (head.y - tail.y) * b,
-      width,
-      alpha: Math.min(1, k * stopAlpha((a + b) / 2)),
-    });
-  }
+  // `default` and `dashed`: the artboard's single tapering stroke, as one
+  // stroke through one gradient. `dashed` traces the same trail through
+  // `DASHED_TRAIL_DASH` — that pattern is a tier-3 choice a member made, and is
+  // the only dashing left on this canvas.
+  paint.trail = {
+    fromX: tail.x,
+    fromY: tail.y,
+    toX: head.x,
+    toY: head.y,
+    width,
+    stops: TRAIL_STOPS.map((stop) => ({
+      at: stop.at,
+      alpha: Math.min(1, k * stop.alpha),
+    })),
+  };
   return paint;
-}
-
-/** `TRAIL_STOPS`, interpolated. `at` runs 0 at the tail to 1 at the head. */
-function stopAlpha(at: number): number {
-  let previous = TRAIL_STOPS[0];
-  for (const stop of TRAIL_STOPS) {
-    if (at <= stop.at) {
-      const span = stop.at - previous.at;
-      const t = span > 0 ? (at - previous.at) / span : 1;
-      return previous.alpha + (stop.alpha - previous.alpha) * t;
-    }
-    previous = stop;
-  }
-  return previous.alpha;
-}
-
-/**
- * The head's halo, as discs rather than as a radial gradient.
- *
- * Same reason as `TRAIL_STOPS`: the colour is a token, not something whose
- * alpha this file can vary inside a gradient stop. Three concentric discs of
- * falling alpha read as the export's `createRadialGradient` halo does at the
- * five-to-fourteen pixel radii it actually uses, and cost three arcs.
- */
-function haloDiscs(x: number, y: number, k: number): TrailDisc[] {
-  const reach = HALO_BASE + HALO_GAIN * k;
-  const discs: TrailDisc[] = [];
-  // Widest first, so the core is painted over its own glow rather than under
-  // it. Alpha falls as the square of the radius, which is the shape of the
-  // export's gradient between `haloA` at the centre and zero at the rim.
-  for (let i = HALO_STEPS; i >= 1; i--) {
-    const t = i / HALO_STEPS;
-    discs.push({
-      x,
-      y,
-      radius: reach * t,
-      alpha: k * HALO_ALPHA * (1 - t + 1 / HALO_STEPS) ** 2,
-    });
-  }
-  return discs;
 }

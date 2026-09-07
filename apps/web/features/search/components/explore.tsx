@@ -4,15 +4,9 @@ import { RotateCcw, Search as SearchIcon, TriangleAlert } from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect, useRef } from "react";
 import { AuthReasonDialog } from "@/features/auth";
-import { CourseCardItem, courseCardGeometry } from "@/features/courses";
+import { CourseCardItem } from "@/features/courses";
 import { PageColumn, PageHeader, useSearchBarArrival } from "@/features/shell";
-import {
-  MobileWorkspaceSheetHost,
-  useResultsWidth,
-  useWorkspacePane,
-  useWorkspacePresentation,
-  WorkspacePaneHost,
-} from "@/features/workspace";
+import { useWorkspaceHost, WorkspaceHost } from "@/features/workspace";
 import { useExplore } from "../hooks/use-explore";
 
 /**
@@ -20,12 +14,13 @@ import { useExplore } from "../hooks/use-explore";
  * catalogue.
  *
  * From `docs/design_ref/2026-09-06/Course Community - Explore.dc.html`. Three things
- * about it are this page's alone:
+ * about it are worth knowing before changing anything here:
  *
- * - **It owns the course card's collapse ramp.** `courseCardGeometry` turns the
- *   measured results-column width into the card's `geo`; the artboard computes
- *   the same ramp off the width the workspace pane leaves behind.
- *   The card measures nothing, which is why the geometry is a prop.
+ * - **It hands the course card its collapse ramp.** `useWorkspaceHost` measures
+ *   the results column and turns the width into the card's `geo`; the artboard
+ *   computes the same ramp off the width the workspace pane leaves behind. The
+ *   card measures nothing, which is why the geometry is a prop. Saved does the
+ *   same thing from the same hook — this is the page's shape, not its monopoly.
  * - **It is where a course opens.** #68 §5 retired the course page, so
  *   `/course/<code>` now redirects here carrying `?open=<code>&kind=…` and the
  *   pane is the only surface that shows a course. Nothing on this page routes
@@ -123,15 +118,11 @@ import { useExplore } from "../hooks/use-explore";
  *   the rail is the shell's and only the shell can hand it over.
  */
 export function Explore() {
-  const workspace = useWorkspacePane("explore");
+  const host = useWorkspaceHost("explore");
+  const { containerRef, geo, resultsRef, rowRef, workspace } = host;
   const explore = useExplore({
     onOpenCourse: (request) => workspace.open(request.courseCode, request.kind),
   });
-  const containerRef = useRef<HTMLDivElement>(null);
-  const presentation = useWorkspacePresentation(containerRef);
-  const rowRef = useRef<HTMLDivElement>(null);
-  const [resultsRef, resultsWidth] = useResultsWidth();
-  const geo = courseCardGeometry(resultsWidth);
   // The bar the landing hands over, and the subtree the arrival looks in for the
   // surroundings that fade up behind it.
   const barRef = useRef<HTMLFormElement>(null);
@@ -329,30 +320,11 @@ export function Explore() {
           </div>
         </div>
 
-        {/* Two presentations of one open list, and never both at once: the
-            column until the container has been measured as narrow, the sheet
-            after. See `useWorkspacePresentation` for why `null` is not
-            "narrow". */}
-        {presentation === "sheet" ? null : (
-          <WorkspacePaneHost
-            rowRef={rowRef}
-            openCourses={workspace.openCourses}
-            activeId={workspace.activeId}
-            onActivate={workspace.activate}
-            onClose={workspace.close}
-            onOpen={workspace.open}
-          />
-        )}
+        {/* The pane, or the sheet, or neither — `WorkspaceHost` owns that
+            branch for both pages. It sits inside the row because that is where
+            the column is laid out; the sheet portals out of here. */}
+        <WorkspaceHost host={host} />
       </div>
-
-      {presentation === "sheet" ? (
-        <MobileWorkspaceSheetHost
-          openCourses={workspace.openCourses}
-          activeId={workspace.activeId}
-          onClose={workspace.close}
-          onOpen={workspace.open}
-        />
-      ) : null}
 
       <AuthReasonDialog
         reason={explore.authReason}

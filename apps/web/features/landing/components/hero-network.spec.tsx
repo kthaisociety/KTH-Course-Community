@@ -39,6 +39,16 @@ type TracedPath = {
   filled: boolean;
   stroked: boolean;
   dash: number[];
+  /**
+   * The cap and width in force when the path was opened.
+   *
+   * A signal's wake is one stroked line, and so is a **backbone edge** — the
+   * only thing that tells them apart from the outside is that the wake is drawn
+   * round-capped and wider. Since the head's halo came off, that is also the
+   * only mark a plain signal leaves at all.
+   */
+  cap: string;
+  width: number;
 };
 
 function recordingContext() {
@@ -46,6 +56,7 @@ function recordingContext() {
   const paths: TracedPath[] = [];
   let dash: number[] = [];
   const open = () => paths[paths.length - 1];
+  const state = { cap: "butt", width: 1 };
   return {
     calls,
     paths,
@@ -63,6 +74,8 @@ function recordingContext() {
           filled: false,
           stroked: false,
           dash,
+          cap: state.cap,
+          width: state.width,
         });
       }),
       moveTo: vi.fn((x: number, y: number) => open()?.moves.push({ x, y })),
@@ -93,8 +106,18 @@ function recordingContext() {
       globalAlpha: 1,
       fillStyle: "",
       strokeStyle: "",
-      lineWidth: 1,
-      lineCap: "butt",
+      set lineWidth(value: number) {
+        state.width = value;
+      },
+      get lineWidth() {
+        return state.width;
+      },
+      set lineCap(value: string) {
+        state.cap = value;
+      },
+      get lineCap() {
+        return state.cap;
+      },
       font: "",
       textBaseline: "alphabetic",
     } as unknown as CanvasRenderingContext2D,
@@ -889,12 +912,24 @@ describe("HeroNetwork under the pointer", () => {
       recorder.paths.length = 0;
       for (let i = 0; i < 40; i++) clock.step();
 
-      // A halo disc: filled, one arc, and wider than any node on the canvas.
-      const halo = recorder.paths.filter(
+      /*
+        A signal's wake: one stroked line, round-capped and wider than the hairline
+        a backbone edge is drawn with.
+
+        This used to look for a halo disc — filled, one arc, wider than a node.
+        That halo is gone: it read as a circular glow around every signal and is
+        not in the design, so the wake is now the whole of what a plain signal
+        draws.
+      */
+      const wakes = recorder.paths.filter(
         (path) =>
-          path.filled && path.arcs.length === 1 && path.arcs[0].r > NODE_RADIUS,
+          path.stroked &&
+          path.cap === "round" &&
+          path.arcs.length === 0 &&
+          path.lines.length === 1 &&
+          path.width > 1,
       );
-      expect(halo.length).toBeGreaterThan(0);
+      expect(wakes.length).toBeGreaterThan(0);
     } finally {
       clock.restore();
     }

@@ -235,26 +235,44 @@ describe("Saved", { timeout: 20_000 }, () => {
       ).toBeNull();
     });
 
-    // The artboard's own heading and line. The line is what
-    // distinguishes this section from the `h1` of the same words above it.
-    it("heads the list the way the artboard heads it", () => {
+    /**
+     * #208 took the artboard's `h2` and its line out, and it is an alignment
+     * decision rather than an editorial one: Explore has nothing between its
+     * band and its results, so a heading here would push this list one row
+     * below Explore's and undo the levelling the band above it just bought.
+     *
+     * The region keeps its name — a landmark that loses its heading has to gain
+     * a label, or it stops being findable at all.
+     */
+    it("names the list rather than heading it", () => {
       saved("DD2380");
       render(<Saved />);
 
-      const heading = screen.getByRole("heading", {
-        level: 2,
-        name: "Saved courses",
-      });
-      expect(heading).toBeVisible();
       expect(
-        screen.getByText(
-          /All the courses you have saved, including any already grouped into a collection\./,
-        ),
-      ).toBeVisible();
-      // The superseded copy promised the opposite.
-      expect(
-        screen.queryByText(/but not yet added to a collection/),
+        screen.queryByRole("heading", { level: 2, name: "Saved courses" }),
       ).toBeNull();
+      expect(
+        screen.queryByText(
+          /All the courses you have saved, including any already grouped/,
+        ),
+      ).toBeNull();
+      expect(
+        screen.getByRole("region", { name: "Saved courses" }),
+      ).toBeInTheDocument();
+    });
+
+    /** The other `h2` #208 removed, and its section's replacement name. */
+    it("names the collections region rather than heading it", () => {
+      saved("DD2380");
+      collections.mockReturnValue([collection("Spring picks", "DD2380")]);
+      render(<Saved openCollectionId="col-Spring picks" />);
+
+      expect(
+        screen.queryByRole("heading", { level: 2, name: "Collections" }),
+      ).toBeNull();
+      expect(
+        screen.getByRole("region", { name: "Collections" }),
+      ).toBeInTheDocument();
     });
 
     /**
@@ -274,8 +292,10 @@ describe("Saved", { timeout: 20_000 }, () => {
       await userEvent.click(trigger);
       expect(trigger).toHaveAttribute("aria-expanded", "true");
 
+      // Anywhere outside the card. The page's own `h1` since #208 took the
+      // section headings out.
       await userEvent.click(
-        screen.getByRole("heading", { level: 2, name: "Saved courses" }),
+        screen.getByRole("heading", { level: 1, name: "Saved courses" }),
       );
       expect(trigger).toHaveAttribute("aria-expanded", "false");
     });
@@ -320,26 +340,82 @@ describe("Saved", { timeout: 20_000 }, () => {
   });
 
   /**
-   * `Course Community - Saved.dc.html` imports the Collections artboard
-   * with `compact`. That embedding is the design's only way in to collections —
-   * the artboard's rail has no entry for them — so it is part of this page
-   * rather than a link away from it.
+   * `Course Community - Saved.dc.html` imports the Collections artboard as a
+   * section of itself. That embedding is the design's only way in to
+   * collections — the artboard's rail has no entry for them — so it is part of
+   * this page rather than a link away from it.
+   *
+   * Since #208 it arrives in two pieces: the chips are the page's band, above
+   * the workspace row, and an open collection's detail is inside the scrolling
+   * column below. See `the band above the row` for what that buys.
    */
   describe("the collections section", () => {
-    it("is a row of chips above the saved courses", () => {
+    it("is a row of chips in the band, with the create button beside them", () => {
       saved("DD2380");
       collections.mockReturnValue([collection("Spring picks", "DD2380")]);
       render(<Saved />);
 
+      const band = screen.getByTestId("collections-band");
       expect(
-        screen.getByRole("heading", { name: "Collections" }),
+        within(band).getByRole("button", { name: "New collection" }),
       ).toBeInTheDocument();
       expect(
-        screen.getByRole("button", { name: "New collection" }),
+        within(band).getByRole("button", {
+          name: "Open collection Spring picks",
+        }),
       ).toBeInTheDocument();
+    });
+
+    /**
+     * The chips persist while a detail is open, with the open one marked — they
+     * are the design's only way into collections, so they stay as navigation
+     * rather than being replaced by a back control. Nothing needed an active
+     * chip before #208, because opening one used to replace the row.
+     */
+    it("keeps the chips while a collection is open, and marks the open one", async () => {
+      saved("DD2380");
+      collections.mockReturnValue([
+        collection("Spring picks", "DD2380"),
+        collection("Autumn", "DD2380"),
+      ]);
+      render(<Saved />);
+
+      const chip = screen.getByRole("button", {
+        name: "Open collection Spring picks",
+      });
+      await userEvent.click(chip);
+
+      const band = screen.getByTestId("collections-band");
       expect(
+        within(band).getByRole("button", {
+          name: "Open collection Spring picks",
+        }),
+      ).toHaveAttribute("aria-current", "true");
+      expect(
+        within(band).getByRole("button", { name: "Open collection Autumn" }),
+      ).not.toHaveAttribute("aria-current");
+    });
+
+    /**
+     * The regression `saved.tsx` has recorded since it was built: the row owns
+     * the page's only scroll, so a fixed-height block above it clips a long
+     * collection. #208 moves the chips up and leaves the detail down here, and
+     * this is the half that must not follow them.
+     */
+    it("opens the detail in the results column, never in the band", async () => {
+      saved("DD2380");
+      collections.mockReturnValue([collection("Spring picks", "DD2380")]);
+      render(<Saved />);
+
+      await userEvent.click(
         screen.getByRole("button", { name: "Open collection Spring picks" }),
-      ).toBeInTheDocument();
+      );
+
+      const detail = screen.getByRole("heading", { name: "Spring picks" });
+      expect(screen.getByTestId("saved-results").contains(detail)).toBe(true);
+      expect(screen.getByTestId("collections-band").contains(detail)).toBe(
+        false,
+      );
     });
 
     // The artboard's own `showSavedSection: !collectionsOpenDetail`. The detail
@@ -881,40 +957,58 @@ describe("Saved", { timeout: 20_000 }, () => {
   });
 
   /**
-   * The space this page holds for a block it does not have.
+   * The band this page spends where Explore spends its search block.
    *
-   * Explore spends `--cc-search-block-h` on its search block between the header
-   * and the row the workspace pane sits in; this page puts nothing there. The
-   * tab strip lives in that row on both, so without the reservation the two
-   * strips started 74px apart - 118px before Explore's block came down to one
-   * row. Both sides read the one token, so neither can be edited to a literal
-   * without the other noticing.
+   * Explore spends `--cc-search-block-h` between its header and the row the
+   * workspace pane sits in. The tab strip lives in that row on both pages, so
+   * without something of the same height here the two strips started 74px apart
+   * — 118px before Explore's block came down to one row. #205 held the height
+   * blank; #208 fills it with the reader's collections. Both sides read the one
+   * token, so neither can be edited to a literal without the other noticing.
    *
    * jsdom lays nothing out, so this reads the declaration rather than the
-   * pixels, as `workspace-pane-host.spec.tsx` does for its own `@3xl` gate.
+   * pixels, as `workspace-pane-host.spec.tsx` does for its own `@3xl` gate. The
+   * pixels were measured in a browser: on a 1920px viewport both pages put
+   * their workspace pane at y=229, with the band running 155→229.
    */
-  describe("the space above the row", () => {
+  describe("the band above the row", () => {
     function row() {
       return screen.getByTestId("saved-results").parentElement;
     }
 
-    it("reserves what Explore spends on its search block", () => {
+    function band() {
+      return screen.getByTestId("collections-band");
+    }
+
+    it("spends what Explore spends on its search block", () => {
       saved("DD2380");
       render(<Saved />);
 
-      expect(row()).toHaveClass("@3xl:pt-[var(--cc-search-block-h)]");
+      expect(band()).toHaveClass("@3xl:h-[var(--cc-search-block-h)]");
+    });
+
+    /**
+     * The reservation #205 put on the row is gone, because the band above it is
+     * the reservation now. Left in place it would be spent twice and the strips
+     * would part company by 74px the other way.
+     */
+    it("no longer reserves the height on the row as well", () => {
+      saved("DD2380");
+      render(<Saved />);
+
+      expect(row()).not.toHaveClass("@3xl:pt-[var(--cc-search-block-h)]");
+      expect(row()).not.toHaveClass("pt-[var(--cc-search-block-h)]");
     });
 
     /**
      * Permanent, not conditional on tabs being open: a page that jumped down
-     * 74px when the reader opened their first tab would be worse than 74px of
-     * quiet space, and it would move the collections strip under a reader
-     * mid-scroll.
+     * 74px when the reader opened their first tab would be worse than a page
+     * that never moves, and it would shift the chips under a reader mid-scroll.
      */
-    it("holds the space whether or not anything is open", async () => {
+    it("holds its height whether or not anything is open", async () => {
       saved("DD2380");
       render(<Saved />);
-      expect(row()).toHaveClass("@3xl:pt-[var(--cc-search-block-h)]");
+      expect(band()).toHaveClass("@3xl:h-[var(--cc-search-block-h)]");
 
       await userEvent.click(
         within(cardFor("DD2380")).getByRole("button", {
@@ -923,33 +1017,129 @@ describe("Saved", { timeout: 20_000 }, () => {
       );
 
       expect(screen.getByTestId("workspace-pane-host")).toBeInTheDocument();
-      expect(row()).toHaveClass("@3xl:pt-[var(--cc-search-block-h)]");
+      expect(band()).toHaveClass("@3xl:h-[var(--cc-search-block-h)]");
     });
 
     /**
-     * `@3xl` is `WorkspacePaneHost`'s own condition. Below it the workspace is a
-     * sheet, there is no side-by-side column and no tab strip to line up with,
-     * and 74px of blank costs real height on a phone.
+     * The fixed height is `@3xl`, which is `WorkspacePaneHost`'s own condition.
+     * Below it the workspace is a sheet, there is no side-by-side column and no
+     * tab strip to line up with, so the band takes its natural height there.
+     *
+     * The **band itself** is not gated, which is the change from #205's blank
+     * reservation: it carries the create button and the chips now, and those
+     * have to be reachable on a phone.
      */
-    it("gives the space up where there is no tab strip to line up with", () => {
+    it("takes its natural height where there is no tab strip to line up with", () => {
       saved("DD2380");
       render(<Saved />);
 
-      expect(row()).not.toHaveClass("pt-[var(--cc-search-block-h)]");
+      expect(band()).not.toHaveClass("h-[var(--cc-search-block-h)]");
+      expect(band()).toBeInTheDocument();
     });
 
     /**
      * The same query Explore spends its block on — unqualified, so it resolves
      * against `PageColumn` rather than against the shell's named container. The
      * rail's `@3xl/shell` is a whole rail width of viewport away from this one,
-     * and a reservation made on that threshold would part company with Explore
+     * and a band sized on that threshold would part company with Explore
      * between roughly 1004 and 1024px. See `explore.tsx` for the measurements.
      */
-    it("reserves on the pane's threshold, not the rail's", () => {
+    it("sizes on the pane's threshold, not the rail's", () => {
       saved("DD2380");
       render(<Saved />);
 
-      expect(row()).not.toHaveClass("@3xl/shell:pt-[var(--cc-search-block-h)]");
+      expect(band()).not.toHaveClass("@3xl/shell:h-[var(--cc-search-block-h)]");
+    });
+
+    /**
+     * Explore's band carries `@3xl:mr-[236px]` and this one must not. The
+     * margin moves a *centred* bar onto the viewport's centre line by
+     * cancelling the rail's width; this band is left-aligned, so the same
+     * margin would centre nothing and only cut 236px off its right-hand end,
+     * when the two bands are meant to occupy the same box. Measured: the row
+     * runs 490→1666 on a 1920px viewport, and so does this.
+     */
+    it("does not take Explore's rail correction", () => {
+      saved("DD2380");
+      render(<Saved />);
+
+      expect(band()).not.toHaveClass("@3xl:mr-[236px]");
+    });
+
+    /**
+     * The band's height is what levels the two pages, so nothing inside it may
+     * be allowed to change that height. A wrapping chip row would do exactly
+     * that once the reader has enough collections — the defect this whole
+     * change exists to fix, re-triggered by user data instead of by page.
+     */
+    it("scrolls its chips sideways rather than wrapping them", () => {
+      saved("DD2380");
+      collections.mockReturnValue([
+        collection("Spring picks", "DD2380"),
+        collection("Autumn", "DD2380"),
+      ]);
+      render(<Saved />);
+
+      const scroller = screen.getByTestId("collections-scroller");
+      expect(scroller).toHaveClass("flex-nowrap");
+      expect(scroller).toHaveClass("overflow-x-auto");
+      expect(scroller).not.toHaveClass("flex-wrap");
+    });
+
+    /**
+     * The 3-second confirmation must never resize the band — it would shift
+     * both pages' tab strips for its lifetime. It goes above the list, in the
+     * column that scrolls.
+     */
+    it("keeps the confirmation note out of the band", async () => {
+      saved("DD2380");
+      collections.mockReturnValue([collection("Spring picks", "DD2380")]);
+      // The note is what says the deletion happened, so the write has to land.
+      deleteCollection.mockResolvedValue({ id: "col-Spring picks" });
+      render(<Saved />);
+
+      await userEvent.click(
+        within(band()).getByRole("button", {
+          name: "More actions for Spring picks",
+        }),
+      );
+      await userEvent.click(screen.getByRole("menuitem", { name: "Delete" }));
+      await userEvent.click(
+        screen.getByRole("button", { name: "Delete collection" }),
+      );
+
+      const note = await screen.findAllByText(
+        'Collection "Spring picks" deleted',
+      );
+      for (const element of note) {
+        expect(band().contains(element)).toBe(false);
+      }
+    });
+  });
+
+  /**
+   * A visitor's band has to be the same height as a member's, or the two pages'
+   * strips sit level for one and 46px out for the other — on a page Explore
+   * does not mirror, so nothing would correct it. The card this replaces was
+   * three rows and about 120px.
+   */
+  describe("the band a visitor sees", () => {
+    it("is one line, and still offers both ways in", () => {
+      useMe.mockReturnValue({ user: null, isLoading: false });
+      render(<Saved />);
+
+      const band = screen.getByTestId("collections-band");
+      expect(
+        within(band).getByText("Organize your saved courses into collections."),
+      ).toBeVisible();
+      expect(
+        within(band).getByRole("button", { name: "Sign up" }),
+      ).toBeVisible();
+      expect(
+        within(band).getByRole("button", { name: "Log in" }),
+      ).toBeVisible();
+      // The sync promise is dropped knowingly: one line has no room for it.
+      expect(screen.queryByText(/sync across devices/)).toBeNull();
     });
   });
 });
