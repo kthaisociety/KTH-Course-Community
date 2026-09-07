@@ -1,9 +1,9 @@
 "use client";
 
-import { Check, Lock, Plus } from "lucide-react";
+import { Check, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { AuthReasonDialog } from "@/features/auth";
+import { AuthReasonDialog, SignInPrompt } from "@/features/auth";
 import type { OpenCourseKind } from "@/features/workspace";
 import type { CollectionsState } from "../hooks/use-collections-state";
 import { CollectionDetail } from "./collection-detail";
@@ -158,38 +158,24 @@ export function CollectionsBody({
         ) : null}
 
         {/*
-          The invitation to sign in, at page scale. Embedded it is the band's
-          one-line row instead — see `CollectionsStrip`'s `GuestRow`, and #208
-          for why a 120px card cannot sit in a band that levels two pages.
+          The invitation to sign in on `/collections`. Embedded there is none
+          here at all: Saved puts it in the band instead — see
+          `CollectionsStrip`'s `GuestRow`, and #208 for why a 120px card cannot
+          sit in a band that levels two pages.
+
+          It is the same `SignInPrompt` the band draws. The two used to be
+          different shapes for that reason, and the slim one won: a card that
+          fits the band fits a page as well, and the reverse was never true.
         */}
         {!state.isLoading && !state.signedIn && !embedded ? (
-          <div className="max-w-[520px] rounded-[11px] border border-cc-rule2 bg-cc-surface p-[16px_17px]">
-            <div className="flex items-center gap-2">
-              <Lock size={15} className="text-cc-dim" aria-hidden />
-              <div className="font-semibold text-[13.5px]">
-                Organize your saved courses
-              </div>
-            </div>
-            <div className="mt-1.5 text-[12.5px] text-cc-muted leading-[1.5]">
-              Sign up or log in to create collections and sync across devices.
-            </div>
-            <div className="mt-[11px] flex gap-[7px]">
-              <button
-                type="button"
-                onClick={() => state.setAuthReason("sign-up")}
-                className="flex h-8 cursor-pointer items-center rounded-[8px] bg-cc-btn px-3.5 font-semibold text-[12.5px] text-cc-btn-fg hover:opacity-[0.88]"
-              >
-                Sign up
-              </button>
-              <button
-                type="button"
-                onClick={() => state.setAuthReason("log-in")}
-                className="flex h-8 cursor-pointer items-center rounded-[8px] border border-cc-rule3 bg-cc-surface px-3.5 font-medium text-[12.5px] text-cc-brand hover:border-cc-hov"
-              >
-                Log in
-              </button>
-            </div>
-          </div>
+          <SignInPrompt
+            title="Organize your saved courses into collections"
+            action={{
+              kind: "ask",
+              onSignUp: () => state.setAuthReason("sign-up"),
+              onLogIn: () => state.setAuthReason("log-in"),
+            }}
+          />
         ) : null}
 
         {!state.isLoading &&

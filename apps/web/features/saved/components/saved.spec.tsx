@@ -30,10 +30,17 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push, replace }),
   usePathname: () => "/saved",
 }));
-vi.mock("@/features/auth", () => ({
+// `SignInPrompt` is the real component rather than a stub: the band's guest
+// state *is* that component now, so stubbing it would leave these specs
+// asserting against markup no reader ever sees. It is imported from its module
+// rather than from the barrel this factory is replacing, and inside the factory
+// because `vi.mock` is hoisted above the imports at the top of this file.
+vi.mock("@/features/auth", async () => ({
   useMe: () => useMe(),
   AuthReasonDialog: () => null,
   authHref: (to: string) => `/auth?next=${encodeURIComponent(to)}`,
+  SignInPrompt: (await import("@/features/auth/components/sign-in-prompt"))
+    .SignInPrompt,
 }));
 vi.mock("@/features/courses/api/queries", () => ({
   useCourseDetails: () => ({ data: undefined }),
@@ -1130,7 +1137,7 @@ describe("Saved", { timeout: 20_000 }, () => {
 
       const band = screen.getByTestId("collections-band");
       expect(
-        within(band).getByText("Organize your saved courses into collections."),
+        within(band).getByText("Organize your saved courses into collections"),
       ).toBeVisible();
       expect(
         within(band).getByRole("button", { name: "Sign up" }),

@@ -1201,5 +1201,71 @@ describe("Explore", () => {
 
       expect(bar()).toHaveClass("max-w-[var(--cc-search-bar-w)]");
     });
+
+    /**
+     * The bar is the control the reader sees; the input inside it is
+     * transparent and unbordered. So the app's one focus ring — `globals.css` —
+     * has to land on the box and not on the field, or it draws a rounded
+     * rectangle around the *text*, inside the bar's own border.
+     *
+     * The two halves are asserted together because neither works alone: without
+     * `data-cc-field` there are two rings, and without the border variant there
+     * is none at all.
+     */
+    it("takes focus on the bar's edge rather than around the text", () => {
+      render(<Explore />);
+
+      const field = screen.getByLabelText("Search courses");
+      expect(field).toHaveAttribute("data-cc-field");
+      expect(field.parentElement).toHaveClass(
+        "has-[input:focus-visible]:border-cc-focus",
+      );
+    });
+  });
+
+  /**
+   * iOS Safari leaves the keyboard up after a submit, over the results the
+   * reader just asked for, on a shell that is `h-dvh overflow-hidden` and has
+   * no scroll to spare. `dismissKeyboard` is the fix and the pointer is its
+   * gate — see `lib/dismiss-keyboard.ts`.
+   */
+  describe("submitting on a touch device", () => {
+    function setPointer(kind: "coarse" | "fine") {
+      vi.spyOn(window, "matchMedia").mockImplementation(
+        (query: string) =>
+          ({
+            matches: query.includes(kind),
+            media: query,
+            onchange: null,
+            addListener: () => {},
+            removeListener: () => {},
+            addEventListener: () => {},
+            removeEventListener: () => {},
+            dispatchEvent: () => false,
+          }) as MediaQueryList,
+      );
+    }
+
+    it("closes the keyboard by taking focus off the field", async () => {
+      setPointer("coarse");
+      render(<Explore />);
+
+      const field = screen.getByLabelText("Search courses");
+      await userEvent.type(field, "graphs{Enter}");
+
+      expect(field).not.toHaveFocus();
+    });
+
+    it("leaves focus alone where there is no keyboard to close", async () => {
+      setPointer("fine");
+      render(<Explore />);
+
+      const field = screen.getByLabelText("Search courses");
+      await userEvent.type(field, "graphs{Enter}");
+
+      // A desktop reader is still typing in the field they just searched from.
+      // Blurring here is the regression the pointer query exists to prevent.
+      expect(field).toHaveFocus();
+    });
   });
 });

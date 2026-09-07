@@ -37,9 +37,14 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace, push }),
   usePathname: () => "/collections",
 }));
-vi.mock("@/features/auth", () => ({
+// The real `SignInPrompt`, not a stub — the visitor's panel is that component,
+// so a stub would take the thing under test out of the test. Imported inside
+// the factory because `vi.mock` is hoisted above this file's imports.
+vi.mock("@/features/auth", async () => ({
   useMe: () => useMe(),
   AuthReasonDialog: () => null,
+  SignInPrompt: (await import("@/features/auth/components/sign-in-prompt"))
+    .SignInPrompt,
 }));
 vi.mock("@/features/saved", () => ({
   useSetCourseSaved: () => ({ setSaved: vi.fn().mockResolvedValue(undefined) }),
@@ -597,10 +602,16 @@ describe("a visitor", () => {
     setup({ signedIn: false });
     render(<Collections />);
 
-    expect(screen.getByText("Organize your saved courses")).toBeVisible();
+    expect(
+      screen.getByText("Organize your saved courses into collections"),
+    ).toBeVisible();
     expect(screen.getByRole("button", { name: "Sign up" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Log in" })).toBeVisible();
     // There is no comparison feature to promise (#68).
     expect(screen.queryByText(/AI/)).not.toBeInTheDocument();
+    // The sync promise went with the slim card, on this page as in the band:
+    // one line has no room for it. See `SignInPrompt`.
+    expect(screen.queryByText(/sync across devices/)).toBeNull();
   });
 });
 

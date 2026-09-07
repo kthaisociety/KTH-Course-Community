@@ -1,10 +1,10 @@
 "use client";
 
-import { Lock, RotateCw, TriangleAlert } from "lucide-react";
+import { RotateCw, TriangleAlert } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useRef, useState } from "react";
-import { authHref, useMe } from "@/features/auth";
+import { authHref, SignInPrompt, useMe } from "@/features/auth";
 import {
   type EditableReview,
   Review,
@@ -461,40 +461,22 @@ export function MyPage() {
  *
  * `authHref` rather than a bare `/auth`, so signing in comes back to this page
  * instead of to `/search`.
+ *
+ * ## It is the band's card now, not a 520px one
+ *
+ * The panel was a three-row `max-w-[520px]` card of its own, and Saved's
+ * signed-out row was a bare line with no card at all. They are one
+ * {@link SignInPrompt} now, in the slim shape — full width, one line — because
+ * that is the only shape that also fits Saved's 74px band. The artboard's body
+ * copy goes with it; the shared component says why.
  */
 function SignedOutPanel() {
   return (
     <div className="px-7 pt-[18px] @max-[440px]:px-[14px]">
-      <div className="max-w-[520px] rounded-[11px] border border-cc-rule2 bg-cc-surface px-[17px] py-4">
-        <div className="flex items-center gap-2">
-          <Lock
-            aria-hidden
-            className="size-[15px] text-cc-dim"
-            strokeWidth={1.8}
-          />
-          <div className="font-semibold text-[13.5px]">
-            Sign in to see your page
-          </div>
-        </div>
-        <p className="m-0 mt-1.5 text-[12.5px] text-cc-muted leading-[1.5]">
-          Your course list, reviews and average stay private to you and sync
-          across devices.
-        </p>
-        <div className="mt-[11px] flex gap-[7px]">
-          <Link
-            href={authHref("/profile")}
-            className="inline-flex h-8 items-center whitespace-nowrap rounded-lg bg-cc-btn px-3.5 font-semibold text-[12.5px] text-cc-btn-fg no-underline hover:opacity-[.88]"
-          >
-            Sign up
-          </Link>
-          <Link
-            href={authHref("/profile")}
-            className="inline-flex h-8 items-center whitespace-nowrap rounded-lg border border-cc-rule3 bg-cc-surface px-3.5 font-medium text-[12.5px] text-cc-brand no-underline hover:border-cc-hov"
-          >
-            Log in
-          </Link>
-        </div>
-      </div>
+      <SignInPrompt
+        title="Sign in to see your page"
+        action={{ kind: "link", href: authHref("/profile") }}
+      />
     </div>
   );
 }

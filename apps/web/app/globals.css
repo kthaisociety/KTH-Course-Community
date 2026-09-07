@@ -94,6 +94,11 @@
   --color-cc-checked-tint: var(--cc-checked-tint);
   --color-cc-checked-hover-tint: var(--cc-checked-hover-tint);
   --color-cc-applied: var(--cc-applied);
+  /* `--focus` in `cc-theme.css`, registered as a colour utility because one
+     control paints with it rather than only being ringed by it: the search bar
+     lights its own border on keyboard focus. See the composite-control rule
+     further down. */
+  --color-cc-focus: var(--cc-focus);
 }
 
 :root {
@@ -547,7 +552,10 @@
    `focus:bg-cc-pill` (a menu highlight, not a ring), and
    `search/components/explore.tsx`'s `focus-visible:outline-cc-brand`, which
    this rule already overrides and which is therefore dead. Anything else added
-   in `features/**` is a duplicate of this rule. */
+   in `features/**` is a duplicate of this rule — with one exception, which is
+   the `data-cc-field` rule below and is not a duplicate but a *move*: the two
+   search bars draw this treatment on the box the reader sees instead of on the
+   input inside it. */
 :focus-visible:not([tabindex="-1"]) {
   /* biome-ignore lint/complexity/noImportantStyles: it has to beat the 22 inline `outline:none` declarations the artboards carry, and the shadcn primitives' own ring. Without it a focus style exists everywhere except where it is needed. */
   outline: 2px solid var(--cc-focus) !important;
@@ -562,6 +570,73 @@
   outline-color: var(--cc-rail-focus) !important;
   /* biome-ignore lint/complexity/noImportantStyles: as above — it replaces an `!important` halo, not a plain one. */
   box-shadow: 0 0 0 4px var(--cc-rail-focus-ring) !important;
+}
+
+/* The one exception to the two rules above: a field whose *wrapper* is the
+   control.
+
+   The rule lands on whatever element actually takes focus, which is normally
+   the thing the reader sees. It is not, for a text field inside a box that is
+   drawn as the control — Explore's search bar and the landing's hero bar are a
+   bordered 42px box around a transparent input, so the ring came up around the
+   *text*: a rounded rectangle floating inside another rounded rectangle, two
+   pixels of surface showing between them.
+
+   `data-cc-field` marks such an input. It suppresses that input's own ring and
+   nothing else; the wrapper takes the treatment instead, through
+   `has-[input:focus-visible]:border-cc-focus`, which keeps it keyboard-only in
+   exactly the way the rule above is. `:has()` rather than `:focus-within`
+   deliberately — `focus-within` has no `-visible` counterpart, so it would ring
+   the bar on a mouse click, which is the behaviour this file's first paragraph
+   exists to avoid.
+
+   **An input carrying this attribute and nothing lighting up around it has no
+   focus indicator at all.** That is why it is a deliberate mark on two known
+   bars rather than a class to reach for: pair it with a wrapper treatment or do
+   not use it.
+
+   Specificity is 0,3,0 against the rule above's 0,2,0, so it wins on its own
+   terms rather than on where it happens to sit in this file.
+
+   One thing to know before debugging this: the border does not change
+   instantly. `cc-theme` transitions `border-color` over 0.34s on every element
+   inside it, and the focus border inherits that — so `getComputedStyle` read in
+   the same tick as `.focus()` returns the *unfocused* colour, and the treatment
+   looks broken when it is only mid-transition. Measured at rest: `#f4eee252`
+   (`--cc-rule3`) unfocused, `rgb(139, 179, 239)` (`--cc-focus`, dark) 600ms
+   after focus. */
+[data-cc-field]:focus-visible:not([tabindex="-1"]) {
+  /* biome-ignore lint/complexity/noImportantStyles: it overrides an `!important` rule, which a plain declaration cannot do however specific it is. */
+  outline: none !important;
+  /* biome-ignore lint/complexity/noImportantStyles: as above — the halo it replaces is `!important` too, and half a treatment is worse than either. */
+  box-shadow: none !important;
+}
+
+/* No field under 16px on a touch device, ever.
+
+   iOS Safari zooms the page in when a field smaller than 16px takes focus, and
+   hands none of that zoom back when the field is blurred — so a reader who taps
+   the search bar gets the page magnified onto it, and then keeps the
+   magnification, off-centre, for the rest of the session. Nothing in the app
+   can undo it: there is no API to reset the scale, and the alternative fix
+   (`maximum-scale=1` in the viewport meta) buys it by taking pinch-zoom away
+   from everybody, which is a WCAG 1.4.4 failure.
+
+   16px is the whole of the threshold. Fields keep their designed size on every
+   pointer that is not a finger, which is where the artboards' 12.5–14px sizes
+   were drawn to be read.
+
+   `!important` because every field in this app is sized by a utility class —
+   `text-[14px]`, or shadcn's `md:text-sm` — and a bare element selector loses to
+   all of them. Checkboxes and radios are excluded: they carry no text, and a
+   font size on them moves layout in browsers that size them from it. */
+@media (pointer: coarse) {
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea {
+    /* biome-ignore lint/complexity/noImportantStyles: it exists to beat the per-field utility classes; without it the rule matches everywhere and applies nowhere. */
+    font-size: 16px !important;
+  }
 }
 
 /* The default for every scroll container in the app: thin and muted, so a pane

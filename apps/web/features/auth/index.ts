@@ -3,6 +3,10 @@ export {
   type AuthReason,
   AuthReasonDialog,
 } from "./components/auth-reason-dialog";
+export {
+  SignInPrompt,
+  type SignInPromptAction,
+} from "./components/sign-in-prompt";
 export { useRequireSession, useSessionData } from "./hooks/session";
 export { useLogout } from "./hooks/use-logout";
 export { useMe } from "./hooks/use-me";

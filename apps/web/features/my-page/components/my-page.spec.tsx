@@ -32,10 +32,15 @@ vi.mock("@/trpc/client", () => ({
   }),
 }));
 
-vi.mock("@/features/auth", () => ({
+// The real `SignInPrompt`: the signed-out panel is that component, and the
+// specs below assert on the links it draws. Imported inside the factory because
+// `vi.mock` is hoisted above this file's imports.
+vi.mock("@/features/auth", async () => ({
   useMe: () => me(),
   useLogout: () => logout,
   authHref: (to: string) => `/auth?next=${encodeURIComponent(to)}`,
+  SignInPrompt: (await import("@/features/auth/components/sign-in-prompt"))
+    .SignInPrompt,
 }));
 
 vi.mock("@/lib/user", () => ({ uploadProfilePicture: vi.fn() }));
