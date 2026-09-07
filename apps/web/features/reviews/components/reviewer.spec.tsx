@@ -1,8 +1,8 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { ReviewFormData } from "../lib/review-form-schema";
 import { readReviewerSession } from "../lib/reviewer-session";
-import type { ReviewFormData } from "./review";
 import { Reviewer } from "./reviewer";
 import type { ReviewerCardCourse } from "./reviewer-card";
 

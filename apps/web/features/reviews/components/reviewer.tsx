@@ -5,10 +5,10 @@ import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { useAddReview } from "../hooks/use-add-review";
 import {
-  EMPTY_REVIEW_DRAFT,
-  type ReviewDraft,
-  toReviewFormData,
-} from "../lib/review-draft";
+  answersToReviewFormData,
+  EMPTY_REVIEW_ANSWERS,
+  type ReviewAnswers,
+} from "../lib/review-answers";
 import {
   type CardOutcome,
   type ReviewerSession,
@@ -33,7 +33,7 @@ type Round = {
   /** What happened to each card. A code that is absent is still to come. */
   done: Record<string, CardOutcome>;
   /** Answers per course, kept while the round runs so a card can be revisited. */
-  drafts: Record<string, ReviewDraft>;
+  drafts: Record<string, ReviewAnswers>;
 };
 
 function sameOrder(a: readonly string[], b: readonly string[]): boolean {
@@ -74,7 +74,7 @@ export interface ReviewerProps {
  *
  * The card asks the same four questions the workspace pane's review draft asks,
  * in a shape built for a queue rather than for a column. What it does *not*
- * have is a write of its own: `toReviewFormData` is the only mapping, and
+ * have is a write of its own: `answersToReviewFormData` is the only mapping, and
  * `useAddReview` is the only submit — the same hook the pane and the review
  * dialog call, which validates every review with `reviewFormSchema` before it
  * sends anything. Two presentations, one write path, one validator.
@@ -158,8 +158,8 @@ export function Reviewer({
 
   async function save() {
     if (activeCode === null || isSaving) return;
-    const form = toReviewFormData(
-      round.drafts[activeCode] ?? EMPTY_REVIEW_DRAFT,
+    const form = answersToReviewFormData(
+      round.drafts[activeCode] ?? EMPTY_REVIEW_ANSWERS,
     );
     // The button is disabled without the three required answers; this is the
     // guard for the paths that are not the button, such as "Try again".
@@ -252,7 +252,7 @@ export function Reviewer({
             <ReviewerCard
               key={activeCode}
               course={courses.get(activeCode) ?? { courseCode: activeCode }}
-              draft={round.drafts[activeCode] ?? EMPTY_REVIEW_DRAFT}
+              draft={round.drafts[activeCode] ?? EMPTY_REVIEW_ANSWERS}
               // The artboard's `revStackLabel` is
               // `(queue - at - 1) + " more after this"`, which on the final
               // card renders "0 more after this" — a sentence that has to be

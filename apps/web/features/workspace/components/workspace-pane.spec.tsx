@@ -7,10 +7,13 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  EMPTY_REVIEW_DRAFT,
+  type ReviewDraft,
+} from "@/features/reviews/lib/review-draft";
 import { sanitizeHtml } from "@/lib/sanitize-html";
 import type { CourseDetails, CourseStats } from "@/types";
 import type { OpenCourse } from "../lib/open-courses";
-import { EMPTY_REVIEW_DRAFT, type ReviewDraft } from "../lib/review-draft";
 import {
   markAwaitingSignIn,
   readDrafts,
@@ -22,6 +25,7 @@ const useCourseDetails = vi.fn();
 const useCourseSummaries = vi.fn();
 const useReviewList = vi.fn();
 const addReview = vi.fn();
+const editReview = vi.fn();
 const useMe = vi.fn();
 const useSessionData = vi.fn();
 
@@ -42,31 +46,28 @@ vi.mock("@/features/courses", () => ({
 }));
 
 // `ReviewList` is the reviews feature's own list of designed Review Cards.
-// The pane's job is to hand it the course and its reviews, which is
-// what this asserts; how a card draws itself is that feature's test.
-// The palette and the review-draft model are the real ones — the pane draws
-// the same examination bar the Review Card does, and since the pane's draft
-// stopped carrying its own copy of the model, `toReviewFormData` is what turns
-// what the writer typed into what is sent. Faking either would test a fake.
-// The barrel itself is not imported: it reaches the rich text editor, whose
-// stylesheet needs a PostCSS pass Vitest does not run.
+// The pane's job is to hand it that course's reviews, which is what this
+// asserts; how a card draws itself is that feature's test.
+// The palette, the review-draft model and the editor itself are the real ones —
+// the form under test *is* `ReviewDraftEditor`, and the pane's draft carries no
+// copy of the model, so `toReviewFormData` is what turns what the writer typed
+// into what is sent. Faking any of them would test a fake.
+// Only the two write hooks are stubs, because a mutation is not this suite's
+// subject: what it asserts is what they are handed.
 vi.mock("@/features/reviews", async () => ({
   ...(await import("@/features/reviews/lib/examination-palette")),
   ...(await import("@/features/reviews/lib/review-draft")),
+  ...(await import("@/features/reviews/lib/review-answers")),
+  ...(await import("@/features/reviews/components/review-draft-editor")),
   // The real score controls. They are presentation with no data behind them,
   // and this suite asserts on what the slider renders — "counts the sections as
   // they are answered" reads its value pill — so a stub would test the stub.
   ...(await import("@/features/reviews/components/score-controls")),
   useReviewList: (code: string | undefined) => useReviewList(code),
   useAddReview: () => addReview,
-  ReviewList: ({
-    courseCode,
-    reviews,
-  }: {
-    courseCode: string;
-    reviews: { id: string }[];
-  }) => (
-    <div data-testid="review-list" data-course={courseCode}>
+  useEditReview: () => editReview,
+  ReviewList: ({ reviews }: { reviews: { id: string }[] }) => (
+    <div data-testid="review-list">
       {reviews.map((review) => (
         <article key={review.id} data-testid="review-card">
           {review.id}
@@ -145,7 +146,51 @@ function openCourse(kind: OpenCourse["kind"], code = "DD2380"): OpenCourse {
   return { id: `${kind}:${code}`, courseCode: code, kind };
 }
 
-type ReviewRow = { id: string; courseCode: string; userId?: string };
+type ReviewRow = {
+  id: string;
+  courseCode: string;
+  userId?: string;
+  examinationDistribution?: Record<string, number> | null;
+  approachTheoryPercent?: number | null;
+  workloadScore?: number;
+  learningScore?: number;
+  happyTook?: boolean;
+  message?: string | null;
+  upvoteCount?: number;
+  downvoteCount?: number;
+};
+
+/**
+ * A review already published by the signed-in account, as `reviews.list` hands
+ * it over.
+ *
+ * Complete rather than partial, because the panel now reads one back into the
+ * form: a row missing `workloadScore` would put `undefined` on a slider and
+ * assert nothing about the mapping this suite exists to check.
+ */
+function publishedReview(over: Partial<ReviewRow> = {}): ReviewRow {
+  return {
+    id: "rev-1",
+    courseCode: "DD2380",
+    userId: OWNER,
+    examinationDistribution: {
+      exam: 60,
+      assignments: 0,
+      labs: 40,
+      projects: 0,
+      seminars: 0,
+      other: 0,
+    },
+    approachTheoryPercent: 70,
+    workloadScore: 8,
+    learningScore: 6,
+    happyTook: true,
+    message: "<p>Do the labs early.</p>",
+    upvoteCount: 0,
+    downvoteCount: 0,
+    ...over,
+  };
+}
 
 /**
  * What a `reviews.list` refetch would answer with, which is a separate thing
@@ -628,7 +673,7 @@ describe("what survives a page load", () => {
     ).toBeEnabled();
   });
 
-  it("will not take a second review for a course already reviewed", async () => {
+  it("opens the review already published, rather than a second empty form", async () => {
     const user = userEvent.setup({ delay: null });
     const { unmount } = renderPane([openCourse("review")]);
 
@@ -640,14 +685,92 @@ describe("what survives a page load", () => {
     unmount();
 
     // What `reviews.create` invalidated into the list, and equally what a
-    // review published last week or from the course page would look like.
-    setReviewList([{ id: "rev-1", courseCode: "DD2380", userId: "u1" }]);
+    // review published last week or from another browser would look like.
+    setReviewList([publishedReview()]);
+    renderPane([openCourse("review")]);
+
+    // The row, in the form that wrote it: the answers are the stored ones and
+    // the only offer is to change them.
+    expect(screen.getByRole("slider", { name: /How demanding/ })).toHaveValue(
+      "8",
+    );
+    expect(screen.getByDisplayValue("Do the labs early.")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Post review" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Save changes" })).toBeDisabled();
+    expect(addReview).toHaveBeenCalledTimes(1);
+  });
+
+  it("saves a change to a published review as the wire contract", async () => {
+    const user = userEvent.setup({ delay: null });
+    editReview.mockResolvedValue(true);
+    setReviewList([publishedReview()]);
+    renderPane([openCourse("review")]);
+
+    setScore("How demanding was this course?", 3);
+    const save = screen.getByRole("button", { name: "Save changes" });
+    expect(save).toBeEnabled();
+    await user.click(save);
+
+    expect(editReview).toHaveBeenCalledWith("rev-1", {
+      happyTook: true,
+      workloadScore: 3,
+      learningScore: 6,
+      // Read out of the stored column in the catalogue's order, zeroes dropped.
+      examinationDistribution: {
+        exam: 60,
+        assignments: 0,
+        labs: 40,
+        projects: 0,
+        seminars: 0,
+        other: 0,
+      },
+      approachTheoryPercent: 70,
+      // Into the textarea as plain text, back out as the markup
+      // `reviews.message` holds. A one-paragraph write-up therefore comes back
+      // byte for byte; anything the retired rich-text dialog could produce and
+      // this cannot — a list, a bold run — does not.
+      message: "<p>Do the labs early.</p>",
+    });
+    // Nothing was published: rewriting a review is `reviews.update`.
+    expect(addReview).not.toHaveBeenCalled();
+  });
+
+  it("gives an abandoned edit back to the row it came from", async () => {
+    const user = userEvent.setup({ delay: null });
+    setReviewList([publishedReview()]);
+    renderPane([openCourse("review")]);
+
+    setScore("How demanding was this course?", 3);
+    expect(screen.getByText("Unsaved changes")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Discard changes" }));
+
+    expect(screen.getByRole("slider", { name: /How demanding/ })).toHaveValue(
+      "8",
+    );
+    expect(screen.getByText("Published")).toBeInTheDocument();
+    expect(editReview).not.toHaveBeenCalled();
+  });
+
+  it("ticks I don't remember for an answer the reviewer never gave", () => {
+    setReviewList([
+      publishedReview({
+        examinationDistribution: null,
+        approachTheoryPercent: null,
+      }),
+    ]);
     renderPane([openCourse("review")]);
 
     expect(
-      screen.getByText(/You have already reviewed this course/),
-    ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Post review" })).toBeDisabled();
+      screen.getByRole("checkbox", {
+        name: "I don't remember how it was examined",
+      }),
+    ).toBeChecked();
+    expect(
+      screen.getByRole("checkbox", { name: "I don't remember the approach" }),
+    ).toBeChecked();
   });
 
   it("refuses a second review while the list is still being asked again", async () => {
@@ -746,11 +869,12 @@ describe("what survives a page load", () => {
     await screen.findByText(/Published. Thanks/);
     first.unmount();
 
-    // The list has caught up, which is what the workspace's note was covering.
-    setReviewList([{ id: "rev-1", courseCode: "DD2380", userId: "u1" }]);
+    // The list has caught up, which is what the workspace's note was covering:
+    // the tab is now an editor for the review that arrived.
+    setReviewList([publishedReview()]);
     const second = renderPane([openCourse("review")]);
     expect(
-      await screen.findByText(/You have already reviewed this course/),
+      await screen.findByRole("button", { name: "Save changes" }),
     ).toBeInTheDocument();
     second.unmount();
 

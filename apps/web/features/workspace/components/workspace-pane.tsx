@@ -8,6 +8,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useSessionData } from "@/features/auth";
+import {
+  EMPTY_REVIEW_DRAFT,
+  type ReviewDraft,
+} from "@/features/reviews/lib/review-draft";
 import { cn } from "@/lib/utils";
 import {
   type OpenCourse,
@@ -16,7 +20,6 @@ import {
   tabLabel,
   tabLayout,
 } from "../lib/open-courses";
-import { EMPTY_REVIEW_DRAFT, type ReviewDraft } from "../lib/review-draft";
 import {
   readDrafts,
   readPublished,

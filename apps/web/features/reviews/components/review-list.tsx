@@ -14,12 +14,21 @@ import { useMe } from "@/features/auth";
 import type { Review as ReviewModel } from "@/types";
 import { useRemoveReview } from "../hooks/use-remove-review";
 import { useReviewVotes } from "../hooks/use-review-votes";
-import { type EditableReview, Review, toEditableReview } from "./review";
 import { ReviewCard } from "./review-card";
 
 type ReviewListProps = {
-  courseCode: string;
   reviews: ReviewModel[];
+  /**
+   * Take the viewer to their own review, in the editor that writes one.
+   *
+   * The list does not draw that editor itself. It is rendered inside the
+   * workspace pane's details tab, and the pane already has a review tab for
+   * this course whose whole job is the form — so editing switches to it rather
+   * than unfolding a second copy of the form inside a scrolling list inside a
+   * pane. Without a handler the author gets no pencil, which is what happens
+   * anywhere the list is drawn outside a pane.
+   */
+  onEditReview?: () => void;
 };
 
 /**
@@ -30,11 +39,13 @@ type ReviewListProps = {
  * Visitors get no vote handler at all rather than buttons that would do
  * nothing — `reviews.vote` is a protected procedure.
  */
-export function ReviewList({ courseCode, reviews }: Readonly<ReviewListProps>) {
+export function ReviewList({
+  reviews,
+  onEditReview,
+}: Readonly<ReviewListProps>) {
   const { userId } = useMe();
   const { vote } = useReviewVotes();
   const removeReview = useRemoveReview();
-  const [editing, setEditing] = useState<EditableReview | null>(null);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
   if (reviews.length === 0) {
@@ -65,24 +76,13 @@ export function ReviewList({ courseCode, reviews }: Readonly<ReviewListProps>) {
             onVote={
               userId ? (voteType) => void vote(review.id, voteType) : undefined
             }
-            onEdit={
-              isAuthor ? () => setEditing(toEditableReview(review)) : undefined
-            }
+            onEdit={isAuthor && onEditReview ? onEditReview : undefined}
             onDelete={
               isAuthor ? () => setPendingDeleteId(review.id) : undefined
             }
           />
         );
       })}
-
-      {editing ? (
-        <Review
-          key={editing.id}
-          courseCode={courseCode}
-          editing={editing}
-          onClose={() => setEditing(null)}
-        />
-      ) : null}
 
       <ConfirmDialog
         request={

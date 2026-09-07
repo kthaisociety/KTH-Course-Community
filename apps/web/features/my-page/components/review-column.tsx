@@ -10,14 +10,22 @@ type Props = {
   emptyBody: string;
   /** The empty panel's call to action, where the column has one to offer. */
   emptyAction?: { label: string; onClick: () => void };
-  /** Given only for the column of the viewer's own reviews. */
-  onEdit?: (review: Review) => void;
-  onDelete?: (review: Review) => void;
+  /**
+   * Open one review on its own, which the artboard's `isDetail` branch does
+   * with the whole tab. Given only for the column of the viewer's own reviews:
+   * the detail's footer offers Edit review and Delete review, and there is
+   * nothing on the other column's reviews to offer.
+   */
+  onOpen?: (review: Review) => void;
 };
 
 /**
  * One of the Reviews tab's two columns — the artboard's `isMine` branch, which
  * draws the same list twice either side of a rule.
+ *
+ * The cards are summaries here and nothing more. A card given an `onOpen` does
+ * not unfold in place — half a column is a poor width for an examination bar,
+ * and the artboard opens a review into a panel of its own instead.
  *
  * No vote controls. Voting happens where the review lives, on the course page:
  * `reviews.vote` invalidates that course's list, and this page reads the
@@ -31,8 +39,7 @@ export function ReviewColumn({
   emptyTitle,
   emptyBody,
   emptyAction,
-  onEdit,
-  onDelete,
+  onOpen,
 }: Props) {
   return (
     <section>
@@ -61,11 +68,7 @@ export function ReviewColumn({
             <li key={review.id}>
               <ReviewCard
                 review={review}
-                // Only the viewer's own column is given handlers, so this is
-                // the same question as "did the caller offer any".
-                isAuthor={Boolean(onEdit || onDelete)}
-                onEdit={onEdit ? () => onEdit(review) : undefined}
-                onDelete={onDelete ? () => onDelete(review) : undefined}
+                onOpen={onOpen ? () => onOpen(review) : undefined}
               />
             </li>
           ))}

@@ -131,6 +131,24 @@ How theoretical rather than applied the reviewer found the course, on the same
 "I don't remember" rule.
 _Avoid_: theory rating, theoretical vs applied
 
+**Review draft**:
+A review while it is still being written or rewritten, in the shape the
+controls need rather than the shape the wire takes. It is not a stored thing:
+an unpublished one lives in the browser, and one opened from a published
+**Review** lives only as long as the form is on screen. The **Review editor**
+is the only form that edits it, and it is the same form whether it is being
+written for the first time or rewritten — a draft opened from a review is that
+review's answers, and saving replaces the row.
+_Avoid_: unsaved review, pending review, review form state, edit mode
+
+**Review editor**:
+The three cards a review is written in — how it was examined and how
+theoretical it was, the two 1–10 scores, and the verdict with the write-up.
+Two surfaces host it: the workspace pane, for a course being read, and My
+Page's review detail, for one of the reader's own reviews. Both draw the same
+component; neither is a dialog.
+_Avoid_: review form, review modal, review dialog (there is no longer one)
+
 **Fast-track reviewer**:
 The screen on Taken courses that deals one card per unreviewed taken course, in
 a **round**. It is a second way of asking for a **Review**, never a second kind

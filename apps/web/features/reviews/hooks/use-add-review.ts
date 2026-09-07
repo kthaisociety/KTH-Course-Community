@@ -3,8 +3,8 @@
 import { useCallback } from "react";
 import { toast } from "sonner";
 import { useCreateReview } from "../api/mutations";
-import type { ReviewFormData } from "../components/review";
 import { warnAboutProfanity } from "../lib/profanity";
+import type { ReviewFormData } from "../lib/review-form-schema";
 import { reviewFormSchema } from "../lib/review-form-schema";
 import { toStoredMessage } from "../lib/review-text";
 

@@ -1,250 +1,204 @@
 import { describe, expect, it } from "vitest";
+import { sanitizeHtml } from "@/lib/sanitize-html";
+import type { Review } from "@/types";
+import { examinationDistributionSchema } from "@/types";
 import {
   decodeReviewDraft,
-  dividerPositions,
   EMPTY_REVIEW_DRAFT,
-  evenShares,
-  isAnswered,
   isUntouched,
-  MIN_SHARE,
-  moveDivider,
-  nudgeDivider,
   type ReviewDraft,
-  toExaminationDistribution,
-  toggleMethod,
+  sectionsDone,
+  toReviewDraft,
   toReviewFormData,
 } from "./review-draft";
 
+/**
+ * Only what the pane adds to the reviews feature's draft.
+ *
+ * The model itself and every bar transform now live in
+ * `features/reviews/lib/review-draft.ts`, and `features/reviews/lib/
+ * review-draft.spec.ts` is where they are tested. Re-testing `evenShares` or
+ * `moveDivider` here would be testing the same function twice under two names,
+ * which is what the duplication this file used to sit on top of felt like from
+ * the inside.
+ */
 function draft(over: Partial<ReviewDraft> = {}): ReviewDraft {
   return { ...EMPTY_REVIEW_DRAFT, ...over };
 }
 
-/** A card with the three answers a review cannot be written without. */
+/** A publishable draft, so a test can vary one thing at a time. */
 function answered(over: Partial<ReviewDraft> = {}): ReviewDraft {
   return draft({
     happyTook: true,
     workloadScore: 7,
-    learningScore: 4,
+    learningScore: 8,
     ...over,
   });
 }
 
-describe("the examination bar", () => {
-  it("splits evenly in 5% steps and always adds up to 100", () => {
-    for (let count = 1; count <= 6; count++) {
-      const shares = evenShares(count);
-      expect(shares).toHaveLength(count);
-      expect(shares.reduce((total, share) => total + share, 0)).toBe(100);
-      expect(shares.every((share) => share % 5 === 0)).toBe(true);
-      expect(shares.every((share) => share >= MIN_SHARE)).toBe(true);
-    }
+describe("sectionsDone", () => {
+  it("counts nothing on an untouched draft", () => {
+    expect(sectionsDone(draft())).toBe(0);
   });
 
-  it("keeps the order the reviewer picked in", () => {
-    const picked = toggleMethod(toggleMethod(draft(), "labs"), "exam");
-    expect(picked.methods).toEqual(["labs", "exam"]);
-    expect(picked.shares).toEqual([50, 50]);
-
-    const unpicked = toggleMethod(picked, "labs");
-    expect(unpicked.methods).toEqual(["exam"]);
-    expect(unpicked.shares).toEqual([100]);
-  });
-
-  it("moves one divider and leaves every other segment where it was", () => {
-    const three = draft({
-      methods: ["exam", "labs", "projects"],
-      shares: [35, 35, 30],
-    });
-
-    const moved = moveDivider(three, 1, 88);
-    expect(moved.shares).toEqual([35, 55, 10]);
-    expect(moved.shares.reduce((total, share) => total + share, 0)).toBe(100);
-  });
-
-  // A 0% segment would be a method the reviewer picked and then said nothing
-  // about, which is not an answer the bar can express.
-  it("never drags a segment out of existence", () => {
-    const two = draft({ methods: ["exam", "labs"], shares: [50, 50] });
-
-    expect(moveDivider(two, 0, 200).shares).toEqual([95, 5]);
-    expect(moveDivider(two, 0, -200).shares).toEqual([5, 95]);
-  });
-
-  it("ignores a divider that is not between two segments", () => {
-    const two = draft({ methods: ["exam", "labs"], shares: [50, 50] });
-
-    expect(moveDivider(two, 1, 50)).toBe(two);
-    expect(moveDivider(two, -1, 50)).toBe(two);
-    expect(nudgeDivider(two, 1, 1)).toBe(two);
-  });
-
-  it("nudges by one step, which is how the keyboard drives it", () => {
-    const two = draft({ methods: ["exam", "labs"], shares: [50, 50] });
-
-    expect(nudgeDivider(two, 0, 1).shares).toEqual([55, 45]);
-    expect(nudgeDivider(two, 0, -1).shares).toEqual([45, 55]);
-  });
-
-  it("puts a divider at each running total", () => {
+  it("counts format as done when both its questions are answered", () => {
     expect(
-      dividerPositions(
-        draft({ methods: ["exam", "labs", "other"], shares: [20, 30, 50] }),
+      sectionsDone(
+        draft({
+          methods: ["exam"],
+          shares: [100],
+          approachTheoryPercent: 60,
+        }),
       ),
-    ).toEqual([20, 50]);
+    ).toBe(1);
+  });
+
+  it("takes 'I don't remember' as an answer", () => {
     expect(
-      dividerPositions(draft({ methods: ["exam"], shares: [100] })),
-    ).toEqual([]);
+      sectionsDone(
+        draft({ examinationForgotten: true, approachForgotten: true }),
+      ),
+    ).toBe(1);
+  });
+
+  it("counts all three when the write-up is there too", () => {
+    expect(
+      sectionsDone(
+        answered({
+          examinationForgotten: true,
+          approachForgotten: true,
+          message: "Worth it.",
+        }),
+      ),
+    ).toBe(3);
   });
 });
 
-describe("what reaches the database", () => {
-  /**
-   * The rule `CONTEXT.md` states outright: an examination split nobody
-   * remembers is stored absent, never as six zeroes. On this card there is no
-   * "I don't remember" checkbox — leaving the bar alone *is* that answer.
-   */
-  it("stores no distribution at all when the bar was left alone", () => {
-    expect(toExaminationDistribution(draft())).toBeNull();
-    expect(toReviewFormData(answered())?.examinationDistribution).toBeNull();
+describe("isUntouched", () => {
+  it("is true for a draft nobody has answered anything on", () => {
+    expect(isUntouched(draft())).toBe(true);
   });
 
-  it("stores every key, with the unpicked ones at zero, once anything is picked", () => {
+  // The header reads "Not saved yet" off this, and ticking a box is an answer
+  // the pane has to keep — the shared check cannot see either flag.
+  it("is false once a checkbox says the writer does not remember", () => {
+    expect(isUntouched(draft({ examinationForgotten: true }))).toBe(false);
+    expect(isUntouched(draft({ approachForgotten: true }))).toBe(false);
+  });
+
+  it("is false once anything else is answered", () => {
+    expect(isUntouched(draft({ workloadScore: 3 }))).toBe(false);
+    expect(isUntouched(draft({ message: "Good." }))).toBe(false);
+  });
+});
+
+describe("what the pane sends", () => {
+  it("has nothing to send until happy, workload and learning are answered", () => {
+    expect(toReviewFormData(draft())).toBeNull();
+    expect(toReviewFormData(draft({ happyTook: true }))).toBeNull();
+    expect(
+      toReviewFormData(draft({ happyTook: true, workloadScore: 5 })),
+    ).toBeNull();
+  });
+
+  it("keeps the scores on the stored 1-10 scale", () => {
+    const form = toReviewFormData(answered());
+
+    expect(form?.workloadScore).toBe(7);
+    expect(form?.learningScore).toBe(8);
+  });
+
+  it("fills every examination key and passes the wire contract", () => {
     const form = toReviewFormData(
-      answered({ methods: ["labs", "exam"], shares: [40, 60] }),
+      answered({ methods: ["exam", "labs"], shares: [60, 40] }),
     );
 
-    expect(form?.examinationDistribution).toEqual({
+    expect(
+      examinationDistributionSchema.safeParse(form?.examinationDistribution)
+        .success,
+    ).toBe(true);
+    expect(form?.examinationDistribution).toMatchObject({
       exam: 60,
-      assignments: 0,
       labs: 40,
+      assignments: 0,
       projects: 0,
       seminars: 0,
       other: 0,
     });
   });
 
-  /**
-   * The track is drawn at the midpoint when unanswered, and 50 would claim the
-   * reviewer called the course exactly balanced — a recollection they never
-   * offered.
-   */
-  it("never mistakes the theory track's resting position for an answer", () => {
+  it("stores an unanswered approach as absent rather than the midpoint", () => {
     expect(toReviewFormData(answered())?.approachTheoryPercent).toBeNull();
-    expect(
-      toReviewFormData(answered({ approachTheoryPercent: 50 }))
-        ?.approachTheoryPercent,
-    ).toBe(50);
   });
 
-  it("carries the scores through raw, on the 1–10 scale the column stores", () => {
-    const form = toReviewFormData(
-      answered({ workloadScore: 9, learningScore: 1 }),
-    );
-    expect(form?.workloadScore).toBe(9);
-    expect(form?.learningScore).toBe(1);
-  });
-
-  /**
-   * Nothing on the card can produce these. A draft restored from the tab's
-   * storage can, and it is better to send the nearest real answer than to tell
-   * the reviewer their finished review "is not finished".
-   */
-  it("clamps values that somehow left their scale rather than sending them", () => {
+  // "I don't remember" is a stored `null`, never zeroes, and it has to win over
+  // whatever the cleared control happened to leave behind — a draft restored
+  // from `sessionStorage` is read field by field, so both can be present at once.
+  it("drops answers the writer said they do not remember", () => {
     const form = toReviewFormData(
       answered({
-        workloadScore: 42,
-        learningScore: 0,
-        approachTheoryPercent: 400,
+        examinationForgotten: true,
+        methods: ["exam"],
+        shares: [100],
+        approachForgotten: true,
+        approachTheoryPercent: 80,
       }),
     );
-    expect(form?.workloadScore).toBe(10);
-    expect(form?.learningScore).toBe(1);
-    expect(form?.approachTheoryPercent).toBe(95);
-    expect(
-      toReviewFormData(answered({ approachTheoryPercent: -20 }))
-        ?.approachTheoryPercent,
-    ).toBe(5);
+
+    expect(form?.examinationDistribution).toBeNull();
+    expect(form?.approachTheoryPercent).toBeNull();
   });
 
-  it("has nothing to send until happy, workload and learning are answered", () => {
-    expect(toReviewFormData(draft())).toBeNull();
-    expect(toReviewFormData(answered({ happyTook: null }))).toBeNull();
-    expect(toReviewFormData(answered({ workloadScore: null }))).toBeNull();
-    expect(toReviewFormData(answered({ learningScore: null }))).toBeNull();
-    expect(isAnswered(answered())).toBe(true);
-  });
+  /*
+   * The data-loss regression.
+   *
+   * `reviews.message` is only ever rendered through `parse(sanitizeHtml(...))`,
+   * and `sanitizeHtml` runs with `stripIgnoreTag` — so a raw plain-text
+   * write-up loses everything tag-shaped on its way to the screen, silently and
+   * after it was stored. The pane's box is a plain `<textarea>`, so escaping on
+   * the way out is the only thing standing between a reviewer and a sentence
+   * with a hole in it.
+   */
+  it("keeps characters a renderer would otherwise eat as markup", () => {
+    const form = toReviewFormData(
+      answered({ message: "use <vector> from STL & <algorithm> too" }),
+    );
 
-  // `happyTook: false` is an answer. Anything reading it for truthiness would
-  // hold a reviewer inside a card they had in fact finished.
-  it("counts an unhappy answer as an answer", () => {
-    expect(isAnswered(answered({ happyTook: false }))).toBe(true);
-    expect(toReviewFormData(answered({ happyTook: false }))?.happyTook).toBe(
-      false,
+    expect(form?.message).toBe(
+      "<p>use &lt;vector&gt; from STL &amp; &lt;algorithm&gt; too</p>",
+    );
+    // And what the review card actually renders: `sanitizeHtml` with
+    // `stripIgnoreTag` is the step that used to delete the useful half of the
+    // sentence, so it is run here rather than described.
+    expect(sanitizeHtml(form?.message ?? "")).toContain("&lt;vector&gt;");
+    expect(sanitizeHtml(form?.message ?? "")).not.toBe(
+      "<p>use  from STL & </p>",
     );
   });
 
-  /**
-   * The write-up is the only optional part, and an empty one becomes `null` on
-   * the way to the column — `toStoredMessage`, inside the write path, does
-   * that. The mapping's job is to hand over what was typed, in the markup
-   * `reviews.message` holds.
-   */
-  it("carries the write-up over as the markup the column stores", () => {
-    expect(toReviewFormData(answered())?.message).toBe("");
-    expect(
-      toReviewFormData(answered({ message: "Bring time." }))?.message,
-    ).toBe("<p>Bring time.</p>");
-  });
-
-  /**
-   * The card's box is a plain textarea, and `sanitizeHtml` strips anything
-   * tag-shaped on the way to the screen. Escaping first is what stops a
-   * reviewer's sentence losing its useful half.
-   */
-  it("keeps characters that would otherwise be read as markup", () => {
-    expect(
-      toReviewFormData(answered({ message: "Use <vector> & <map>." }))?.message,
-    ).toBe("<p>Use &lt;vector&gt; &amp; &lt;map&gt;.</p>");
-  });
-});
-
-describe("isUntouched", () => {
-  it("is true only for a card nobody has answered anything on", () => {
-    expect(isUntouched(draft())).toBe(true);
-    expect(isUntouched(draft({ message: "  " }))).toBe(true);
-    expect(isUntouched(draft({ happyTook: false }))).toBe(false);
-    expect(isUntouched(draft({ approachTheoryPercent: 50 }))).toBe(false);
+  it("leaves a write-up nobody typed empty rather than inventing a paragraph", () => {
+    expect(toReviewFormData(answered({ message: "   " }))?.message).toBe("");
   });
 });
 
 /*
- * The one decoder both storages go through.
- *
- * `features/workspace/lib/workspace-storage.ts` and `./reviewer-session.ts`
- * used to hand-decode a stored draft each. They drifted by four lines, then by
- * what a malformed record *means* — one salvaged, the other rejected — which is
- * #166. Everything about the reading is asserted here, once; each storage's own
- * suite asserts that it goes through this and salvages.
+ * Only what the pane adds to the shared decoder, for the same reason as the
+ * rest of this file. The answers, and every salvage rule about them, are
+ * `features/reviews/lib/review-draft.spec.ts`'s.
  */
 describe("decodeReviewDraft", () => {
   /**
-   * The guard against a field being dropped on the way back in.
-   *
-   * Both old copies spread `EMPTY_REVIEW_DRAFT` before setting the fields they
-   * knew about, which made the result structurally complete whether or not the
-   * decoder had heard of every field: a field added to `ReviewDraft` compiled in
-   * both, type-checked in both, and came back as its empty value after a reload.
-   * The decoder no longer spreads it, so an omission is a compiler error — and
-   * this is the same guarantee at runtime, for the day somebody puts the spread
-   * back.
-   *
-   * `ANSWERED` is typed, so a field added to `ReviewDraft` has to be given a
-   * value here too rather than quietly dropping out of the test with the code.
+   * Typed, so a field added to either half of the shape has to be given a value
+   * here and then survive the round trip. That is the runtime half of #166's
+   * guarantee; the compile-time half is that neither decoder defaults anything
+   * from an empty draft any more, so an unhandled field fails to build.
    */
   const ANSWERED: ReviewDraft = {
     methods: ["exam", "labs"],
     shares: [60, 40],
     approachTheoryPercent: 35,
+    approachForgotten: true,
+    examinationForgotten: true,
     workloadScore: 8,
     learningScore: 6,
     happyTook: true,
@@ -252,8 +206,6 @@ describe("decodeReviewDraft", () => {
   };
 
   it("carries every field of a fully answered draft across", () => {
-    // Every field differs from the empty draft, so a dropped one shows up as a
-    // difference rather than coincidentally matching the default.
     for (const [field, value] of Object.entries(ANSWERED)) {
       expect(value, field).not.toEqual(
         EMPTY_REVIEW_DRAFT[field as keyof ReviewDraft],
@@ -266,101 +218,195 @@ describe("decodeReviewDraft", () => {
   });
 
   it("is nothing at all when the value is not an object", () => {
-    for (const value of [null, undefined, "draft", 7, true, ["exam"]]) {
+    for (const value of [null, "draft", 7, ["exam"]]) {
       expect(decodeReviewDraft(value), String(value)).toBeNull();
     }
   });
 
-  it("reads an empty object as a draft nobody has answered", () => {
-    expect(decodeReviewDraft({})).toEqual(EMPTY_REVIEW_DRAFT);
+  /**
+   * The flags are the pane's whole extension, and they are the one part of a
+   * draft with no null: a box is ticked or it is not. Anything that is not
+   * `true` is a box nobody ticked, which is also what an older build that never
+   * wrote them looks like.
+   */
+  it("reads a flag that is not true as a box nobody ticked", () => {
+    expect(decodeReviewDraft({})).toMatchObject({
+      examinationForgotten: false,
+      approachForgotten: false,
+    });
+    expect(
+      decodeReviewDraft({ examinationForgotten: "yes", approachForgotten: 1 }),
+    ).toMatchObject({ examinationForgotten: false, approachForgotten: false });
   });
 
   /*
-   * Salvage, not reject — the decision #166 had to make, and the reason there
-   * is only one decoder rather than one with a policy argument. Both screens
-   * mirror their state straight back over storage, so a draft refused here is
-   * a draft deleted within a commit. A bar we cannot draw is one unanswered
-   * question; the write-up and the scores are still the writer's work.
+   * A draft carrying both a ticked box and the methods it was meant to clear is
+   * a shape storage can hold — the fields are read one at a time — and
+   * `toReviewFormData` is where "I don't remember" wins. The decoder's job is
+   * to report what was stored, not to tidy it.
    */
-  describe("a stored draft that is wrong in one field", () => {
-    const KEPT = {
-      workloadScore: 8,
-      learningScore: 3,
+  it("keeps a ticked box and the answers beside it, and lets the mapper decide", () => {
+    const draft = decodeReviewDraft({
+      methods: ["exam"],
+      shares: [100],
+      examinationForgotten: true,
+      workloadScore: 5,
+      learningScore: 5,
       happyTook: true,
-      message: "Still mine",
-    };
-
-    it("keeps the answers when the bar's arrays do not line up", () => {
-      expect(
-        decodeReviewDraft({
-          ...KEPT,
-          methods: ["exam", "labs"],
-          shares: [100],
-        }),
-      ).toEqual({ ...EMPTY_REVIEW_DRAFT, ...KEPT, methods: [], shares: [] });
     });
 
-    it("drops a split naming a method this build does not have", () => {
-      expect(
-        decodeReviewDraft({
-          ...KEPT,
-          methods: ["exam", "quiz"],
-          shares: [60, 40],
-        })?.methods,
-      ).toEqual([]);
+    expect(draft).toMatchObject({
+      methods: ["exam"],
+      examinationForgotten: true,
     });
+    expect(
+      // biome-ignore lint/style/noNonNullAssertion: decoded from a record above.
+      toReviewFormData(draft!)?.examinationDistribution,
+    ).toBeNull();
+  });
+});
 
-    it("drops a split that does not add up to 100", () => {
-      expect(
-        decodeReviewDraft({
-          ...KEPT,
-          methods: ["exam", "labs"],
-          shares: [60, 30],
-        })?.methods,
-      ).toEqual([]);
-    });
+/** A stored review, as `reviews.list` hands one over. */
+function review(over: Partial<Review> = {}): Review {
+  return {
+    id: "rev-1",
+    userId: "u1",
+    courseCode: "DD2380",
+    createdAt: "2026-09-01T00:00:00.000Z",
+    updatedAt: "2026-09-01T00:00:00.000Z",
+    upvoteCount: 0,
+    downvoteCount: 0,
+    userVote: null,
+    happyTook: true,
+    message: "<p>Do the labs early.</p>",
+    examinationDistribution: {
+      exam: 60,
+      assignments: 0,
+      labs: 40,
+      projects: 0,
+      seminars: 0,
+      other: 0,
+    },
+    approachTheoryPercent: 70,
+    workloadScore: 8,
+    learningScore: 6,
+    ...over,
+  };
+}
 
-    it("drops a split naming the same method twice", () => {
-      expect(
-        decodeReviewDraft({
-          ...KEPT,
-          methods: ["exam", "exam"],
-          shares: [50, 50],
-        })?.methods,
-      ).toEqual([]);
+describe("toReviewDraft", () => {
+  it("reads every answer back into the form that wrote it", () => {
+    expect(toReviewDraft(review())).toEqual({
+      methods: ["exam", "labs"],
+      shares: [60, 40],
+      examinationForgotten: false,
+      approachTheoryPercent: 70,
+      approachForgotten: false,
+      workloadScore: 8,
+      learningScore: 6,
+      happyTook: true,
+      message: "Do the labs early.",
     });
+  });
 
-    it("keeps a split that is entirely fine", () => {
-      expect(
-        decodeReviewDraft({ methods: ["exam", "labs"], shares: [60, 40] }),
-      ).toMatchObject({ methods: ["exam", "labs"], shares: [60, 40] });
-    });
+  /*
+   * The stored column names every method and gives the unpicked ones a zero.
+   * A zero-width segment is not something the bar can draw or a divider can be
+   * dragged off, so they are dropped rather than carried into the draft.
+   */
+  it("drops the methods the reviewer did not pick", () => {
+    const draft = toReviewDraft(
+      review({
+        examinationDistribution: {
+          exam: 0,
+          assignments: 25,
+          labs: 0,
+          projects: 75,
+          seminars: 0,
+          other: 0,
+        },
+      }),
+    );
 
-    it("reads an answer of the wrong type as no answer", () => {
-      expect(
-        decodeReviewDraft({
-          workloadScore: "8",
-          learningScore: null,
-          approachTheoryPercent: [],
-          happyTook: "yes",
-          message: 12,
-        }),
-      ).toEqual(EMPTY_REVIEW_DRAFT);
-    });
+    expect(draft.methods).toEqual(["assignments", "projects"]);
+    expect(draft.shares).toEqual([25, 75]);
+  });
 
-    /*
-     * `JSON.parse` cannot produce either, but this takes `unknown`. A
-     * non-finite score would travel to `clampScore`, whose `Math.min`/`Math.max`
-     * propagate it into a form the writer is then told is unfinished.
-     */
-    it("reads a score that is not a finite number as no answer", () => {
-      expect(
-        decodeReviewDraft({ workloadScore: Number.NaN })?.workloadScore,
-      ).toBeNull();
-      expect(
-        decodeReviewDraft({ approachTheoryPercent: Number.POSITIVE_INFINITY })
-          ?.approachTheoryPercent,
-      ).toBeNull();
+  it("ticks the box for a recollection the reviewer never had", () => {
+    const draft = toReviewDraft(
+      review({ examinationDistribution: null, approachTheoryPercent: null }),
+    );
+
+    expect(draft).toMatchObject({
+      methods: [],
+      shares: [],
+      examinationForgotten: true,
+      approachTheoryPercent: null,
+      approachForgotten: true,
     });
+  });
+
+  /*
+   * `reviews.approach_theory_percent` takes the whole 0-100 range and the
+   * track the editor drags along stops short of both ends, so an extreme
+   * stored answer — only the retired dialog's slider could write one — is
+   * clamped on the way in. Doing it only in `toReviewFormData` would move the
+   * answer at the moment of saving, without the reviewer ever seeing it.
+   */
+  it("clamps an approach the editor's track cannot reach", () => {
+    expect(
+      toReviewDraft(review({ approachTheoryPercent: 0 })).approachTheoryPercent,
+    ).toBe(5);
+    expect(
+      toReviewDraft(review({ approachTheoryPercent: 100 }))
+        .approachTheoryPercent,
+    ).toBe(95);
+    expect(
+      toReviewDraft(review({ approachTheoryPercent: 40 }))
+        .approachTheoryPercent,
+    ).toBe(40);
+  });
+
+  it("takes the write-up out of its markup, and puts it back", () => {
+    expect(toReviewDraft(review({ message: null })).message).toBe("");
+    expect(
+      toReviewDraft(review({ message: "<p>Theory &amp; practice</p>" }))
+        .message,
+    ).toBe("Theory & practice");
+
+    // What a one-paragraph write-up survives: out of the row, through the
+    // form, and back to the row unchanged.
+    const draft = toReviewDraft(review());
+    expect(toReviewFormData(draft)?.message).toBe("<p>Do the labs early.</p>");
+  });
+
+  /*
+   * The round trip is the contract editing rests on: whatever is not touched
+   * in the form goes back exactly as it came out. Anything that failed here
+   * would be a field silently rewritten by opening the editor and saving.
+   */
+  it("sends an untouched review back as the same answers", () => {
+    const stored = review();
+    const form = toReviewFormData(toReviewDraft(stored));
+
+    expect(form).toEqual({
+      happyTook: stored.happyTook,
+      workloadScore: stored.workloadScore,
+      learningScore: stored.learningScore,
+      examinationDistribution: stored.examinationDistribution,
+      approachTheoryPercent: stored.approachTheoryPercent,
+      message: stored.message,
+    });
+  });
+
+  it("sends a review with neither recollection back with neither", () => {
+    const stored = review({
+      examinationDistribution: null,
+      approachTheoryPercent: null,
+    });
+    const form = toReviewFormData(toReviewDraft(stored));
+
+    expect(form?.examinationDistribution).toBeNull();
+    expect(form?.approachTheoryPercent).toBeNull();
   });
 });

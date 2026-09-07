@@ -6,22 +6,8 @@ import { useId, useState } from "react";
 import { sanitizeHtml } from "@/lib/sanitize-html";
 import { cn } from "@/lib/utils";
 import type { Review, ReviewVoteType } from "@/types";
-import { MAX_REVIEW_SCORE } from "@/types";
-import {
-  examinationSegments,
-  examinationSplitLabel,
-} from "../lib/examination-palette";
 import { toExcerpt } from "../lib/review-text";
-
-/**
- * What a reviewer who answered "I don't remember" gets drawn in place of a
- * chart. Copy from the review detail in
- * `docs/design_ref/2026-09-06/Course Community - My Page.dc.html`, with its "student"
- * changed to the reviewer, who is the one person the sentence is actually
- * about.
- */
-const UNANSWERED_NOTE =
-  "The reviewer chose “I don't remember” — nothing is estimated in its place.";
+import { ExaminationBlock, ProfileBlock } from "./review-detail-blocks";
 
 export type ReviewCardProps = {
   review: Review;
@@ -40,70 +26,17 @@ export type ReviewCardProps = {
   onVote?: (voteType: ReviewVoteType) => void;
   onEdit?: () => void;
   onDelete?: () => void;
+  /**
+   * Open this review somewhere of the caller's choosing, instead of expanding
+   * it in place.
+   *
+   * My Page passes it: its artboard opens a review into a detail of its own
+   * rather than unfolding it inside a column half the width. Given one, the
+   * card never expands and never draws the author's buttons — the detail's
+   * footer is where they live there.
+   */
+  onOpen?: () => void;
 };
-
-/** The dashed panel that stands in for a chart nobody answered. */
-function UnansweredPanel() {
-  return (
-    <div className="mt-[11px] flex h-[38px] items-center rounded-lg border border-cc-rule3 border-dashed bg-cc-surface px-[13px] text-[12.5px] text-cc-dim">
-      {UNANSWERED_NOTE}
-    </div>
-  );
-}
-
-type SectionHeadProps = {
-  title: string;
-  /** The pill beside the heading; "Not recorded" when there is no answer. */
-  value: string;
-  className?: string;
-};
-
-/** A detail block's heading and the figure that goes with it. */
-function SectionHead({ title, value, className }: Readonly<SectionHeadProps>) {
-  return (
-    <div
-      className={cn("flex items-baseline justify-between gap-2.5", className)}
-    >
-      <div className="font-semibold text-[14.5px]">{title}</div>
-      <div className="flex-none rounded-full bg-cc-pill px-[9px] py-0.5 font-semibold text-[12px] text-cc-brand tabular-nums">
-        {value}
-      </div>
-    </div>
-  );
-}
-
-type MeterProps = {
-  label: string;
-  score: number;
-  low: string;
-  high: string;
-};
-
-/**
- * One 1-10 axis. Scores are displayed raw — a 7 is "7 / 10" and fills 70% of
- * the track. Nothing is rescaled to five (issue #68, decision 2).
- */
-function Meter({ label, score, low, high }: Readonly<MeterProps>) {
-  return (
-    <div>
-      <SectionHead
-        title={label}
-        value={`${score} / ${MAX_REVIEW_SCORE}`}
-        className="mb-[9px]"
-      />
-      <div className="h-2 w-full overflow-hidden rounded-[4px] bg-cc-rule">
-        <div
-          className="h-full bg-cc-btn"
-          style={{ width: `${(score / MAX_REVIEW_SCORE) * 100}%` }}
-        />
-      </div>
-      <div className="mt-[5px] flex justify-between text-[11.5px] text-cc-muted">
-        <span>{low}</span>
-        <span>{high}</span>
-      </div>
-    </div>
-  );
-}
 
 /**
  * One review, as the Review Card artboard draws it: a coloured left edge for
@@ -112,9 +45,12 @@ function Meter({ label, score, low, high }: Readonly<MeterProps>) {
  * Reviews are anonymous, so no name and no signature appear anywhere.
  *
  * Clicking the summary opens the rest — the scores, the examination split and
- * the theory/applied split, drawn in the same language the design's review
- * detail uses. Everything the reviewer left unanswered says so in words;
- * nothing unanswered is drawn as a zero.
+ * the theory/applied split, in the very blocks the design's review detail is
+ * built from. Everything the reviewer left unanswered says so in words; nothing
+ * unanswered is drawn as a zero.
+ *
+ * `onOpen` replaces that: a caller with somewhere better to put a review takes
+ * the click and the card stays a summary.
  *
  * Presentational: it takes a `Review` and callbacks, and the screen maps tRPC
  * output and mutations onto them.
@@ -125,9 +61,11 @@ export function ReviewCard({
   onVote,
   onEdit,
   onDelete,
+  onOpen,
 }: Readonly<ReviewCardProps>) {
   const [expanded, setExpanded] = useState(false);
   const detailId = useId();
+  const opensInPlace = onOpen === undefined;
 
   const { happyTook } = review;
   // The revised card uses the review-warning accent for an unhappy verdict;
@@ -137,9 +75,6 @@ export function ReviewCard({
   const netScore = review.upvoteCount - review.downvoteCount;
   const isUpvoted = review.userVote === "up";
   const isDownvoted = review.userVote === "down";
-  const segments = examinationSegments(review.examinationDistribution);
-  const splitLabel = examinationSplitLabel(review.examinationDistribution);
-  const theoryPercent = review.approachTheoryPercent;
 
   return (
     <article
@@ -149,9 +84,9 @@ export function ReviewCard({
       <button
         type="button"
         className="block w-full cursor-pointer text-left"
-        aria-expanded={expanded}
-        aria-controls={detailId}
-        onClick={() => setExpanded((open) => !open)}
+        aria-expanded={opensInPlace ? expanded : undefined}
+        aria-controls={opensInPlace ? detailId : undefined}
+        onClick={onOpen ?? (() => setExpanded((open) => !open))}
       >
         <div
           className={cn(
@@ -233,82 +168,19 @@ export function ReviewCard({
         </div>
       </div>
 
-      {expanded ? (
+      {opensInPlace && expanded ? (
         <div id={detailId} className="mt-3.5 flex flex-col gap-3.5">
           <div className="rounded-[12px] border border-cc-rule bg-cc-pg px-4 pt-[15px] pb-3.5">
-            <div className="font-semibold text-[10.5px] text-cc-dim uppercase tracking-[0.09em]">
-              Format
-            </div>
-            <SectionHead
-              title="How it was examined"
-              value={splitLabel ?? "Not recorded"}
-              className="mt-1.5"
+            <ExaminationBlock
+              examinationDistribution={review.examinationDistribution}
+              approachTheoryPercent={review.approachTheoryPercent}
             />
-            {segments.length > 0 ? (
-              <div className="mt-[11px] flex h-[38px] overflow-hidden rounded-lg bg-cc-rule">
-                {segments.map((segment) => (
-                  <div
-                    key={segment.key}
-                    className="flex items-center justify-center overflow-hidden whitespace-nowrap font-semibold text-[12px]"
-                    style={{
-                      width: `${segment.percent}%`,
-                      background: segment.color,
-                      color: segment.ink,
-                    }}
-                  >
-                    {segment.label}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <UnansweredPanel />
-            )}
-
-            <div className="my-3.5 h-px bg-cc-rule" />
-
-            <SectionHead
-              title="The approach"
-              value={
-                theoryPercent === null
-                  ? "Not recorded"
-                  : `${theoryPercent} / ${100 - theoryPercent}`
-              }
-            />
-            {theoryPercent === null ? (
-              <UnansweredPanel />
-            ) : (
-              <div className="mt-[11px] flex h-[38px] overflow-hidden rounded-lg bg-cc-rule">
-                <div
-                  className="flex items-center overflow-hidden whitespace-nowrap bg-cc-btn pl-[11px] font-semibold text-[12px] text-cc-btn-fg"
-                  style={{ width: `${theoryPercent}%` }}
-                >
-                  Theoretical
-                </div>
-                <div
-                  className="flex items-center justify-end overflow-hidden whitespace-nowrap bg-cc-info pr-[11px] font-semibold text-[12px] text-cc-brand"
-                  style={{ width: `${100 - theoryPercent}%` }}
-                >
-                  Applied
-                </div>
-              </div>
-            )}
           </div>
 
           <div className="flex flex-col gap-3.5 rounded-[12px] border border-cc-rule bg-cc-pg px-4 pt-[15px] pb-3.5">
-            <div className="font-semibold text-[10.5px] text-cc-dim uppercase tracking-[0.09em]">
-              Course profile
-            </div>
-            <Meter
-              label="How demanding it was"
-              score={review.workloadScore}
-              low="Not at all"
-              high="Very"
-            />
-            <Meter
-              label="How much was learned"
-              score={review.learningScore}
-              low="Nothing new"
-              high="Transformative"
+            <ProfileBlock
+              workloadScore={review.workloadScore}
+              learningScore={review.learningScore}
             />
           </div>
 
