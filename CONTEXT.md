@@ -145,8 +145,9 @@ bulk review, quick rating
 
 **Community graph**:
 One persistent global graph of app users in a shared world coordinate space. It
-is not rebuilt per visit: a returning user keeps their place and their
-neighbourhood.
+is not rebuilt per visit and not rebuilt per reader: a returning user keeps
+their place, and the people around them are the same people on anybody else's
+screen.
 _Avoid_: network, social graph, map, constellation
 
 **Node**:
@@ -174,11 +175,25 @@ _Avoid_: friendship, connection, follow, link, relationship
 
 **Graph window**:
 The bounded slice of the **community graph** a surface draws: a limited set of
-nodes and the **backbone edges** that run between them. A member's window is
-centred on their own node and is the one place "neighbourhood" means; a
-visitor's is centred on the community origin. It is derived per read and never
-stored, and an edge with one end outside it is not part of it.
-_Avoid_: viewport, camera, subgraph, cluster
+nodes and the **backbone edges** that run between them. It is centred on the
+community origin for everybody — a member's window is a visitor's window with
+one node flagged as theirs. Nobody is drawn at the middle of their own
+community: if every reader were the centre, two members comparing screens would
+both be it. It is derived per read and never stored, and an edge with one end
+outside it is not part of it.
+_Avoid_: viewport, subgraph, cluster, neighbourhood (a window is not centred on
+anybody, so it is nobody's neighbourhood). Not **camera** either: the window is
+which nodes a surface draws, the camera is where it puts them.
+
+**Camera**:
+Where a **graph window** lands on the canvas. Chosen from the frame and the copy
+alone, then nudged by the fewest pixels that bring the reader's own node onto
+the canvas — and by no more, because panning further starts composing a personal
+view of a shared graph. A pan translates every node equally, so it changes which
+part of the graph is on screen and never what the graph looks like. Nodes it
+leaves off the edge are still in the community; they are simply not in this
+viewport.
+_Avoid_: centre (that is the window's, in world units), zoom, focus
 
 **Node profile**:
 A node's appearance, stored separately from graph topology.
