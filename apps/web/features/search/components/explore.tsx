@@ -1,6 +1,6 @@
 "use client";
 
-import { RotateCcw, Search as SearchIcon, TriangleAlert } from "lucide-react";
+import { RotateCcw, TriangleAlert } from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect, useRef } from "react";
 import { AuthReasonDialog } from "@/features/auth";
@@ -9,6 +9,7 @@ import { PageColumn, PageHeader, useSearchBarArrival } from "@/features/shell";
 import { useWorkspaceHost, WorkspaceHost } from "@/features/workspace";
 import { dismissKeyboard } from "@/lib/dismiss-keyboard";
 import { useExplore } from "../hooks/use-explore";
+import { CourseSearchField } from "./course-search-field";
 
 /**
  * Explore: the search-and-browse workspace, and the app's front door to the
@@ -207,32 +208,17 @@ export function Explore() {
           className="w-full min-w-0 max-w-[var(--cc-search-bar-w)]"
         >
           {/*
-            The focus treatment is on this box and not on the field inside it.
-            The bar *is* the control to the reader — the input is transparent and
-            unbordered — so the app's ring came up around the text, inside the
-            bar's own border, with a couple of pixels of surface showing between
-            the two rounded rectangles. The border lights up instead, and
-            `data-cc-field` on the input is what stops the ring being drawn twice.
-            Both halves are argued in `globals.css`; neither works without the
-            other.
+            The bar itself, shared with the catalogue search in Taken courses'
+            "Add a course by hand" — including the focus treatment, which is on
+            the box and not on the field inside it. `course-search-field.tsx`
+            argues both.
           */}
-          <div className="flex h-[42px] items-center gap-2.5 rounded-[10px] border border-cc-rule3 bg-cc-surface px-3.5 has-[input:focus-visible]:border-cc-focus">
-            <SearchIcon
-              size={16}
-              strokeWidth={2}
-              className="shrink-0 text-cc-muted"
-              aria-hidden
-            />
-            <input
-              type="search"
-              data-cc-field
-              value={explore.field}
-              onChange={(event) => explore.onQueryChange(event.target.value)}
-              placeholder="Search a course, code or subject"
-              aria-label="Search courses"
-              className="min-w-0 flex-1 border-none bg-transparent text-[14px] text-cc-ink outline-none placeholder:text-cc-dim2 [&::-webkit-search-cancel-button]:hidden"
-            />
-          </div>
+          <CourseSearchField
+            value={explore.field}
+            onChange={explore.onQueryChange}
+            placeholder="Search a course, code or subject"
+            label="Search courses"
+          />
         </form>
 
         {/* Outside the form: each filter is its own committed choice, so there

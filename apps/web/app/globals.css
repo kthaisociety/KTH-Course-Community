@@ -551,7 +551,7 @@
    `sr-only` peer, which this rule cannot reach), `workspace-pane.tsx`'s
    `focus:bg-cc-pill` (a menu highlight, not a ring). Anything else added in
    `features/**` is a duplicate of this rule — with one exception, which is the
-   `data-cc-field` rule below and is not a duplicate but a *move*: the two search
+   `data-cc-field` rule below and is not a duplicate but a *move*: the search
    bars draw this treatment on the box the reader sees instead of on the input
    inside it. */
 :focus-visible:not([tabindex="-1"]) {
@@ -575,10 +575,11 @@
 
    The rule lands on whatever element actually takes focus, which is normally
    the thing the reader sees. It is not, for a text field inside a box that is
-   drawn as the control — Explore's search bar and the landing's hero bar are a
-   bordered 42px box around a transparent input, so the ring came up around the
-   *text*: a rounded rectangle floating inside another rounded rectangle, two
-   pixels of surface showing between them.
+   drawn as the control — `CourseSearchField` (Explore's bar, and the catalogue
+   search in "Add a course by hand") and the landing's hero bar are a bordered
+   42px box around a transparent input, so the ring came up around the *text*: a
+   rounded rectangle floating inside another rounded rectangle, two pixels of
+   surface showing between them.
 
    `data-cc-field` marks such an input. It suppresses that input's own ring and
    nothing else; the wrapper takes the treatment instead, through
@@ -589,9 +590,14 @@
    exists to avoid.
 
    **An input carrying this attribute and nothing lighting up around it has no
-   focus indicator at all.** That is why it is a deliberate mark on two known
-   bars rather than a class to reach for: pair it with a wrapper treatment or do
-   not use it.
+   focus indicator at all.** That is why it is a deliberate mark on the two
+   components that draw such a box rather than a class to reach for: pair it
+   with a wrapper treatment or do not use it.
+
+   The inverse is what "Add a course by hand" shipped — a bar built to look like
+   Explore's, carrying neither half — and the ring came up around its text.
+   Keeping the pair inside `features/search/components/course-search-field.tsx`
+   is what stops another one being drawn the same way.
 
    Specificity is 0,3,0 against the rule above's 0,2,0, so it wins on its own
    terms rather than on where it happens to sit in this file.
