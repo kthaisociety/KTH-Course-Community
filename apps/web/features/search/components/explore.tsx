@@ -641,7 +641,7 @@ function ResultsSkeleton() {
  *
  */
 const SELECT_CLASS =
-  "h-[34px] min-w-0 max-w-full cursor-pointer rounded-[8px] border border-cc-rule3 bg-cc-surface px-2.5 font-medium text-[12.5px] text-cc-chip-ink @3xl:w-[11rem] hover:border-cc-hov focus-visible:outline-cc-brand";
+  "h-[34px] min-w-0 max-w-full cursor-pointer rounded-[8px] border border-cc-rule3 bg-cc-surface px-2.5 font-medium text-[12.5px] text-cc-chip-ink @3xl:w-[11rem] hover:border-cc-hov";
 
 /**
  * The school filter, and the only filter.
