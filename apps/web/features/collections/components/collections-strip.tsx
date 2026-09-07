@@ -184,7 +184,18 @@ function ChipRow({ state }: { state: CollectionsState }) {
       <button
         type="button"
         onClick={state.openDialog}
-        className={`box-border flex flex-none cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-[9px] border border-cc-hov border-dashed bg-cc-info px-[13px] font-semibold text-[13px] text-cc-brand hover:border-cc-brand ${CONTROL_H}`}
+        /*
+          Two layers, not one: `--cc-info` is a **translucent** blue, so on its
+          own it takes the colour of whatever it is over. In the band that is
+          the page — `--cc-pg`, which is warm — and the button came out a muddy
+          cream rather than the pale blue it is meant to be, and did not match
+          the chips beside it, which are `--cc-surface`. So the surface goes
+          underneath as the background *colour* and the tint sits on top as a
+          background *image*: blue over white, on one element and with no extra
+          node. It tracks the theme through both tokens rather than pinning a
+          literal white, which would invert in dark.
+        */
+        className={`box-border flex flex-none cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-[9px] border border-cc-hov border-dashed bg-cc-surface bg-[linear-gradient(var(--cc-info),var(--cc-info))] px-[13px] font-semibold text-[13px] text-cc-brand hover:border-cc-brand ${CONTROL_H}`}
       >
         <Plus size={14} aria-hidden />
         New collection

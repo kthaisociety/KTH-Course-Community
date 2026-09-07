@@ -787,7 +787,22 @@ export function TakenCourses() {
               <button
                 type="button"
                 onClick={() => setUpdateOpen(true)}
-                className="flex h-[38px] cursor-pointer items-center gap-2 rounded-[9px] border border-cc-rule3 bg-cc-surface px-3.5 font-medium text-[13px] text-cc-chip-ink hover:border-cc-hov"
+                /*
+                  The same treatment as Saved's "New collection", and
+                  deliberately: #208 took *this* button as the model for what a
+                  page's band should look like — content on the left, the page's
+                  one action pinned right — so the two read as one piece of
+                  furniture rather than as two conventions.
+
+                  Two background layers, because `--cc-info` is translucent: on
+                  its own it takes the colour of whatever it is over, which here
+                  is the warm `--cc-pg`, and it came out cream rather than pale
+                  blue. So the surface goes underneath as the background
+                  *colour* and the tint sits on top as a background *image*.
+                  Both are tokens, so it follows the theme instead of pinning a
+                  white that would invert in dark.
+                */
+                className="flex h-[38px] cursor-pointer items-center gap-2 rounded-[9px] border border-cc-hov border-dashed bg-cc-surface bg-[linear-gradient(var(--cc-info),var(--cc-info))] px-3.5 font-semibold text-[13px] text-cc-brand hover:border-cc-brand"
               >
                 <RefreshCw size={15} strokeWidth={1.9} aria-hidden />
                 Update transcript
