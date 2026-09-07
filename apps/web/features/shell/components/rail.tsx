@@ -12,8 +12,8 @@ import {
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { AuthReason } from "@/features/auth";
-import { useLogout, useMe, useSessionData } from "@/features/auth";
-import { initialsOf } from "@/lib/initials";
+import { UserAvatar, useLogout, useMe, useSessionData } from "@/features/auth";
+import { displayNameOf } from "@/lib/identity";
 import { cn } from "@/lib/utils";
 
 /**
@@ -96,23 +96,6 @@ function isActive(pathname: string, href: string) {
 const LINK =
   "flex items-center gap-2.5 rounded-[8px] px-2.5 py-[9px] no-underline hover:bg-white/10";
 
-/**
- * How the account shows itself in the rail: a display name and the initials on
- * the avatar. Both fall back through the same fields in the same order, so the
- * circle can never disagree with the name beside it.
- */
-function identity(
-  user: { name?: string | null; email?: string | null } | null,
-) {
-  const full = user?.name?.trim() ?? "";
-  const email = user?.email?.trim() ?? "";
-
-  return {
-    name: full || email.split("@")[0] || "",
-    initials: initialsOf(full, email),
-  };
-}
-
 type Props = {
   /** Ask the shell to open the sign-in dialog. */
   onRequestAuth: (reason: AuthReason) => void;
@@ -127,7 +110,7 @@ export function Rail({ onRequestAuth, onDismiss }: Props) {
   const logout = useLogout();
 
   const savedCount = me?.savedCourseCodes.length ?? 0;
-  const { name, initials } = identity(user);
+  const name = displayNameOf(user?.name ?? "", user?.email ?? "");
 
   return (
     // `data-cc-sidebar` is the hook `globals.css` scopes the on-rail focus ring
@@ -221,9 +204,11 @@ export function Rail({ onRequestAuth, onDismiss }: Props) {
             beat of nothing where the block will be. */}
         {isPending ? null : user ? (
           <div className="mt-2 flex items-center gap-2.5 rounded-[8px] bg-white/10 p-2.5">
-            <span className="flex size-[34px] shrink-0 items-center justify-center rounded-full bg-white/25 font-bold text-[13px] text-white">
-              {initials}
-            </span>
+            <UserAvatar
+              user={user}
+              className="size-[34px]"
+              fallbackClassName="bg-white/25 font-bold text-[13px] text-white"
+            />
             <span className="min-w-0 flex-1 truncate font-medium text-[13px]">
               {name}
             </span>

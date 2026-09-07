@@ -48,6 +48,10 @@ vi.mock("@/features/auth", async () => ({
   authHref: (to: string) => `/auth?next=${encodeURIComponent(to)}`,
   SignInPrompt: (await import("@/features/auth/components/sign-in-prompt"))
     .SignInPrompt,
+  // The real one, like `SignInPrompt`: the header's avatar is part of what this
+  // page renders, and a stub would let the initials it falls back to drift.
+  UserAvatar: (await import("@/features/auth/components/user-avatar"))
+    .UserAvatar,
 }));
 
 vi.mock("sonner", () => ({

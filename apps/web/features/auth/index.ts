@@ -7,6 +7,12 @@ export {
   SignInPrompt,
   type SignInPromptAction,
 } from "./components/sign-in-prompt";
+/**
+ * On the barrel because every surface that shows who is signed in draws it —
+ * the landing header, the rail and My Page — and they must not each decide for
+ * themselves whether the provider's picture counts.
+ */
+export { UserAvatar } from "./components/user-avatar";
 export { useRequireSession, useSessionData } from "./hooks/session";
 export { useLogout } from "./hooks/use-logout";
 export { useMe } from "./hooks/use-me";
