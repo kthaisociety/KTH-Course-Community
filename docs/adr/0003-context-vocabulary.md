@@ -85,7 +85,7 @@ Three rules keep those lines honest:
 None of `users_graph_nodes`, `users_graph_backbone_edges`,
 `users_node_profiles` or `users.personalization_tier_earned` exists. Their words
 are settled anyway, by the design and by
-[`personal-community-viewport.md`](../landing_docs/personal-community-viewport.md), and
+[`shared-community-viewport.md`](../landing_docs/shared-community-viewport.md), and
 every one of those entries carries a `_Today_` line saying the table is absent
 and the landing hero renders a synthetic field.
 

@@ -25,30 +25,31 @@ import * as graphRepo from "./repository";
 import { deriveEarnedTier, deriveEffectiveTier } from "./tier";
 
 /**
- * How many nodes one bounded neighbourhood read may return.
+ * How many nodes a window may return.
  *
- * This is a query policy, not a database column: the landing page never loads
- * the whole community, and the bound belongs to the domain that answers the
- * question.
+ * A query policy, not a database column: the landing page never loads the whole
+ * community, and the bound belongs to the domain that answers the question.
+ *
+ * There is **one** number rather than one per caller, because there is now one
+ * window. A member and a visitor are served the same slice of the same graph
+ * and differ only in whether one node in it is flagged as theirs; a second
+ * bound would be a second picture waiting to happen.
  */
-export const MAX_NEIGHBOURHOOD_NODES = 150;
+export const MAX_WINDOW_NODES = 150;
 
 /**
- * How many nodes the public window may return.
- *
- * Deliberately its own number rather than a reuse of the one above. The
- * neighbourhood is a read a member makes about themselves; this one is served
- * to anybody who loads `/`, so it must be possible to tighten it — for cost, or
- * because the community has grown enough that a stranger seeing 150 nodes at
- * once starts to say something — without changing what a member sees.
- */
-export const MAX_PUBLIC_WINDOW_NODES = 150;
-
-/**
- * Where the community's world coordinate system begins, and what the public
+ * Where the community's world coordinate system begins, and what **every**
  * window is centred on. `computeWorldPosition` puts the very first node exactly
  * here and grows the radius from it, so the origin is the densest part of the
- * graph and the honest place to point a camera that has no viewer to follow.
+ * graph.
+ *
+ * It is the centre for members too, not only for visitors, and that is the
+ * point rather than a simplification. A window centred on whoever is reading it
+ * draws every member at the middle of their own community — and the moment two
+ * of them compare screens, the graph reads as a diorama built per viewer rather
+ * than one place they both live in. Centring on the origin makes a member's
+ * position a fact about them: somewhere specific, not special, and the same
+ * somewhere on their friend's screen.
  */
 export const COMMUNITY_ORIGIN: WorldPosition = { x: 0, y: 0 };
 
@@ -97,8 +98,13 @@ export type WindowEdge = { fromId: string; toId: string };
 /** A bounded slice of the community graph, ready to project. */
 export type GraphWindow = {
   /**
-   * The world position the client's projection subtracts: the viewer's own node
-   * for a member, the community origin for a visitor. World units, untouched.
+   * The world position the client's projection subtracts: `COMMUNITY_ORIGIN`,
+   * for a member and a visitor alike. World units, untouched.
+   *
+   * It no longer varies by caller. Getting the viewer onto the canvas is the
+   * **camera's** job on the client, and it is a pan of a few pixels rather than
+   * a different world centre — so the graph two people compare is the same
+   * graph, laid out the same way, with their two dots in two different places.
    */
   centre: WorldPosition;
   nodes: WindowNode[];
@@ -174,13 +180,25 @@ export async function joinCommunityGraphOnSignUp(
 }
 
 /**
- * The bounded neighbourhood around an app user's own node: the nearby nodes and
- * the backbone edges spanning exactly that set.
+ * The community window, with the caller's own node flagged as theirs.
  *
- * `nodes` deliberately contains the viewer's own node, flagged `isViewer` — it
- * is the one they came to find, and it needs the same appearance every other
- * node has. `centre` repeats its world position because the client's projection
- * is expressed relative to it, so nothing has to search the set for itself.
+ * **It is the public window plus a flag, and that is the whole difference.**
+ * The read used to be centred on the caller and to return the nodes nearest
+ * *them*, which drew every member at the middle of their own community. That is
+ * a claim the data does not support: put two members' screens side by side and
+ * both are the centre, so the graph reads as something generated per viewer
+ * rather than one community they are both in. Centring everybody on
+ * `COMMUNITY_ORIGIN` makes it checkable — the same nodes in the same
+ * arrangement on both screens, with two different dots lit up.
+ *
+ * Getting the caller onto the canvas is the **client's** job and is a camera
+ * pan of a few pixels, not a different world centre — see `fitViewerInFrame`.
+ *
+ * `nodes` therefore contains the caller's own node, flagged `isViewer`, even
+ * when the bounded read would not have reached them: `withViewer` appends it.
+ * Without that the flag would silently go missing for anybody outside the
+ * nearest `MAX_WINDOW_NODES`, and no amount of panning can show a dot that is
+ * not in the payload.
  *
  * World units come back untouched. Projecting them into screen pixels, and any
  * responsive keep-out adjustment, happens on the client and never returns here.
@@ -199,18 +217,16 @@ export async function getNeighbourhood(userId: string): Promise<GraphWindow> {
   // graph existed never saw it. Joining here repairs both, and because joining
   // is idempotent an app user who already has a node just gets it back.
   const node = await joinCommunityGraph(userId);
-  const centre: WorldPosition = { x: node.x, y: node.y };
 
-  return readWindow(centre, MAX_NEIGHBOURHOOD_NODES, userId);
+  return readWindow(COMMUNITY_ORIGIN, MAX_WINDOW_NODES, node);
 }
 
 /**
- * A bounded window on the real community graph for someone with no node of
- * their own — a visitor, or a member whose own read did not answer.
+ * The same window, for someone with no node of their own — a visitor, or a
+ * member whose own read did not answer.
  *
- * Centred on the community origin rather than on anybody, so it is the same
- * graph for everyone who asks and nothing about the caller shapes it. There is
- * no "You" in it: `isViewer` is false throughout.
+ * The only thing that distinguishes it from `getNeighbourhood` is that there is
+ * no "You" in it: `isViewer` is false throughout, and nothing is appended.
  *
  * The community is small, so this window is sparse, and it is empty until
  * somebody joins. That is the honest answer and the landing draws it as such —
@@ -218,7 +234,7 @@ export async function getNeighbourhood(userId: string): Promise<GraphWindow> {
  * community rather than the community.
  */
 export async function getPublicWindow(): Promise<GraphWindow> {
-  return readWindow(COMMUNITY_ORIGIN, MAX_PUBLIC_WINDOW_NODES);
+  return readWindow(COMMUNITY_ORIGIN, MAX_WINDOW_NODES);
 }
 
 /** Both tier numbers for one app user, and the appearance they have stored. */
@@ -429,6 +445,64 @@ export async function backfillEarnedPersonalizationTiers(
 }
 
 /**
+ * How many app users one placement backfill page looks at.
+ *
+ * Smaller than the tier page because each app user here costs a count, an
+ * anchor search and a write transaction rather than two reads, and because the
+ * set it walks is normally tiny — the only people in it are the ones neither
+ * placement path reached.
+ */
+const PLACEMENT_BACKFILL_PAGE = 100;
+
+/**
+ * Give a node to every app user who has none.
+ *
+ * The two live paths are the sign-up hook and a member's own first read, and
+ * neither covers everybody: accounts created before the graph existed never saw
+ * the hook, and the hook is deliberately written to swallow its failures so it
+ * cannot cost somebody their sign-up. Both leave an account that is real but
+ * absent from the hero. This is the one-off that closes that, and it is safe to
+ * run whenever the graph looks short: `joinCommunityGraph` is idempotent, so a
+ * second run finds nobody and writes nothing.
+ *
+ * **Strictly one app user at a time, and that is not incidental.**
+ * `computeWorldPosition` takes the current node count as the placement index,
+ * and the count is read before the write rather than inside it — so two
+ * placements computed against the same count land at the same radius, separated
+ * only by `ANGLE_JITTER`. At index 0 they land on exactly the same point,
+ * because a jittered angle times a zero radius is still the origin. A
+ * `Promise.all` over a page would therefore stack the very people this function
+ * exists to make visible. The sequential `await` is the fix and must stay one.
+ *
+ * Like the tier backfill and for the same reason, it does **not** swallow: a
+ * run that half-finished and reported success is worse than one that stops and
+ * says where it stopped.
+ */
+export async function backfillCommunityGraphPlacements(
+  pageSize: number = PLACEMENT_BACKFILL_PAGE,
+): Promise<{ placed: number }> {
+  let after: string | null = null;
+  let placed = 0;
+
+  for (;;) {
+    const userIds: string[] = await graphRepo.findUnplacedUserIds(
+      after,
+      pageSize,
+    );
+    if (userIds.length === 0) return { placed };
+
+    for (const userId of userIds) {
+      // One at a time. See the note on concurrency above.
+      await joinCommunityGraph(userId);
+      placed += 1;
+    }
+
+    if (userIds.length < pageSize) return { placed };
+    after = userIds[userIds.length - 1] ?? null;
+  }
+}
+
+/**
  * Recompute the earned tier after a contribution that could have raised it.
  *
  * **When this runs.** The two moments the inputs change are publishing a review
@@ -473,19 +547,23 @@ export async function recordEarnedPersonalizationTierOnContribution(
 
 /**
  * The bounded read both windows are: the nearest `limit` nodes to `centre`, the
- * backbone edges spanning exactly that set, and nothing else.
+ * caller's own node if it was not among them, the backbone edges spanning
+ * exactly that set, and nothing else.
  *
- * This is `personal-community-viewport.md`'s "Bounded rendering" in one place —
+ * This is `shared-community-viewport.md`'s "Bounded rendering" in one place —
  * read a position, select a bounded set with a product-defined maximum, load
  * only the edges that set needs — so neither caller can quietly widen it.
  */
 async function readWindow(
   centre: WorldPosition,
   limit: number,
-  viewerUserId?: string,
+  viewer?: GraphNode,
   now: Date = new Date(),
 ): Promise<GraphWindow> {
-  const nodes = await graphRepo.findNearestNodes(centre, limit);
+  const nodes = await withViewer(
+    await graphRepo.findNearestNodes(centre, limit),
+    viewer,
+  );
   const userIds = nodes.map((node) => node.userId);
   // Two independent reads over the same bounded set. The tier bases are what
   // masks a dormant axis back to unconfigured, and they are fetched for the
@@ -494,7 +572,48 @@ async function readWindow(
     graphRepo.findBackboneEdgesWithin(userIds),
     graphRepo.findNodeTierBases(userIds),
   ]);
-  return anonymise({ centre, nodes, edges, viewerUserId, tierBases, now });
+  return anonymise({
+    centre,
+    nodes,
+    edges,
+    viewerUserId: viewer?.userId,
+    tierBases,
+    now,
+  });
+}
+
+/**
+ * The bounded set, guaranteed to contain the caller's own node.
+ *
+ * The window is the nodes nearest the **origin**, which is a set the caller has
+ * no special claim on: a member placed out at the edge of a community larger
+ * than `MAX_WINDOW_NODES` is simply not in it. Before, when the window was
+ * centred on them, they were in it by construction; now they have to be put
+ * back, or "you can always see your own dot" quietly stops being true at
+ * exactly the size where it starts to matter.
+ *
+ * Appending rather than displacing the farthest node: the bound is a cost
+ * policy, and one node past it costs nothing worth the extra rule. It is also
+ * the rare path — every member inside the window returns here untouched, having
+ * spent no query at all.
+ *
+ * The appearance is read separately because `findNearestNodes` is what normally
+ * carries it and this node did not come from there. No profile row is a normal
+ * state, not an error, so it reads as unconfigured — the same answer the column
+ * defaults give.
+ */
+async function withViewer(
+  nearest: NeighbourNode[],
+  viewer?: GraphNode,
+): Promise<NeighbourNode[]> {
+  if (!viewer) return nearest;
+  if (nearest.some((node) => node.userId === viewer.userId)) return nearest;
+
+  const appearance = await graphRepo.findNodeProfile(viewer.userId);
+  return [
+    ...nearest,
+    { ...viewer, ...(appearance ?? UNCONFIGURED_APPEARANCE) },
+  ];
 }
 
 /**

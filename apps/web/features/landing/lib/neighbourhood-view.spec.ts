@@ -7,6 +7,7 @@ import { clearAt, fallbackRects, MAX_PUSH, type Rect } from "./hero-keepout";
 import {
   DEFAULT_NODE_COLOR_VAR,
   FALLBACK_NODE_COLOR_VAR,
+  fitViewerInFrame,
   type GraphWindowInput,
   NODE_COLOR_VARS,
   NODE_RADIUS,
@@ -14,6 +15,7 @@ import {
   pickViewportCentre,
   projectGraphWindow,
   VIEW_SCALE,
+  VIEWER_MARGIN,
 } from "./neighbourhood-view";
 
 const WIDTH = 1000;
@@ -199,6 +201,144 @@ describe("pickViewportCentre", () => {
         y: HEIGHT / 2,
       });
     }
+  });
+});
+
+/**
+ * The camera nudge that replaced centring the window on the viewer.
+ *
+ * Every window is centred on the community origin now, so nobody is drawn at
+ * the middle of their own community — two members comparing screens would both
+ * be the centre, and the graph would read as generated per viewer rather than
+ * as one place they are both in. This is what still lets somebody find
+ * themselves, and the smallness of it is the whole design.
+ */
+describe("fitViewerInFrame", () => {
+  const ANCHOR = { x: 500, y: 300 };
+
+  function fit(viewer: { x: number; y: number } | null, anchor = ANCHOR) {
+    return fitViewerInFrame({ anchor, viewer, width: WIDTH, height: HEIGHT });
+  }
+
+  it("leaves the camera alone for a window with no You in it", () => {
+    expect(fit(null)).toEqual(ANCHOR);
+  });
+
+  it("leaves the camera alone when the viewer is already on the canvas", () => {
+    expect(fit({ x: 120, y: -80 })).toEqual(ANCHOR);
+  });
+
+  it("brings a viewer off any edge back onto the canvas", () => {
+    for (const viewer of [
+      { x: -900, y: 0 },
+      { x: 900, y: 0 },
+      { x: 0, y: -700 },
+      { x: 0, y: 700 },
+      { x: -900, y: 700 },
+    ]) {
+      const centre = fit(viewer);
+      expect(centre.x + viewer.x).toBeGreaterThanOrEqual(VIEWER_MARGIN);
+      expect(centre.x + viewer.x).toBeLessThanOrEqual(WIDTH - VIEWER_MARGIN);
+      expect(centre.y + viewer.y).toBeGreaterThanOrEqual(VIEWER_MARGIN);
+      expect(centre.y + viewer.y).toBeLessThanOrEqual(HEIGHT - VIEWER_MARGIN);
+    }
+  });
+
+  /**
+   * Just enough, never more. Panning further than it takes to get the dot in
+   * frame is how a shared picture turns back into a personal one.
+   */
+  it("moves the camera no further than it has to", () => {
+    const viewer = { x: -900, y: 0 };
+    const centre = fit(viewer);
+
+    // Exactly on the margin, not comfortably inside it and not centred.
+    expect(centre.x + viewer.x).toBeCloseTo(VIEWER_MARGIN);
+    expect(centre.y).toBe(ANCHOR.y);
+    expect(centre.x).not.toBeCloseTo(WIDTH / 2);
+  });
+
+  it("does not shuffle the dot on a frame narrower than its own margins", () => {
+    expect(
+      fitViewerInFrame({
+        anchor: ANCHOR,
+        viewer: { x: -900, y: 0 },
+        width: VIEWER_MARGIN,
+        height: HEIGHT,
+      }).x,
+    ).toBe(ANCHOR.x);
+  });
+});
+
+/**
+ * The property the whole change exists for, stated as two people comparing
+ * screens: same graph, same arrangement, two different dots lit up.
+ */
+describe("two members looking at the same community", () => {
+  /** One window on the origin-centred graph, as the server now returns it. */
+  function windowFor(viewerId: string | null) {
+    return graphWindow({ x: 0, y: 0 }, [
+      { id: "p", x: 0, y: 0, isViewer: viewerId === "p" },
+      { id: "q", x: 300, y: -120, isViewer: viewerId === "q" },
+      { id: "r", x: -160, y: 240, isViewer: viewerId === "r" },
+    ]);
+  }
+
+  it("shows both of them the same nodes in the same arrangement", () => {
+    const mine = project(windowFor("p"), COPY);
+    const theirs = project(windowFor("q"), COPY);
+
+    const separations = (view: ReturnType<typeof project>) =>
+      view.nodes.map((node) => ({
+        id: node.id,
+        dx: node.screenX - (view.nodes[0]?.screenX ?? 0),
+        dy: node.screenY - (view.nodes[0]?.screenY ?? 0),
+      }));
+
+    expect(separations(theirs)).toEqual(separations(mine));
+  });
+
+  it("lights up a different dot for each of them", () => {
+    expect(
+      project(windowFor("p"), COPY).nodes.find((n) => n.isViewer)?.id,
+    ).toBe("p");
+    expect(
+      project(windowFor("q"), COPY).nodes.find((n) => n.isViewer)?.id,
+    ).toBe("q");
+  });
+
+  /**
+   * Nobody is the middle. That is the claim two friends would otherwise catch
+   * out, and it is why the window centre stopped being the reader's own node.
+   */
+  it("puts neither of them at the centre of their own screen", () => {
+    for (const viewerId of ["q", "r"]) {
+      const view = project(windowFor(viewerId), COPY);
+      const me = view.nodes.find((node) => node.isViewer);
+      expect(
+        Math.hypot(
+          (me?.screenX ?? 0) - view.centre.x,
+          (me?.screenY ?? 0) - view.centre.y,
+        ),
+      ).toBeGreaterThan(NODE_RADIUS);
+    }
+  });
+
+  /** But each of them can still find themselves. */
+  it("keeps a member far from the origin on their own canvas", () => {
+    const view = project(
+      graphWindow({ x: 0, y: 0 }, [
+        { id: "origin", x: 0, y: 0 },
+        { id: "rim", x: 9000, y: -7000, isViewer: true },
+      ]),
+      COPY,
+    );
+    const me = view.nodes.find((node) => node.isViewer);
+
+    expect(me?.screenX).toBeGreaterThanOrEqual(0);
+    expect(me?.screenX).toBeLessThanOrEqual(WIDTH);
+    expect(me?.screenY).toBeGreaterThanOrEqual(0);
+    expect(me?.screenY).toBeLessThanOrEqual(HEIGHT);
   });
 });
 

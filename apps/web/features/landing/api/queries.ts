@@ -15,7 +15,10 @@ import { type RouterOutputs, useTRPC } from "@/trpc/client";
  */
 export type GraphWindow = RouterOutputs["graph"]["publicWindow"];
 
-/** The member read: the same window, centred on their own node. */
+/**
+ * The member read: the same window a visitor gets, centred on the same
+ * community origin, with one node in it flagged as theirs.
+ */
 export type Neighbourhood = RouterOutputs["graph"]["neighbourhood"];
 
 /**

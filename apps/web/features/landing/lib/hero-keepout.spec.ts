@@ -258,7 +258,9 @@ describe("pushClear", () => {
     /**
      * A point *on* the anchor has no bearing to preserve, so there is nothing
      * radial to do and the nearest wall is as good an answer as any. Asserted
-     * because the viewer's own node lands exactly here.
+     * because a node at the community origin lands exactly here — which, since
+     * every window is origin-centred, is whoever joined first rather than
+     * whoever is reading.
      */
     it("falls back to the axis walls for a point on the origin itself", () => {
       const out = pushClear(ORIGIN.x, ORIGIN.y, BLOCK, RADIUS, ORIGIN);
