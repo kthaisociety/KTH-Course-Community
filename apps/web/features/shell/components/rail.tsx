@@ -13,6 +13,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { AuthReason } from "@/features/auth";
 import { useLogout, useMe, useSessionData } from "@/features/auth";
+import { initialsOf } from "@/lib/initials";
 import { cn } from "@/lib/utils";
 
 /**
@@ -105,17 +106,10 @@ function identity(
 ) {
   const full = user?.name?.trim() ?? "";
   const email = user?.email?.trim() ?? "";
-  const initials = full
-    .split(/\s+/)
-    .filter(Boolean)
-    .map((part) => part[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
 
   return {
     name: full || email.split("@")[0] || "",
-    initials: initials || email.charAt(0).toUpperCase() || "?",
+    initials: initialsOf(full, email),
   };
 }
 

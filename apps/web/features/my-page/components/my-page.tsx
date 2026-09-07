@@ -4,6 +4,7 @@ import { RotateCw, TriangleAlert } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useRef, useState } from "react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { authHref, SignInPrompt, useMe } from "@/features/auth";
 import {
   type EditableReview,
@@ -18,6 +19,8 @@ import { PageColumn, PageHeader } from "@/features/shell";
 // route contract is one pure function and this is the half of it that builds
 // a link — `/taken` owns the half that reads one.
 import { reviewHref } from "@/features/taken/lib/review-deep-link";
+import { initialsOf } from "@/lib/initials";
+import type { Me } from "@/lib/user";
 import { useSetNodeAppearance } from "../api/mutations";
 import {
   isTierUnavailable,
@@ -32,7 +35,6 @@ import {
 } from "../lib/grade-average";
 import { AccountSettings } from "./account-settings";
 import { DeleteReviewDialog, type PendingDelete } from "./delete-review-dialog";
-import { Identity } from "./identity";
 import { NodeProfile } from "./node-profile";
 import { ReviewColumn } from "./review-column";
 import { StatCard } from "./stat-card";
@@ -167,6 +169,11 @@ export function MyPage() {
     .map((course) => course.attendanceYear)
     .filter((year): year is number => year !== null)
     .sort((a, b) => a - b);
+  const sinceYear = attendanceYears[0] ?? null;
+  // The email is the fallback the whole app uses for an account with no name,
+  // and "My Page" covers the beat before the session resolves — the heading is
+  // desktop-only, so this is the same frame in which the avatar appears.
+  const displayName = user?.name || user?.email || "My Page";
   const lastImportedAt = takenCourses
     .map((course) => course.transcriptImportedAt)
     .filter((at): at is string => at !== null)
@@ -202,9 +209,44 @@ export function MyPage() {
 
   return (
     <PageColumn>
-      <PageHeader title="My Page" subtitle="Private to you." />
+      {/*
+        The reader's own name is the title, and their picture sits in the
+        header's `leading` slot rather than in a block of its own underneath.
+        "My Page" as a heading was already said twice over — by the rail's
+        active item and by the mobile top bar — while the title and the
+        identity block below it cost 159px between them, so the page opened on
+        its own chrome. Measured on a 730px viewport: one row in 89px, the tab
+        strip up from y=245 to y=175, and the first stat card from y=286 to
+        y=216 — 39% of the viewport down to 30%.
 
-      <Identity user={user} sinceYear={attendanceYears[0] ?? null} />
+        This merges two blocks `… - My Page.dc.html` draws separately (its
+        `dc-import` of the Page Header, then an identity block at 18px below).
+        The artboard governs, so the departure is deliberate and recorded here:
+        it draws no avatar at all in that block, and the vertical budget it
+        assumes is not the one a laptop actually has.
+      */}
+      <PageHeader
+        title={displayName}
+        subtitle={
+          sinceYear === null
+            ? "Private to you."
+            : `Private to you. · At KTH since ${sinceYear}`
+        }
+        leading={
+          // A beat of nothing rather than a "?" in a circle: until the session
+          // resolves there is no name to take initials from, and the fallback
+          // would spend that frame telling the reader their account is
+          // unknown. Same 44px either way, so nothing moves when it arrives.
+          isSessionLoading ? (
+            <div
+              aria-hidden
+              className="size-11 flex-none animate-pulse rounded-full bg-cc-pill"
+            />
+          ) : (
+            <ProfileAvatar user={user} />
+          )
+        }
+      />
 
       {/*
         A real tablist, not a nav of links: the four sections are one panel
@@ -447,6 +489,32 @@ export function MyPage() {
         />
       ) : null}
     </PageColumn>
+  );
+}
+
+/**
+ * The reader's picture, beside their name in the page header.
+ *
+ * Whatever the sign-in provider handed Better Auth: Google and GitHub supply an
+ * image with the profile, magic-link sign-in supplies none, and nothing in this
+ * app writes the column. So an email-only account shows initials, which is what
+ * the rail has always shown for everyone — the two now compute them from one
+ * helper so they cannot disagree.
+ *
+ * `alt=""` because the name is the `h1` immediately beside it. Announcing the
+ * picture would read the same account twice.
+ */
+function ProfileAvatar({ user }: { user: Me | null }) {
+  return (
+    <Avatar className="size-11 flex-none">
+      {user?.image ? <AvatarImage src={user.image} alt="" /> : null}
+      {/* Radix falls through to this whenever the provider's URL fails to
+          load, so an expired or blocked image degrades to initials rather
+          than to a broken picture. */}
+      <AvatarFallback className="bg-cc-pill font-semibold text-[15px] text-cc-brand">
+        {initialsOf(user?.name ?? "", user?.email ?? "")}
+      </AvatarFallback>
+    </Avatar>
   );
 }
 

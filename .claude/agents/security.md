@@ -15,7 +15,7 @@ You are a security reviewer for the KTH-Course-Community monorepo. Your job is t
 - **`proxy.ts` is not authorisation.** Next 16 renamed `middleware.ts` to `proxy.ts`; this one calls `getSessionCookie()` for `/profile` and `/saved` and never validates the cookie. A forged or stale cookie passes it by design. Anything relying on it for access control is a finding.
 - **Protection is opt-*in*.** Unlike the old NestJS global guard, a tRPC procedure is public unless it is built on `protectedProcedure`. The risk is therefore an omission, not an over-broad exemption — a new procedure on `baseProcedure` that touches user data is the bug to hunt for.
 - **Database:** Drizzle against Neon. The query builder parameterises; `db.execute()` and the `sql` tag are the injection surface.
-- **Uploads:** `app/api/user/profile-picture/route.ts` — multipart via a route handler (not tRPC), stored in Vercel Blob.
+- **Uploads:** `app/api/user/transcript/route.ts` — the only multipart route, via a route handler (not tRPC). Nothing is stored in object storage; the PDF is parsed and dropped.
 - **Ingestion:** KOPPS responses validated with Zod in `server/ingest/schemas.ts`.
 
 ## Live dependency audit
@@ -52,14 +52,15 @@ The static notes below are a starting checklist, not a complete picture. `bun au
 
 **File uploads**
 
-- `profile-picture/route.ts` checks session, `instanceof File`, an allowlist of MIME types, and a 2 MB cap. Verify a new upload path does all four. Content-Type is client-supplied, so treat the allowlist as a filter, not proof — confirm nothing later executes or serves the file as HTML.
+- `transcript/route.ts` checks `instanceof File`, the content type, and caps the body with `capRequestBody` **before** `formData()`. Verify a new upload path does all three — the cap has to come first, because `formData()` buffers the whole body before anything can read a file's size. Content-Type is client-supplied, so treat it as a filter, not proof; here the real check is that parsing fails on a non-PDF.
+- **That route is deliberately open to signed-out callers** — a guest parses a transcript and meets the account at the *keep* step, so parsing and writing are two calls. What bounds it is not a session but a per-caller and all-callers rate limit plus a parser-slot gate, all checked **before** the body is read. A change that reads the body first, or that lets this route write a row, is a finding; `transcript.confirm` is the `protectedProcedure` that owns the write.
 - **Transcript import (issue #66) is the sensitive one.** A Ladok transcript is a student's academic record. Verify it is not persisted beyond parsing, never logged, and never echoed back in an error message.
 
 **Data exposure**
 
 - Responses must not carry fields the client does not need — other users' emails, session rows, internal ids.
 - The tRPC `errorFormatter` in `server/api/trpc.ts` passes `NotFoundError` / `ForbiddenError` messages through to the client. Verify those messages never contain another user's data or internal state.
-- Server-only env vars (`DATABASE_URL`, `AWS_SECRET_ACCESS_KEY`, `BETTER_AUTH_SECRET`, `AI_GATEWAY_API_KEY`, `BLOB_READ_WRITE_TOKEN`) must never reach a client component or a `NEXT_PUBLIC_` name.
+- Server-only env vars (`DATABASE_URL`, `AWS_SECRET_ACCESS_KEY`, `BETTER_AUTH_SECRET`, `AI_GATEWAY_API_KEY`) must never reach a client component or a `NEXT_PUBLIC_` name.
 
 **XSS**
 

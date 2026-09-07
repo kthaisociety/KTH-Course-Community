@@ -41,8 +41,11 @@ Better Auth; protected procedures fail closed, same as the old global
   two — still holds.)
 - **Same-origin cookies.** Better Auth can use default Lax cookies. `BETTER_AUTH_URL`
   is still the public site origin.
-- **Multipart stays off tRPC.** Profile pictures POST to
-  `/api/user/profile-picture`.
+- **Multipart stays off tRPC.** Profile pictures POSTed to
+  `/api/user/profile-picture`. (That uploader has since been retired —
+  `users.image` carries whatever the OAuth provider supplies and nothing in the
+  app writes it — but the decision it recorded, that multipart bypasses tRPC,
+  still holds for the transcript import at `/api/user/transcript`.)
 - **Frontend route protection is still optimistic.** `proxy.ts` only checks that
   a session cookie exists. `protectedProcedure` is the real enforcement.
 - **ADR 0001 still holds** for identity (one Better Auth user id, plural tables,

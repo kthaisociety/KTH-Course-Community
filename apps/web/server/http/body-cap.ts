@@ -2,10 +2,11 @@
  * Size caps for request bodies that arrive as a stream.
  *
  * This lived in `server/ingest/transcript/upload.ts` and filed under transcript
- * machinery, which is why the profile-picture route never found it and buffered
- * whatever a signed-in caller sent. Nothing here knows what the body contains,
- * so it belongs to no domain: `server/http/` is the neutral shelf every route
- * handler can reach without importing another domain's internals.
+ * machinery, which is why the second multipart route of the day never found it
+ * and buffered whatever a signed-in caller sent. Nothing here knows what the
+ * body contains, so it belongs to no domain: `server/http/` is the neutral
+ * shelf every route handler can reach without importing another domain's
+ * internals.
  *
  * Every multipart route in `app/api/` must cap its body here before touching
  * `formData()`. There is no second way to do it.
