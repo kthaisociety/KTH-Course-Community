@@ -276,10 +276,31 @@ export function CourseDetailsPanel({
             {course.rounds.length === 0 ? (
               <div className="text-cc-dim2">No offering on file.</div>
             ) : (
-              course.rounds.map((round, index) => (
-                <div
-                  key={`${round.startTerm}-${round.formattedPeriodsAndCredits ?? index}`}
-                >
+              /*
+                Keyed on the round's own id, because nothing it *displays*
+                identifies it. This used to be
+                `${startTerm}-${formattedPeriodsAndCredits ?? index}`, and the
+                `?? index` only ever helped when the label was null: two rounds
+                of one course in one term with the same periods and credits —
+                "20252-P2 (6,0 hp)" twice — got the same key and React said so.
+
+                That is the data rather than a defect in it. On the exact key
+                this list was building, 126 groups of rounds collide and 152
+                rows are in excess of one per key — DD2380 among them. And a
+                *maximal* label-derived key does no better: ADR 0004 counted 77
+                groups that still collide once language, tutoring form,
+                tutoring time and the programme flags are added, which is every
+                field this list draws. Only `ladokUID` ever separated those, and
+                KOPPS is closed. So there is nothing to fall back to, and the id
+                is carried through `findRoundDetails` → `getDetails` →
+                `CourseRoundSummary` for this.
+
+                Those same 77 groups are why some courses draw two identical
+                lines here. That is a display question, not a key one, and it is
+                deliberately not answered by this.
+              */
+              course.rounds.map((round) => (
+                <div key={round.id}>
                   <span className="font-semibold text-cc-ink">
                     {round.formattedPeriodsAndCredits ?? "—"}
                   </span>{" "}

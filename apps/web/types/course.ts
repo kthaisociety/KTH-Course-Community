@@ -93,6 +93,17 @@ export interface CourseDetails {
 
 /** One offering of a course in a given term (e.g. DD2421 P2 vs P3). */
 export interface CourseRoundSummary {
+  /**
+   * `course_rounds.id`, and the only thing that tells two rounds apart.
+   *
+   * Nothing else here does. `docs/adr/0004-course-round-identity.md` measured
+   * it over all 2320 rows: `(course_code, start_term)` collides in 184 groups,
+   * and adding language, tutoring form, tutoring time and the two programme
+   * flags still leaves 77. Only KOPPS' `round.ladokUID` ever separated those,
+   * and that API is closed, so no key derived from the fields below can be made
+   * unique — a UI that needs one per round has to use this.
+   */
+  id: number;
   startTerm: number; // e.g. 20252
   formattedPeriodsAndCredits: string | null; // e.g. "P1 (7,5 hp)"
   studyPace: number | null; // percentage, e.g. 50

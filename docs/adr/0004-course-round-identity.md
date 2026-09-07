@@ -67,6 +67,14 @@ decision forecloses nothing.
 
 - Rounds cannot be addressed by a stable external identifier. Acceptable: they
   are only ever listed under a course.
+- **Application code selects `id` after all, from 2026-09-07.** The Context
+  above records that none did when this was decided, and that is no longer
+  true: `findRoundDetails` selects it, `getDetails` maps it, and it reaches the
+  browser as `CourseRoundSummary.id`. The reason is this decision's own
+  finding — the 77 groups that collide on every descriptive column mean the
+  course details pane cannot key its Offerings list on anything it displays,
+  and React requires a unique key per sibling. Nothing about the decision
+  changes; the id is read, never written or addressed from outside.
 - Duplicate rounds are not prevented by the schema. Four rows are already
   identical to another row on every column but `id`. Whether those are
   ingestion artefacts or genuinely parallel rounds cannot be determined from

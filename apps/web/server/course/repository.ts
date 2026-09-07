@@ -56,6 +56,9 @@ export async function findExamCodesByCodes(codes: string[]) {
 export async function findRoundDetails(courseCode: string) {
   return db
     .select({
+      // The row's identity, and the only column that distinguishes two rounds
+      // of one course in one term — see `CourseRoundSummary.id` and ADR 0004.
+      id: courseRounds.id,
       startTerm: courseRounds.startTerm,
       formattedPeriodsAndCredits: courseRounds.formattedPeriodsAndCredits,
       studyPace: courseRounds.studyPace,
