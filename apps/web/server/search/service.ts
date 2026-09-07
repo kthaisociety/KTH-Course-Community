@@ -27,10 +27,14 @@ const SCHOOLS = ["EECS", "ABE", "CBH", "ITM", "SCI"];
  * The filter a chosen value actually becomes.
  *
  * Any department carrying one of the five abbreviations collapses to the
- * abbreviation, and the query is `department ILIKE '%EECS%'`. So the catalogue's
- * ~100 distinct `department` values produce at most six distinct result sets.
- * A department carrying none of them is passed through and filters on itself,
- * which is why the return type is `string` rather than a member of `SCHOOLS`.
+ * abbreviation, and the query is `department ILIKE '%EECS%'`. A department
+ * carrying none of them is passed through and filters on itself, which is why
+ * the return type is `string` rather than a member of `SCHOOLS`.
+ *
+ * Counted against the live catalogue: 99 distinct `department` values, of which
+ * 89 carry one of the five and 10 do not — `Stockholms universitet` (26
+ * courses), `KTH/Utbildningsstöd (EDO)`, three `CHE/…`, two `ECE/…`, two
+ * `STH/…` and one `BIO/…`. So the column's 99 values resolve to 15.
  *
  * It is idempotent — `resolveDepartmentFilter("EECS") === "EECS"` — and that is
  * what lets `getDepartments` offer the resolved values as the options
@@ -273,18 +277,33 @@ export async function searchCourses(
 /**
  * The filter's options: one per distinct result set, not one per catalogue row.
  *
- * `listDepartments` returns every distinct `department` — around 100 strings,
- * the longest `ECE/Skolan för teknikvetenskaplig kommunikation och lärande`.
+ * `listDepartments` returns every distinct `department` — 99 of them, the
+ * longest `ECE/Skolan för teknikvetenskaplig kommunikation och lärande`.
  * Handing those to the control raw was wrong twice over. It is labelled
  * *School* and they are departments; and `resolveDepartmentFilter` collapses
  * every EECS department to `EECS` before the query runs, so a reader choosing
  * between twenty of those options was choosing between twenty identical result
- * sets. The list only ever had six behaviours in it.
+ * sets.
  *
  * Mapping the catalogue through the same function and deduping yields exactly
- * the values that filter differently: the five schools, plus any department
- * carrying none of their abbreviations, which filters on itself and so still
- * earns its own row. Nothing a reader could reach before is unreachable now.
+ * the values that filter differently: 99 in, **15 out** — the five schools plus
+ * the ten departments carrying none of their abbreviations, which filter on
+ * themselves and so still earn their own rows. Nothing a reader could reach
+ * before is unreachable now.
+ *
+ * Fifteen, not six. It is worth being plain about that, because the shape of
+ * the list is what the mobile layout was blamed for: the longest option
+ * survives this, so the control's intrinsic width is unchanged and the CSS in
+ * `features/search/components/explore.tsx` is what actually holds it inside a
+ * phone's column. This function fixes a correctness problem — an option list
+ * with duplicates in it — and not a width.
+ *
+ * One wrinkle worth knowing: `ILIKE '%…%'` is a substring test, so an option
+ * that is a prefix of another (`CHE/Kemi` of `CHE/Kemiteknik`) returns both
+ * departments' courses. The options are still distinct — no two name the same
+ * query — but one of them is a superset of the other rather than disjoint from
+ * it. Making them disjoint means an exact-match filter, which is a change to
+ * `resolveDepartmentFilter` and to every `?department=` link already shared.
  *
  * Derived rather than hardcoded to `SCHOOLS` on purpose, in both directions —
  * a school KOPPS currently lists no courses under does not become an option

@@ -588,38 +588,41 @@ function ResultsSkeleton() {
  *
  * Every width rule here used to be `@3xl:`-gated, so below that threshold the
  * select had no width, no `min-width` and no `max-width` — and a native
- * `<select>` sizes itself to its widest **option**. On the ~100 raw department
- * names those options used to be it wanted **398px**, which is wider than the
- * content box of any phone this app is read on. It could not shrink, because a
- * flex item's `min-width: auto` floors it at min-content and a select does not
- * wrap, so it left the column instead.
+ * `<select>` sizes itself to its widest **option**. It could not shrink either,
+ * because a flex item's `min-width: auto` floors it at min-content and a select
+ * does not wrap. Measured in a 390px shell: **398px**, sitting at `-4 → 394`
+ * across a row whose own box is `24 → 366`. It hung off both edges of the
+ * column at once.
  *
- * Two changes fix that and they are independent. `server/search/service.ts` now
- * resolves the options down to the values that actually filter differently, so
- * the widest is a school abbreviation rather than a sentence of Swedish; and
- * `min-w-0 max-w-full` here is no longer gated, so even if a future catalogue
- * puts a long string back in the list the control clips instead of overflowing.
- * The second is the guarantee — the first is only what makes the guarantee
- * unnecessary today.
+ * `min-w-0 max-w-full` are no longer gated, and that is the whole fix: the
+ * select now measures **342px** at `24 → 366`, which is exactly the row, and
+ * exactly the search bar above it. The two controls line up on both edges.
+ *
+ * Note what this does *not* rest on. `server/search/service.ts` resolves the
+ * options down to the values that actually filter differently, but the longest
+ * survivor is still `ECE/Skolan för teknikvetenskaplig kommunikation och
+ * lärande` — ten of the catalogue's 99 departments carry none of the five
+ * school abbreviations and so are kept whole. The intrinsic width is still
+ * 398px. The clamp is not a safety net for some future catalogue; it is what
+ * holds the control inside the column today.
  *
  * Ungating those two is not a change to the wide layout. They were already
  * `@3xl:min-w-0 @3xl:max-w-full`, so above the threshold the used widths are
  * identical; all that is new is that they now also hold below it.
  *
- * The narrow layout keeps the compact chip it was drawn as rather than becoming
- * a full-width field: `Course Community - Mobile Preview.dc.html` in
- * `docs/design_ref/2026-09-06/` draws Explore's search block as the bar alone,
- * so a filter that reads as a chip beside "Clear filters" is the smallest thing
- * that can sit under it without competing with it.
+ * `@max-3xl:flex-1` is why the block does not grow when a filter is applied.
+ * Left to size itself the select fills the row, pushing "Clear filters" onto a
+ * line of its own and taking the block from 118px to **160px** — the results
+ * moved down the page as a side effect of filtering them. Sharing the row
+ * instead settles the pair at **249.7px** and **84.3px**, ending on the content
+ * edge, and the block stays 118px filtered or not.
  *
  * ## The wide end, which is unchanged and deliberately so
  *
- * Every number below was measured in the running app, against the 398px select.
- * Shorter options can only give these rules more room than they were measured
- * with, so they stay correct; they are no longer *tight*, and re-measuring them
- * against a 5-option list is worth doing when someone next has the app running.
- * They are left alone here because this change could not be measured — see the
- * pull request.
+ * Every number below was measured against the 398px select, and re-measured at
+ * 1920 after this change: the track is still 204px, the select still 176px, the
+ * bar still 460px, the block still 74px. The intrinsic width did not move, so
+ * neither did they.
  *
  * The select is given a resting width and allowed to clip its own label, and
  * nothing is lost by that: the open dropdown draws every option at full width,
@@ -641,7 +644,7 @@ function ResultsSkeleton() {
  *
  */
 const SELECT_CLASS =
-  "h-[34px] min-w-0 max-w-full cursor-pointer rounded-[8px] border border-cc-rule3 bg-cc-surface px-2.5 font-medium text-[12.5px] text-cc-chip-ink @3xl:w-[11rem] hover:border-cc-hov focus-visible:outline-cc-brand";
+  "h-[34px] min-w-0 max-w-full cursor-pointer rounded-[8px] border border-cc-rule3 bg-cc-surface px-2.5 font-medium text-[12.5px] text-cc-chip-ink @max-3xl:flex-1 @3xl:w-[11rem] hover:border-cc-hov focus-visible:outline-cc-brand";
 
 /**
  * The school filter, and the only filter.
@@ -658,12 +661,18 @@ const SELECT_CLASS =
  * query over an inflated window and a search could come back short with nothing
  * saying so.
  *
- * `@max-3xl:w-full` gives the narrow layout a definite box to centre the chip
- * in. Without it this row is a shrink-to-fit flex item under the parent's
+ * `@max-3xl:w-full` gives the narrow layout a definite box for the pair to
+ * divide. Without it this row is a shrink-to-fit flex item under the parent's
  * `items-center`, and `max-w-full` on the select would be a percentage of a
  * width the select itself had just determined. The wide end is untouched:
  * `@3xl:flex-1` sets `flex-basis: 0%`, which wins over a `width` on a flex item
  * either way.
+ *
+ * `flex-nowrap` and the button's `shrink-0` are now unconditional. Both were
+ * already what the wide end used (`@3xl:flex-nowrap`, `@3xl:shrink-0`), so
+ * nothing above the threshold moves; below it they are what keeps the select
+ * and "Clear filters" on one line instead of stacking. See `SELECT_CLASS` for
+ * the 118px-versus-160px measurement that decided it.
  */
 function Filters({ explore }: { explore: ReturnType<typeof useExplore> }) {
   return (
@@ -671,7 +680,7 @@ function Filters({ explore }: { explore: ReturnType<typeof useExplore> }) {
     // behind the arriving search bar rather than being there before it lands.
     <div
       data-cc-fade
-      className="flex flex-wrap items-center justify-center gap-2 @max-3xl:w-full @3xl:min-w-[12.5rem] @3xl:flex-1 @3xl:flex-nowrap @3xl:justify-start"
+      className="flex flex-nowrap items-center justify-center gap-2 @max-3xl:w-full @3xl:min-w-[12.5rem] @3xl:flex-1 @3xl:justify-start"
     >
       <select
         aria-label="School"
@@ -705,7 +714,7 @@ function Filters({ explore }: { explore: ReturnType<typeof useExplore> }) {
         <button
           type="button"
           onClick={explore.onClearFilters}
-          className="h-[34px] cursor-pointer rounded-[8px] px-2.5 font-medium text-[12.5px] text-cc-brand @3xl:shrink-0 hover:underline"
+          className="h-[34px] shrink-0 cursor-pointer rounded-[8px] px-2.5 font-medium text-[12.5px] text-cc-brand hover:underline"
         >
           Clear filters
         </button>
