@@ -1,6 +1,5 @@
 "use client";
 
-import { Search } from "lucide-react";
 import { useState } from "react";
 import {
   Dialog,
@@ -8,7 +7,11 @@ import {
   DialogDescription,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useDebouncedQuery, useSearchCourses } from "@/features/search";
+import {
+  CourseSearchField,
+  useDebouncedQuery,
+  useSearchCourses,
+} from "@/features/search";
 import { creditsLabel, type TakenEdits } from "../lib/taken-rows";
 
 /** The credits a KTH course usually carries, as the artboard's own chips. */
@@ -151,24 +154,21 @@ export function AddTakenCourseDialog({
           <span className="font-medium text-[11.5px] text-cc-dim">
             Search the KTH catalogue
           </span>
-          <div className="mt-1.5 flex h-[42px] items-center gap-2.5 rounded-[9px] border border-cc-rule3 bg-cc-surface px-[13px]">
-            <Search
-              size={16}
-              strokeWidth={2}
-              aria-hidden
-              className="flex-none text-cc-dim"
-            />
-            <input
-              value={query}
-              onChange={(event) => {
-                setQuery(event.target.value);
-                setPicked(null);
-              }}
-              placeholder="Course code or name, e.g. DD2421"
-              aria-label="Search the KTH catalogue"
-              className="min-w-0 flex-1 border-none bg-transparent text-[13.5px] text-cc-ink outline-none"
-            />
-          </div>
+          {/* Explore's bar, not a second one drawn to look like it. The
+              hand-rolled copy that stood here carried the box but not the
+              `data-cc-field` half of its focus treatment, so the app's ring came
+              up around the *text* inside the bar instead of on the bar's own
+              edge. */}
+          <CourseSearchField
+            className="mt-1.5"
+            value={query}
+            onChange={(next) => {
+              setQuery(next);
+              setPicked(null);
+            }}
+            placeholder="Course code or name, e.g. DD2421"
+            label="Search the KTH catalogue"
+          />
         </div>
 
         {picked === null && debounced.trim() !== "" ? (

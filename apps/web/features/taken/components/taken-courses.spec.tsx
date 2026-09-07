@@ -121,7 +121,16 @@ vi.mock("@/features/reviews/components/reviewer", () => ({
     );
   },
 }));
-vi.mock("@/features/search", () => ({
+// The barrel is stubbed rather than loaded because it also exports `Explore`,
+// which drags in the tRPC client. `CourseSearchField` is handed back real: the
+// add-by-hand dialog searches from Explore's own bar, and a stub of it would
+// hide the focus treatment that is the reason the bar is shared at all.
+vi.mock("@/features/search", async () => ({
+  CourseSearchField: (
+    await vi.importActual<
+      typeof import("@/features/search/components/course-search-field")
+    >("@/features/search/components/course-search-field")
+  ).CourseSearchField,
   useDebouncedQuery: (value: string) => [value, vi.fn()] as const,
   useSearchCourses: ({ q }: { q: string }) => ({
     data: q.trim() ? { results: searchResults() } : undefined,
@@ -417,6 +426,30 @@ describe("editing in place", () => {
 });
 
 describe("adding by hand", () => {
+  /**
+   * The bar is Explore's, and the reason it is Explore's rather than a second
+   * one drawn to match: the box is what the reader sees as the control, so the
+   * app's one focus ring has to land on its border and not around the text
+   * inside it. The copy that stood here carried neither half of that treatment.
+   *
+   * Both halves are asserted together because neither works alone: without
+   * `data-cc-field` there are two rings, and without the border variant there
+   * is none at all. `globals.css` argues the pair.
+   */
+  it("searches from the same bar Explore does", async () => {
+    render(<TakenCourses />);
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Add a course by hand" }),
+    );
+
+    const field = screen.getByLabelText("Search the KTH catalogue");
+    expect(field).toHaveAttribute("data-cc-field");
+    expect(field.parentElement).toHaveClass(
+      "has-[input:focus-visible]:border-cc-focus",
+    );
+  });
+
   it("records a course the reader picked out of the catalogue", async () => {
     render(<TakenCourses />);
 
