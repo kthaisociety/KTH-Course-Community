@@ -1,6 +1,7 @@
 "use client";
 
-import { Lock, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
+import { SignInPrompt } from "@/features/auth";
 import type { CollectionsState } from "../hooks/use-collections-state";
 import { CollectionChip } from "./collection-chip";
 
@@ -108,33 +109,29 @@ function StripSkeleton() {
  * has no room for it and signing up is one click away. Both buttons stay, and
  * they are `h-8` inside a 42px row rather than filling it, because they are the
  * row's controls and not the row.
+ *
+ * The row itself is {@link SignInPrompt} now, shared with My Page and
+ * `/collections`. This was the only one of the three drawn without a card
+ * around it, and the shared component is this row grown a border rather than
+ * the other two shrunk into a band — so the height, and everything the height
+ * levels, is unchanged.
+ *
+ * It is drawn at {@link CONTROL_H} by the shared component itself rather than
+ * by anything passed from here, which is why this is the one control in the
+ * band that does not carry that class: repeating it would be two files
+ * declaring one height, and the one that lost would do so silently.
  */
 function GuestRow({ state }: { state: CollectionsState }) {
   return (
-    <div
-      className={`flex min-w-0 flex-1 items-center gap-2 ${CONTROL_H} @max-[560px]:h-auto @max-[560px]:flex-wrap`}
-    >
-      <Lock size={15} className="flex-none text-cc-dim" aria-hidden />
-      <span className="min-w-0 truncate text-[13px] text-cc-muted">
-        Organize your saved courses into collections.
-      </span>
-      <div className="ml-auto flex flex-none gap-[7px] @max-[560px]:ml-0">
-        <button
-          type="button"
-          onClick={() => state.setAuthReason("sign-up")}
-          className="flex h-8 cursor-pointer items-center rounded-[8px] bg-cc-btn px-3.5 font-semibold text-[12.5px] text-cc-btn-fg hover:opacity-[0.88]"
-        >
-          Sign up
-        </button>
-        <button
-          type="button"
-          onClick={() => state.setAuthReason("log-in")}
-          className="flex h-8 cursor-pointer items-center rounded-[8px] border border-cc-rule3 bg-cc-surface px-3.5 font-medium text-[12.5px] text-cc-brand hover:border-cc-hov"
-        >
-          Log in
-        </button>
-      </div>
-    </div>
+    <SignInPrompt
+      title="Organize your saved courses into collections"
+      action={{
+        kind: "ask",
+        onSignUp: () => state.setAuthReason("sign-up"),
+        onLogIn: () => state.setAuthReason("log-in"),
+      }}
+      className="min-w-0 flex-1"
+    />
   );
 }
 

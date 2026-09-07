@@ -1,5 +1,5 @@
 // Other imports
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
 // For authentication
@@ -23,6 +23,28 @@ export const metadata: Metadata = {
   icons: {
     icon: "/compass.png",
   },
+};
+
+/**
+ * The first two lines are Next's own defaults, written out because the third
+ * cannot be added without them.
+ *
+ * `interactiveWidget: "resizes-content"` is the on-screen keyboard's effect on
+ * the layout viewport. Every screen in the app is `h-dvh` with `overflow-hidden`
+ * — `AppShell` — so with the default (`resizes-visual`) the keyboard slides over
+ * a page that still believes it is full height, and the browser scrolls the
+ * whole thing up to reveal the focused field. `resizes-content` shortens the
+ * viewport instead, so `dvh` accounts for the keyboard and the layout stays put.
+ *
+ * There is deliberately no `maximumScale` or `userScalable: false` here. That
+ * would also stop iOS zooming into a small field, and it would do it by taking
+ * pinch-zoom away from everyone who needs it — WCAG 1.4.4. The size of the
+ * fields is the fix instead; `globals.css` holds it.
+ */
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  interactiveWidget: "resizes-content",
 };
 
 export default function RootLayout({

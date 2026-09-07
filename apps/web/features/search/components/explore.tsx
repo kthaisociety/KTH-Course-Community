@@ -7,6 +7,7 @@ import { AuthReasonDialog } from "@/features/auth";
 import { CourseCardItem } from "@/features/courses";
 import { PageColumn, PageHeader, useSearchBarArrival } from "@/features/shell";
 import { useWorkspaceHost, WorkspaceHost } from "@/features/workspace";
+import { dismissKeyboard } from "@/lib/dismiss-keyboard";
 import { useExplore } from "../hooks/use-explore";
 
 /**
@@ -199,10 +200,23 @@ export function Explore() {
         */}
         <form
           ref={barRef}
-          onSubmit={explore.onSubmit}
+          onSubmit={(event) => {
+            explore.onSubmit(event);
+            dismissKeyboard(event.currentTarget);
+          }}
           className="w-full min-w-0 max-w-[var(--cc-search-bar-w)]"
         >
-          <div className="flex h-[42px] items-center gap-2.5 rounded-[10px] border border-cc-rule3 bg-cc-surface px-3.5">
+          {/*
+            The focus treatment is on this box and not on the field inside it.
+            The bar *is* the control to the reader — the input is transparent and
+            unbordered — so the app's ring came up around the text, inside the
+            bar's own border, with a couple of pixels of surface showing between
+            the two rounded rectangles. The border lights up instead, and
+            `data-cc-field` on the input is what stops the ring being drawn twice.
+            Both halves are argued in `globals.css`; neither works without the
+            other.
+          */}
+          <div className="flex h-[42px] items-center gap-2.5 rounded-[10px] border border-cc-rule3 bg-cc-surface px-3.5 has-[input:focus-visible]:border-cc-focus">
             <SearchIcon
               size={16}
               strokeWidth={2}
@@ -211,6 +225,7 @@ export function Explore() {
             />
             <input
               type="search"
+              data-cc-field
               value={explore.field}
               onChange={(event) => explore.onQueryChange(event.target.value)}
               placeholder="Search a course, code or subject"

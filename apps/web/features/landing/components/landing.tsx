@@ -16,6 +16,7 @@ import {
   stashSearchBarHandoff,
   ThemeToggle,
 } from "@/features/shell";
+import { dismissKeyboard } from "@/lib/dismiss-keyboard";
 import { isUnplaced, useNeighbourhood, usePublicWindow } from "../api/queries";
 import { FindYourDot, type FindYourDotStatus } from "./find-your-dot";
 import { HeroNetwork } from "./hero-network";
@@ -477,9 +478,13 @@ export function Landing() {
               data-hero-clear
               onSubmit={(event) => {
                 event.preventDefault();
+                // Before `submitSearch`, which measures this bar for the
+                // hand-off: on a phone the keyboard has the page shifted up,
+                // and a rect measured there is a rect Explore animates from.
+                dismissKeyboard(event.currentTarget);
                 submitSearch(query);
               }}
-              className="pointer-events-auto mt-4 @lg:mt-[31px] flex h-[42px] w-full @lg:max-w-[var(--cc-search-bar-w)] items-center gap-2.5 rounded-[10px] border border-cc-rule3 bg-cc-surface px-3.5"
+              className="pointer-events-auto mt-4 @lg:mt-[31px] flex h-[42px] w-full @lg:max-w-[var(--cc-search-bar-w)] items-center gap-2.5 rounded-[10px] border border-cc-rule3 bg-cc-surface px-3.5 has-[input:focus-visible]:border-cc-focus"
             >
               <Search
                 size={16}
@@ -487,7 +492,13 @@ export function Landing() {
                 aria-hidden
                 className="shrink-0 text-cc-muted"
               />
+              {/* `data-cc-field`, and the border above: the bar is the control,
+                  so the focus ring goes on its edge rather than around the text
+                  inside it. Explore's bar carries the same pair — they are one
+                  bar to the reader and the hand-off does not interpolate a
+                  focus style. `globals.css` argues both halves. */}
               <input
+                data-cc-field
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 onFocus={warmExplore}
