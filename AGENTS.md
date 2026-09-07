@@ -13,6 +13,7 @@ Bun workspace monorepo (`workspaces: ["apps/*"]`). The only app is `apps/web`: N
 - DB: `bun run db:push` / `bun run db:generate`
 - Ingest: `bun run ingest` (optional `--test`)
 - Backfill earned personalization tiers: `bun run backfill:tiers` (idempotent; only ever raises)
+- Backfill missing graph nodes: `bun run backfill:placements` (idempotent; places app users who have none)
 
 Run scripts from the repo root. Env lives in `apps/web/.env.local` (see `apps/web/.env.example`). Path alias `@/*` → `apps/web/*`.
 
