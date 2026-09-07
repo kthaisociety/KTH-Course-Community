@@ -929,6 +929,27 @@ describe("backfillCommunityGraphPlacements", () => {
       "neon is having a day",
     );
   });
+
+  /**
+   * The count is rows this run wrote, not app users it walked past.
+   *
+   * Somebody selected as unplaced can be placed by their own sign-up or first
+   * read in the moment before the backfill's insert, and the placement then
+   * returns the winner's node rather than failing. Counting that would have the
+   * command report a repair it did not perform — which defeats the only reason
+   * the number is printed.
+   */
+  it("does not count an app user a concurrent placement got to first", async () => {
+    unplaced(["u1"], 100);
+    // Selected as unplaced, but their own first read commits while this run is
+    // computing a position: the insert finds a row and returns nothing.
+    vi.mocked(graphRepo.persistPlacement).mockResolvedValue(undefined);
+    vi.mocked(graphRepo.findNode)
+      .mockResolvedValueOnce(undefined)
+      .mockResolvedValue({ userId: "u1", x: 7, y: -3 });
+
+    expect(await backfillCommunityGraphPlacements()).toEqual({ placed: 0 });
+  });
 });
 
 describe("a window's node appearance", () => {

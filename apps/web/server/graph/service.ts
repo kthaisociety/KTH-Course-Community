@@ -118,10 +118,34 @@ export type GraphWindow = {
  * node is placed at the outer edge of the community and attached to three to
  * five established anchors — nobody already placed is asked to move, and no
  * global layout pass ever runs.
+ *
+ * Where the node came from is `placeInCommunityGraph`'s to report; almost every
+ * caller only wants somewhere to draw a dot, and gets it.
  */
 export async function joinCommunityGraph(userId: string): Promise<GraphNode> {
+  return (await placeInCommunityGraph(userId)).node;
+}
+
+/**
+ * The same placement, and **whether this call is the one that wrote it**.
+ *
+ * `created` is false in the two idempotent cases — the app user already had a
+ * node, or a concurrent sign-up or first read committed theirs while this call
+ * was computing a position — and true only when this call's own insert landed.
+ * The node comes back either way; the flag says nothing about whether the
+ * caller has somewhere to draw them, only about who put it there.
+ *
+ * It exists because a backfill that counts what it did not do is a backfill
+ * whose output cannot be trusted: "placed 4 app users" has to mean four rows
+ * that were not there before, or an operator reading it learns nothing. Nobody
+ * else needs the distinction, which is why `joinCommunityGraph` above still
+ * hands back a bare node.
+ */
+export async function placeInCommunityGraph(
+  userId: string,
+): Promise<{ node: GraphNode; created: boolean }> {
   const existing = await graphRepo.findNode(userId);
-  if (existing) return existing;
+  if (existing) return { node: existing, created: false };
 
   const position = computeWorldPosition(userId, await graphRepo.countNodes());
   const node: GraphNode = { userId, ...position };
@@ -144,18 +168,19 @@ export async function joinCommunityGraph(userId: string): Promise<GraphNode> {
       anchorUserId: anchor.userId,
     })),
   });
-  if (placed) return placed;
+  if (placed) return { node: placed, created: true };
 
   // A concurrent join for the same app user committed first. Their placement
   // stands and ours was abandoned whole, so report where this app user really
-  // is rather than coordinates that were never stored.
+  // is rather than coordinates that were never stored — and say plainly that we
+  // are not the ones who put them there.
   const winner = await graphRepo.findNode(userId);
   if (!winner) {
     throw new Error(
       `Placement for app user ${userId} conflicted but no node was found`,
     );
   }
-  return winner;
+  return { node: winner, created: false };
 }
 
 /**
@@ -477,6 +502,14 @@ const PLACEMENT_BACKFILL_PAGE = 100;
  * Like the tier backfill and for the same reason, it does **not** swallow: a
  * run that half-finished and reported success is worse than one that stops and
  * says where it stopped.
+ *
+ * `placed` counts **rows this run wrote**, which is not the same as app users
+ * it visited. Somebody selected as unplaced can be placed by their own sign-up
+ * or first read in the moment between the two, and `placeInCommunityGraph` then
+ * hands back the winner's node with `created: false`. Counting that would have
+ * the command claim work it did not do — and the number exists precisely so an
+ * operator can tell a run that repaired something from a run that found nothing
+ * to repair.
  */
 export async function backfillCommunityGraphPlacements(
   pageSize: number = PLACEMENT_BACKFILL_PAGE,
@@ -493,8 +526,8 @@ export async function backfillCommunityGraphPlacements(
 
     for (const userId of userIds) {
       // One at a time. See the note on concurrency above.
-      await joinCommunityGraph(userId);
-      placed += 1;
+      const { created } = await placeInCommunityGraph(userId);
+      if (created) placed += 1;
     }
 
     if (userIds.length < pageSize) return { placed };
