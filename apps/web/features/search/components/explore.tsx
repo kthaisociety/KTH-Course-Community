@@ -584,24 +584,49 @@ function ResultsSkeleton() {
 }
 
 /**
- * The width rules are `@3xl:` only, and every number in them was measured in the
- * running app rather than reasoned about. Below that width the control is
- * exactly what it has always been: the narrow layout keeps its own row and is
- * not touched here.
+ * ## The narrow end, which is what #220 was about
  *
- * A native `<select>` sizes itself to its widest **option**, and these options
- * are whole department names — 100 of them, the longest "ECE/Skolan för
- * teknikvetenskaplig kommunikation och lärande". Left alone the control comes
- * out **398px** wide. That is harmless in a row of its own and is not once it
- * shares a fixed-height row with the search bar: measured at a 1920px viewport
- * it spilled 194px past its track and out of the row entirely.
+ * Every width rule here used to be `@3xl:`-gated, so below that threshold the
+ * select had no width, no `min-width` and no `max-width` — and a native
+ * `<select>` sizes itself to its widest **option**. On the ~100 raw department
+ * names those options used to be it wanted **398px**, which is wider than the
+ * content box of any phone this app is read on. It could not shrink, because a
+ * flex item's `min-width: auto` floors it at min-content and a select does not
+ * wrap, so it left the column instead.
  *
- * So on the row it is given a resting width and allowed to clip its own label,
- * and nothing is lost by that — the open dropdown draws every option at full
- * width, which is the one place the whole string has to be readable.
- * `min-w-0` lets it give way first when "Clear filters" joins the row: measured
- * at 1920 it settles to 112px beside the button and 176px without it, and in
- * both cases the row ends exactly on its own content edge.
+ * Two changes fix that and they are independent. `server/search/service.ts` now
+ * resolves the options down to the values that actually filter differently, so
+ * the widest is a school abbreviation rather than a sentence of Swedish; and
+ * `min-w-0 max-w-full` here is no longer gated, so even if a future catalogue
+ * puts a long string back in the list the control clips instead of overflowing.
+ * The second is the guarantee — the first is only what makes the guarantee
+ * unnecessary today.
+ *
+ * Ungating those two is not a change to the wide layout. They were already
+ * `@3xl:min-w-0 @3xl:max-w-full`, so above the threshold the used widths are
+ * identical; all that is new is that they now also hold below it.
+ *
+ * The narrow layout keeps the compact chip it was drawn as rather than becoming
+ * a full-width field: `Course Community - Mobile Preview.dc.html` in
+ * `docs/design_ref/2026-09-06/` draws Explore's search block as the bar alone,
+ * so a filter that reads as a chip beside "Clear filters" is the smallest thing
+ * that can sit under it without competing with it.
+ *
+ * ## The wide end, which is unchanged and deliberately so
+ *
+ * Every number below was measured in the running app, against the 398px select.
+ * Shorter options can only give these rules more room than they were measured
+ * with, so they stay correct; they are no longer *tight*, and re-measuring them
+ * against a 5-option list is worth doing when someone next has the app running.
+ * They are left alone here because this change could not be measured — see the
+ * pull request.
+ *
+ * The select is given a resting width and allowed to clip its own label, and
+ * nothing is lost by that: the open dropdown draws every option at full width,
+ * which is the one place the whole string has to be readable. `min-w-0` lets it
+ * give way first when "Clear filters" joins the row — measured at 1920 it
+ * settled to 112px beside the button and 176px without it, and in both cases
+ * the row ended exactly on its own content edge.
  *
  * What it may *not* do is vanish. `Filters` carries a `@3xl:min-w-[12.5rem]`
  * floor for that: without one, the select is the control that collapses,
@@ -613,9 +638,10 @@ function ResultsSkeleton() {
  * also the largest floor the centring survives — the track is 204px at the
  * content column's cap, and a floor above that would push the bar off the
  * viewport's centre line at every width.
+ *
  */
 const SELECT_CLASS =
-  "h-[34px] cursor-pointer rounded-[8px] border border-cc-rule3 bg-cc-surface px-2.5 font-medium text-[12.5px] text-cc-chip-ink @3xl:w-[11rem] @3xl:min-w-0 @3xl:max-w-full hover:border-cc-hov focus-visible:outline-cc-brand";
+  "h-[34px] min-w-0 max-w-full cursor-pointer rounded-[8px] border border-cc-rule3 bg-cc-surface px-2.5 font-medium text-[12.5px] text-cc-chip-ink @3xl:w-[11rem] hover:border-cc-hov focus-visible:outline-cc-brand";
 
 /**
  * The school filter, and the only filter.
@@ -631,6 +657,13 @@ const SELECT_CLASS =
  * cannot — those live in the reviews domain, so it would be applied after the
  * query over an inflated window and a search could come back short with nothing
  * saying so.
+ *
+ * `@max-3xl:w-full` gives the narrow layout a definite box to centre the chip
+ * in. Without it this row is a shrink-to-fit flex item under the parent's
+ * `items-center`, and `max-w-full` on the select would be a percentage of a
+ * width the select itself had just determined. The wide end is untouched:
+ * `@3xl:flex-1` sets `flex-basis: 0%`, which wins over a `width` on a flex item
+ * either way.
  */
 function Filters({ explore }: { explore: ReturnType<typeof useExplore> }) {
   return (
@@ -638,7 +671,7 @@ function Filters({ explore }: { explore: ReturnType<typeof useExplore> }) {
     // behind the arriving search bar rather than being there before it lands.
     <div
       data-cc-fade
-      className="flex flex-wrap items-center justify-center gap-2 @3xl:min-w-[12.5rem] @3xl:flex-1 @3xl:flex-nowrap @3xl:justify-start"
+      className="flex flex-wrap items-center justify-center gap-2 @max-3xl:w-full @3xl:min-w-[12.5rem] @3xl:flex-1 @3xl:flex-nowrap @3xl:justify-start"
     >
       <select
         aria-label="School"
@@ -652,6 +685,20 @@ function Filters({ explore }: { explore: ReturnType<typeof useExplore> }) {
             {department}
           </option>
         ))}
+        {/*
+          A `?department=` the option list does not contain — a link shared
+          before the options were resolved down to schools, or a hand-typed one.
+          The server still honours it (`resolveDepartmentFilter` collapses or
+          passes it through), so the results on screen *are* filtered, and
+          without a matching option the select would fall back to displaying
+          "All schools" while they were. A filter the reader cannot see is a
+          filter they cannot clear; this keeps the control telling the truth,
+          and "Clear filters" beside it is then reachable.
+        */}
+        {explore.department &&
+        !explore.departments.includes(explore.department) ? (
+          <option value={explore.department}>{explore.department}</option>
+        ) : null}
       </select>
 
       {explore.hasFilters ? (

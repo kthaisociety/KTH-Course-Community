@@ -14,11 +14,32 @@ const embeddingCache = new Map<string, number[]>();
 const embeddingInflight = new Map<string, Promise<number[]>>();
 let embeddingSearchFailures = 0;
 
+/**
+ * KTH's five schools, as they appear *inside* the `department` strings KOPPS
+ * ships. Ingest stores `detail.course.department.name` verbatim, and those read
+ * `EECS/Skolan för elektroteknik och datavetenskap` — the abbreviation is a
+ * prefix on every department belonging to that school, which is what makes the
+ * substring test below sound.
+ */
+const SCHOOLS = ["EECS", "ABE", "CBH", "ITM", "SCI"];
+
+/**
+ * The filter a chosen value actually becomes.
+ *
+ * Any department carrying one of the five abbreviations collapses to the
+ * abbreviation, and the query is `department ILIKE '%EECS%'`. So the catalogue's
+ * ~100 distinct `department` values produce at most six distinct result sets.
+ * A department carrying none of them is passed through and filters on itself,
+ * which is why the return type is `string` rather than a member of `SCHOOLS`.
+ *
+ * It is idempotent — `resolveDepartmentFilter("EECS") === "EECS"` — and that is
+ * what lets `getDepartments` offer the resolved values as the options
+ * themselves: what comes back from this function can be fed into it again.
+ */
 function resolveDepartmentFilter(department?: string): string | null {
   if (!department) return null;
-  const departments = ["EECS", "ABE", "CBH", "ITM", "SCI"];
-  const matchingDepts = departments.find((abbr) => department.includes(abbr));
-  return matchingDepts ?? department;
+  const matching = SCHOOLS.find((abbr) => department.includes(abbr));
+  return matching ?? department;
 }
 
 async function resolveEmbedding(query: string): Promise<number[] | null> {
@@ -249,6 +270,34 @@ export async function searchCourses(
   return { results: await getSummariesByCodes(codes), page, hasMore };
 }
 
-export function getDepartments(): Promise<string[]> {
-  return listDepartments();
+/**
+ * The filter's options: one per distinct result set, not one per catalogue row.
+ *
+ * `listDepartments` returns every distinct `department` — around 100 strings,
+ * the longest `ECE/Skolan för teknikvetenskaplig kommunikation och lärande`.
+ * Handing those to the control raw was wrong twice over. It is labelled
+ * *School* and they are departments; and `resolveDepartmentFilter` collapses
+ * every EECS department to `EECS` before the query runs, so a reader choosing
+ * between twenty of those options was choosing between twenty identical result
+ * sets. The list only ever had six behaviours in it.
+ *
+ * Mapping the catalogue through the same function and deduping yields exactly
+ * the values that filter differently: the five schools, plus any department
+ * carrying none of their abbreviations, which filters on itself and so still
+ * earns its own row. Nothing a reader could reach before is unreachable now.
+ *
+ * Derived rather than hardcoded to `SCHOOLS` on purpose, in both directions —
+ * a school KOPPS currently lists no courses under does not become an option
+ * that returns nothing, and a department outside the five is not silently
+ * dropped from a filter that would still honour it if the value arrived in the
+ * URL.
+ */
+export async function getDepartments(): Promise<string[]> {
+  const departments = await listDepartments();
+  const options = new Set<string>();
+  for (const department of departments) {
+    const filter = resolveDepartmentFilter(department);
+    if (filter) options.add(filter);
+  }
+  return [...options].sort();
 }
