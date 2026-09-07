@@ -5,7 +5,11 @@ import {
   COLLAPSED_CARD_GEOMETRY,
   EXPANDED_CARD_GEOMETRY,
 } from "@/features/courses/lib/card-geometry";
+import type { CardGeometry } from "@/types";
+import { useCollectionsState } from "../hooks/use-collections-state";
 import { Collections } from "./collections";
+import { CollectionsBody } from "./collections-body";
+import { CollectionsStrip } from "./collections-strip";
 
 /**
  * The Collections page against mocked procedures.
@@ -75,6 +79,31 @@ vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
 vi.mock("@/features/workspace/components/workspace-pane", () => ({
   WorkspacePane: () => null,
 }));
+
+/**
+ * How `/saved` puts the feature together after #208: one `useCollectionsState`
+ * call feeding a strip in the page's band and a body in its scrolling column.
+ *
+ * It stands in for the `compact` prop these tests used to pass. That prop is
+ * gone because the two halves are no longer in one subtree, and a harness that
+ * wires them the way the real page does is the only honest way to keep
+ * asserting across both.
+ */
+function SavedEmbedding({
+  openCollectionId = null,
+  geo,
+}: {
+  openCollectionId?: string | null;
+  geo?: CardGeometry;
+}) {
+  const state = useCollectionsState({ openCollectionId, geo });
+  return (
+    <>
+      <CollectionsStrip state={state} />
+      <CollectionsBody state={state} embedded />
+    </>
+  );
+}
 
 const TITLES: Record<string, string> = {
   AA1000: "Alpha",
@@ -531,7 +560,7 @@ describe("deleting a collection", () => {
 
   it("asks from the compact chip's menu", async () => {
     setup({ savedCourseCodes: ["AA1000"], collections: [SPRING] });
-    render(<Collections compact />);
+    render(<SavedEmbedding />);
 
     await askFromTileMenu();
     expect(deleteCollection).not.toHaveBeenCalled();
@@ -589,7 +618,7 @@ describe("what the page promises", () => {
     expect(page.container.textContent).not.toMatch(/compar/i);
     page.unmount();
 
-    const section = render(<Collections compact />);
+    const section = render(<SavedEmbedding />);
     expect(section.container.textContent).not.toMatch(/compar/i);
   });
 });
@@ -617,11 +646,7 @@ describe("the geometry an open collection's cards get", () => {
       collections: [{ id: "c1", name: "Spring", courseCodes: ["AA1000"] }],
     });
     render(
-      <Collections
-        compact
-        openCollectionId="c1"
-        geo={COLLAPSED_CARD_GEOMETRY}
-      />,
+      <SavedEmbedding openCollectionId="c1" geo={COLLAPSED_CARD_GEOMETRY} />,
     );
 
     expect(cardShellFor("AA1000").style.getPropertyValue("--card-h")).toBe(

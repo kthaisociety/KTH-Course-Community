@@ -5,7 +5,11 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { type AuthReason, AuthReasonDialog, useMe } from "@/features/auth";
-import { Collections } from "@/features/collections";
+import {
+  CollectionsBody,
+  CollectionsStrip,
+  useCollectionsState,
+} from "@/features/collections";
 import {
   CourseCardItem,
   NO_COURSE_STATS,
@@ -28,9 +32,6 @@ import { GuestSavesImportBanner } from "./guest-saves-import-banner";
  * shortest run that reads as a list rather than as a single stalled card.
  */
 const SKELETON_KEYS = ["s0", "s1", "s2"] as const;
-
-/** Names the saved list's own section, under the page's `h1` of the same words. */
-const SAVED_HEADING_ID = "saved-courses-heading";
 
 /**
  * The viewer's saved courses.
@@ -60,14 +61,16 @@ const SAVED_HEADING_ID = "saved-courses-heading";
  * it is a thing a reader can do without ever opening the collection they are
  * emptying.
  *
- * **Collections is a section of this page, not a link away from it.** The
- * artboard imports the Collections artboard with `compact`, which is
- * the design's only way in to collections — its rail has no entry for them.
- * Opening a collection from the
- * chips opens its detail *here*, and the saved list gets out of its way, which
- * is the artboard's own `showSavedSection: !collectionsOpenDetail`. It is also
- * why a course opened from inside a collection comes back to this route as
- * `?open=`: the pane it opens into is this page's.
+ * **Collections is part of this page, not a link away from it.** The artboard
+ * imports the Collections artboard as a section of itself, which is the
+ * design's only way in to collections — its rail has no entry for them. Since
+ * #208 that import arrives in two pieces rather than one: `CollectionsStrip` is
+ * this page's band, and `CollectionsBody` is what sits under it in the column.
+ * Opening a collection from the chips opens its detail *here*, and the saved
+ * list gets out of its way, which is the artboard's own
+ * `showSavedSection: !collectionsOpenDetail`. It is also why a course opened
+ * from inside a collection comes back to this route as `?open=`: the pane it
+ * opens into is this page's.
  *
  * **The list is every saved course, organized or not.** A collection is a view
  * over saved courses, never a place they move to (`CONTEXT.md`): joining one
@@ -79,27 +82,54 @@ const SAVED_HEADING_ID = "saved-courses-heading";
  * which this list can be empty while saves exist. There is deliberately no
  * organized/unorganized split.
  *
- * The `h2` comes back with the subtitle that earns it. It repeats the `h1`, and
- * that is the artboard's own doing — but the section under it is now one of two
- * on the page, and the line beneath is what tells them apart.
+ * **Neither section carries a heading.** There is no "Saved courses" `h2` and
+ * no "Collections" one either, and that is an alignment decision rather than an
+ * editorial one (#208 Q7). Explore has nothing between its band and its
+ * results, so any heading left here would push this list down and the two pages
+ * would stop matching one row *below* the band as well as at it — levelling the
+ * tab strips and then leaving a heading in the column fixes one row and breaks
+ * the next. The `h1` and its subtitle carry the page. Both sections take an
+ * `aria-label` instead, so neither region loses its name.
  *
  * ## Where else it departs from the artboard
  *
- * The artboard keeps the collections strip *above* the row the pane sits in,
- * and shortens it by a flat 236px while tabs are open (`savedTopMargin`, line
- * 961). Here the strip is inside the column the pane already narrows, which
- * does the same job exactly rather than approximately — and, decisively, keeps
- * an open collection's detail scrollable. A fixed-height block above a row that
- * owns the page's only scroll would clip a long collection instead.
- * `resultsMax` is computed by the artboard and never read by its
- * markup, so there is nothing to follow.
+ * ### The collections strip is above the row — and its detail is not (#208)
  *
- * The 236px it shortens by is the **rail's width**, which is what the same
- * number means in the Explore artboard's `searchBarMargin` — but the two do
- * different things with it. Explore's row is centred, so a right margin moves
- * its bar; this block is left-aligned, so the margin only takes width off its
- * right-hand end. Either way nothing is built from it here, because the strip is
- * inside the column the pane already narrows.
+ * The artboard keeps the collections strip *above* the row the pane sits in.
+ * This page used to keep the whole of collections *inside* the results column
+ * instead, for a reason that has not changed: a fixed-height block above a row
+ * that owns the page's only scroll clips a long open collection.
+ *
+ * #208 splits the difference, and it is a split rather than a reversal. The
+ * **chips** move up into the band, where the artboard always had them; the
+ * **detail** stays in the scrolling column, for the clipping reason above. Both
+ * halves of the old note survive. `CollectionsStrip` and `CollectionsBody` are
+ * that split, fed by one `useCollectionsState` call so there is still only one
+ * writer on `?collection=`.
+ *
+ * ### The band fills the height it used to reserve
+ *
+ * `--cc-search-block-h` is what Explore spends on its search block, and #205
+ * had this page hold the same height *blank* above its row so the two tab
+ * strips started level. The band now fills it. The token keeps its derivation
+ * and stops meaning "the height Saved reserves"; on both pages it now means
+ * "the height of the band". Measured on a 1920px viewport: `PageHeader` ends at
+ * y=155 on both routes, the band runs 155→229, and both pages' workspace panes
+ * start at y=229.
+ *
+ * ### The band does not take the rail correction
+ *
+ * The artboard shortens its strip by a flat 236px while tabs are open
+ * (`savedTopMargin`, line 961) — the **rail's width**, which is what the same
+ * number means in the Explore artboard's `searchBarMargin`. The two do
+ * different things with it, which is why only one of them is built. Explore's
+ * band is centred, so a right margin of a rail width moves its bar onto the
+ * viewport's centre line. This band is left-aligned — chips from the left, the
+ * create button pinned right — so the same margin would centre nothing and only
+ * cut 236px off its right-hand end, when the two bands are meant to occupy the
+ * same box. Measured: this band and the row below it both run 490→1666.
+ * `resultsMax` is computed by the artboard and never read by its markup, so
+ * there is nothing to follow there either.
  */
 type Props = {
   /**
@@ -137,13 +167,30 @@ export function Saved({ openCollectionId = null, openCourse = null }: Props) {
    * armed behind it.
    */
   const [pendingUnsave, setPendingUnsave] = useState<string | null>(null);
-  // Which collection's detail is open, as `Collections` reports it. The route
-  // is the authority on the first paint; after that the chips are.
-  const [openDetail, setOpenDetail] = useState<string | null>(openCollectionId);
-  useEffect(() => setOpenDetail(openCollectionId), [openCollectionId]);
 
   const host = useWorkspaceHost("saved");
   const { containerRef, geo, resultsRef, rowRef, workspace } = host;
+
+  /**
+   * The collections feature, in one call, shared by the two places this page
+   * puts it: the band above the row and the column inside it.
+   *
+   * **Once**, deliberately. The hook writes `?collection=` and two callers
+   * would be two writers on one URL. It is also why the open collection is read
+   * off `collections.openId` here rather than reported back through a callback
+   * — `onDetailChange` existed because the old single component was the only
+   * thing that knew, and now this page knows.
+   *
+   * `geo` is handed down because an open collection's cards sit in this very
+   * column: without it they pinned the expanded end and were clipped by the
+   * column the pane had just narrowed.
+   */
+  const collections = useCollectionsState({
+    openCollectionId,
+    onRequestAuth: setAuthReason,
+    geo,
+  });
+  const openDetail = collections.openId;
 
   const requestedCode = openCourse?.courseCode ?? null;
   const requestedKind = openCourse?.kind ?? null;
@@ -273,27 +320,21 @@ export function Saved({ openCollectionId = null, openCourse = null }: Props) {
       />
 
       {/*
-        The artboard's row: the results column, and the pane beside it.
+        The band, at exactly the height Explore's search block spends between
+        its header and its row — which is what puts the two pages' workspace tab
+        strips on the same line. #205 held this height blank here; #208 fills it
+        with the collections the reader actually has.
+      */}
+      <CollectionsStrip state={collections} />
 
-        The top padding is space this page does not use, held so that its tab
-        strip starts level with Explore's. Explore spends exactly
-        `--cc-search-block-h` on a search block between its header and this row;
-        this page has nothing to put there, and without the reservation the two
-        strips began 74px apart.
-
-        **Permanent, not conditional on tabs being open.** A page that jumped
-        down 74px when the reader opened their first tab would be a worse defect
-        than 74px of quiet space, and it would move the collections strip under
-        a reader mid-scroll.
-
-        Gated to `@3xl`, which is `WorkspacePaneHost`'s own condition. Below it
-        the workspace is a sheet, there is no side-by-side column and no tab
-        strip to line up with anything, and 74px of blank costs real height on a
-        phone.
+      {/*
+        The artboard's row: the results column, and the pane beside it. It
+        starts immediately under the band, with no reservation of its own left
+        to make — the band is the reservation now.
       */}
       <div
         ref={rowRef}
-        className="flex min-h-0 flex-1 gap-[18px] px-7 pb-5 @3xl:pt-[var(--cc-search-block-h)] @max-[440px]:px-[14px]"
+        className="flex min-h-0 flex-1 gap-[18px] px-7 pb-5 @max-[440px]:px-[14px]"
       >
         <div
           ref={resultsRef}
@@ -318,22 +359,15 @@ export function Saved({ openCollectionId = null, openCourse = null }: Props) {
             />
           </div>
 
-          {/* The artboard's `18px 28px 10px`, narrowing with the list below it. */}
-          <div className="pt-[18px] pb-2.5 @max-[440px]:pt-3">
-            <Collections
-              compact
-              openCollectionId={openCollectionId}
-              onDetailChange={setOpenDetail}
-              onRequestAuth={setAuthReason}
-              /*
-                An open collection's cards sit in this very column, so they get
-                the ramp this page already measured for its own list. Without it
-                they pinned the expanded end and were clipped by the column the
-                pane had just narrowed.
-              */
-              geo={geo}
-            />
-          </div>
+          {/*
+            What sits under the band: the confirmation note, and an open
+            collection's detail. The chips themselves are up in the band; this
+            is the half that has to stay inside the column, because the column
+            owns the page's only scroll and a long collection has to be
+            scrollable. It names its own region and collapses to nothing —
+            padding included — when there is neither a note nor an open detail.
+          */}
+          <CollectionsBody state={collections} embedded />
 
           {/*
             Desktop is the Saved artboard's own `18px 28px 20px` with a 14px
@@ -349,27 +383,17 @@ export function Saved({ openCollectionId = null, openCourse = null }: Props) {
           */}
           {openDetail !== null ? null : (
             <section
-              aria-labelledby={SAVED_HEADING_ID}
+              /*
+                Named rather than headed. The artboard's own `h2` and its line
+                came out in #208: Explore has nothing between its band and its
+                results, so a heading here would push this list one row below
+                Explore's and undo the levelling the band above just bought. The
+                `h1` says "Saved courses" already; this only has to name the
+                region for a screen reader.
+              */
+              aria-label="Saved courses"
               className="flex flex-col gap-3.5 pt-[18px] pb-5 @max-[440px]:gap-3 @max-[440px]:pt-3"
             >
-              {/*
-                The artboard's own heading and line. The line says the rule to
-                the reader: a collection groups saved courses, it does not take
-                them out of this list.
-              */}
-              <div>
-                <h2
-                  id={SAVED_HEADING_ID}
-                  className="m-0 font-semibold text-[16px] leading-[1.3]"
-                >
-                  Saved courses
-                </h2>
-                <div className="mt-1 text-[12.5px] text-cc-muted">
-                  All the courses you have saved, including any already grouped
-                  into a collection.
-                </div>
-              </div>
-
               {isLoading ? (
                 SKELETON_KEYS.map((key) => <CardSkeleton key={key} />)
               ) : savedCourseCodes.length === 0 ? (

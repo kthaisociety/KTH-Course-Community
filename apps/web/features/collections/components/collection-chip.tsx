@@ -10,18 +10,32 @@ type Props = {
   onOpen: () => void;
   onRename: (name: string) => void;
   onDelete: () => void;
+  /**
+   * True while this collection's detail is the one open below.
+   *
+   * Nothing needed this before #208, because opening a collection *replaced*
+   * the chips. Now they persist as the page's navigation into collections, so
+   * the open one has to say which it is — in both halves, `aria-current` and a
+   * visual treatment.
+   */
+  active?: boolean;
 };
 
 /**
- * One collection as a 40px chip — the `compact` variant's answer to
+ * One collection as a chip in Saved's band — the strip's answer to
  * {@link CollectionTile}.
  *
  * `Course Community - Collections.dc.html` line 112 draws this row when the
  * artboard is embedded rather than shown as a page, which is how
  * `Course Community - Saved.dc.html` reaches collections at all. A chip is the
- * tile with everything but the name, the count and the menu taken out: the
- * section is a strip above a list of cards, not the page's subject, so course
- * previews would be the second-biggest thing on the screen.
+ * tile with everything but the name, the count and the menu taken out: the band
+ * is a strip above a list of cards, not the page's subject, so course previews
+ * would be the second-biggest thing on the screen.
+ *
+ * **It is 42px, not the artboard's 40.** The band it sits in is
+ * `--cc-search-block-h` tall and holds Explore's 42px search bar on the other
+ * page, and #208's whole purpose is that the two bands agree. `CollectionsStrip`
+ * carries the argument and the constant.
  *
  * The menu and the rename draft are the chip's own state for the reason the
  * tile's are — a deleted collection unmounts its instance, and state the parent
@@ -32,12 +46,25 @@ export function CollectionChip({
   onOpen,
   onRename,
   onDelete,
+  active = false,
 }: Props) {
   const menu = usePopover();
   const renaming = useRenameDraft(collection.name, onRename);
 
   return (
-    <div className="relative box-border flex h-10 flex-none items-center gap-[9px] whitespace-nowrap rounded-[9px] border border-cc-rule bg-cc-surface px-3 hover:border-cc-hov">
+    <div
+      data-active={active || undefined}
+      /*
+        The app's existing selected idiom rather than a new one:
+        `--cc-checked-tint` under a `--cc-brand` border is what this codebase
+        already means by "this one is on".
+      */
+      className={`relative box-border flex h-[42px] flex-none items-center gap-[9px] whitespace-nowrap rounded-[9px] border px-3 ${
+        active
+          ? "border-cc-brand bg-cc-checked-tint"
+          : "border-cc-rule bg-cc-surface hover:border-cc-hov"
+      }`}
+    >
       {/* The whole chip opens the collection, as the artboard's does. A button
           covering it keeps the name and count as text rather than nesting a
           second control inside a control. */}
@@ -46,6 +73,7 @@ export function CollectionChip({
           type="button"
           onClick={onOpen}
           aria-label={`Open collection ${collection.name}`}
+          aria-current={active ? "true" : undefined}
           className="absolute inset-0 cursor-pointer rounded-[9px]"
         />
       )}
