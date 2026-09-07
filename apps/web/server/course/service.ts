@@ -274,6 +274,7 @@ export async function getDetails(
   if (!course) return null;
 
   const mappedRounds: CourseRoundSummary[] = rounds.map((r) => ({
+    id: r.id,
     startTerm: r.startTerm,
     formattedPeriodsAndCredits: r.formattedPeriodsAndCredits,
     studyPace: r.studyPace,

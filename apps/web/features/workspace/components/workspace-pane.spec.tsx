@@ -102,6 +102,7 @@ const DETAILS: CourseDetails = {
   eligibility: null,
   rounds: [
     {
+      id: 1,
       startTerm: 20252,
       formattedPeriodsAndCredits: "P2 (6,0 hp)",
       studyPace: 50,
@@ -318,6 +319,54 @@ describe("the details tab", () => {
     expect(
       screen.getByRole("link", { name: /Open on KTH.se/ }),
     ).toHaveAttribute("href", "https://www.kth.se/student/kurser/kurs/DD2380");
+  });
+
+  /**
+   * Two rounds of one course, in one term, identical in every field this list
+   * draws. ADR 0004 counted 77 such groups over the catalogue's 2320 rows —
+   * only KOPPS' `ladokUID` ever separated them, and that API is closed — so
+   * this is the data rather than a defect in it.
+   *
+   * The old key was `${startTerm}-${formattedPeriodsAndCredits ?? index}`,
+   * whose `index` fallback only fired on a null label. These two therefore both
+   * keyed on "20252-P2 (6,0 hp)", and React warned that it "may cause children
+   * to be duplicated and/or omitted".
+   *
+   * Both halves are asserted, because the warning and the loss are different
+   * failures: React logs the first even when it happens to render both rows,
+   * and a future key that is merely *quieter* without being unique would pass a
+   * test that only counted the lines.
+   */
+  it("draws both of two rounds that differ only by id, and keys them apart", () => {
+    const identical = DETAILS.rounds[0];
+    if (!identical) throw new Error("fixture has no round to duplicate");
+    useCourseDetails.mockReturnValue({
+      data: {
+        ...DETAILS,
+        rounds: [identical, { ...identical, id: identical.id + 1 }],
+      },
+      isLoading: false,
+      error: null,
+    });
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+
+    renderPane([openCourse("details")]);
+
+    expect(screen.getAllByText(/P2 \(6,0 hp\)/)).toHaveLength(2);
+    // Read off every argument of every call rather than matched positionally:
+    // React formats this one as `("…same key, `%s`…", key, …)` and the arity
+    // has moved between versions, so a positional matcher would go quietly
+    // green against a warning that did fire.
+    const warnedAboutKeys = consoleError.mock.calls.some((call) =>
+      call.some(
+        (argument) =>
+          typeof argument === "string" && argument.includes("same key"),
+      ),
+    );
+    consoleError.mockRestore();
+    expect(warnedAboutKeys).toBe(false);
   });
 
   it("renders the review means raw on the 1-10 scale", () => {
