@@ -478,6 +478,44 @@ describe("the details tab", () => {
     expect(screen.getByTestId("review-card")).toHaveTextContent("rev-1");
   });
 
+  it.each([
+    {
+      label: "one review",
+      reviewCount: 1,
+      rows: [{ id: "rev-1", courseCode: "DD2380" }],
+    },
+    {
+      label: "multiple reviews",
+      reviewCount: 2,
+      rows: [
+        { id: "rev-1", courseCode: "DD2380" },
+        { id: "rev-2", courseCode: "DD2380" },
+      ],
+    },
+  ])(
+    "keeps $label revealed when Read all is activated repeatedly",
+    async ({ reviewCount, rows }) => {
+      const user = userEvent.setup({ delay: null });
+      setStats({
+        ...REVIEWED,
+        reviews: REVIEWED.reviews ? { ...REVIEWED.reviews, reviewCount } : null,
+      });
+      setReviewList(rows);
+      renderPane([openCourse("details")]);
+
+      const readAll = screen.getByRole("button", {
+        name: `Read all ${reviewCount} reviews →`,
+      });
+      await user.dblClick(readAll);
+
+      expect(readAll).toBeDisabled();
+      expect(
+        screen.getByRole("button", { name: `Reviews · ${reviewCount}` }),
+      ).toHaveAttribute("aria-expanded", "true");
+      expect(screen.getAllByTestId("review-card")).toHaveLength(rows.length);
+    },
+  );
+
   it("does not put the summary's count over a list that failed", async () => {
     const user = userEvent.setup({ delay: null });
     renderPane([openCourse("details")]);
