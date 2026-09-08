@@ -221,6 +221,84 @@ describe("ReviewCard", () => {
     ).not.toBeInTheDocument();
   });
 
+  // A card remembers for itself unless a caller says otherwise. My Page does
+  // say otherwise: one review is open at a time across a whole column, and a
+  // card cannot know that about its siblings.
+  it("lets a caller own whether it is unfolded", async () => {
+    const onExpandedChange = vi.fn();
+    const { rerender } = render(
+      <ReviewCard
+        review={makeReview()}
+        expanded={false}
+        onExpandedChange={onExpandedChange}
+      />,
+    );
+
+    await expand();
+
+    // Reported, not acted on: the card stays folded until the caller says so.
+    expect(onExpandedChange).toHaveBeenCalledExactlyOnceWith(true);
+    expect(screen.queryByText("7 / 10")).not.toBeInTheDocument();
+
+    rerender(
+      <ReviewCard
+        review={makeReview()}
+        expanded
+        onExpandedChange={onExpandedChange}
+      />,
+    );
+    expect(screen.getByText("7 / 10")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { expanded: true }));
+    expect(onExpandedChange).toHaveBeenLastCalledWith(false);
+  });
+
+  // Given only one half of the controlled pair, the card keeps its own memory
+  // rather than freezing on a value nothing can change.
+  it("remembers for itself when given a value it was handed no way to change", async () => {
+    render(<ReviewCard review={makeReview()} expanded={false} />);
+
+    await expand();
+    expect(screen.getByText("7 / 10")).toBeInTheDocument();
+  });
+
+  // My Page hands the card a fuller reading of the review — the course above
+  // it, and the editor behind it. The card draws what it is handed and keeps
+  // the review editor out of this file entirely.
+  it("draws a caller's own body in place of the read-back blocks", async () => {
+    render(
+      <ReviewCard
+        review={makeReview()}
+        expandedSlot={<p>The whole review, as My Page reads it.</p>}
+      />,
+    );
+
+    expect(
+      screen.queryByText("The whole review, as My Page reads it."),
+    ).not.toBeInTheDocument();
+
+    await expand();
+
+    expect(
+      screen.getByText("The whole review, as My Page reads it."),
+    ).toBeVisible();
+    expect(screen.queryByText("7 / 10")).not.toBeInTheDocument();
+  });
+
+  it("points the summary at the region it unfolds", async () => {
+    render(<ReviewCard review={makeReview()} />);
+
+    const summary = screen.getByRole("button", { expanded: false });
+    await userEvent.click(summary);
+
+    expect(summary).toHaveAttribute("aria-expanded", "true");
+    const controls = summary.getAttribute("aria-controls");
+    expect(controls).toBeTruthy();
+    expect(document.getElementById(controls as string)).toContainElement(
+      screen.getByText("7 / 10"),
+    );
+  });
+
   it("says so when a reviewer scored the course but wrote nothing", () => {
     render(
       <ReviewCard review={makeReview({ message: null })} onVote={vi.fn()} />,

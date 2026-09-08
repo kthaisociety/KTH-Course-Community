@@ -118,15 +118,34 @@ vi.mock("@/features/reviews", async () => ({
         </button>
       </div>
     ),
-  ReviewCard: ({ review, onOpen }: { review: Review; onOpen?: () => void }) => (
+  // Enough of the card for this page's subject: the summary that unfolds it,
+  // and the body the page hands it to unfold into. A card the page does not
+  // control — the upvoted column's — keeps its own memory and gets no slot,
+  // which is why the stub has nothing to toggle there either.
+  ReviewCard: ({
+    review,
+    expanded,
+    onExpandedChange,
+    expandedSlot,
+  }: {
+    review: Review;
+    expanded?: boolean;
+    onExpandedChange?: (next: boolean) => void;
+    expandedSlot?: React.ReactNode;
+  }) => (
     <article>
-      {onOpen ? (
-        <button type="button" onClick={onOpen}>
+      {onExpandedChange ? (
+        <button
+          type="button"
+          onClick={() => onExpandedChange(!expanded)}
+          aria-expanded={expanded}
+        >
           Open {review.courseCode}
         </button>
       ) : (
         <span>{review.courseCode}</span>
       )}
+      {expanded ? expandedSlot : null}
     </article>
   ),
   useRemoveReview: () => vi.fn(),
@@ -297,13 +316,14 @@ describe("MyPage tabs", () => {
   });
 
   /*
-   * The Reviews tab's second state, and the point of it: a review opens into
-   * the space the artboard reserves for one (`isDetail`), and Edit review turns
-   * that space into the review editor the workspace pane and the fast-track
-   * card both write in. There is no dialog anywhere in this; the retired one
-   * was the only thing in the app still asking for a review in a modal.
+   * A review read in full, and the point of it: the card unfolds where it
+   * stands — inside the column it is listed in, with the other column still
+   * beside it — and Edit review turns that same card into the review editor the
+   * workspace pane and the fast-track card both write in. There is no dialog
+   * anywhere in this; the retired one was the only thing in the app still
+   * asking for a review in a modal. ADR 0010 records the unfolding.
    */
-  describe("one review, opened on its own", () => {
+  describe("one review, unfolded on its own card", () => {
     const MINE = makeReview({
       id: "mine",
       userId: "u1",
@@ -334,7 +354,7 @@ describe("MyPage tabs", () => {
       );
     }
 
-    it("replaces the columns with the review, and reads it back", async () => {
+    it("reads the review back on its card, with both columns still there", async () => {
       await openTheReview();
 
       expect(
@@ -342,19 +362,51 @@ describe("MyPage tabs", () => {
       ).toBeVisible();
       expect(screen.getByText("2 helpful")).toBeVisible();
       expect(screen.getByText("Do the labs early.")).toBeVisible();
-      // The columns are gone while a review is open, which is what makes the
-      // 760px the artboard draws available to it.
-      expect(screen.queryByText("Reviews you upvoted")).not.toBeInTheDocument();
+      // The columns stay. A review takes its own card's width and nothing
+      // more, so what the reader upvoted does not vanish while they read one.
+      expect(screen.getByText("Reviews you upvoted")).toBeVisible();
     });
 
-    it("comes back to the columns", async () => {
+    it("folds back up from the summary that opened it", async () => {
       await openTheReview();
 
       await userEvent.click(
-        screen.getByRole("button", { name: /Back to your reviews/ }),
+        screen.getByRole("button", { name: "Open DD1337" }),
       );
 
+      expect(
+        screen.queryByRole("heading", { name: "Programming" }),
+      ).not.toBeInTheDocument();
       expect(screen.getByText("Reviews you upvoted")).toBeVisible();
+    });
+
+    // The tab holds the open id, which is the only place that can enforce this:
+    // a card knows whether it is open and nothing about its siblings.
+    it("keeps one review open at a time", async () => {
+      reviews.mockReturnValue(
+        settled([
+          MINE,
+          makeReview({
+            id: "second",
+            userId: "u1",
+            courseCode: "DD2380",
+            message: "<p>Read the papers.</p>",
+          }),
+        ]),
+      );
+      render(<MyPage />);
+      await openTab(/^Reviews/);
+
+      await userEvent.click(
+        screen.getByRole("button", { name: "Open DD1337" }),
+      );
+      expect(screen.getByText("Do the labs early.")).toBeVisible();
+
+      await userEvent.click(
+        screen.getByRole("button", { name: "Open DD2380" }),
+      );
+      expect(screen.getByText("Read the papers.")).toBeVisible();
+      expect(screen.queryByText("Do the labs early.")).not.toBeInTheDocument();
     });
 
     it("edits it in the same form every other surface writes one in", async () => {
@@ -415,6 +467,27 @@ describe("MyPage tabs", () => {
       expect(editReview).not.toHaveBeenCalled();
       // Back to reading the row, with the answer that was stored.
       expect(screen.getByText("8 / 10")).toBeVisible();
+    });
+
+    // The summary is what folds the card away, and an unsaved rewrite is
+    // exactly what a stray click on it would cost. Discarding stays a thing
+    // the writer has to say out loud.
+    it("will not fold an unsaved rewrite away from under the writer", async () => {
+      await openTheReview();
+      await userEvent.click(
+        screen.getByRole("button", { name: /Edit review/ }),
+      );
+      fireEvent.change(screen.getByRole("slider", { name: /How demanding/ }), {
+        target: { value: "3" },
+      });
+
+      await userEvent.click(
+        screen.getByRole("button", { name: "Open DD1337" }),
+      );
+
+      expect(screen.getByRole("slider", { name: /How demanding/ })).toHaveValue(
+        "3",
+      );
     });
 
     it("offers nothing on a review the viewer only upvoted", async () => {
