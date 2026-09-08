@@ -28,7 +28,6 @@ import { AccountSettings } from "./account-settings";
 import { DeleteReviewDialog, type PendingDelete } from "./delete-review-dialog";
 import { NodeProfile } from "./node-profile";
 import { ReviewColumn } from "./review-column";
-import { ReviewDetail } from "./review-detail";
 import { StatCard } from "./stat-card";
 
 // "node" rather than the artboard's "dot": `CONTEXT.md` licenses "dot" for
@@ -99,13 +98,18 @@ export function MyPage() {
 
   const [view, setView] = useState<MyPageView>("overview");
   /**
-   * Which of the viewer's reviews is open on its own, if any.
+   * Which of the viewer's own reviews is unfolded on its card, if any.
    *
-   * An id rather than the review, so that the panel always draws the row as the
-   * list currently holds it: saving an edit invalidates every `reviews.list`,
-   * and a copy taken when the card was clicked would go stale the moment the
-   * writer changed it. A review that is gone — deleted from the panel's own
-   * footer — simply stops resolving, and the columns come back.
+   * Here rather than in the column because it is what makes one card open at a
+   * time: a card knows whether it is open and nothing about its siblings, so
+   * the tab holds the single id and every card reads its own answer off it.
+   *
+   * An id rather than the review, so that the expanded card always draws the
+   * row as the list currently holds it: saving an edit invalidates every
+   * `reviews.list`, and a copy taken when the card was clicked would go stale
+   * the moment the writer changed it. A review that is gone — deleted from the
+   * expanded card's own footer — takes its card with it, and this id stops
+   * matching anything.
    */
   const [openReviewId, setOpenReviewId] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(
@@ -154,11 +158,6 @@ export function MyPage() {
   // Someone else's review that this viewer upvoted. Their own reviews are
   // excluded even if they voted on one: this column is for what they kept, and
   // it already sits beside the column of what they wrote.
-  const openReview =
-    openReviewId === null
-      ? null
-      : (myReviews.find((review) => review.id === openReviewId) ?? null);
-
   const upvotedReviews = useMemo(
     () =>
       allReviews.filter(
@@ -415,43 +414,42 @@ export function MyPage() {
               </div>
             ) : null}
 
+            {/*
+              Both columns, always. A review unfolds on its own card inside the
+              column it is listed in, so opening one no longer takes the tab
+              away from the other — see ADR 0010, which also records what the
+              column's width costs the examination bar and why that is accepted.
+            */}
             {view === "reviews" ? (
-              openReview ? (
-                <ReviewDetail
-                  key={openReview.id}
-                  review={openReview}
-                  onBack={() => setOpenReviewId(null)}
-                  onDelete={() =>
+              <div className="grid grid-cols-[1fr_1px_1fr] gap-6 px-7 pt-[22px] @max-[860px]:grid-cols-1 @max-[440px]:px-[14px] @max-[440px]:pt-3">
+                <ReviewColumn
+                  heading="Your reviews"
+                  reviews={myReviews}
+                  emptyTitle="Nothing written yet"
+                  emptyBody="Reviews you publish land here, with how many members found them helpful."
+                  emptyAction={{
+                    label: "Find a course to review",
+                    onClick: () => router.push("/search"),
+                  }}
+                  openReviewId={openReviewId}
+                  onOpenReviewChange={setOpenReviewId}
+                  onDeleteReview={(review) =>
                     setPendingDelete({
-                      id: openReview.id,
-                      courseCode: openReview.courseCode,
+                      id: review.id,
+                      courseCode: review.courseCode,
                     })
                   }
                 />
-              ) : (
-                <div className="grid grid-cols-[1fr_1px_1fr] gap-6 px-7 pt-[22px] @max-[860px]:grid-cols-1 @max-[440px]:px-[14px] @max-[440px]:pt-3">
-                  <ReviewColumn
-                    heading="Your reviews"
-                    reviews={myReviews}
-                    emptyTitle="Nothing written yet"
-                    emptyBody="Reviews you publish land here, with how many members found them helpful."
-                    emptyAction={{
-                      label: "Find a course to review",
-                      onClick: () => router.push("/search"),
-                    }}
-                    onOpen={(review) => setOpenReviewId(review.id)}
-                  />
 
-                  <div aria-hidden className="bg-cc-rule @max-[860px]:hidden" />
+                <div aria-hidden className="bg-cc-rule @max-[860px]:hidden" />
 
-                  <ReviewColumn
-                    heading="Reviews you upvoted"
-                    reviews={upvotedReviews}
-                    emptyTitle="No upvoted reviews"
-                    emptyBody="Upvoting a review on a course page keeps it here, so you can find it again."
-                  />
-                </div>
-              )
+                <ReviewColumn
+                  heading="Reviews you upvoted"
+                  reviews={upvotedReviews}
+                  emptyTitle="No upvoted reviews"
+                  emptyBody="Upvoting a review on a course page keeps it here, so you can find it again."
+                />
+              </div>
             ) : null}
 
             {view === "node" ? (

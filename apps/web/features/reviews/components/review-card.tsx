@@ -2,7 +2,7 @@
 
 import parse from "html-react-parser";
 import { ArrowDown, ArrowUp, CircleCheck, CircleX, Pencil } from "lucide-react";
-import { useId, useState } from "react";
+import { type ReactNode, useId, useState } from "react";
 import { sanitizeHtml } from "@/lib/sanitize-html";
 import { cn } from "@/lib/utils";
 import type { Review, ReviewVoteType } from "@/types";
@@ -27,15 +27,31 @@ export type ReviewCardProps = {
   onEdit?: () => void;
   onDelete?: () => void;
   /**
-   * Open this review somewhere of the caller's choosing, instead of expanding
-   * it in place.
+   * Whether the card is unfolded, for a caller that needs to know or to say.
    *
-   * My Page passes it: its artboard opens a review into a detail of its own
-   * rather than unfolding it inside a column half the width. Given one, the
-   * card never expands and never draws the author's buttons — the detail's
-   * footer is where they live there.
+   * Given together with {@link ReviewCardProps.onExpandedChange}, the caller
+   * owns the state and this card only reports the clicks: My Page keeps one
+   * card open at a time across a whole column, which is not something a card
+   * can know about its siblings. Given neither, the card remembers for itself,
+   * which is what a course's review list wants.
+   *
+   * Half-controlled is not a supported shape — a value with no handler could
+   * never change, and a handler with no value would be told about a state it
+   * is not holding — so the card falls back to its own memory unless it is
+   * given both.
    */
-  onOpen?: () => void;
+  expanded?: boolean;
+  onExpandedChange?: (next: boolean) => void;
+  /**
+   * What to draw in the unfolded region instead of the read-back blocks below.
+   *
+   * My Page passes its own expanded review through here: the same course
+   * header, blocks and footer, plus the editor that rewrites the review. The
+   * card stays out of that — it renders whatever it is handed, and the review
+   * editor is never imported into this file, so a course page does not pull a
+   * form in to draw a list.
+   */
+  expandedSlot?: ReactNode;
 };
 
 /**
@@ -44,13 +60,17 @@ export type ReviewCardProps = {
  * course-code meta line, and an upvote/downvote pair with the net score.
  * Reviews are anonymous, so no name and no signature appear anywhere.
  *
- * Clicking the summary opens the rest — the scores, the examination split and
- * the theory/applied split, in the very blocks the design's review detail is
- * built from. Everything the reviewer left unanswered says so in words; nothing
- * unanswered is drawn as a zero.
+ * Clicking the summary opens the rest, on the card and in the column it is
+ * already in — the scores, the examination split and the theory/applied split,
+ * in the very blocks the design's review detail is built from. Everything the
+ * reviewer left unanswered says so in words; nothing unanswered is drawn as a
+ * zero.
  *
- * `onOpen` replaces that: a caller with somewhere better to put a review takes
- * the click and the card stays a summary.
+ * A caller with a fuller reading of the review than the default blocks — My
+ * Page has one, with the course above it and the editor behind it — passes
+ * `expandedSlot` and it is drawn in that same region instead. There is no
+ * variant that refuses to unfold: every surface expands a review where it
+ * stands.
  *
  * Presentational: it takes a `Review` and callbacks, and the screen maps tRPC
  * output and mutations onto them.
@@ -61,11 +81,24 @@ export function ReviewCard({
   onVote,
   onEdit,
   onDelete,
-  onOpen,
+  expanded: expandedProp,
+  onExpandedChange,
+  expandedSlot,
 }: Readonly<ReviewCardProps>) {
-  const [expanded, setExpanded] = useState(false);
+  const [ownExpanded, setOwnExpanded] = useState(false);
   const detailId = useId();
-  const opensInPlace = onOpen === undefined;
+  const controlled =
+    expandedProp !== undefined && onExpandedChange !== undefined;
+  const expanded = controlled ? expandedProp === true : ownExpanded;
+
+  function toggle() {
+    const next = !expanded;
+    if (controlled && onExpandedChange) {
+      onExpandedChange(next);
+      return;
+    }
+    setOwnExpanded(next);
+  }
 
   const { happyTook } = review;
   // The revised card uses the review-warning accent for an unhappy verdict;
@@ -84,9 +117,14 @@ export function ReviewCard({
       <button
         type="button"
         className="block w-full cursor-pointer text-left"
-        aria-expanded={opensInPlace ? expanded : undefined}
-        aria-controls={opensInPlace ? detailId : undefined}
-        onClick={onOpen ?? (() => setExpanded((open) => !open))}
+        aria-expanded={expanded}
+        // Only while there is something to point at. The unfolded region is
+        // unmounted when the card is folded, and an `aria-controls` naming an
+        // id that is not in the document is a dangling reference — a screen
+        // reader offering to jump to it lands nowhere. `aria-expanded` is what
+        // says the summary is a disclosure, and it is there either way.
+        aria-controls={expanded ? detailId : undefined}
+        onClick={toggle}
       >
         <div
           className={cn(
@@ -168,7 +206,13 @@ export function ReviewCard({
         </div>
       </div>
 
-      {opensInPlace && expanded ? (
+      {expanded && expandedSlot ? (
+        <div id={detailId} className="mt-3.5">
+          {expandedSlot}
+        </div>
+      ) : null}
+
+      {expanded && !expandedSlot ? (
         <div id={detailId} className="mt-3.5 flex flex-col gap-3.5">
           <div className="rounded-[12px] border border-cc-rule bg-cc-pg px-4 pt-[15px] pb-3.5">
             <ExaminationBlock

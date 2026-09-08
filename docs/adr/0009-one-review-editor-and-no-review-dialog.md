@@ -4,7 +4,11 @@ Date: 2026-09-07
 
 ## Status
 
-Accepted.
+Accepted. Partly superseded by ADR 0010, which reverses **My Page opens a review
+into the space the artboard already reserves** below and nothing else: a review
+now unfolds on its own card in the Reviews list. The rest of this record — one
+editor, `toReviewDraft`, the deleted dialog, the course list's hand-off to the
+pane — stands. Left otherwise unedited, as a point-in-time record.
 
 ## Context
 
