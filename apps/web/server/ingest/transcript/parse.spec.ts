@@ -246,6 +246,85 @@ describe("parseLadokTranscript", () => {
     ]);
   });
 
+  it("reads a complete degree-project row", () => {
+    const transcript = [
+      "Code Name Scope Grade Date Note",
+      "DA232X Degree Project in Computer Science 30.0 hp P 2026-06-05 1",
+      "Summation",
+    ].join("\n");
+
+    expect(parseLadokTranscript(transcript)).toEqual([
+      {
+        courseCode: "DA232X",
+        courseName: "Degree Project in Computer Science",
+        credits: 30,
+        grade: "P",
+        completedOn: "2026-06-05",
+      },
+    ]);
+  });
+
+  it("reports a wrapped degree-project row through the fallback parser", () => {
+    const transcript = [
+      "Code Name Scope Grade Date Note",
+      "SF279X Degree Project in Applied and",
+      "Computational Mathematics",
+      "Summation",
+    ].join("\n");
+
+    expect(parseLadokTranscript(transcript)).toEqual([
+      {
+        courseCode: "SF279X",
+        courseName: "Degree Project in Applied and Computational Mathematics",
+        credits: null,
+        grade: null,
+        completedOn: null,
+      },
+    ]);
+  });
+
+  it("reads ordinary and degree-project course codes from the same transcript", () => {
+    const transcript = [
+      "Code Name Scope Grade Date Note",
+      "DD1337 Programming 6.0 hp P 2023-06-02 1",
+      "DA232X Degree Project in Computer Science 30.0 hp P 2026-06-05 1",
+      "Summation",
+    ].join("\n");
+
+    expect(
+      parseLadokTranscript(transcript).map(({ courseCode }) => courseCode),
+    ).toEqual(["DD1337", "DA232X"]);
+  });
+
+  it("accepts a transcript containing only a degree-project course", () => {
+    const transcript = [
+      "Code Name Scope Grade Date Note",
+      "SF279X Degree Project 30.0 hp P 2026-06-05 1",
+      "Summation",
+    ].join("\n");
+
+    expect(parseLadokTranscript(transcript)).toHaveLength(1);
+  });
+
+  it("does not accept a three-digit course code with a non-X suffix", () => {
+    const transcript = [
+      "Code Name Scope Grade Date Note",
+      "SF279A Not a KTH Course Code 30.0 hp P 2026-06-05 1",
+      "DD1337 Programming 6.0 hp P 2023-06-02 1",
+      "Summation",
+    ].join("\n");
+
+    expect(parseLadokTranscript(transcript)).toEqual([
+      {
+        courseCode: "DD1337",
+        courseName: "Programming",
+        credits: 6,
+        grade: "P",
+        completedOn: "2023-06-02",
+      },
+    ]);
+  });
+
   it("rejects a document too large to be a transcript, without scanning it", () => {
     const huge = `Code Name Scope Grade Date Note\nSF1625 ${"x".repeat(3_000_000)}`;
 

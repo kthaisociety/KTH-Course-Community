@@ -34,8 +34,12 @@ const TABLE_HEADER = /^(?:Code|Kod)\s+(?:Name|Benämning)\b/;
 /** First line after the table; Ladok always prints a summation block. */
 const TABLE_END = /^(?:Summation|Summering)\b/;
 
-/** A KTH course code: two or three letters then four digits. */
-const COURSE_CODE = /^[A-ZÅÄÖ]{2,3}\d{4}[A-Z]?$/;
+/**
+ * A KTH course code: two or three letters followed by either four digits and
+ * an optional suffix, or three digits and the degree-project suffix `X`.
+ */
+const COURSE_CODE_SOURCE = "[A-ZÅÄÖ]{2,3}(?:\\d{4}[A-Z]?|\\d{3}X)";
+const COURSE_CODE = new RegExp(`^${COURSE_CODE_SOURCE}$`);
 
 /** The longest course name KTH prints is well under this. */
 const MAX_NAME_LENGTH = 300;
@@ -59,11 +63,11 @@ const MAX_CONTINUATION_LINES = 4;
  * bounded so a failed match cannot backtrack across a long line.
  */
 const ROW = new RegExp(
-  `^([A-ZÅÄÖ]{2,3}\\d{4}[A-Z]?)\\s+(.{1,${MAX_NAME_LENGTH}}?)\\s+(\\d+(?:[.,]\\d+)?)\\s*hp\\s+(\\S{1,3})\\s+(\\d{4}-\\d{2}-\\d{2})(?:\\s+\\d+)?$`,
+  `^(${COURSE_CODE_SOURCE})\\s+(.{1,${MAX_NAME_LENGTH}}?)\\s+(\\d+(?:[.,]\\d+)?)\\s*hp\\s+(\\S{1,3})\\s+(\\d{4}-\\d{2}-\\d{2})(?:\\s+\\d+)?$`,
 );
 
 /** The fallback when a row's trailing columns are unreadable: code and name. */
-const ROW_HEAD = /^([A-ZÅÄÖ]{2,3}\d{4}[A-Z]?)\s+(.*)$/;
+const ROW_HEAD = new RegExp(`^(${COURSE_CODE_SOURCE})\\s+(.*)$`);
 
 /**
  * Marks a line as belonging to the page rather than to the table: the Ladok
