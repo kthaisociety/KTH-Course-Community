@@ -118,7 +118,12 @@ export function ReviewCard({
         type="button"
         className="block w-full cursor-pointer text-left"
         aria-expanded={expanded}
-        aria-controls={detailId}
+        // Only while there is something to point at. The unfolded region is
+        // unmounted when the card is folded, and an `aria-controls` naming an
+        // id that is not in the document is a dangling reference — a screen
+        // reader offering to jump to it lands nowhere. `aria-expanded` is what
+        // says the summary is a disclosure, and it is there either way.
+        aria-controls={expanded ? detailId : undefined}
         onClick={toggle}
       >
         <div

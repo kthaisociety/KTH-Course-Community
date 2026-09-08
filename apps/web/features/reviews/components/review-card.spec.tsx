@@ -289,6 +289,11 @@ describe("ReviewCard", () => {
     render(<ReviewCard review={makeReview()} />);
 
     const summary = screen.getByRole("button", { expanded: false });
+    // Nothing to point at while it is folded: the region is unmounted, and a
+    // name for an element that is not in the document is a reference a screen
+    // reader cannot follow.
+    expect(summary).not.toHaveAttribute("aria-controls");
+
     await userEvent.click(summary);
 
     expect(summary).toHaveAttribute("aria-expanded", "true");
@@ -297,6 +302,9 @@ describe("ReviewCard", () => {
     expect(document.getElementById(controls as string)).toContainElement(
       screen.getByText("7 / 10"),
     );
+
+    await userEvent.click(summary);
+    expect(summary).not.toHaveAttribute("aria-controls");
   });
 
   it("says so when a reviewer scored the course but wrote nothing", () => {
