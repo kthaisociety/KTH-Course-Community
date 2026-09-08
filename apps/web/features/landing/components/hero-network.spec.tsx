@@ -433,33 +433,47 @@ describe("HeroNetwork", () => {
     expect(recorder.ctx.fillText).not.toHaveBeenCalled();
   });
 
-  /**
-   * The graph is deliberately a crop of a larger community, so edges may still
-   * leave through the sides and foot of the canvas. The top edge is different:
-   * it touches the landing header, and ink ending there reads as if the header
-   * is obscuring part of the graph rather than as an intentional crop.
-   */
+  /** A header treatment must not hide app-user nodes from the community. */
   it.each([
     {
-      frame: "desktop",
+      frame: "signed-out desktop",
       width: 1920,
       height: 600,
       copy: box(500, 100, 920, 480),
+      showsViewer: false,
     },
     {
-      frame: "narrow",
+      frame: "signed-in desktop",
+      width: 1920,
+      height: 600,
+      copy: box(500, 100, 920, 480),
+      showsViewer: true,
+    },
+    {
+      frame: "signed-out narrow",
       width: 320,
       height: 480,
       copy: box(20, 160, 280, 280),
+      showsViewer: false,
+    },
+    {
+      frame: "signed-in narrow",
+      width: 320,
+      height: 480,
+      copy: box(20, 160, 280, 280),
+      showsViewer: true,
     },
   ])(
-    "keeps painted graph content below the header-adjacent edge on a $frame frame",
-    ({ width, height, copy: copyBox }) => {
+    "keeps every graph node visible at the header-adjacent edge on a $frame frame",
+    ({ width, height, copy: copyBox, showsViewer }) => {
       const graph: GraphWindow = {
         centre: { x: 0, y: 0 },
         nodes: [
           node({ id: "top", x: 0, y: -70 }),
           node({ id: "bottom", x: 0, y: 70 }),
+          ...(showsViewer
+            ? [node({ id: "viewer", x: 0, y: 0, isViewer: true })]
+            : []),
         ],
         edges: [{ fromId: "top", toId: "bottom" }],
       };
@@ -468,7 +482,7 @@ describe("HeroNetwork", () => {
           <div data-hero-clear>
             <span>Find the Course You Will Be Happy You Took</span>
           </div>
-          <HeroNetwork window={graph} labelled={false} />
+          <HeroNetwork window={graph} labelled={showsViewer} />
         </div>,
       );
       const canvas = container.querySelector("canvas");
@@ -482,24 +496,15 @@ describe("HeroNetwork", () => {
       recorder.paths.length = 0;
       onResize?.();
 
-      const visibleTops = recorder.paths
-        .filter((path) => path.filled || path.stroked)
-        .flatMap((path) => {
-          const arcs = path.arcs.flatMap(({ y, r }) =>
-            y + r > 0 && y - r < height ? [Math.max(0, y - r)] : [],
-          );
-          const lineYs = [...path.moves, ...path.lines].map(({ y }) => y);
-          const lines =
-            path.stroked &&
-            lineYs.length > 1 &&
-            Math.max(...lineYs) > 0 &&
-            Math.min(...lineYs) < height
-              ? [Math.max(0, Math.min(...lineYs) - path.width / 2)]
-              : [];
-          return [...arcs, ...lines];
-        });
-      expect(visibleTops.length).toBeGreaterThan(0);
-      expect(Math.min(...visibleTops)).toBeGreaterThanOrEqual(24);
+      const visibleNodes = recorder.paths.filter(
+        (path) =>
+          path.filled &&
+          path.arcs.some(
+            ({ y, r }) => r === NODE_RADIUS && y + r > 0 && y - r < height,
+          ),
+      );
+      expect(visibleNodes).toHaveLength(graph.nodes.length);
+      if (showsViewer) expect(recorder.ctx.fillText).toHaveBeenCalled();
     },
   );
 
