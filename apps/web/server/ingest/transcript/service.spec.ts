@@ -225,8 +225,66 @@ describe("confirmTranscriptImport", () => {
 
     expect(result).toEqual({ inserted: 0, updated: 0 });
     expect(takenService.recordTranscriptCoursesIfAbsent).not.toHaveBeenCalled();
+    expect(takenService.fillTranscriptCourseFields).not.toHaveBeenCalled();
     expect(courseService.getSummariesByCodes).not.toHaveBeenCalled();
     // Nothing was imported, so nothing about the ladder can have changed.
+    expect(
+      graphService.recordEarnedPersonalizationTierOnContribution,
+    ).not.toHaveBeenCalled();
+  });
+
+  it("persists a fill-only confirmation and recomputes the tier", async () => {
+    vi.mocked(courseService.getSummariesByCodes).mockResolvedValue(
+      catalogue("SF1625"),
+    );
+    vi.mocked(takenService.fillTranscriptCourseFields).mockResolvedValue(1);
+
+    const result = await confirmTranscriptImport("user-1", [], importedAt, [
+      {
+        courseCode: " sf1625 ",
+        grade: "A",
+        earnedCredits: 7.5,
+        attendanceYear: 2023,
+      },
+    ]);
+
+    expect(courseService.getSummariesByCodes).toHaveBeenCalledWith(["SF1625"]);
+    expect(takenService.recordTranscriptCoursesIfAbsent).not.toHaveBeenCalled();
+    expect(takenService.fillTranscriptCourseFields).toHaveBeenCalledWith(
+      "user-1",
+      [
+        {
+          courseCode: "SF1625",
+          grade: "A",
+          earnedCredits: 7.5,
+          attendanceYear: 2023,
+        },
+      ],
+    );
+    expect(
+      graphService.recordEarnedPersonalizationTierOnContribution,
+    ).toHaveBeenCalledWith("user-1");
+    expect(
+      vi.mocked(graphService.recordEarnedPersonalizationTierOnContribution).mock
+        .invocationCallOrder[0],
+    ).toBeGreaterThan(
+      vi.mocked(takenService.fillTranscriptCourseFields).mock
+        .invocationCallOrder[0] ?? 0,
+    );
+    expect(result).toEqual({ inserted: 0, updated: 1 });
+  });
+
+  it("validates fill-only course codes before writing anything", async () => {
+    vi.mocked(courseService.getSummariesByCodes).mockResolvedValue([]);
+
+    await expect(
+      confirmTranscriptImport("user-1", [], importedAt, [
+        { courseCode: "ZZ9999", grade: "A" },
+      ]),
+    ).rejects.toBeInstanceOf(NotFoundError);
+
+    expect(takenService.recordTranscriptCoursesIfAbsent).not.toHaveBeenCalled();
+    expect(takenService.fillTranscriptCourseFields).not.toHaveBeenCalled();
     expect(
       graphService.recordEarnedPersonalizationTierOnContribution,
     ).not.toHaveBeenCalled();

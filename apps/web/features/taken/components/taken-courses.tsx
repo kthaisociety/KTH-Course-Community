@@ -535,10 +535,10 @@ export function TakenCourses() {
   /**
    * Makes the writes the confirmed proposal describes, and only those.
    *
-   * New courses go through `transcript.confirm`, which stamps them imported.
-   * Courses the reader already has are only touched to fill an empty field,
-   * and then through `taken.update`, which cannot overwrite what they
-   * corrected by hand — see `planTranscriptImport`.
+   * New courses and fills both go through `transcript.confirm`. New rows are
+   * stamped imported; existing courses are touched only where a field remains
+   * empty, so the endpoint cannot overwrite what the reader corrected by hand
+   * — see `planTranscriptImport`.
    *
    * **The plan is built against a freshly read list, not the render's copy.**
    * It lets the page fill fields that are already empty, and it makes retries
@@ -598,9 +598,7 @@ export function TakenCourses() {
       setIsResumed(false);
       clearGuestProposal();
       pendingHandoff.current = null;
-      setBanner(
-        importedSummary(written.inserted + written.updated, plan.fill.length),
-      );
+      setBanner(importedSummary(written.inserted, written.updated));
     } catch (error) {
       setConfirmError(
         error instanceof Error && error.message

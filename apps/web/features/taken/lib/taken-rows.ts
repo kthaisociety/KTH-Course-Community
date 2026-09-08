@@ -98,17 +98,17 @@ export type ConfirmedCourse = {
  * keep the edits you made — only new rows and missing fields are filled in."*
  * Two things in the write path make that a split rather than one call.
  *
- * So a course the reader does not have yet goes through `transcript.confirm`,
- * which atomically inserts only absent rows and stamps `transcript_imported_at`.
- * A course they already have is
- * only touched when the transcript can fill a field that is still empty, and
- * then through `taken.update`, which writes the whole row — stored values
- * included, periods carried — and leaves provenance alone.
+ * So a course the reader does not have yet goes through `transcript.confirm`
+ * as a create, which atomically inserts only absent rows and stamps
+ * `transcript_imported_at`. A course they already have goes through the same
+ * endpoint as a fill only when the transcript can supply a field that is still
+ * empty. The fill keeps every non-empty stored value and leaves provenance
+ * alone.
  */
 export type TranscriptImportPlan = {
   /** Courses with no row yet. Written by `transcript.confirm`, stamped imported. */
   create: ConfirmedCourse[];
-  /** Rows that exist and have an empty field the transcript can fill. */
+  /** Existing rows whose empty fields `transcript.confirm` can fill. */
   fill: TakenUpdateInput[];
   /** Rows the reader already has with nothing missing. Nothing writes to these. */
   unchanged: number;

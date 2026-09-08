@@ -105,9 +105,10 @@ function toTakenCourseInput(row: ConfirmedTranscriptRow): TakenCourseInput {
  * client from confirming a code that was never proposed. Only catalogue courses
  * become taken courses.
  *
- * The write itself belongs to `server/taken`. It inserts only when the user
- * does not already have a row for the course, so a manual entry that races this
- * confirmation is never overwritten by transcript values.
+ * The writes themselves belong to `server/taken`. New rows are inserted only
+ * when the user does not already have the course; fills update only fields
+ * that are still empty. A manual entry or correction that races this
+ * confirmation is therefore never overwritten by transcript values.
  */
 export async function confirmTranscriptImport(
   userId: string,
@@ -116,9 +117,11 @@ export async function confirmTranscriptImport(
   fills: ConfirmedTranscriptRow[] = [],
 ): Promise<{ inserted: number; updated: number }> {
   const inputs = rows.map(toTakenCourseInput);
-  if (inputs.length === 0) return { inserted: 0, updated: 0 };
-
   const fillInputs = fills.map(toTakenCourseInput);
+  if (inputs.length === 0 && fillInputs.length === 0) {
+    return { inserted: 0, updated: 0 };
+  }
+
   const codes = [...inputs, ...fillInputs].map((input) => input.courseCode);
   const known = new Set(
     (await getSummariesByCodes(codes)).map((summary) => summary.courseCode),
@@ -130,11 +133,10 @@ export async function confirmTranscriptImport(
     );
   }
 
-  const created = await recordTranscriptCoursesIfAbsent(
-    userId,
-    inputs,
-    importedAt,
-  );
+  const created =
+    inputs.length > 0
+      ? await recordTranscriptCoursesIfAbsent(userId, inputs, importedAt)
+      : { inserted: 0, updated: 0 };
   const updated =
     fillInputs.length > 0
       ? await fillTranscriptCourseFields(userId, fillInputs)
