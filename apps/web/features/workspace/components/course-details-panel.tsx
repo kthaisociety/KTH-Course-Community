@@ -59,9 +59,11 @@ function ScoreBar({
 function ReviewsSummary({
   stats,
   onReadReviews,
+  reviewsOpen,
 }: {
   stats: CourseReviewStats;
   onReadReviews: () => void;
+  reviewsOpen: boolean;
 }) {
   // The same slices the Review Card draws, from the reviews feature's own
   // palette — one examination bar in the app, not two that drift apart.
@@ -162,7 +164,8 @@ function ReviewsSummary({
           <button
             type="button"
             onClick={onReadReviews}
-            className="cursor-pointer text-left font-semibold text-[11.5px] text-cc-dim hover:underline"
+            disabled={reviewsOpen}
+            className="cursor-pointer text-left font-semibold text-[11.5px] text-cc-dim hover:underline disabled:cursor-default disabled:no-underline disabled:opacity-60"
           >
             Read all {stats.reviewCount} reviews →
           </button>
@@ -361,7 +364,11 @@ export function CourseDetailsPanel({
           </div>
         )}
         {statsAnswered && stats !== null && (
-          <ReviewsSummary stats={stats} onReadReviews={revealReviews} />
+          <ReviewsSummary
+            stats={stats}
+            onReadReviews={revealReviews}
+            reviewsOpen={reviewsOpen}
+          />
         )}
 
         <div className="flex items-center justify-between gap-3 rounded-[10px] border border-cc-rule bg-cc-info px-[13px] py-[11px]">
