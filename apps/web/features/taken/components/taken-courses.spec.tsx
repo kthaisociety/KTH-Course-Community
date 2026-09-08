@@ -466,6 +466,62 @@ describe("adding by hand", () => {
     });
   });
 
+  it.each(["1900", "2200"])(
+    "accepts the attendance-year boundary %s",
+    async (year) => {
+      render(<TakenCourses />);
+
+      await userEvent.click(
+        screen.getByRole("button", { name: "Add a course by hand" }),
+      );
+      await userEvent.type(
+        screen.getByLabelText("Search the KTH catalogue"),
+        "DD2380",
+      );
+      await userEvent.click(
+        screen.getByRole("button", {
+          name: /DD2380\s*Artificial Intelligence/,
+        }),
+      );
+      await userEvent.type(screen.getByLabelText("Year"), year);
+      await userEvent.click(screen.getByRole("button", { name: "Add course" }));
+
+      expect(addTaken).toHaveBeenCalledWith(
+        expect.objectContaining({ attendanceYear: Number(year) }),
+      );
+    },
+  );
+
+  it.each(["1899", "2201", "20"])(
+    "keeps the draft and refuses the invalid attendance year %s",
+    async (year) => {
+      render(<TakenCourses />);
+
+      await userEvent.click(
+        screen.getByRole("button", { name: "Add a course by hand" }),
+      );
+      await userEvent.type(
+        screen.getByLabelText("Search the KTH catalogue"),
+        "DD2380",
+      );
+      await userEvent.click(
+        screen.getByRole("button", {
+          name: /DD2380\s*Artificial Intelligence/,
+        }),
+      );
+      const yearField = screen.getByLabelText("Year");
+      await userEvent.type(yearField, year);
+
+      expect(yearField).toHaveValue(year);
+      expect(yearField).toHaveAttribute("aria-invalid", "true");
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "Enter a year from 1900 to 2200.",
+      );
+      expect(screen.getByRole("button", { name: "Add course" })).toBeDisabled();
+      expect(addTaken).not.toHaveBeenCalled();
+    },
+  );
+
   it("keeps the draft when the write is refused", async () => {
     addTaken.mockRejectedValue(new Error("nope"));
     render(<TakenCourses />);

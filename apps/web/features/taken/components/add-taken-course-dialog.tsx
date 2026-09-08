@@ -12,7 +12,7 @@ import {
   useDebouncedQuery,
   useSearchCourses,
 } from "@/features/search";
-import { creditsLabel, type TakenEdits } from "../lib/taken-rows";
+import { creditsLabel, parseYear, type TakenEdits } from "../lib/taken-rows";
 
 /** The credits a KTH course usually carries, as the artboard's own chips. */
 const CREDIT_CHOICES = [6, 7.5, 9, 15];
@@ -68,6 +68,8 @@ export function AddTakenCourseDialog({
   const search = useSearchCourses({ q: debounced });
   const results = search.data?.results ?? [];
   const alreadyTaken = new Set(takenCourseCodes);
+  const attendanceYear = parseYear(year);
+  const yearInvalid = attendanceYear === undefined;
 
   function reset() {
     setQuery("");
@@ -95,7 +97,8 @@ export function AddTakenCourseDialog({
 
   async function submit() {
     if (!picked || isSaving) return;
-    const parsedYear = /^\d{4}$/.test(year) ? Number(year) : null;
+    const parsedYear = attendanceYear;
+    if (parsedYear === undefined) return;
     setIsSaving(true);
     try {
       await onAdd(picked.courseCode, {
@@ -264,11 +267,24 @@ export function AddTakenCourseDialog({
                   inputMode="numeric"
                   maxLength={4}
                   placeholder="2025"
+                  aria-invalid={yearInvalid}
+                  aria-describedby={
+                    yearInvalid ? "taken-add-year-error" : undefined
+                  }
                   onChange={(event) =>
                     setYear(event.target.value.replace(/\D/g, "").slice(0, 4))
                   }
-                  className="mt-1.5 box-border h-[34px] w-full rounded-[8px] border border-cc-rule3 bg-cc-surface px-[11px] text-[13px] text-cc-ink tabular-nums outline-none"
+                  className="mt-1.5 box-border h-[34px] w-full rounded-[8px] border border-cc-rule3 bg-cc-surface px-[11px] text-[13px] text-cc-ink tabular-nums outline-none aria-invalid:border-cc-danger"
                 />
+                {yearInvalid ? (
+                  <p
+                    id="taken-add-year-error"
+                    className="mt-1.5 text-[12px] text-cc-danger-ink"
+                    role="alert"
+                  >
+                    Enter a year from 1900 to 2200.
+                  </p>
+                ) : null}
               </div>
             </div>
 
@@ -311,7 +327,7 @@ export function AddTakenCourseDialog({
             <button
               type="button"
               onClick={() => void submit()}
-              disabled={picked === null || isSaving}
+              disabled={picked === null || yearInvalid || isSaving}
               className="flex h-[38px] cursor-pointer items-center rounded-[9px] bg-cc-btn px-4 font-semibold text-[13px] text-cc-btn-fg hover:opacity-[0.88] disabled:cursor-not-allowed disabled:opacity-55"
             >
               {isSaving ? "Adding…" : "Add course"}
