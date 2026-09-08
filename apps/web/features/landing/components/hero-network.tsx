@@ -88,6 +88,18 @@ const NODE_ALPHA = 0.82;
 const EDGE_ALPHA = 0.26;
 
 /**
+ * Blank canvas kept between the landing header and the first graph mark.
+ *
+ * Cropping at the other three edges is intentional: it says the community
+ * continues beyond this graph window. The top edge abuts an opaque header,
+ * however, so the same crop reads as content hidden behind navigation. Treat
+ * that strip like the hero copy: nodes are moved clear when the local push can
+ * do so, and edges crossing it are not painted. `SAFETY` on the measured rect
+ * still leaves enough room for the ±5px drift around a node's home position.
+ */
+const HEADER_EDGE_CLEARANCE = 24;
+
+/**
  * A diamond's half-diagonal, as a multiple of `NODE_RADIUS`.
  *
  * Chosen so the square covers the same area as the circle it replaces: a square
@@ -257,7 +269,16 @@ function nodeColour(palette: Palette, colorVar: string) {
  */
 function refreshView(scene: Scene) {
   const measured = measureRects(scene.root, scene.canvas);
-  const keepOut = measured.length ? measured : fallbackRects(scene.w, scene.h);
+  const content = measured.length ? measured : fallbackRects(scene.w, scene.h);
+  const keepOut = [
+    {
+      x: -SAFETY,
+      y: -SAFETY,
+      w: scene.w + SAFETY * 2,
+      h: HEADER_EDGE_CLEARANCE + SAFETY,
+    },
+    ...content,
+  ];
   scene.view = scene.window
     ? projectGraphWindow({
         window: scene.window,

@@ -323,6 +323,20 @@ function giveCanvasABox(width = 320, height = 220) {
   );
 }
 
+function box(x: number, y: number, width: number, height: number): DOMRect {
+  return {
+    left: x,
+    top: y,
+    right: x + width,
+    bottom: y + height,
+    width,
+    height,
+    x,
+    y,
+    toJSON: () => ({}),
+  } as DOMRect;
+}
+
 describe("HeroNetwork repaints when", () => {
   // The reported bug. Every colour is a `--cc-*` token resolved at draw time,
   // so already-rasterised pixels keep the old palette until something redraws.
@@ -418,6 +432,76 @@ describe("HeroNetwork", () => {
     expect(recorder.calls.arc).toBeGreaterThan(0);
     expect(recorder.ctx.fillText).not.toHaveBeenCalled();
   });
+
+  /**
+   * The graph is deliberately a crop of a larger community, so edges may still
+   * leave through the sides and foot of the canvas. The top edge is different:
+   * it touches the landing header, and ink ending there reads as if the header
+   * is obscuring part of the graph rather than as an intentional crop.
+   */
+  it.each([
+    {
+      frame: "desktop",
+      width: 1920,
+      height: 600,
+      copy: box(500, 100, 920, 480),
+    },
+    {
+      frame: "narrow",
+      width: 320,
+      height: 480,
+      copy: box(20, 160, 280, 280),
+    },
+  ])(
+    "keeps painted graph content below the header-adjacent edge on a $frame frame",
+    ({ width, height, copy: copyBox }) => {
+      const graph: GraphWindow = {
+        centre: { x: 0, y: 0 },
+        nodes: [
+          node({ id: "top", x: 0, y: -70 }),
+          node({ id: "bottom", x: 0, y: 70 }),
+        ],
+        edges: [{ fromId: "top", toId: "bottom" }],
+      };
+      const { container } = render(
+        <div data-hero>
+          <div data-hero-clear>
+            <span>Find the Course You Will Be Happy You Took</span>
+          </div>
+          <HeroNetwork window={graph} labelled={false} />
+        </div>,
+      );
+      const canvas = container.querySelector("canvas");
+      const hero = container.querySelector<HTMLElement>("[data-hero]");
+      const copy = container.querySelector<HTMLElement>("[data-hero-clear]");
+      if (!canvas || !hero || !copy) throw new Error("the hero did not render");
+
+      canvas.getBoundingClientRect = () => box(0, 0, width, height);
+      hero.getBoundingClientRect = () => box(0, 0, width, height);
+      copy.getBoundingClientRect = () => copyBox;
+      recorder.paths.length = 0;
+      onResize?.();
+
+      const visibleTops = recorder.paths
+        .filter((path) => path.filled || path.stroked)
+        .flatMap((path) => {
+          const arcs = path.arcs.flatMap(({ y, r }) =>
+            y + r > 0 && y - r < height ? [Math.max(0, y - r)] : [],
+          );
+          const lineYs = [...path.moves, ...path.lines].map(({ y }) => y);
+          const lines =
+            path.stroked &&
+            lineYs.length > 1 &&
+            Math.max(...lineYs) > 0 &&
+            Math.min(...lineYs) < height
+              ? [Math.max(0, Math.min(...lineYs) - path.width / 2)]
+              : [];
+          return [...arcs, ...lines];
+        });
+      expect(visibleTops.length).toBeGreaterThan(0);
+      expect(Math.min(...visibleTops)).toBeGreaterThanOrEqual(24);
+    },
+  );
 
   it("labels the viewer's own node once the flow has found it", () => {
     render(<HeroNetwork window={WINDOW} labelled={true} />);
