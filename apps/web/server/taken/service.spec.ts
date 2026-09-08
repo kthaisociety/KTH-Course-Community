@@ -5,7 +5,7 @@ import {
   addTakenCourse,
   listTakenCourses,
   recordTakenCourses,
-  recordTranscriptCoursesIfAbsent,
+  recordTranscriptConfirmation,
   removeTakenCourse,
   updateTakenCourse,
 } from "./service";
@@ -145,25 +145,38 @@ describe("recordTakenCourses", () => {
   });
 });
 
-describe("recordTranscriptCoursesIfAbsent", () => {
-  it("uses an atomic insert-only write so an existing row is preserved", async () => {
-    vi.mocked(takenRepo.insertTakenCoursesIfAbsent).mockResolvedValue([]);
+describe("recordTranscriptConfirmation", () => {
+  it("normalizes creates and fills before one atomic repository write", async () => {
+    vi.mocked(takenRepo.applyTranscriptConfirmation).mockResolvedValue({
+      inserted: 0,
+      updated: 1,
+    });
 
     await expect(
-      recordTranscriptCoursesIfAbsent(
+      recordTranscriptConfirmation(
         "u1",
         [{ courseCode: "SF1625", grade: "A" }],
+        [{ courseCode: "DD1337", earnedCredits: 7.5 }],
         importedAt,
       ),
-    ).resolves.toEqual({ inserted: 0, updated: 0 });
+    ).resolves.toEqual({ inserted: 0, updated: 1 });
 
-    expect(takenRepo.insertTakenCoursesIfAbsent).toHaveBeenCalledWith(
+    expect(takenRepo.applyTranscriptConfirmation).toHaveBeenCalledWith(
       "u1",
       [
         {
           courseCode: "SF1625",
           grade: "A",
           earnedCredits: null,
+          attendancePeriods: null,
+          attendanceYear: null,
+        },
+      ],
+      [
+        {
+          courseCode: "DD1337",
+          grade: null,
+          earnedCredits: 7.5,
           attendancePeriods: null,
           attendanceYear: null,
         },

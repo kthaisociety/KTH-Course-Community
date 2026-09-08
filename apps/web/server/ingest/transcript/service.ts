@@ -2,8 +2,7 @@ import { getSummariesByCodes } from "../../course/service";
 import { NotFoundError } from "../../errors";
 import { recordEarnedPersonalizationTierOnContribution } from "../../graph/service";
 import {
-  fillTranscriptCourseFields,
-  recordTranscriptCoursesIfAbsent,
+  recordTranscriptConfirmation,
   type TakenCourseInput,
 } from "../../taken/service";
 import { matchCandidates, type UnmatchedCandidate } from "./match";
@@ -133,14 +132,12 @@ export async function confirmTranscriptImport(
     );
   }
 
-  const created =
-    inputs.length > 0
-      ? await recordTranscriptCoursesIfAbsent(userId, inputs, importedAt)
-      : { inserted: 0, updated: 0 };
-  const updated =
-    fillInputs.length > 0
-      ? await fillTranscriptCourseFields(userId, fillInputs)
-      : 0;
+  const written = await recordTranscriptConfirmation(
+    userId,
+    inputs,
+    fillInputs,
+    importedAt,
+  );
 
   // The other moment the personalization ladder can move: an import earns 2, and it
   // earns tier 3 outright for somebody who had already reviewed everything on
@@ -150,5 +147,5 @@ export async function confirmTranscriptImport(
   // second import that leaves courses unreviewed cannot take tier 3 away.
   await recordEarnedPersonalizationTierOnContribution(userId);
 
-  return { inserted: created.inserted, updated };
+  return written;
 }
