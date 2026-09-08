@@ -88,60 +88,61 @@ export async function upsertTakenCourses(
 }
 
 /**
- * Inserts transcript rows without replacing a row that another client already
- * recorded. The primary-key conflict decision happens in PostgreSQL with the
- * insert, so a manual write that lands between a browser's list refresh and
- * transcript confirmation is preserved.
+ * Applies one transcript confirmation in a transaction.
  *
- * Returns the codes that this statement actually inserted. `ON CONFLICT DO
- * NOTHING` also handles a course duplicated within one transcript batch.
+ * New rows never replace a concurrent manual write, and fills preserve fields
+ * that a concurrent manual edit has already supplied. If any write fails, the
+ * inserts and preceding fills are rolled back together.
  */
-export async function insertTakenCoursesIfAbsent(
+export async function applyTranscriptConfirmation(
   userId: string,
   rows: TakenCourseWrite[],
+  fills: TakenCourseWrite[],
   importedAt: Date,
-): Promise<string[]> {
-  if (rows.length === 0) return [];
-  const inserted = await db
-    .insert(schema.userTakenCourses)
-    .values(
-      rows.map((row) => ({
-        userId,
-        ...row,
-        transcriptImportedAt: importedAt,
-      })),
-    )
-    .onConflictDoNothing({
-      target: [
-        schema.userTakenCourses.userId,
-        schema.userTakenCourses.courseCode,
-      ],
-    })
-    .returning({ courseCode: schema.userTakenCourses.courseCode });
-  return inserted.map((row) => row.courseCode);
-}
+): Promise<{ inserted: number; updated: number }> {
+  return db.transaction(async (tx) => {
+    const inserted =
+      rows.length > 0
+        ? await tx
+            .insert(schema.userTakenCourses)
+            .values(
+              rows.map((row) => ({
+                userId,
+                ...row,
+                transcriptImportedAt: importedAt,
+              })),
+            )
+            .onConflictDoNothing({
+              target: [
+                schema.userTakenCourses.userId,
+                schema.userTakenCourses.courseCode,
+              ],
+            })
+            .returning({ courseCode: schema.userTakenCourses.courseCode })
+        : [];
 
-/** Fills only fields that are still null, preserving concurrent edits. */
-export async function fillTakenCourseFieldsIfEmpty(
-  userId: string,
-  row: TakenCourseWrite,
-): Promise<boolean> {
-  const updated = await db
-    .update(schema.userTakenCourses)
-    .set({
-      grade: sql`coalesce(${schema.userTakenCourses.grade}, ${row.grade})`,
-      earnedCredits: sql`coalesce(${schema.userTakenCourses.earnedCredits}, ${row.earnedCredits})`,
-      attendanceYear: sql`coalesce(${schema.userTakenCourses.attendanceYear}, ${row.attendanceYear})`,
-      updatedAt: new Date(),
-    })
-    .where(
-      and(
-        eq(schema.userTakenCourses.userId, userId),
-        eq(schema.userTakenCourses.courseCode, row.courseCode),
-      ),
-    )
-    .returning({ courseCode: schema.userTakenCourses.courseCode });
-  return updated.length > 0;
+    let updated = 0;
+    for (const row of fills) {
+      const filled = await tx
+        .update(schema.userTakenCourses)
+        .set({
+          grade: sql`coalesce(${schema.userTakenCourses.grade}, ${row.grade})`,
+          earnedCredits: sql`coalesce(${schema.userTakenCourses.earnedCredits}, ${row.earnedCredits})`,
+          attendanceYear: sql`coalesce(${schema.userTakenCourses.attendanceYear}, ${row.attendanceYear})`,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(schema.userTakenCourses.userId, userId),
+            eq(schema.userTakenCourses.courseCode, row.courseCode),
+          ),
+        )
+        .returning({ courseCode: schema.userTakenCourses.courseCode });
+      if (filled.length > 0) updated += 1;
+    }
+
+    return { inserted: inserted.length, updated };
+  });
 }
 
 /**

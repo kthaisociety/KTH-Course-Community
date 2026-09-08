@@ -2,8 +2,7 @@ import { getSummariesByCodes } from "../../course/service";
 import { NotFoundError } from "../../errors";
 import { recordEarnedPersonalizationTierOnContribution } from "../../graph/service";
 import {
-  fillTranscriptCourseFields,
-  recordTranscriptCoursesIfAbsent,
+  recordTranscriptConfirmation,
   type TakenCourseInput,
 } from "../../taken/service";
 import { matchCandidates, type UnmatchedCandidate } from "./match";
@@ -105,9 +104,10 @@ function toTakenCourseInput(row: ConfirmedTranscriptRow): TakenCourseInput {
  * client from confirming a code that was never proposed. Only catalogue courses
  * become taken courses.
  *
- * The write itself belongs to `server/taken`. It inserts only when the user
- * does not already have a row for the course, so a manual entry that races this
- * confirmation is never overwritten by transcript values.
+ * The writes themselves belong to `server/taken`. New rows are inserted only
+ * when the user does not already have the course; fills update only fields
+ * that are still empty. A manual entry or correction that races this
+ * confirmation is therefore never overwritten by transcript values.
  */
 export async function confirmTranscriptImport(
   userId: string,
@@ -116,9 +116,11 @@ export async function confirmTranscriptImport(
   fills: ConfirmedTranscriptRow[] = [],
 ): Promise<{ inserted: number; updated: number }> {
   const inputs = rows.map(toTakenCourseInput);
-  if (inputs.length === 0) return { inserted: 0, updated: 0 };
-
   const fillInputs = fills.map(toTakenCourseInput);
+  if (inputs.length === 0 && fillInputs.length === 0) {
+    return { inserted: 0, updated: 0 };
+  }
+
   const codes = [...inputs, ...fillInputs].map((input) => input.courseCode);
   const known = new Set(
     (await getSummariesByCodes(codes)).map((summary) => summary.courseCode),
@@ -130,15 +132,12 @@ export async function confirmTranscriptImport(
     );
   }
 
-  const created = await recordTranscriptCoursesIfAbsent(
+  const written = await recordTranscriptConfirmation(
     userId,
     inputs,
+    fillInputs,
     importedAt,
   );
-  const updated =
-    fillInputs.length > 0
-      ? await fillTranscriptCourseFields(userId, fillInputs)
-      : 0;
 
   // The other moment the personalization ladder can move: an import earns 2, and it
   // earns tier 3 outright for somebody who had already reviewed everything on
@@ -148,5 +147,5 @@ export async function confirmTranscriptImport(
   // second import that leaves courses unreviewed cannot take tier 3 away.
   await recordEarnedPersonalizationTierOnContribution(userId);
 
-  return { inserted: created.inserted, updated };
+  return written;
 }

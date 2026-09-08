@@ -793,6 +793,7 @@ describe("reading a transcript", () => {
   });
 
   it("fills only an empty field, and keeps the periods while doing it", async () => {
+    confirmImport.mockResolvedValue({ inserted: 0, updated: 1 });
     takenList.mockReturnValue([
       takenCourse({ grade: null, earnedCredits: 9, attendancePeriods: "P3" }),
     ]);
@@ -823,6 +824,50 @@ describe("reading a transcript", () => {
       }),
     );
     expect(updateTaken).not.toHaveBeenCalled();
+    expect(
+      screen.getByText(
+        "Transcript saved — 1 course had a missing field filled in",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/new course/)).not.toBeInTheDocument();
+  });
+
+  it("reports server-confirmed creates and fills as separate counts", async () => {
+    confirmImport.mockResolvedValue({ inserted: 1, updated: 1 });
+    takenList.mockReturnValue([takenCourse({ grade: null })]);
+    uploadTranscript.mockResolvedValue(
+      proposal({
+        candidates: [
+          ...proposal().candidates,
+          {
+            courseCode: "DD2380",
+            transcriptName: "Artificiell intelligens",
+            catalogueName: "Artificial Intelligence",
+            grade: "A",
+            earnedCredits: 6,
+            attendanceYear: 2026,
+          },
+        ],
+      }),
+    );
+    render(<TakenCourses />);
+    await userEvent.click(
+      screen.getByRole("button", { name: "Update transcript" }),
+    );
+    await userEvent.click(
+      screen.getByRole("switch", { name: /Read grades from transcript/ }),
+    );
+    await uploadPdf();
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Looks right" }),
+    );
+
+    expect(
+      await screen.findByText(
+        "Transcript saved — 1 new course, 1 course had a missing field filled in",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/2 new courses/)).not.toBeInTheDocument();
   });
 
   it("keeps the transcript's grades once the reader asks for them", async () => {
