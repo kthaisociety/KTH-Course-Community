@@ -1,4 +1,4 @@
-import { and, count, eq, inArray, sql } from "drizzle-orm";
+import { and, count, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import { db } from "../db";
 import * as schema from "../db/schema";
 
@@ -92,7 +92,8 @@ export async function upsertTakenCourses(
  *
  * New rows never replace a concurrent manual write, and fills preserve fields
  * that a concurrent manual edit has already supplied. If any write fails, the
- * inserts and preceding fills are rolled back together.
+ * inserts and preceding fills are rolled back together. `updated` counts only
+ * rows where at least one previously-empty field was filled.
  */
 export async function applyTranscriptConfirmation(
   userId: string,
@@ -122,7 +123,15 @@ export async function applyTranscriptConfirmation(
         : [];
 
     let updated = 0;
+    // This bounded, sequential loop deliberately keeps each fill as a typed,
+    // per-row coalescing UPDATE. Revisit batching only if transcript imports
+    // are measured as slow; UPDATE FROM VALUES would trade away that clarity.
     for (const row of fills) {
+      const fillsGrade = row.grade !== null;
+      const fillsCredits = row.earnedCredits !== null;
+      const fillsYear = row.attendanceYear !== null;
+      if (!fillsGrade && !fillsCredits && !fillsYear) continue;
+
       const filled = await tx
         .update(schema.userTakenCourses)
         .set({
@@ -135,6 +144,15 @@ export async function applyTranscriptConfirmation(
           and(
             eq(schema.userTakenCourses.userId, userId),
             eq(schema.userTakenCourses.courseCode, row.courseCode),
+            or(
+              fillsGrade ? isNull(schema.userTakenCourses.grade) : undefined,
+              fillsCredits
+                ? isNull(schema.userTakenCourses.earnedCredits)
+                : undefined,
+              fillsYear
+                ? isNull(schema.userTakenCourses.attendanceYear)
+                : undefined,
+            ),
           ),
         )
         .returning({ courseCode: schema.userTakenCourses.courseCode });
