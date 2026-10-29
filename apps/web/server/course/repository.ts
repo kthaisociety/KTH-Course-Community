@@ -34,13 +34,17 @@ export async function findExamCodes(courseCode: string) {
 
 /**
  * The SQL half of `courseNameKey` in `./name-key.ts`, applied to a catalogue
- * column. The two must stay step-for-step identical: lower-case, `&` and
- * ` och ` to ` and `, then strip everything outside `[a-z0-9]`. The class is
- * spelled as an explicit ASCII range rather than `[[:alnum:]]`, whose meaning
- * for non-ASCII letters depends on the database's collation.
+ * column. The two must stay step-for-step identical: NFKC, lower-case ASCII
+ * capitals and `İ` only, turn every run outside `[a-z0-9]` into one space,
+ * drop the whole words `and` and `och`, then remove the spaces. The classes
+ * are spelled as explicit ASCII ranges, and `translate` stands in for
+ * `lower()`, because both of those otherwise depend on the database's
+ * collation. `normalize` needs a UTF-8 database, which Neon always is.
  */
 function nameKeySql(column: Column): SQL {
-  return sql`regexp_replace(replace(replace(lower(${column}), '&', ' and '), ' och ', ' and '), '[^a-z0-9]+', '', 'g')`;
+  const folded = sql`translate(normalize(${column}, NFKC), 'ABCDEFGHIJKLMNOPQRSTUVWXYZİ', 'abcdefghijklmnopqrstuvwxyzi')`;
+  const words = sql`' ' || regexp_replace(${folded}, '[^a-z0-9]+', ' ', 'g') || ' '`;
+  return sql`regexp_replace(regexp_replace(${words}, ' (and|och)(?= )', '', 'g'), ' ', '', 'g')`;
 }
 
 /**

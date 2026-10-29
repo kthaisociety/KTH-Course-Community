@@ -288,7 +288,7 @@ describe("getCoursesByNames", () => {
     expect(courseRepo.findByNameKeys).toHaveBeenCalledTimes(1);
     expect(courseRepo.findByNameKeys).toHaveBeenCalledWith([
       "linearalgebra",
-      "algebraandgeometry",
+      "algebrageometry",
     ]);
   });
 
