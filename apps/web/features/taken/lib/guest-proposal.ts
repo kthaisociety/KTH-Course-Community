@@ -167,6 +167,8 @@ function stringOr(value: unknown, fallback: string): string {
   return typeof value === "string" ? value : fallback;
 }
 
+type UnmatchedCandidate = TranscriptProposal["unmatched"][number];
+
 function numberOrNull(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
@@ -195,14 +197,23 @@ function decodeRow(value: unknown): TranscriptProposalRow | null {
   };
 }
 
-function decodeUnmatched(
-  value: unknown,
-): { courseCode: string; courseName: string } | null {
+/**
+ * An unmatched row needs something to name it by: its code when the transcript
+ * printed one, its name otherwise. Ladok's transcript prints no codes, so a
+ * row with only a name is the usual case, not a damaged one.
+ */
+function decodeUnmatched(value: unknown): UnmatchedCandidate | null {
   if (!isObject(value)) return null;
   const courseCode =
-    typeof value.courseCode === "string" ? value.courseCode : "";
-  if (!courseCode) return null;
-  return { courseCode, courseName: stringOr(value.courseName, courseCode) };
+    typeof value.courseCode === "string" && value.courseCode !== ""
+      ? value.courseCode
+      : null;
+  const courseName =
+    typeof value.courseName === "string" && value.courseName !== ""
+      ? value.courseName
+      : courseCode;
+  if (!courseName) return null;
+  return { courseCode, courseName };
 }
 
 /**
@@ -317,10 +328,7 @@ export function readGuestProposal(
         .candidates,
       unmatched: (Array.isArray(unmatched) ? unmatched : [])
         .map(decodeUnmatched)
-        .filter(
-          (row): row is { courseCode: string; courseName: string } =>
-            row !== null,
-        ),
+        .filter((row): row is UnmatchedCandidate => row !== null),
     },
   };
 }
