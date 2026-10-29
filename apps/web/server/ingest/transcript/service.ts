@@ -5,7 +5,11 @@ import {
   recordTranscriptConfirmation,
   type TakenCourseInput,
 } from "../../taken/service";
-import { matchCandidates, type UnmatchedCandidate } from "./match";
+import {
+  type CatalogueCourse,
+  matchCandidates,
+  type UnmatchedCandidate,
+} from "./match";
 import { parseLadokTranscript, type TranscriptCandidate } from "./parse";
 
 /**
@@ -27,7 +31,11 @@ export type TranscriptProposalRow = {
 /** What a parsed transcript offers. Nothing here has been written. */
 export type TranscriptProposal = {
   candidates: TranscriptProposalRow[];
-  /** Course codes with no catalogue entry. Reported, never invented. */
+  /**
+   * Rows that could not be tied to exactly one catalogue course — an unknown
+   * code, or a name the catalogue does not have or has more than once.
+   * Reported, never invented. Most carry no code: Ladok does not print one.
+   */
   unmatched: UnmatchedCandidate[];
 };
 
@@ -43,6 +51,30 @@ function attendanceYearOf(candidate: TranscriptCandidate): number | null {
 }
 
 /**
+ * The catalogue courses the parsed rows could be, looked up in one go.
+ *
+ * Only the rows that printed a course code can be looked up here: there is no
+ * catalogue lookup by name yet, so a row without a code — every row of a real
+ * Ladok transcript — finds nothing to match and is reported as unmatched, for
+ * the user to add by hand. `matchCandidates` already matches by English and
+ * Swedish name; it needs a name lookup feeding this list to use it.
+ */
+async function catalogueFor(
+  candidates: TranscriptCandidate[],
+): Promise<CatalogueCourse[]> {
+  const codes = candidates.flatMap((candidate) =>
+    candidate.courseCode === null ? [] : [candidate.courseCode],
+  );
+  const summaries = await getSummariesByCodes(codes);
+  return summaries.map((summary) => ({
+    courseCode: summary.courseCode,
+    titleEng: summary.titleEng,
+    titleSwe: null,
+    credits: summary.credits,
+  }));
+}
+
+/**
  * Turns the text of a Ladok transcript into a proposal for the user to confirm.
  *
  * Reads only; the transcript is never stored and never logged. Throws
@@ -52,14 +84,12 @@ export async function buildTranscriptProposal(
   text: string,
 ): Promise<TranscriptProposal> {
   const candidates = parseLadokTranscript(text);
-  const summaries = await getSummariesByCodes(
-    candidates.map((candidate) => candidate.courseCode),
-  );
+  const catalogue = await catalogueFor(candidates);
   const titles = new Map(
-    summaries.map((summary) => [summary.courseCode, summary.titleEng]),
+    catalogue.map((course) => [course.courseCode, course.titleEng]),
   );
 
-  const { matched, unmatched } = matchCandidates(candidates, titles.keys());
+  const { matched, unmatched } = matchCandidates(candidates, catalogue);
 
   return {
     candidates: matched.map((candidate) => ({

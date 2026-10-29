@@ -5,6 +5,7 @@ import * as courseService from "../../course/service";
 import { NotFoundError } from "../../errors";
 import * as graphService from "../../graph/service";
 import * as takenService from "../../taken/service";
+import { TranscriptParseError } from "./parse";
 import { buildTranscriptProposal, confirmTranscriptImport } from "./service";
 
 vi.mock("../../course/service");
@@ -35,16 +36,62 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
+/**
+ * The same five courses as `fixtures/ladok-english.txt`, in the layout of an
+ * export that prints a course-code column.
+ */
+const CODED_TRANSCRIPT = [
+  "Completed courses",
+  "Code Name Scope Grade Date Note",
+  "SF1625 Calculus in One Variable 7.5 hp A 2023-01-13 1",
+  "DD1337 Programming 6.0 hp P 2023-06-02 2",
+  "SF1672 Linear Algebra 7.5 hp C 2024-01-12 1",
+  "DD1389 Interactive Programming and Computer Games in",
+  "Distributed Environments",
+  "9.0 hp B 2024-06-03 1",
+  "ME1003 Industrial Management, Basic Course 6.0 hp P 2025-10-10 2",
+  "Summation",
+].join("\n");
+
 describe("buildTranscriptProposal", () => {
-  it("proposes the catalogue courses and reports the codes it could not place", async () => {
-    vi.mocked(courseService.getSummariesByCodes).mockResolvedValue(
-      catalogue("SF1625", "DD1337", "SF1672", "DD1389"),
-    );
+  it("reports every row of a transcript without codes, and looks nothing up by code", async () => {
+    vi.mocked(courseService.getSummariesByCodes).mockResolvedValue([]);
 
     const proposal = await buildTranscriptProposal(
       fixture("ladok-english.txt"),
     );
 
+    expect(courseService.getSummariesByCodes).toHaveBeenCalledTimes(1);
+    expect(courseService.getSummariesByCodes).toHaveBeenCalledWith([]);
+    expect(proposal.candidates).toEqual([]);
+    expect(proposal.unmatched).toEqual([
+      { courseCode: null, courseName: "Calculus in One Variable" },
+      { courseCode: null, courseName: "Programming" },
+      { courseCode: null, courseName: "Linear Algebra" },
+      {
+        courseCode: null,
+        courseName:
+          "Interactive Programming and Computer Games in Distributed Environments",
+      },
+      { courseCode: null, courseName: "Industrial Management, Basic Course" },
+    ]);
+  });
+
+  it("rejects a certificate of registration before looking anything up", async () => {
+    await expect(
+      buildTranscriptProposal(fixture("registreringsintyg.txt")),
+    ).rejects.toBeInstanceOf(TranscriptParseError);
+    expect(courseService.getSummariesByCodes).not.toHaveBeenCalled();
+  });
+
+  it("proposes the catalogue courses and reports the codes it could not place", async () => {
+    vi.mocked(courseService.getSummariesByCodes).mockResolvedValue(
+      catalogue("SF1625", "DD1337", "SF1672", "DD1389"),
+    );
+
+    const proposal = await buildTranscriptProposal(CODED_TRANSCRIPT);
+
+    expect(courseService.getSummariesByCodes).toHaveBeenCalledTimes(1);
     expect(proposal.candidates).toEqual([
       {
         courseCode: "SF1625",
@@ -93,6 +140,7 @@ describe("buildTranscriptProposal", () => {
       catalogue("SF1625", "DD1337", "SF1672", "DD1389", "ME1003"),
     );
 
+    await buildTranscriptProposal(CODED_TRANSCRIPT);
     await buildTranscriptProposal(fixture("ladok-english.txt"));
 
     expect(takenService.recordTranscriptConfirmation).not.toHaveBeenCalled();
