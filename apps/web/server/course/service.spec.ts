@@ -7,7 +7,7 @@ import {
 } from "../reviews/service";
 import { getTakenCountsByCourseCodes } from "../taken/service";
 import * as courseRepo from "./repository";
-import { getStatsByCodes, getSummary } from "./service";
+import { getCoursesByNames, getStatsByCodes, getSummary } from "./service";
 
 vi.mock("./repository");
 vi.mock("../reviews/service");
@@ -272,5 +272,54 @@ describe("getSummary", () => {
 
     expect(summary?.courseCode).toBe("SF1625");
     expect(summary?.stats).toEqual({ reviews: null, takenCount: 0 });
+  });
+});
+
+describe("getCoursesByNames", () => {
+  it("looks every name up in one query, by its key, once", async () => {
+    vi.mocked(courseRepo.findByNameKeys).mockResolvedValue([]);
+
+    await getCoursesByNames([
+      "Linear Algebra",
+      "linear  algebra",
+      "Algebra & Geometry",
+    ]);
+
+    expect(courseRepo.findByNameKeys).toHaveBeenCalledTimes(1);
+    expect(courseRepo.findByNameKeys).toHaveBeenCalledWith([
+      "linearalgebra",
+      "algebraandgeometry",
+    ]);
+  });
+
+  it("runs no query when there is no name to look up", async () => {
+    await expect(getCoursesByNames([])).resolves.toEqual([]);
+    await expect(getCoursesByNames(["", " – "])).resolves.toEqual([]);
+
+    expect(courseRepo.findByNameKeys).not.toHaveBeenCalled();
+  });
+
+  it("bounds the parameter list however many names a file holds", async () => {
+    vi.mocked(courseRepo.findByNameKeys).mockResolvedValue([]);
+
+    await getCoursesByNames(
+      Array.from({ length: 1000 }, (_, index) => `Course ${index}`),
+    );
+
+    expect(vi.mocked(courseRepo.findByNameKeys).mock.calls[0][0]).toHaveLength(
+      300,
+    );
+  });
+
+  it("returns what the catalogue has under those names", async () => {
+    const row = {
+      courseCode: "SF1672",
+      titleEng: "Linear Algebra",
+      titleSwe: "Linjär algebra",
+      credits: 7.5,
+    };
+    vi.mocked(courseRepo.findByNameKeys).mockResolvedValue([row]);
+
+    await expect(getCoursesByNames(["Linear Algebra"])).resolves.toEqual([row]);
   });
 });

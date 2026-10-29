@@ -1,4 +1,4 @@
-import { eq, inArray } from "drizzle-orm";
+import { type Column, eq, inArray, or, type SQL, sql } from "drizzle-orm";
 import { db } from "../db";
 import { courseExaminations, courseRounds, courses } from "../db/schema";
 
@@ -30,6 +30,42 @@ export async function findExamCodes(courseCode: string) {
     .select({ examCode: courseExaminations.examCode })
     .from(courseExaminations)
     .where(eq(courseExaminations.courseCode, courseCode));
+}
+
+/**
+ * The SQL half of `courseNameKey` in `./name-key.ts`, applied to a catalogue
+ * column. The two must stay step-for-step identical: lower-case, `&` and
+ * ` och ` to ` and `, then strip everything outside `[a-z0-9]`. The class is
+ * spelled as an explicit ASCII range rather than `[[:alnum:]]`, whose meaning
+ * for non-ASCII letters depends on the database's collation.
+ */
+function nameKeySql(column: Column): SQL {
+  return sql`regexp_replace(replace(replace(lower(${column}), '&', ' and '), ' och ', ' and '), '[^a-z0-9]+', '', 'g')`;
+}
+
+/**
+ * The catalogue courses whose English or Swedish name has one of these
+ * lookup keys, in one query. Read-only, and a prefilter only: the keys are
+ * deliberately loose, and the caller re-checks every row it gets back.
+ *
+ * There is no index on either expression, so this scans `courses`; at the
+ * catalogue's size that is one cheap query per transcript upload.
+ */
+export async function findByNameKeys(keys: string[]) {
+  return db
+    .select({
+      courseCode: courses.code,
+      titleEng: courses.titleEng,
+      titleSwe: courses.titleSwe,
+      credits: courses.credits,
+    })
+    .from(courses)
+    .where(
+      or(
+        inArray(nameKeySql(courses.titleEng), keys),
+        inArray(nameKeySql(courses.titleSwe), keys),
+      ),
+    );
 }
 
 export async function findRoundSummariesByCodes(codes: string[]) {

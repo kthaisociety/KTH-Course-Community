@@ -1,4 +1,4 @@
-import { getSummariesByCodes } from "../../course/service";
+import { getCoursesByNames, getSummariesByCodes } from "../../course/service";
 import { NotFoundError } from "../../errors";
 import { recordEarnedPersonalizationTierOnContribution } from "../../graph/service";
 import {
@@ -51,27 +51,44 @@ function attendanceYearOf(candidate: TranscriptCandidate): number | null {
 }
 
 /**
- * The catalogue courses the parsed rows could be, looked up in one go.
+ * The catalogue courses the parsed rows could be, in two lookups whatever the
+ * row count: one by the codes some rows printed, one by the names the rest
+ * printed instead. Ladok's transcript prints no codes, so the name lookup is
+ * the one a real upload depends on.
  *
- * Only the rows that printed a course code can be looked up here: there is no
- * catalogue lookup by name yet, so a row without a code — every row of a real
- * Ladok transcript — finds nothing to match and is reported as unmatched, for
- * the user to add by hand. `matchCandidates` already matches by English and
- * Swedish name; it needs a name lookup feeding this list to use it.
+ * The name lookup is a loose prefilter. What it returns is only what
+ * `matchCandidates` may choose from; whether a name really is a course's name,
+ * and whether it names exactly one course, is decided there.
+ *
+ * A course both lookups found is kept once, with its Swedish name, which only
+ * the name lookup carries.
  */
 async function catalogueFor(
   candidates: TranscriptCandidate[],
 ): Promise<CatalogueCourse[]> {
-  const codes = candidates.flatMap((candidate) =>
-    candidate.courseCode === null ? [] : [candidate.courseCode],
-  );
-  const summaries = await getSummariesByCodes(codes);
-  return summaries.map((summary) => ({
-    courseCode: summary.courseCode,
-    titleEng: summary.titleEng,
-    titleSwe: null,
-    credits: summary.credits,
-  }));
+  const codes: string[] = [];
+  const names: string[] = [];
+  for (const candidate of candidates) {
+    if (candidate.courseCode === null) names.push(candidate.courseName);
+    else codes.push(candidate.courseCode);
+  }
+
+  const [summaries, byName] = await Promise.all([
+    getSummariesByCodes(codes),
+    getCoursesByNames(names),
+  ]);
+
+  const catalogue = new Map<string, CatalogueCourse>();
+  for (const summary of summaries) {
+    catalogue.set(summary.courseCode, {
+      courseCode: summary.courseCode,
+      titleEng: summary.titleEng,
+      titleSwe: null,
+      credits: summary.credits,
+    });
+  }
+  for (const course of byName) catalogue.set(course.courseCode, course);
+  return [...catalogue.values()];
 }
 
 /**
