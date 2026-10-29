@@ -116,6 +116,22 @@ describe("holding a proposal across a sign-in", () => {
       { courseCode: "XX9999", courseName: "Other" },
     ]);
   });
+
+  it("carries the rows that have only a name, which is most of them", () => {
+    const handoff = writeGuestProposal(
+      proposal({
+        unmatched: [
+          { courseCode: null, courseName: "Programming" },
+          { courseCode: null, courseName: "" },
+        ],
+      }),
+      true,
+    );
+
+    expect(readGuestProposal(handoff)?.proposal.unmatched).toEqual([
+      { courseCode: null, courseName: "Programming" },
+    ]);
+  });
 });
 
 describe("a record that cannot be trusted", () => {

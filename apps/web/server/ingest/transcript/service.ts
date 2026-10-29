@@ -1,11 +1,15 @@
-import { getSummariesByCodes } from "../../course/service";
+import { getCoursesByNames, getSummariesByCodes } from "../../course/service";
 import { NotFoundError } from "../../errors";
 import { recordEarnedPersonalizationTierOnContribution } from "../../graph/service";
 import {
   recordTranscriptConfirmation,
   type TakenCourseInput,
 } from "../../taken/service";
-import { matchCandidates, type UnmatchedCandidate } from "./match";
+import {
+  type CatalogueCourse,
+  matchCandidates,
+  type UnmatchedCandidate,
+} from "./match";
 import { parseLadokTranscript, type TranscriptCandidate } from "./parse";
 
 /**
@@ -27,7 +31,11 @@ export type TranscriptProposalRow = {
 /** What a parsed transcript offers. Nothing here has been written. */
 export type TranscriptProposal = {
   candidates: TranscriptProposalRow[];
-  /** Course codes with no catalogue entry. Reported, never invented. */
+  /**
+   * Rows that could not be tied to exactly one catalogue course — an unknown
+   * code, or a name the catalogue does not have or has more than once.
+   * Reported, never invented. Most carry no code: Ladok does not print one.
+   */
   unmatched: UnmatchedCandidate[];
 };
 
@@ -43,6 +51,47 @@ function attendanceYearOf(candidate: TranscriptCandidate): number | null {
 }
 
 /**
+ * The catalogue courses the parsed rows could be, in two lookups whatever the
+ * row count: one by the codes some rows printed, one by the names the rest
+ * printed instead. Ladok's transcript prints no codes, so the name lookup is
+ * the one a real upload depends on.
+ *
+ * The name lookup is a loose prefilter. What it returns is only what
+ * `matchCandidates` may choose from; whether a name really is a course's name,
+ * and whether it names exactly one course, is decided there.
+ *
+ * A course both lookups found is kept once, with its Swedish name, which only
+ * the name lookup carries.
+ */
+async function catalogueFor(
+  candidates: TranscriptCandidate[],
+): Promise<CatalogueCourse[]> {
+  const codes: string[] = [];
+  const names: string[] = [];
+  for (const candidate of candidates) {
+    if (candidate.courseCode === null) names.push(candidate.courseName);
+    else codes.push(candidate.courseCode);
+  }
+
+  const [summaries, byName] = await Promise.all([
+    getSummariesByCodes(codes),
+    getCoursesByNames(names),
+  ]);
+
+  const catalogue = new Map<string, CatalogueCourse>();
+  for (const summary of summaries) {
+    catalogue.set(summary.courseCode, {
+      courseCode: summary.courseCode,
+      titleEng: summary.titleEng,
+      titleSwe: null,
+      credits: summary.credits,
+    });
+  }
+  for (const course of byName) catalogue.set(course.courseCode, course);
+  return [...catalogue.values()];
+}
+
+/**
  * Turns the text of a Ladok transcript into a proposal for the user to confirm.
  *
  * Reads only; the transcript is never stored and never logged. Throws
@@ -52,14 +101,12 @@ export async function buildTranscriptProposal(
   text: string,
 ): Promise<TranscriptProposal> {
   const candidates = parseLadokTranscript(text);
-  const summaries = await getSummariesByCodes(
-    candidates.map((candidate) => candidate.courseCode),
-  );
+  const catalogue = await catalogueFor(candidates);
   const titles = new Map(
-    summaries.map((summary) => [summary.courseCode, summary.titleEng]),
+    catalogue.map((course) => [course.courseCode, course.titleEng]),
   );
 
-  const { matched, unmatched } = matchCandidates(candidates, titles.keys());
+  const { matched, unmatched } = matchCandidates(candidates, catalogue);
 
   return {
     candidates: matched.map((candidate) => ({

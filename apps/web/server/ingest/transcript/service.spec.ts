@@ -5,6 +5,7 @@ import * as courseService from "../../course/service";
 import { NotFoundError } from "../../errors";
 import * as graphService from "../../graph/service";
 import * as takenService from "../../taken/service";
+import { TranscriptParseError } from "./parse";
 import { buildTranscriptProposal, confirmTranscriptImport } from "./service";
 
 vi.mock("../../course/service");
@@ -33,18 +34,75 @@ function catalogue(...codes: string[]): CourseSummary[] {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.mocked(courseService.getCoursesByNames).mockResolvedValue([]);
 });
 
+/** A catalogue course as the by-name lookup returns it. */
+function byName(
+  courseCode: string,
+  titleEng: string,
+  titleSwe: string,
+  credits = 7.5,
+): courseService.CatalogueCourseName {
+  return { courseCode, titleEng, titleSwe, credits };
+}
+
+/**
+ * The same five courses as `fixtures/ladok-english.txt`, in the layout of an
+ * export that prints a course-code column.
+ */
+const CODED_TRANSCRIPT = [
+  "Completed courses",
+  "Code Name Scope Grade Date Note",
+  "SF1625 Calculus in One Variable 7.5 hp A 2023-01-13 1",
+  "DD1337 Programming 6.0 hp P 2023-06-02 2",
+  "SF1672 Linear Algebra 7.5 hp C 2024-01-12 1",
+  "DD1389 Interactive Programming and Computer Games in",
+  "Distributed Environments",
+  "9.0 hp B 2024-06-03 1",
+  "ME1003 Industrial Management, Basic Course 6.0 hp P 2025-10-10 2",
+  "Summation",
+].join("\n");
+
 describe("buildTranscriptProposal", () => {
-  it("proposes the catalogue courses and reports the codes it could not place", async () => {
-    vi.mocked(courseService.getSummariesByCodes).mockResolvedValue(
-      catalogue("SF1625", "DD1337", "SF1672", "DD1389"),
-    );
+  it("reports every row of a transcript without codes when the catalogue has none of its names", async () => {
+    vi.mocked(courseService.getSummariesByCodes).mockResolvedValue([]);
 
     const proposal = await buildTranscriptProposal(
       fixture("ladok-english.txt"),
     );
 
+    expect(courseService.getSummariesByCodes).toHaveBeenCalledTimes(1);
+    expect(courseService.getSummariesByCodes).toHaveBeenCalledWith([]);
+    expect(proposal.candidates).toEqual([]);
+    expect(proposal.unmatched).toEqual([
+      { courseCode: null, courseName: "Calculus in One Variable" },
+      { courseCode: null, courseName: "Programming" },
+      { courseCode: null, courseName: "Linear Algebra" },
+      {
+        courseCode: null,
+        courseName:
+          "Interactive Programming and Computer Games in Distributed Environments",
+      },
+      { courseCode: null, courseName: "Industrial Management, Basic Course" },
+    ]);
+  });
+
+  it("rejects a certificate of registration before looking anything up", async () => {
+    await expect(
+      buildTranscriptProposal(fixture("registreringsintyg.txt")),
+    ).rejects.toBeInstanceOf(TranscriptParseError);
+    expect(courseService.getSummariesByCodes).not.toHaveBeenCalled();
+  });
+
+  it("proposes the catalogue courses and reports the codes it could not place", async () => {
+    vi.mocked(courseService.getSummariesByCodes).mockResolvedValue(
+      catalogue("SF1625", "DD1337", "SF1672", "DD1389"),
+    );
+
+    const proposal = await buildTranscriptProposal(CODED_TRANSCRIPT);
+
+    expect(courseService.getSummariesByCodes).toHaveBeenCalledTimes(1);
     expect(proposal.candidates).toEqual([
       {
         courseCode: "SF1625",
@@ -88,11 +146,110 @@ describe("buildTranscriptProposal", () => {
     ]);
   });
 
+  it("matches a transcript without codes by name, in one lookup", async () => {
+    vi.mocked(courseService.getSummariesByCodes).mockResolvedValue([]);
+    vi.mocked(courseService.getCoursesByNames).mockResolvedValue([
+      byName("SF1625", "Calculus in One Variable", "Envariabelanalys"),
+      byName("SF1672", "Linear Algebra", "Linjär algebra"),
+      // The prefilter is loose: this one shares a key, not a name.
+      byName("XX1000", "Linear-Algebra?", "Linjar algebra", 3),
+    ]);
+
+    const proposal = await buildTranscriptProposal(
+      fixture("ladok-swedish.txt"),
+    );
+
+    expect(courseService.getCoursesByNames).toHaveBeenCalledTimes(1);
+    expect(courseService.getCoursesByNames).toHaveBeenCalledWith([
+      "Envariabelanalys",
+      "Programmering",
+      "Linjär algebra",
+      "Interaktiv programmering och datorspel i distribuerade miljöer",
+      "Industriell ekonomi, grundkurs",
+    ]);
+    expect(proposal.candidates).toEqual([
+      {
+        courseCode: "SF1625",
+        transcriptName: "Envariabelanalys",
+        catalogueName: "Calculus in One Variable",
+        grade: "A",
+        earnedCredits: 7.5,
+        attendanceYear: 2023,
+      },
+      {
+        courseCode: "SF1672",
+        transcriptName: "Linjär algebra",
+        catalogueName: "Linear Algebra",
+        grade: "C",
+        earnedCredits: 7.5,
+        attendanceYear: 2024,
+      },
+    ]);
+    expect(proposal.unmatched.map((row) => row.courseName)).toEqual([
+      "Programmering",
+      "Interaktiv programmering och datorspel i distribuerade miljöer",
+      "Industriell ekonomi, grundkurs",
+    ]);
+  });
+
+  it("merges the courses found by code with the ones found by name", async () => {
+    vi.mocked(courseService.getSummariesByCodes).mockResolvedValue(
+      catalogue("SF1625"),
+    );
+    vi.mocked(courseService.getCoursesByNames).mockResolvedValue([
+      byName("DD1337", "Programming", "Programmering", 6),
+      // Found both ways: kept once.
+      byName("SF1625", "Title of SF1625", "Envariabelanalys"),
+    ]);
+
+    const proposal = await buildTranscriptProposal(
+      [
+        "Code Name Scope Grade Date Note",
+        "SF1625 Calculus in One Variable 7.5 hp A 2023-01-13 1",
+        "Programming 6.0 hp P 2023-06-02 2",
+        "Envariabelanalys 7.5 hp B 2024-01-13 1",
+        "Summation",
+      ].join("\n"),
+    );
+
+    expect(courseService.getSummariesByCodes).toHaveBeenCalledWith(["SF1625"]);
+    expect(courseService.getCoursesByNames).toHaveBeenCalledWith([
+      "Programming",
+      "Envariabelanalys",
+    ]);
+    expect(
+      proposal.candidates.map(({ courseCode, grade }) => [courseCode, grade]),
+    ).toEqual([
+      ["SF1625", "A"],
+      ["DD1337", "P"],
+    ]);
+    expect(proposal.unmatched).toEqual([]);
+  });
+
+  it("reports a name two catalogue courses share, rather than picking one", async () => {
+    vi.mocked(courseService.getSummariesByCodes).mockResolvedValue([]);
+    vi.mocked(courseService.getCoursesByNames).mockResolvedValue([
+      byName("DD1337", "Programming", "Programmering", 6),
+      byName("DD1310", "Programming", "Programmering", 6),
+    ]);
+
+    const proposal = await buildTranscriptProposal(
+      fixture("ladok-english.txt"),
+    );
+
+    expect(proposal.candidates).toEqual([]);
+    expect(proposal.unmatched).toContainEqual({
+      courseCode: null,
+      courseName: "Programming",
+    });
+  });
+
   it("writes nothing", async () => {
     vi.mocked(courseService.getSummariesByCodes).mockResolvedValue(
       catalogue("SF1625", "DD1337", "SF1672", "DD1389", "ME1003"),
     );
 
+    await buildTranscriptProposal(CODED_TRANSCRIPT);
     await buildTranscriptProposal(fixture("ladok-english.txt"));
 
     expect(takenService.recordTranscriptConfirmation).not.toHaveBeenCalled();
