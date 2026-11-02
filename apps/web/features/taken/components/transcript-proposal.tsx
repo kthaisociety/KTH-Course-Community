@@ -49,10 +49,13 @@ function unmatchedTitle(count: number): string {
  * from a parse that wrote nothing; every write this flow makes is behind that
  * button, and `planTranscriptImport` decides what they are.
  *
- * **Unmatched codes are reported, never invented.** A row whose course code the
- * catalogue does not have cannot become a taken course — `user_taken_courses`
- * has a foreign key to `courses.code` — so it is named here rather than dropped
- * silently, and this screen offers no way to create the missing course.
+ * **Unmatched rows are reported, never invented.** A row the server could not
+ * tie to exactly one catalogue course — an unknown code, or a name the
+ * catalogue does not have or has more than once — cannot become a taken course,
+ * since `user_taken_courses` has a foreign key to `courses.code`. It is named
+ * here rather than dropped silently, and this screen offers no way to create
+ * the missing course. Ladok's transcript prints no codes, so most such rows
+ * have only a name, and the list shows the code only when there is one.
  *
  * The candidate rows are listed, which the artboard's own preview does not do:
  * it shows only a count. A screen whose one button writes to a reader's record
@@ -106,13 +109,15 @@ export function TranscriptProposalReview({
                 These rows do not match a course in the KTH catalogue, so they
                 are left out.
               </p>
-              <ul className="m-0 mt-2 flex list-none flex-col gap-1 p-0">
+              <ul className="scrollbar-subtle m-0 mt-2 flex max-h-[180px] list-none flex-col gap-1 overflow-y-auto p-0">
                 {unmatched.map((row) => (
                   <li
-                    key={row.courseCode}
+                    key={`${row.courseCode ?? ""}|${row.courseName}`}
                     className="truncate text-[12.5px] text-cc-ink2"
                   >
-                    {row.courseCode} — {row.courseName}
+                    {row.courseCode
+                      ? `${row.courseCode} — ${row.courseName}`
+                      : row.courseName}
                   </li>
                 ))}
               </ul>

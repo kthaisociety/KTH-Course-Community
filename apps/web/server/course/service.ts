@@ -18,6 +18,7 @@ import {
   type ReviewAggregate,
 } from "../reviews/service";
 import { getTakenCountsByCourseCodes } from "../taken/service";
+import { courseNameKey } from "./name-key";
 import * as courseRepo from "./repository";
 
 type ExaminationKey = (typeof EXAMINATION_DISTRIBUTION_KEYS)[number];
@@ -196,6 +197,40 @@ export async function getSummary(
       takenCount: 0,
     },
   };
+}
+
+/**
+ * The most distinct names one lookup sends. A transcript is one student's
+ * record and has far fewer rows; the bound keeps a crafted file from turning
+ * one upload into a query with an unbounded parameter list.
+ */
+const MAX_NAME_LOOKUPS = 300;
+
+/** A catalogue course as a by-name lookup returns it. */
+export type CatalogueCourseName = {
+  courseCode: string;
+  titleEng: string;
+  titleSwe: string;
+  credits: number;
+};
+
+/**
+ * The catalogue courses whose English or Swedish name could be one of
+ * `names`, for the transcript import — Ladok's transcript prints names, not
+ * codes.
+ *
+ * One query however many names there are, and none when there are none. The
+ * match is loose on purpose (`courseNameKey`), so the result can hold courses
+ * that only resemble a name; the caller decides which name really matches.
+ */
+export async function getCoursesByNames(
+  names: string[],
+): Promise<CatalogueCourseName[]> {
+  const keys = [...new Set(names.map(courseNameKey))]
+    .filter((key) => key !== "")
+    .slice(0, MAX_NAME_LOOKUPS);
+  if (keys.length === 0) return [];
+  return courseRepo.findByNameKeys(keys);
 }
 
 /**

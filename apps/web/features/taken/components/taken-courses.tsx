@@ -144,9 +144,9 @@ function importedSummary(added: number, filled: number): string {
  * `uploadTranscript` and never kept — not in state, not in a cache, never in
  * `localStorage`.
  *
- * **Course codes the catalogue does not have are reported, not invented.**
- * They come back on the proposal as `unmatched` and are named on the confirm
- * screen. This page offers no way to create the missing course, because
+ * **Rows the catalogue does not have are reported, not invented.**
+ * They come back on the proposal as `unmatched` — by name, since Ladok's
+ * transcript prints no codes — and are named on the confirm screen. This page offers no way to create the missing course, because
  * `user_taken_courses.course_code` is a foreign key to `courses.code`.
  *
  * **The fast-track reviewer is a screen of this page, not a dialog over it.**

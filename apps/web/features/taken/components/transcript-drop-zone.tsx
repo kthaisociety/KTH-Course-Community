@@ -34,6 +34,13 @@ type Props = {
  * reads them; the switch decides what is *kept* when the proposal is confirmed.
  * The copy here says that instead, which is the smallest change that stops the
  * page promising something the server does not do.
+ *
+ * **The Ladok hint names the document, not course codes.** The artboard asks
+ * the reader to "make sure course codes are included", but Ladok's transcript
+ * has no course-code column and no option to add one. The hint instead names
+ * the document to download and the one it is confused with — the certificate
+ * of registration, which the server rejects — as the smallest edit that keeps
+ * the artboard's line and stops it asking for something Ladok cannot give.
  */
 export function TranscriptDropZone({
   variant,
@@ -70,9 +77,9 @@ export function TranscriptDropZone({
             strokeWidth={2}
           />
           <p className="m-0 text-[12.5px] text-cc-ink2 leading-[1.5]">
-            Remember to pick{" "}
-            <span className="font-semibold">Resultatintyg</span> in Ladok, and
-            make sure course codes are included.
+            In Ladok, download a{" "}
+            <span className="font-semibold">Resultatintyg</span> (Transcript of
+            Records), not a Registreringsintyg.
           </p>
         </div>
       ) : (

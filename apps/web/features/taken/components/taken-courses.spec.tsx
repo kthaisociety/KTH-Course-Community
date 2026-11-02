@@ -730,6 +730,25 @@ describe("reading a transcript", () => {
     expect(screen.getByText("XX9999 — Something else")).toBeInTheDocument();
   });
 
+  it("names an unmatched row by its name alone when the transcript printed no code", async () => {
+    uploadTranscript.mockResolvedValue(
+      proposal({
+        unmatched: [
+          { courseCode: null, courseName: "Underwater Basket Weaving" },
+          { courseCode: null, courseName: "Linear Algebra" },
+        ],
+      }),
+    );
+    render(<TakenCourses />);
+    await uploadPdf();
+
+    expect(
+      await screen.findByText("2 rows were not KTH catalogue courses"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Underwater Basket Weaving")).toBeInTheDocument();
+    expect(screen.getByText("Linear Algebra")).toBeInTheDocument();
+  });
+
   it("writes the proposal only when the reader confirms it", async () => {
     render(<TakenCourses />);
     await uploadPdf();
