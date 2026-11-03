@@ -50,11 +50,13 @@ vi.mock("@/lib/auth-client", () => ({
   },
 }));
 
-// Only the session hooks are faked; AuthReasonDialog stays real.
+// Only the session hooks are faked; AuthReasonDialog stays real. `useMe` is
+// read by the rail inside the menu drawer, for its saved-course count.
 vi.mock("@/features/auth", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/features/auth")>()),
   useSessionData: () => useSessionData(),
   useLogout: () => logout,
+  useMe: () => ({ user: null, isLoading: false }),
 }));
 
 // `isUnplaced` stays real — how "unplaced" is recognised is the point of the
@@ -536,6 +538,63 @@ describe("Landing", () => {
       );
     });
 
+    // #252: a visitor who came to import a transcript should not have to search
+    // for something first to find the page that does it.
+    describe("reaching the app without searching", () => {
+      it("links the rail's pages from the header", () => {
+        render(<Landing />);
+        const nav = within(header().getByRole("navigation", { name: "Main" }));
+        expect(nav.getByRole("link", { name: "Explore" })).toHaveAttribute(
+          "href",
+          "/search",
+        );
+        expect(
+          nav.getByRole("link", { name: "Saved courses" }),
+        ).toHaveAttribute("href", "/saved");
+        expect(
+          nav.getByRole("link", { name: "Taken courses" }),
+        ).toHaveAttribute("href", "/taken");
+      });
+
+      // The account end of the bar is the way to My Page, so the links beside
+      // the wordmark do not repeat it.
+      it("leaves My Page to the account end of the bar", () => {
+        render(<Landing />);
+        const nav = within(header().getByRole("navigation", { name: "Main" }));
+        expect(
+          nav.queryByRole("link", { name: "My Page" }),
+        ).not.toBeInTheDocument();
+      });
+
+      it("opens the rail as a drawer from the menu button", async () => {
+        const user = userEvent.setup();
+        render(<Landing />);
+        await user.click(header().getByRole("button", { name: /open menu/i }));
+
+        const drawer = await screen.findByRole("dialog");
+        const nav = within(drawer).getByRole("navigation", { name: "Main" });
+        expect(
+          within(nav).getByRole("link", { name: /taken courses/i }),
+        ).toHaveAttribute("href", "/taken");
+      });
+
+      it("signs up from the drawer through the landing's own dialog", async () => {
+        const user = userEvent.setup();
+        render(<Landing />);
+        await user.click(header().getByRole("button", { name: /open menu/i }));
+        const drawer = await screen.findByRole("dialog");
+        await user.click(
+          within(drawer).getByRole("button", { name: "Sign up" }),
+        );
+
+        await waitFor(() =>
+          expect(
+            screen.getByRole("heading", { name: /create your account/i }),
+          ).toBeInTheDocument(),
+        );
+      });
+    });
+
     describe("find your dot", () => {
       it("asks for an account, because a dot belongs to one", async () => {
         const user = userEvent.setup();
@@ -698,6 +757,13 @@ describe("Landing", () => {
       expect(screen.getByText("Elsa Lindqvist")).toBeInTheDocument();
       await user.click(header().getByRole("button", { name: /log out/i }));
       expect(logout).toHaveBeenCalled();
+    });
+
+    it("takes them to My Page from their name", () => {
+      render(<Landing />);
+      expect(
+        header().getByRole("link", { name: /elsa lindqvist/i }),
+      ).toHaveAttribute("href", "/profile");
     });
 
     // Their own neighbourhood *is* the hero, so it is read on load rather than
