@@ -70,8 +70,11 @@ type NavItem = {
  * section of itself, and Saved does the same, so the design's own way in
  * exists. `/collections` stays as the route a `?collection=` permalink resolves
  * to; nothing needs a second door.
+ *
+ * Exported because the landing header links from it too (#252): it reads this
+ * list rather than keeping its own, so the two cannot drift apart.
  */
-const NAV: readonly NavItem[] = [
+export const NAV: readonly NavItem[] = [
   { href: "/search", label: "Explore", icon: Search, strokeWidth: 2.4 },
   {
     href: "/saved",

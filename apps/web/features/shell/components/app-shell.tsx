@@ -4,9 +4,9 @@ import { Menu } from "lucide-react";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { useRef, useState } from "react";
-import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { type AuthReason, AuthReasonDialog } from "@/features/auth";
 import { Rail } from "@/features/shell/components/rail";
+import { RailDrawer } from "@/features/shell/components/rail-drawer";
 import { SearchMorphProvider } from "@/features/shell/components/search-morph";
 import { ThemeToggle } from "@/features/shell/components/theme-toggle";
 import { pageTitleFor } from "@/features/shell/lib/page-title";
@@ -53,20 +53,11 @@ export function AppShell({ children }: { children: ReactNode }) {
         <Rail onRequestAuth={setAuthReason} />
       </aside>
 
-      <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
-        <SheetContent
-          side="left"
-          showCloseButton={false}
-          overlayClassName="bg-[rgba(20,30,45,0.4)] supports-backdrop-filter:backdrop-blur-none"
-          className="w-[250px] max-w-[85vw] gap-0 border-none bg-cc-rail p-0 sm:max-w-[250px]"
-        >
-          <SheetTitle className="sr-only">Menu</SheetTitle>
-          <Rail
-            onRequestAuth={setAuthReason}
-            onDismiss={() => setDrawerOpen(false)}
-          />
-        </SheetContent>
-      </Sheet>
+      <RailDrawer
+        open={drawerOpen}
+        onOpenChange={setDrawerOpen}
+        onRequestAuth={setAuthReason}
+      />
 
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex h-[66px] shrink-0 items-center gap-2.5 border-cc-rule border-b px-3.5 @3xl/shell:justify-end @3xl/shell:px-7">
