@@ -1,6 +1,6 @@
 "use client";
 
-import { LogOut, Search } from "lucide-react";
+import { LogOut, Menu, Search } from "lucide-react";
 import { motion, useReducedMotion, type Variants } from "motion/react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -14,6 +14,8 @@ import {
 } from "@/features/auth";
 import {
   clearSearchBarHandoff,
+  NAV,
+  RailDrawer,
   stashSearchBarHandoff,
   ThemeToggle,
 } from "@/features/shell";
@@ -29,6 +31,14 @@ import { HeroNetwork } from "./hero-network";
  * It owns its own chrome. `/` sits outside the app shell deliberately — the
  * artboard gives this page a wordmark bar and no rail — so the header here is
  * the landing's, not a second copy of the shell's.
+ *
+ * The bar does carry the rail's destinations, which the artboard does not
+ * (#252). Without them the only way into the app was a search, so a reader who
+ * came to import a transcript or open their saved courses had to search for
+ * something first. Wide frames link the rail's own `NAV` in the bar, less My
+ * Page (`HEADER_NAV` says why); narrow ones get the shell's drawer behind a menu
+ * button. Both live in the header and keep it 66px tall, so the hero and the
+ * graph inside it are untouched.
  *
  * Responsive is a container query on the page itself, matching the artboards:
  * the layout answers to its rendered box, not to the viewport.
@@ -53,6 +63,15 @@ import { HeroNetwork } from "./hero-network";
  */
 
 const TRY = ["deep learning", "machine learning", "DD2380"];
+
+/**
+ * The rail's destinations the header links on a wide frame: all but My Page.
+ *
+ * The account end of the bar already leads there. A member's name chip opens
+ * it, and a visitor's My Page is only a prompt to sign in, which Log in and Sign
+ * up beside it already are. The drawer keeps the whole rail, My Page included.
+ */
+const HEADER_NAV = NAV.filter((item) => item.href !== "/profile");
 
 /** The artboard's own exit easing, `cubic-bezier(.4,0,1,1)` over roughly 130ms. */
 const EXIT_EASE: [number, number, number, number] = [0.4, 0, 1, 1];
@@ -138,6 +157,7 @@ export function Landing() {
   const [authReason, setAuthReason] = useState<AuthReason | null>(null);
   const [dotOpen, setDotOpen] = useState(arrivedFromLink !== null);
   const [expired, setExpired] = useState(arrivedFromLink === "expired");
+  const [menuOpen, setMenuOpen] = useState(false);
 
   /** The bar whose box Explore continues. */
   const barRef = useRef<HTMLFormElement>(null);
@@ -290,37 +310,68 @@ export function Landing() {
         variants={HERO_EXIT}
         className="relative z-10 flex h-[66px] shrink-0 items-center justify-between gap-5 border-cc-rule border-b bg-cc-pg px-4 @lg:px-7"
       >
-        <Link
-          href="/"
-          className="flex items-center gap-2.5 text-cc-ink no-underline"
-        >
-          {/* biome-ignore lint/performance/noImgElement: a fixed 26px mark; next/image adds a loader for nothing. */}
-          <img
-            src="/ais-symbol-blue.png"
-            alt=""
-            data-testid="landing-mark-light"
-            className="size-[26px] shrink-0 object-contain dark:hidden"
-          />
-          {/* biome-ignore lint/performance/noImgElement: a fixed 26px mark; next/image adds a loader for nothing. */}
-          <img
-            src="/ais-symbol-white.png"
-            alt=""
-            data-testid="landing-mark-dark"
-            className="hidden size-[26px] shrink-0 object-contain dark:block"
-          />
-          <span aria-hidden className="h-[28px] w-px bg-cc-rule3" />
-          <span className="font-semibold text-[15px] leading-[1.15]">
-            Course
-            <br />
-            Community
-          </span>
-        </Link>
+        <div className="flex min-w-0 items-center gap-1.5 @5xl:gap-6">
+          <button
+            type="button"
+            onClick={() => setMenuOpen(true)}
+            aria-label="Open menu"
+            className="flex size-[36px] shrink-0 cursor-pointer items-center justify-center rounded-[9px] text-cc-brand hover:bg-cc-pill @5xl:hidden"
+          >
+            <Menu size={19} strokeWidth={2} aria-hidden />
+          </button>
+          <Link
+            href="/"
+            className="flex items-center gap-2.5 text-cc-ink no-underline"
+          >
+            {/* biome-ignore lint/performance/noImgElement: a fixed 26px mark; next/image adds a loader for nothing. */}
+            <img
+              src="/ais-symbol-blue.png"
+              alt=""
+              data-testid="landing-mark-light"
+              className="size-[26px] shrink-0 object-contain dark:hidden"
+            />
+            {/* biome-ignore lint/performance/noImgElement: a fixed 26px mark; next/image adds a loader for nothing. */}
+            <img
+              src="/ais-symbol-white.png"
+              alt=""
+              data-testid="landing-mark-dark"
+              className="hidden size-[26px] shrink-0 object-contain dark:block"
+            />
+            <span aria-hidden className="h-[28px] w-px bg-cc-rule3" />
+            <span className="font-semibold text-[15px] leading-[1.15]">
+              Course
+              <br />
+              Community
+            </span>
+          </Link>
 
-        <div className="flex items-center gap-1.5">
+          <nav
+            aria-label="Main"
+            className="hidden items-center gap-0.5 @5xl:flex"
+          >
+            {HEADER_NAV.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="flex h-[34px] items-center whitespace-nowrap rounded-[8px] px-[11px] font-medium text-[13px] text-cc-chip-ink no-underline hover:bg-cc-pill"
+              >
+                {item.label}
+              </Link>
+            ))}
+          </nav>
+        </div>
+
+        <div className="flex min-w-0 items-center gap-1.5">
           <ThemeToggle />
           {sessionPending ? null : user ? (
-            <div className="flex items-center gap-2">
-              <span className="flex h-[34px] items-center gap-2 rounded-[8px] bg-cc-pill py-0 pr-[11px] pl-[5px]">
+            <div className="flex min-w-0 items-center gap-2">
+              {/* The account is My Page, so the chip that names it goes there.
+                  `min-w-0` lets a long name truncate on a phone, where the menu
+                  button now shares the bar. */}
+              <Link
+                href="/profile"
+                className="flex h-[34px] min-w-0 items-center gap-2 rounded-[8px] bg-cc-pill py-0 pr-[11px] pl-[5px] text-cc-ink no-underline hover:bg-cc-rule2"
+              >
                 <UserAvatar
                   user={user}
                   className="size-6"
@@ -329,7 +380,7 @@ export function Landing() {
                 <span className="max-w-[10rem] truncate font-medium text-[13px]">
                   {displayNameOf(user.name ?? "", user.email ?? "")}
                 </span>
-              </span>
+              </Link>
               <button
                 type="button"
                 onClick={() => void logout()}
@@ -621,6 +672,12 @@ export function Landing() {
           }
           void neighbourhood.refetch();
         }}
+      />
+
+      <RailDrawer
+        open={menuOpen}
+        onOpenChange={setMenuOpen}
+        onRequestAuth={setAuthReason}
       />
 
       <AuthReasonDialog
