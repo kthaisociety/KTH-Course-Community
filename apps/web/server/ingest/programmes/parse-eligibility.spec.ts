@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { civingRequirements, requirementItems } from "./parse-eligibility";
+import {
+  civingRequirements,
+  needsOf,
+  requirementItems,
+} from "./parse-eligibility";
 
 // TSDSM's requirements, as its HT27 plan words them.
 const TSDSM = `För antagning till programmet krävs uppfyllande av grundläggande behörighet, samt följande krav på särskild behörighet:
@@ -60,11 +64,17 @@ describe("civingRequirements", () => {
       {
         category: "Obligatoriska kurser",
         codes: ["SF1625"],
+        needs: [["SF1625"]],
+        review: false,
+        track: null,
         text: "SF1625 Envariabelanalys",
       },
       {
         category: "Obligatoriska kurser",
         codes: ["ID1018", "ID1022"],
+        needs: [["ID1018", "ID1022"]],
+        review: false,
+        track: null,
         text: "ID1018 Programmering I eller ID1022 Konsten att programmera",
       },
     ]);
@@ -73,5 +83,50 @@ describe("civingRequirements", () => {
 
   it("is null when the master's publishes no list", () => {
     expect(civingRequirements("Kandidatexamen inom datavetenskap.")).toBeNull();
+  });
+});
+
+describe("needsOf", () => {
+  it("keeps two courses on one line as two requirements (TICEM for CELTE)", () => {
+    expect(
+      needsOf(
+        "SF1920 Sannolikhetsteori och statistik DD1310 Programmeringsteknik",
+      ),
+    ).toEqual([["SF1920"], ["DD1310"]]);
+    expect(
+      needsOf(
+        "EQ1110 Tidskontinuerliga signaler och system EQ1120 Tidsdiskreta signaler och system",
+      ),
+    ).toEqual([["EQ1110"], ["EQ1120"]]);
+  });
+
+  it("joins codes the line offers as alternatives", () => {
+    expect(needsOf("SF1626/SF1686 Flervariabelanalys")).toEqual([
+      ["SF1626", "SF1686"],
+    ]);
+    expect(
+      needsOf(
+        "SF1626 Flervariabelanalys eller SF1698/SF1688 Diskret matematik",
+      ),
+    ).toEqual([["SF1626", "SF1698", "SF1688"]]);
+    expect(
+      needsOf(
+        "EQ1110 Tidskontinuerliga signaler och system, eller EQ1120 Tidsdiskreta",
+      ),
+    ).toEqual([["EQ1110", "EQ1120"]]);
+  });
+
+  it("marks a line with either/both conditions for the student to check", () => {
+    const c = civingRequirements(
+      [
+        "För civilingenjörsstudenter vid KTH med platsgaranti (mappning) på detta program motsvaras …",
+        "Civilingenjörsutbildning i informationsteknik (CINTE)",
+        "Spår Inbyggd elektronik : IE1206 Inbyggd elektronik, antingen II1303 Signalbehandling eller båda dessa kurser: EQ1110, EQ1120",
+      ].join("\n"),
+    );
+    expect(c?.sections.CINTE[0]).toMatchObject({
+      review: true,
+      track: "Inbyggd elektronik",
+    });
   });
 });

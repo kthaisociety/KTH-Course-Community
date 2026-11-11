@@ -122,8 +122,21 @@ export interface RequirementItem {
 export interface CivingRequirement {
   /** The heading KTH puts over the list, e.g. "Obligatoriska kurser". */
   category: string;
-  /** Any one of these meets the line. */
+  /** Every code the line names. */
   codes: string[];
+  /**
+   * What the line asks for: every inner list must be met, each by any one of its
+   * codes. "SF1920 … DD1310 …" is [[SF1920], [DD1310]]; "SF1626/SF1686" is
+   * [[SF1626, SF1686]].
+   */
+  needs: string[][];
+  /**
+   * The line has conditions a list of codes can't hold ("antingen … eller båda"),
+   * so it is shown for the student to check rather than checked.
+   */
+  review: boolean;
+  /** A track the line applies to only ("Spår Inbyggd elektronik"), or null. */
+  track: string | null;
   text: string;
 }
 

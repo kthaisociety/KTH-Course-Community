@@ -160,7 +160,6 @@ export function StudyPlan() {
   const projects =
     useDegreeProjects([...new Set(projectCodes)].slice(0, 60)).data ?? {};
 
-  const takenCodes = useMemo(() => taken.map((t) => t.courseCode), [taken]);
   const checks = useMemo(
     () =>
       plan
@@ -169,11 +168,11 @@ export function StudyPlan() {
             facts,
             state,
             now,
-            takenCodes,
+            plan.passedCodes,
             programme?.summary.type === "TMAST",
           )
         : [],
-    [plan, facts, state, now, takenCodes, programme],
+    [plan, facts, state, now, programme],
   );
   const progress = useMemo(
     () =>
@@ -381,8 +380,28 @@ export function StudyPlan() {
           </div>
           <p className="text-[12px] text-cc-muted">
             Your plan is saved in this browser. Export it from the plan to keep
-            a copy.
+            a copy, or{" "}
+            <button
+              type="button"
+              onClick={() => fileRef.current?.click()}
+              className="cursor-pointer text-cc-brand underline-offset-2 hover:underline"
+            >
+              import a plan you exported
+            </button>
+            .
           </p>
+          <input
+            ref={fileRef}
+            type="file"
+            accept="application/json"
+            className="hidden"
+            aria-label="Import a plan"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) void onImport(f);
+              e.target.value = "";
+            }}
+          />
         </div>
       </div>
     );
@@ -633,9 +652,9 @@ export function StudyPlan() {
             />
           ) : null}
           <p className="px-1 text-[11.5px] text-cc-muted leading-snug">
-            Periods for this academic year come from your programme's own
-            schedule on kth.se; other courses use the catalogue's 2025/26
-            rounds. Your plan is saved in this browser.
+            Periods come from your programme's schedule and each course's kth.se
+            page for this academic year, else the catalogue's 2025/26 rounds.
+            Your plan is saved in this browser.
           </p>
         </aside>
       </div>

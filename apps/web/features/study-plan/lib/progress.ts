@@ -133,8 +133,14 @@ export function computeProgress(inp: ProgressInputs): ProgressSection[] {
   const sections: ProgressSection[] = [];
   const same = makeSameCourse(plan, facts);
   const startAy = plan.startAy;
-  const studyYear = (i: PlanItem) =>
+  const placedYear = (i: PlanItem) =>
     startAy !== null && i.slot ? studyYearOf(i.slot.ay, startAy) : null;
+  /**
+   * The study year a course counts toward: the syllabus's, where it lists the
+   * course, so moving a year-2 course into year 3 doesn't move its credits out of
+   * "years 1–2". The student's own picks count where they are placed.
+   */
+  const studyYear = (i: PlanItem) => i.syllabusYear ?? placedYear(i);
   const titleSwe = (code: string) =>
     (
       plan.template.get(code)?.name ??
@@ -172,7 +178,7 @@ export function computeProgress(inp: ProgressInputs): ProgressSection[] {
     crit.push(
       creditCriterion(
         tally(all, inBachelor),
-        180,
+        isCiving ? 180 : programme.summary.credits || 180,
         `Credits, years 1–${bachelorYears}`,
         plan.unplaced.length
           ? `Includes ${plan.unplaced.length} taken course${plan.unplaced.length === 1 ? "" : "s"} you haven't placed yet`
@@ -313,13 +319,35 @@ export function computeProgress(inp: ProgressInputs): ProgressSection[] {
         null)
       : null;
     if (civing && e.civing) {
-      for (const r of civing)
+      const href = `https://www.kth.se/student/kurser/program/${e.code}/${e.term}/genomforande`;
+      for (const r of civing) {
+        // Every need must be met, each by any one of its codes.
+        // Data from before `needs` existed reads each code as an alternative, as it was written.
+        const needs = r.needs ?? [r.codes];
+        const states = needs.map((n) => codeState(n, due));
+        const state: CriterionState = r.review
+          ? "unknown"
+          : states.some((x) => x === "short")
+            ? "short"
+            : states.every((x) => x === "met")
+              ? "met"
+              : "planned";
+        const where = [
+          categoryInEnglish(r.category),
+          r.track ? `only for the ${r.track} track` : "",
+        ].filter(Boolean);
         crit.push({
-          state: codeState(r.codes, due),
-          text: r.codes.map((c) => `${c} ${titleEn(c)}`).join(" or "),
-          detail: categoryInEnglish(r.category),
+          state,
+          text: needs
+            .map((n) => n.map((c) => `${c} ${titleEn(c)}`).join(" or "))
+            .join(", and "),
+          detail: r.review
+            ? `${where.join(", ")}. This line has conditions we can't check from your plan: read KTH's wording.`
+            : where.join(", "),
           codes: r.codes,
+          href: r.review ? href : undefined,
         });
+      }
     } else {
       const before = all.filter(
         (i) => i.counts && (i.slot === null || i.endIdx < due),
@@ -361,13 +389,13 @@ export function computeProgress(inp: ProgressInputs): ProgressSection[] {
     });
   }
 
-  const bachelorMandatory: CriterionState = (() => {
+  const bachelorMandatoryBy = (dueIdx: number): CriterionState => {
     const states = mandatoryOf("programme").map((m) =>
-      codeState([m.code], Number.POSITIVE_INFINITY),
+      codeState([m.code], dueIdx),
     );
     if (states.some((x) => x === "short")) return "short";
     return states.every((x) => x === "met") ? "met" : "planned";
-  })();
+  };
 
   // ---- The master's part. ----
   const masterSource = isCiving
@@ -423,6 +451,15 @@ export function computeProgress(inp: ProgressInputs): ProgressSection[] {
       else if (placed && gate) {
         const before = (i: PlanItem) =>
           i !== placed && i.endIdx < placed.startIdx;
+        if (gate.credits)
+          crit.push(
+            creditCriterion(
+              tally(all, before),
+              gate.credits,
+              `Credits before ${mex.code} starts`,
+              `${mex.code} needs ${gate.credits} hp done first${gate.advancedCredits ? `, ${gate.advancedCredits} of them advanced` : ""}.`,
+            ),
+          );
         if (gate.advancedCredits)
           crit.push(
             creditCriterion(
@@ -457,7 +494,7 @@ export function computeProgress(inp: ProgressInputs): ProgressSection[] {
         }
         if (gate.needsBachelorPart && isCiving)
           crit.push({
-            state: bachelorMandatory,
+            state: bachelorMandatoryBy(placed.startIdx),
             text: "Every mandatory course of years 1–3 done first",
           });
       } else

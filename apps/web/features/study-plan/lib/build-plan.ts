@@ -36,6 +36,23 @@ export interface TakenRow {
   attendanceYear: number | null;
 }
 
+const FAILING_GRADE = /^(F|FX|U)$/i;
+
+/**
+ * Whether a taken course was passed in full. A Ladok transcript lists only passed
+ * courses, but a course added by hand can carry a failing grade or partial credits.
+ */
+export function isPassed(t: TakenRow, courseCredits: number | null): boolean {
+  if (t.grade && FAILING_GRADE.test(t.grade.trim())) return false;
+  if (
+    t.earnedCredits !== null &&
+    courseCredits &&
+    t.earnedCredits < courseCredits - 0.05
+  )
+    return false;
+  return true;
+}
+
 export type ItemStatus =
   | "passed"
   | "not-passed"
@@ -60,6 +77,13 @@ export interface PlanItem {
   /** The syllabus category, when a syllabus lists the course. */
   category: PlanCategory | null;
   mandatory: boolean;
+  /**
+   * The study year the syllabus puts the course in, or null for the student's own
+   * picks. Credit gates such as "110 hp from years 1–2" group by this, not by
+   * where the student happened to place the course.
+   */
+  syllabusYear: number | null;
+  /** The taken course, when it was passed in full. */
   taken: TakenRow | null;
   slot: Slot | null;
   /** The student placed it, or moved it from where the syllabus puts it. */
@@ -117,6 +141,8 @@ export interface BuiltPlan {
   template: Map<string, TemplateCourse>;
   mandatory: TemplateCourse[];
   overlaps: string[][];
+  /** Taken courses passed in full: what prerequisites and "done" may rely on. */
+  passedCodes: string[];
 }
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
@@ -306,7 +332,17 @@ export function buildPlan(inputs: PlanInputs): BuiltPlan {
       ? (intakeOf(master, masterIntakeFor(setup.intake))?.overlaps ?? [])
       : []),
   ];
-  const takenBy = new Map(taken.map((t) => [t.courseCode, t]));
+  // Taken means attended. Only a course passed in full counts as done: a U, an F or
+  // credits short of the course's own leave it to be taken again.
+  const passed = taken.filter((t) =>
+    isPassed(
+      t,
+      template.get(t.courseCode)?.credits ??
+        facts.courses[t.courseCode]?.credits ??
+        null,
+    ),
+  );
+  const takenBy = new Map(passed.map((t) => [t.courseCode, t]));
   const leftOut = new Set(state.leftOut);
   const chosen = (code: string) =>
     takenBy.has(code) || code in state.placements;
@@ -383,6 +419,7 @@ export function buildPlan(inputs: PlanInputs): BuiltPlan {
       source: row?.source ?? "own",
       category: row?.category ?? null,
       mandatory: row?.category === "O" && !alternatives.has(code),
+      syllabusYear: row?.studyYear ?? null,
       taken: t,
       slot,
       placedByStudent,
@@ -427,7 +464,7 @@ export function buildPlan(inputs: PlanInputs): BuiltPlan {
     if (done.has(code)) continue;
     add(make(code, template.get(code) ?? null, slot, true));
   }
-  for (const t of taken) {
+  for (const t of passed) {
     if (done.has(t.courseCode)) continue;
     add(make(t.courseCode, template.get(t.courseCode) ?? null, null, false));
   }
@@ -461,5 +498,6 @@ export function buildPlan(inputs: PlanInputs): BuiltPlan {
     template,
     mandatory,
     overlaps,
+    passedCodes: passed.map((t) => t.courseCode),
   };
 }

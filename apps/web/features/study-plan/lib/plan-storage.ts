@@ -22,6 +22,10 @@ import type { Period, Slot } from "./slots";
 
 export const PLAN_PREFIX = "kth-cc:plan:";
 
+/** The keys an imported plan may write. Rule names carry hyphens ("not-passed"). */
+export const IMPORTABLE_KEY =
+  /^(setup|at:[A-Z0-9ÅÄÖ]+|out:[A-Z0-9ÅÄÖ]+|ok:[A-Z0-9ÅÄÖ]+:[a-z-]+(:\d+)?)$/;
+
 export interface PlanSetup {
   programme: string | null;
   /** Admission term, e.g. "20242". */
@@ -201,12 +205,7 @@ export const planStore = {
       for (const key of Object.keys(store))
         if (key.startsWith(prefix)) store.removeItem(key);
       for (const [key, value] of Object.entries(data)) {
-        if (
-          !/^(setup|at:[A-Z0-9ÅÄÖ]+|out:[A-Z0-9ÅÄÖ]+|ok:[A-Z0-9ÅÄÖ]+:[a-z]+)$/.test(
-            key,
-          )
-        )
-          continue;
+        if (!IMPORTABLE_KEY.test(key)) continue;
         if (!value || typeof value !== "object") continue;
         store.setItem(prefix + key, JSON.stringify(value));
       }

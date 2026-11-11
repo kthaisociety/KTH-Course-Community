@@ -295,6 +295,27 @@ export function requirementItems(text: string): RequirementItem[] {
   return items;
 }
 
+/**
+ * One line of codes → what it asks for. A code joins the previous one as an
+ * alternative when the text between them says so — "/", "eller", "alternativt"
+ * — and starts a new requirement otherwise. "SF1920 Sannolikhetsteori och
+ * statistik DD1310 Programmeringsteknik" is two required courses; "SF1626/SF1686
+ * Flervariabelanalys" is one course under two codes.
+ */
+export function needsOf(line: string): string[][] {
+  const needs: string[][] = [];
+  let last = 0;
+  for (const m of line.matchAll(CODE)) {
+    const between = line.slice(last, m.index ?? 0);
+    const alternative =
+      needs.length > 0 && /\/|\beller\b|\balternativt\b|\bor\b/i.test(between);
+    if (alternative) needs[needs.length - 1].push(m[0]);
+    else needs.push([m[0]]);
+    last = (m.index ?? 0) + m[0].length;
+  }
+  return needs.map((n) => [...new Set(n)]);
+}
+
 export function civingRequirements(text: string): MasterEligibility["civing"] {
   const at = text.search(CIVING_HEAD);
   if (at < 0) return null;
@@ -327,12 +348,17 @@ export function civingRequirements(text: string): MasterEligibility["civing"] {
       category = line.replace(/:$/, "");
       continue;
     }
+    const text = line.replace(/^[-–]\s*/, "");
+    const track = text.match(/^Spår\s+([^:]+?)\s*:/i)?.[1] ?? null;
     for (const p of programmes ?? ["*"]) {
       sections[p] = sections[p] ?? [];
       sections[p].push({
         category: category ?? "Krävs",
         codes,
-        text: line.replace(/^[-–]\s*/, ""),
+        needs: needsOf(text),
+        review: /\b(antingen|båda|både)\b/i.test(text),
+        track,
+        text,
       });
     }
   }
