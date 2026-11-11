@@ -13,6 +13,9 @@ const nextConfig: NextConfig = {
   // route whose worker has nothing to load.
   outputFileTracingIncludes: {
     "/api/user/transcript": ["../../node_modules/unpdf/**/*"],
+    // The programme data is read from disk by path (server/programme/repository.ts),
+    // which tracing can't see.
+    "/api/trpc/[trpc]": ["./server/programme/data/**/*"],
   },
   outputFileTracingRoot: path.join(
     path.dirname(fileURLToPath(import.meta.url)),

@@ -3,6 +3,7 @@
 import {
   Bookmark,
   BookOpen,
+  CalendarRange,
   CircleCheck,
   LogOut,
   Search,
@@ -89,6 +90,8 @@ export const NAV: readonly NavItem[] = [
     icon: CircleCheck,
     strokeWidth: 1.8,
   },
+  // Not on the artboard yet: the study plan postdates the 2026-09-06 export.
+  { href: "/plan", label: "Study plan", icon: CalendarRange, strokeWidth: 2 },
 ];
 
 function isActive(pathname: string, href: string) {

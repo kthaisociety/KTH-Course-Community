@@ -98,6 +98,39 @@ course, and the collection chips narrow that list rather than relocating out of
 it.
 _Avoid_: comparison, list, folder, group, playlist
 
+### Study plans
+
+**Programme**:
+A KTH degree programme (utbildningsprogram), keyed by its programme code, e.g.
+`CINTE`. Its **programme syllabus** (utbildningsplan) is published per
+**intake**, the term a cohort starts (`20242` = HT 2024), and lists each study
+year's courses as mandatory, conditionally elective, recommended or elective.
+_Today_: not a table — `bun run ingest:programmes` writes the syllabi to
+`server/programme/data/` from kth.se (ADR 0011).
+_Avoid_: degree, education, course plan
+
+**Study plan**:
+One person's intended path through a programme: which course goes in which
+period of which academic year. Lives in the browser (ADR 0011).
+_Avoid_: course plan, schedule, roadmap
+
+**Placement**:
+A course put in a period of a study plan. Mandatory courses are placed from the
+syllabus; a taken course the syllabus doesn't place waits for the student to
+place it, because a transcript has no period.
+_Avoid_: slot (that is the period itself), entry
+
+**Left out**:
+A course a study plan does not count toward its credits. It still counts as a
+prerequisite met, and it stays a taken course.
+_Avoid_: removed, excluded, hidden
+
+**Master's eligibility**:
+Whether a study plan meets a master's programme's särskild behörighet. For a
+civilingenjör student with a guaranteed place, KTH lists exact course codes per
+programme; otherwise it is the master's own prose, matched as an estimate.
+_Avoid_: admission, qualification
+
 ### Reviews
 
 **Review**:

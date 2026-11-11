@@ -11,6 +11,7 @@
     "lint": "biome check",
     "format": "biome format --write",
     "ingest": "bun --env-file=.env.local scripts/ingest.ts",
+    "ingest:programmes": "bun scripts/ingest-programmes.ts",
     "backfill:tiers": "bun --env-file=.env.local scripts/backfill-personalization-tiers.ts",
     "backfill:placements": "bun --env-file=.env.local scripts/backfill-graph-placements.ts",
     "db:generate": "drizzle-kit generate --config server/db/drizzle.config.ts",

@@ -16,7 +16,8 @@
       "!build",
       "!migrations",
       "!drizzle",
-      "!docs/design_ref"
+      "!docs/design_ref",
+      "!apps/web/server/programme/data"
     ]
   },
   "formatter": {
