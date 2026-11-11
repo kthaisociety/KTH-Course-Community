@@ -53,6 +53,28 @@ export function isPassed(t: TakenRow, courseCredits: number | null): boolean {
   return true;
 }
 
+/**
+ * Every course the page needs facts for. It must not depend on the facts it asks
+ * for: whether a taken course counts as passed depends on its credits, which come
+ * from those facts, so every taken course is asked for, passed or not. Otherwise
+ * a partly credited course drops out once its credits load, its facts go with
+ * it, it counts as passed again, and the request never settles.
+ */
+export function codesNeedingFacts(
+  plan: Pick<BuiltPlan, "items" | "unplaced" | "leftOut" | "electives">,
+  taken: readonly TakenRow[],
+  ...extra: readonly (readonly string[])[]
+): string[] {
+  return [
+    ...new Set([
+      ...[...plan.items, ...plan.unplaced, ...plan.leftOut].map((i) => i.code),
+      ...plan.electives.map((e) => e.code),
+      ...taken.map((t) => t.courseCode),
+      ...extra.flat(),
+    ]),
+  ].sort();
+}
+
 export type ItemStatus =
   | "passed"
   | "not-passed"

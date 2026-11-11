@@ -6,7 +6,12 @@ import type {
   ProgrammeDetail,
   ProgrammeType,
 } from "@/types/programme";
-import { buildPlan, isPassed, type PlanInputs } from "./build-plan";
+import {
+  buildPlan,
+  codesNeedingFacts,
+  isPassed,
+  type PlanInputs,
+} from "./build-plan";
 import { IMPORTABLE_KEY, type PlanState } from "./plan-storage";
 import { computeProgress } from "./progress";
 import type { Period, Slot } from "./slots";
@@ -198,6 +203,62 @@ describe("isPassed", () => {
     });
     expect(line(sections, "bachelor", "Mandatory courses")?.text).toMatch(
       /^Mandatory courses: 0 of/,
+    );
+  });
+});
+
+describe("codesNeedingFacts", () => {
+  it("asks for a partly credited course's facts whether or not they have loaded, so the request settles", () => {
+    const taken = [
+      {
+        courseCode: "ZZ1000",
+        grade: "P",
+        earnedCredits: 3,
+        attendanceYear: 2025,
+      },
+    ];
+    const base: PlanInputs = {
+      setup: {
+        programme: "CXXXX",
+        intake: "20242",
+        master: null,
+        track: null,
+        masterTrack: null,
+        summer: false,
+      },
+      programme: civing,
+      master: null,
+      taken,
+      facts: noFacts,
+      state: empty,
+      now: at(2024, 1),
+      knowsTranscript: true,
+      currentRounds: {},
+    };
+    const loaded: PlanFactsResult = {
+      courses: {
+        ZZ1000: {
+          code: "ZZ1000",
+          titleSwe: "Z",
+          titleEng: "Z",
+          credits: 7.5,
+          level: "B",
+          department: "",
+          rounds: [],
+          prerequisites: [],
+          registeredCounts: false,
+          eligibility: "",
+        },
+      },
+      refs: {},
+    };
+    const before = buildPlan(base);
+    const after = buildPlan({ ...base, facts: loaded });
+    // Without its credits it counts as passed; with them it doesn't, and leaves the plan.
+    expect(before.unplaced.map((i) => i.code)).toEqual(["ZZ1000"]);
+    expect(after.unplaced).toEqual([]);
+    expect(codesNeedingFacts(before, taken)).toEqual(
+      codesNeedingFacts(after, taken),
     );
   });
 });

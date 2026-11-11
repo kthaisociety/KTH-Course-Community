@@ -25,7 +25,12 @@ import {
   useSavedCodes,
 } from "../api/queries";
 import { usePlanStore } from "../hooks/use-plan-store";
-import { buildPlan, type PlanItem, type TakenRow } from "../lib/build-plan";
+import {
+  buildPlan,
+  codesNeedingFacts,
+  type PlanItem,
+  type TakenRow,
+} from "../lib/build-plan";
 import {
   type CheckFix,
   checkPlan,
@@ -134,18 +139,8 @@ export function StudyPlan() {
             .filter(([p]) => p === programme.summary.code || p === "*")
             .flatMap(([, rows]) => rows.flatMap((r) => r.codes))
         : [];
-    return [
-      ...new Set(
-        [...plan.items, ...plan.unplaced, ...plan.leftOut]
-          .map((i) => i.code)
-          .concat(
-            savedCodes,
-            plan.electives.map((e) => e.code),
-            required,
-          ),
-      ),
-    ].sort();
-  }, [plan, savedCodes, masterReq, setup, programme]);
+    return codesNeedingFacts(plan, taken, savedCodes, required);
+  }, [plan, taken, savedCodes, masterReq, setup, programme]);
   if (wanted.join() !== factsCodes.join()) setFactsCodes(wanted);
 
   const projectCodes = useMemo(

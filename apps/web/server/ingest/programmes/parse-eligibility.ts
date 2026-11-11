@@ -356,7 +356,9 @@ export function civingRequirements(text: string): MasterEligibility["civing"] {
         category: category ?? "Krävs",
         codes,
         needs: needsOf(text),
-        review: /\b(antingen|båda|både)\b/i.test(text),
+        // "antingen … eller båda dessa kurser" changes which courses are required; "som kurs i
+        // både X och Y" only says what one course covers, so it stays checkable.
+        review: /\bantingen\b|\bbåda\s+(dessa|de|kurserna)\b/i.test(text),
         track,
         text,
       });

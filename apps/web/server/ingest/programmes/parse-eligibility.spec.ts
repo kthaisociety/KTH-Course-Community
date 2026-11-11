@@ -116,6 +116,20 @@ describe("needsOf", () => {
     ).toEqual([["EQ1110", "EQ1120"]]);
   });
 
+  it("keeps a line checkable when 'både' only says what the course covers (TEFRM for CELTE)", () => {
+    const c = civingRequirements(
+      [
+        "För civilingenjörsstudenter vid KTH med platsgaranti (mappning) på detta program motsvaras …",
+        "Civilingenjörsutbildning i elektroteknik (CELTE)",
+        "EI1220 Teoretisk elektroteknik E, som kurs i både differentialekvationer och elektromagnetisk fältteori",
+      ].join("\n"),
+    );
+    expect(c?.sections.CELTE[0]).toMatchObject({
+      review: false,
+      needs: [["EI1220"]],
+    });
+  });
+
   it("marks a line with either/both conditions for the student to check", () => {
     const c = civingRequirements(
       [
