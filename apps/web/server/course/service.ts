@@ -12,6 +12,11 @@ import {
   EXAMINATION_DISTRIBUTION_KEYS,
   EXAMINATION_DISTRIBUTION_LABELS,
 } from "@/types";
+import type {
+  CourseLevel,
+  CoursePlanFacts,
+  PlanFactsResult,
+} from "@/types/programme";
 import type { SelectCourse } from "../db/schema";
 import {
   getAggregatesByCourseCodes,
@@ -19,6 +24,8 @@ import {
 } from "../reviews/service";
 import { getTakenCountsByCourseCodes } from "../taken/service";
 import { courseNameKey } from "./name-key";
+import { periodCredits } from "./periods";
+import { readPrerequisites } from "./prerequisites";
 import * as courseRepo from "./repository";
 
 type ExaminationKey = (typeof EXAMINATION_DISTRIBUTION_KEYS)[number];
@@ -342,4 +349,95 @@ export async function getDetails(
     rounds: mappedRounds,
     examinations: mappedExams,
   };
+}
+
+const LEVEL: Record<string, CourseLevel> = {
+  BASIC: "B",
+  ADVANCED: "A",
+  PREPARATORY: "P",
+  RESEARCH: "A",
+};
+const levelOf = (code: string | null): CourseLevel => LEVEL[code ?? ""] ?? "B";
+
+/** The catalogue changes once per ingest, so one copy per server process is enough. */
+let catalogueIndex: Promise<
+  Map<string, { titleSwe: string; level: CourseLevel }>
+> | null = null;
+function getCatalogueIndex() {
+  catalogueIndex ??= courseRepo
+    .findCatalogueIndex()
+    .then(
+      (rows) =>
+        new Map(
+          rows.map((r) => [
+            r.code,
+            { titleSwe: r.titleSwe, level: levelOf(r.level) },
+          ]),
+        ),
+    )
+    .catch((error) => {
+      catalogueIndex = null;
+      throw error;
+    });
+  return catalogueIndex;
+}
+
+/**
+ * Everything the study plan checks a course against: credits, level, rounds
+ * with credits per period, and prerequisites read from the eligibility prose.
+ * Read-only catalogue data, so nothing here is per user.
+ */
+export async function getPlanFacts(codes: string[]): Promise<PlanFactsResult> {
+  if (codes.length === 0) return { courses: {}, refs: {} };
+  const [courseRows, roundRows, index] = await Promise.all([
+    courseRepo.findByCodes(codes),
+    courseRepo.findPlanRoundsByCodes(codes),
+    getCatalogueIndex(),
+  ]);
+  const catalogue = new Set(index.keys());
+  const courses: Record<string, CoursePlanFacts> = {};
+  const refs: PlanFactsResult["refs"] = {};
+  for (const c of courseRows) {
+    const reading = readPrerequisites(c.eligibility, c.code, catalogue);
+    courses[c.code] = {
+      code: c.code,
+      titleSwe: c.titleSwe,
+      titleEng: c.titleEng,
+      credits: c.credits,
+      level: levelOf(c.educationalLevelCode),
+      department: c.department,
+      rounds: roundRows
+        .filter((r) => r.courseCode === c.code)
+        .flatMap((r) => {
+          const credits = periodCredits(
+            r.formattedPeriodsAndCredits,
+            c.credits,
+          );
+          return credits
+            ? [
+                {
+                  startTerm: r.startTerm,
+                  credits,
+                  pace: r.studyPace,
+                  isOpen: r.isVU,
+                },
+              ]
+            : [];
+        })
+        .sort((a, b) => a.startTerm - b.startTerm),
+      prerequisites: reading.groups,
+      registeredCounts: reading.registeredCounts,
+      eligibility: reading.text,
+    };
+    for (const g of reading.groups)
+      for (const code of g.codes) {
+        const hit = index.get(code);
+        if (hit) refs[code] = hit;
+      }
+    refs[c.code] = {
+      titleSwe: c.titleSwe,
+      level: levelOf(c.educationalLevelCode),
+    };
+  }
+  return { courses, refs };
 }

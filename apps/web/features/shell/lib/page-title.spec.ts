@@ -14,6 +14,7 @@ const ROUTES_INSIDE_THE_SHELL = [
   "/search",
   "/saved",
   "/taken",
+  "/plan",
   "/collections",
   "/profile",
   "/about",
@@ -35,6 +36,7 @@ describe("pageTitleFor", () => {
     expect(pageTitleFor("/about")).toBe("About");
     expect(pageTitleFor("/contact")).toBe("Contact");
     expect(pageTitleFor("/collections")).toBe("Collections");
+    expect(pageTitleFor("/plan")).toBe("Study plan");
   });
 
   /**

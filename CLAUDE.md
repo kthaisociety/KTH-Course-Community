@@ -12,6 +12,7 @@ Bun workspace monorepo (`workspaces: ["apps/*"]`). The only app is `apps/web`: N
 - Lint / format: `bun run lint` / `bun run format` (Biome)
 - DB: `bun run db:push` / `bun run db:generate`
 - Ingest: `bun run ingest` (optional `--test`)
+- Programme syllabi for the study plan: `bun run ingest:programmes` (optional `--cache <dir>`; commit `server/programme/data/`)
 - Backfill earned personalization tiers: `bun run backfill:tiers` (idempotent; only ever raises)
 - Backfill missing graph nodes: `bun run backfill:placements` (idempotent; places app users who have none)
 
@@ -42,7 +43,9 @@ apps/web/
     db/                     # schema, client, drizzle-kit, migrations
     auth.ts                 # Better Auth
     ai.ts                   # embeddings (search/ingest)
-    ingest/                 # KOPPS → Neon
+    ingest/                 # KOPPS → Neon; programmes/ = kth.se syllabi → server/programme/data
+    programme/              # programme syllabi served from committed JSON (ADR 0011)
+    text/                   # domain-neutral HTML → text
     email/                  # SES magic-link mail
     http/                   # request-shaping helpers shared by app/api routes
 ```

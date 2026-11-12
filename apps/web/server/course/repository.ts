@@ -123,3 +123,28 @@ export async function findExamDetails(courseCode: string) {
     .from(courseExaminations)
     .where(eq(courseExaminations.courseCode, courseCode));
 }
+
+/** Rounds with what the study plan draws: periods, pace, and who may take them. */
+export async function findPlanRoundsByCodes(codes: string[]) {
+  return db
+    .select({
+      courseCode: courseRounds.courseCode,
+      startTerm: courseRounds.startTerm,
+      studyPace: courseRounds.studyPace,
+      formattedPeriodsAndCredits: courseRounds.formattedPeriodsAndCredits,
+      isVU: courseRounds.isVU,
+    })
+    .from(courseRounds)
+    .where(inArray(courseRounds.courseCode, codes));
+}
+
+/** Every catalogue code with its Swedish title and level: ranges and same-course matching need all of them. */
+export async function findCatalogueIndex() {
+  return db
+    .select({
+      code: courses.code,
+      titleSwe: courses.titleSwe,
+      level: courses.educationalLevelCode,
+    })
+    .from(courses);
+}

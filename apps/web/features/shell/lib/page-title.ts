@@ -42,6 +42,7 @@ const TITLES: ReadonlyArray<readonly [string, string]> = [
   ["/taken", "Taken courses"],
   // Routes the design does not key, titled after the page's own heading.
   ["/collections", "Collections"],
+  ["/plan", "Study plan"],
   ["/contact", "Contact"],
   ["/about", "About"],
 ];

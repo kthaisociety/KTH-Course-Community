@@ -651,10 +651,13 @@
    utility renders the browser's default bar, which the artboards never draw. If
    you add `overflow-auto` anywhere, add one of these with it.
 
-   `--border` is mapped onto `--cc-rule2`, so this tracks the theme on its own. */
+   The thumb is a light tint of `--cc-brand`, the rail's blue, so it reads as part
+   of the app rather than as grey OS chrome, and it follows the theme on its own:
+   the dark theme's brand is a pale blue, so the same mix stays light there. */
 @utility scrollbar-subtle {
   scrollbar-width: thin;
-  scrollbar-color: var(--border) transparent;
+  scrollbar-color: color-mix(in oklab, var(--cc-brand) 28%, transparent)
+    transparent;
 
   &::-webkit-scrollbar {
     width: 6px;
@@ -664,11 +667,11 @@
     background: transparent;
   }
   &::-webkit-scrollbar-thumb {
-    background-color: color-mix(in oklab, var(--border) 70%, transparent);
+    background-color: color-mix(in oklab, var(--cc-brand) 28%, transparent);
     border-radius: 9999px;
   }
   &::-webkit-scrollbar-thumb:hover {
-    background-color: var(--border);
+    background-color: color-mix(in oklab, var(--cc-brand) 45%, transparent);
   }
 }
 

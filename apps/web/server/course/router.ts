@@ -1,7 +1,12 @@
 import { z } from "zod";
 import { NotFoundError } from "@/server/errors";
 import { baseProcedure, createTRPCRouter } from "../api/trpc";
-import { getDetails, getStatsByCodes, getSummary } from "./service";
+import {
+  getDetails,
+  getPlanFacts,
+  getStatsByCodes,
+  getSummary,
+} from "./service";
 
 /**
  * An Explore page asks for its whole result set at once, so the cap is well
@@ -9,6 +14,9 @@ import { getDetails, getStatsByCodes, getSummary } from "./service";
  * make the database group over.
  */
 const MAX_STATS_BATCH = 200;
+
+/** A five-year plan holds about seventy courses, plus its syllabus's electives; bounded all the same. */
+const MAX_PLAN_FACTS = 400;
 
 export const courseRouter = createTRPCRouter({
   summary: baseProcedure
@@ -36,6 +44,20 @@ export const courseRouter = createTRPCRouter({
     .query(async ({ input }) =>
       Object.fromEntries(await getStatsByCodes(input.courseCodes)),
     ),
+  /**
+   * The study plan's course facts: rounds with credits per period, level, and
+   * prerequisites read from eligibility. Keyed by code; codes not in the
+   * catalogue are simply absent.
+   */
+  planFacts: baseProcedure
+    .input(
+      z.object({
+        courseCodes: z
+          .array(z.string().regex(/^[A-Z0-9]{5,7}$/))
+          .max(MAX_PLAN_FACTS),
+      }),
+    )
+    .query(({ input }) => getPlanFacts([...new Set(input.courseCodes)])),
   details: baseProcedure
     .input(z.object({ courseCode: z.string().min(1) }))
     .query(async ({ input }) => {

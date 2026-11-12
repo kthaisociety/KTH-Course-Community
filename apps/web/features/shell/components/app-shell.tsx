@@ -80,7 +80,8 @@ export function AppShell({ children }: { children: ReactNode }) {
 
         <main
           className={
-            pathname === "/search"
+            // These pages own their scroll: their panes scroll, the page doesn't.
+            pathname === "/search" || pathname === "/plan"
               ? "min-h-0 flex-1 overflow-hidden"
               : "scrollbar-subtle min-h-0 flex-1 overflow-y-auto overflow-x-hidden"
           }
