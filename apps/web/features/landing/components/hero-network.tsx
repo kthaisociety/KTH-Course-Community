@@ -15,13 +15,16 @@ import {
   syncField,
 } from "../lib/hero-signals";
 import {
+  blendViews,
   FALLBACK_NODE_COLOR_VAR,
   type GraphWindowView,
   NO_SIGNAL,
   NODE_COLOR_VARS,
   NODE_RADIUS,
+  projectCommunityStage,
   projectGraphWindow,
   type ScreenNode,
+  type StageInsets,
   VISIBLE,
 } from "../lib/neighbourhood-view";
 
@@ -38,12 +41,20 @@ import {
  *   own node;
  * - a visitor's is centred on the community origin, with no "You".
  *
- * **Find your dot** no longer swaps anything. The graph is already on screen;
- * the flow only labels the viewer's own node, and the reveal is the pulse and
- * the label appearing. The graph does not rearrange itself for it — the
- * artboard's words at :814, *"the graph never moves: the dot grows and pulses
- * in place"* — so the labelled node is also the one node that stops drifting
- * while the label is up.
+ * **Find your dot** swaps nothing and rearranges nothing. The graph is already
+ * on screen; the flow labels the viewer's own node, and the reveal is the pulse
+ * and the label appearing, on the one node that stops drifting while the label
+ * is up.
+ *
+ * What does move is the **camera**. Behind the copy the graph only has the
+ * canvas the headline leaves over, so the **community view** — `stage` — has
+ * the copy step aside and draws the same window centred and scaled to fit. The
+ * artboard has no such view: its words at :814 are *"the graph never moves: the
+ * dot grows and pulses in place"*, written for a synthetic field that fills the
+ * frame by construction. A real community does not, and a member whose dot was
+ * above the canvas could be told it was theirs without being shown it. Every
+ * node keeps its place relative to every other; only where the whole picture
+ * sits, and how big, changes.
  *
  * **The graph is alive, and that is a decision rather than a default.** Nodes
  * drift inside a ±5px box around where the projection put them, signals travel
@@ -117,6 +128,36 @@ export function seamTaperDepth(height: number) {
   return Math.min(SEAM_TAPER, height / 4);
 }
 
+/**
+ * Canvas the **community view** keeps free of the fitted community, in px.
+ *
+ * The top is the seam taper's depth, so a community that fits is drawn below
+ * the band where lines dissolve and loses none of them. The bottom is the
+ * caption and the way back, which `landing.tsx` lays over the canvas there.
+ */
+export const STAGE_INSETS: StageInsets = { top: SEAM_TAPER, bottom: 112 };
+
+/**
+ * How long the camera takes between the hero and the community view, in
+ * seconds. Long enough to read as one move — the community pulling back into
+ * view — and short enough that nobody waits for it.
+ */
+const STAGE_SECONDS = 0.9;
+
+/**
+ * How far into the move the community lights up, as a fraction.
+ *
+ * A burst from the reader's own node — or the community's first, for a visitor
+ * — sent while the camera is still settling, so the lines are seen to carry
+ * something the moment they are all on screen.
+ */
+const STAGE_ARRIVAL = 0.55;
+
+/** Slow out of the hero, slow into the community view. */
+function easeInOut(t: number) {
+  return t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2;
+}
+
 /** How much fainter than its node a standing-still signal mark is drawn. */
 const SIGNAL_ALPHA = 0.5;
 
@@ -165,6 +206,16 @@ type Scene = {
   /** The hero is on screen. Assumed true where there is no IntersectionObserver. */
   onScreen: boolean;
   window: GraphWindow | null;
+  /** The window behind the hero copy, and for the community view. */
+  rest: GraphWindowView | null;
+  staged: GraphWindowView | null;
+  /** The measured copy, which only the hero's own projection keeps clear of. */
+  keepOut: Rect[];
+  /** Whether the community view is what is being shown, or headed for. */
+  stage: boolean;
+  /** 0 behind the copy, 1 in the community view, and the camera's progress between. */
+  blend: number;
+  /** What is on the canvas now: `rest`, `staged`, or part of the way between. */
   view: GraphWindowView | null;
   /** Drift and signals: the only mutable state on this canvas. */
   field: ReturnType<typeof createField>;
@@ -276,18 +327,68 @@ function nodeColour(palette: Palette, colorVar: string) {
  */
 function refreshView(scene: Scene) {
   const measured = measureRects(scene.root, scene.canvas);
-  const keepOut = measured.length ? measured : fallbackRects(scene.w, scene.h);
-  scene.view = scene.window
+  scene.keepOut = measured.length ? measured : fallbackRects(scene.w, scene.h);
+  scene.rest = scene.window
     ? projectGraphWindow({
         window: scene.window,
         width: scene.w,
         height: scene.h,
-        keepOut,
+        keepOut: scene.keepOut,
       })
     : null;
-  syncField(scene.field, scene.view, keepOut, scene.w);
+  scene.staged = scene.window
+    ? projectCommunityStage({
+        window: scene.window,
+        width: scene.w,
+        height: scene.h,
+        insets: STAGE_INSETS,
+      })
+    : null;
+  showBlend(scene);
   scene.viewerId =
     scene.field.nodes.find((node) => node.node.isViewer)?.node.id ?? null;
+}
+
+/**
+ * Point the field at wherever the camera is between the hero and the community
+ * view.
+ *
+ * The keep-out goes with it. In the community view the copy has stepped aside
+ * and there is nothing to keep clear of; it is dropped as soon as the camera
+ * leaves the hero and restored only once it is all the way back, because
+ * `landing.tsx` fades the copy out first and in last.
+ */
+function showBlend(scene: Scene) {
+  scene.view =
+    scene.rest && scene.staged
+      ? blendViews(scene.rest, scene.staged, easeInOut(scene.blend))
+      : null;
+  syncField(
+    scene.field,
+    scene.view,
+    scene.blend > 0 ? [] : scene.keepOut,
+    scene.w,
+  );
+}
+
+/**
+ * Move the camera one frame towards wherever it is headed. True if it moved.
+ */
+function stepBlend(scene: Scene, dt: number): boolean {
+  const target = scene.stage ? 1 : 0;
+  if (scene.blend === target) return false;
+  const before = scene.blend;
+  const step = dt / STAGE_SECONDS;
+  scene.blend = scene.stage
+    ? Math.min(1, before + step)
+    : Math.max(0, before - step);
+  if (scene.stage && before < STAGE_ARRIVAL && scene.blend >= STAGE_ARRIVAL) {
+    const from =
+      scene.field.nodes.find((node) => node.node.isViewer) ??
+      scene.field.nodes[0];
+    if (from) burstAt(scene.field, from);
+  }
+  return true;
 }
 
 function resize(scene: Scene) {
@@ -788,6 +889,13 @@ type Props = {
    */
   labelled: boolean;
   /**
+   * Show the **community view**: the copy has stepped aside, so the whole
+   * community is drawn centred and zoomed to fit rather than behind a headline.
+   * The camera travels between the two; where no frame loop runs — reduced
+   * motion above all — it cuts.
+   */
+  stage?: boolean;
+  /**
    * The landing is leaving for Explore.
    *
    * Competing motion is the biggest tell in a shared-element transition, so for
@@ -802,6 +910,7 @@ type Props = {
 export function HeroNetwork({
   window: graphWindow,
   labelled,
+  stage = false,
   paused = false,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -830,6 +939,11 @@ export function HeroNetwork({
       paused: false,
       onScreen: true,
       window: null,
+      rest: null,
+      staged: null,
+      keepOut: [],
+      stage: false,
+      blend: 0,
       view: null,
       field: createField(),
       viewerId: null,
@@ -859,6 +973,7 @@ export function HeroNetwork({
       const dt = Math.max(0, Math.min(0.05, (ts - scene.last) / 1000));
       scene.last = ts;
       if (scene.labelled) scene.pulse += dt;
+      if (stepBlend(scene, dt)) showBlend(scene);
       advanceField(scene.field, dt, {
         holdId: scene.labelled ? scene.viewerId : null,
       });
@@ -1024,6 +1139,21 @@ export function HeroNetwork({
     if (paused) scene.stopLoop?.();
     else scene.startLoop?.();
   }, [paused]);
+
+  useEffect(() => {
+    const scene = sceneRef.current;
+    if (!scene) return;
+    scene.stage = stage;
+    scene.startLoop?.();
+    // No loop to carry the camera there — reduced motion, a hidden tab, a hero
+    // scrolled away — so it is simply there. A move nobody is watching, or has
+    // asked not to watch, is not worth leaving the canvas on the wrong picture.
+    if (!scene.raf) {
+      scene.blend = stage ? 1 : 0;
+      showBlend(scene);
+      draw(scene);
+    }
+  }, [stage]);
 
   useEffect(() => {
     const scene = sceneRef.current;

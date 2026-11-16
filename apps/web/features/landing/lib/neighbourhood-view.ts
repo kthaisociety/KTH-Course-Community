@@ -15,9 +15,12 @@
  * screenY = (node.y - centre.y) * scale + anchorY
  * ```
  *
- * The **scale** is a constant, `VIEW_SCALE`, and not a function of anything —
- * fit it to the viewer's own neighbourhood extent and two members standing in
- * the same region of the graph see the same two dots at different zooms.
+ * Behind the copy the **scale** is a constant, `VIEW_SCALE`, and not a function
+ * of anything — fit it to the viewer's own neighbourhood extent and two members
+ * standing in the same region of the graph see the same two dots at different
+ * zooms. The **community view** (`projectCommunityStage`) is the one place it
+ * varies, and there it reads only how far the community reaches, which is the
+ * same for everybody looking at it.
  *
  * The **anchor** is provably not the same kind of thing:
  *
@@ -79,6 +82,7 @@ import {
   type NodeStyle,
   UNCONFIGURED,
 } from "@/server/graph/appearance";
+import { MAX_WINDOW_NODES } from "@/server/graph/window";
 import {
   clearAt,
   distToContent,
@@ -233,8 +237,8 @@ export type ScreenEdge = {
  * `scale` and `centre` are the projection's own parameters rather than
  * something the canvas reads — it draws `screenX`/`screenY` and nothing else.
  * They are here because they are what makes the result checkable: a test can
- * ask where the anchor landed and whether the zoom is still a constant, which
- * are the two properties this file exists to hold.
+ * ask where the anchor landed and what the zoom is, which are the two things a
+ * camera decides.
  */
 export type GraphWindowView = {
   scale: number;
@@ -275,6 +279,17 @@ export type GraphWindowView = {
  * the community being small, drawn honestly.
  */
 export const VIEW_SCALE = 0.72;
+
+/**
+ * The furthest the **community view** zooms out.
+ *
+ * A third of the natural zoom, so neighbours never sit closer than about 48px —
+ * six dot-diameters, which still reads as a network rather than as a smudge.
+ * Past this the community is simply bigger than the frame and is cropped by it,
+ * the way the artboard draws it. The floor multiplies the members a frame can
+ * hold by nine before that happens.
+ */
+export const MIN_STAGE_SCALE = VIEW_SCALE / 3;
 
 /** Drawn radius of an ordinary node, in px. A dot is cleared by its edge. */
 export const NODE_RADIUS = 4;
@@ -398,12 +413,13 @@ export const VIEWER_MARGIN = 14;
  */
 function viewerOffset(
   input: GraphWindowInput,
+  scale: number,
 ): { x: number; y: number } | null {
   const me = input.nodes.find((node) => node.isViewer);
   if (!me) return null;
   return {
-    x: (me.x - input.centre.x) * VIEW_SCALE,
-    y: (me.y - input.centre.y) * VIEW_SCALE,
+    x: (me.x - input.centre.x) * scale,
+    y: (me.y - input.centre.y) * scale,
   };
 }
 
@@ -462,8 +478,13 @@ function nudge(at: number, extent: number): number {
   return 0;
 }
 
+/** Where the middle of the community sits on the canvas, and how big it is. */
+export type Camera = { anchor: { x: number; y: number }; scale: number };
+
 /**
- * Project a bounded window onto a canvas of `width` by `height`.
+ * Project a bounded window onto a canvas of `width` by `height`, **behind the
+ * hero copy**: at the natural zoom, anchored clear of the headline, with every
+ * node walked out from under it.
  *
  * The result is pure derivation: `input` is not mutated, and nothing computed
  * here has anywhere to go but the canvas.
@@ -475,12 +496,171 @@ export function projectGraphWindow(args: {
   keepOut: Rect[];
 }): GraphWindowView {
   const { window: input, width, height, keepOut } = args;
+  return placeWindow(input, width, height, keepOut, {
+    anchor: pickViewportCentre(width, height, keepOut),
+    scale: VIEW_SCALE,
+  });
+}
+
+/**
+ * How far the community reaches from the window's centre, in world units.
+ *
+ * **The same number for a member and a visitor**, which is the only reason a
+ * scale is allowed to depend on it. Both are served the nodes nearest the
+ * origin; a member out past `MAX_WINDOW_NODES` additionally has their own node
+ * appended, and that one node is theirs alone. It is by construction the
+ * farthest in the response, so measuring the nearest `MAX_WINDOW_NODES` leaves
+ * it out and measures exactly what a visitor is shown. `fitViewerInFrame` is
+ * what brings that member's dot on screen, as it always was.
+ */
+export function communityExtent(input: GraphWindowInput): number {
+  const distances = input.nodes
+    .map((node) => Math.hypot(node.x - input.centre.x, node.y - input.centre.y))
+    .sort((a, b) => a - b)
+    .slice(0, MAX_WINDOW_NODES);
+  return distances.at(-1) ?? 0;
+}
+
+/** Canvas the community view keeps free: the header seam above, its caption below. */
+export type StageInsets = { top: number; bottom: number };
+
+/**
+ * The camera for the **community view**: the whole community, centred, as big
+ * as the frame allows.
+ *
+ * Behind the copy the graph can only have what the headline leaves over, and a
+ * fifteen-member community is drawn as nine dots with the rest above the
+ * canvas. The community view is the copy stepping aside, so there is no
+ * keep-out to plan around and the camera can do the obvious thing: put the
+ * origin in the middle and zoom until the farthest member is on the canvas.
+ *
+ * - A community that fits at the natural zoom is drawn at it — three members
+ *   are not blown up to fill a hero.
+ * - A bigger one is zoomed out until it fits, as far as `MIN_STAGE_SCALE`.
+ * - Past that it is cropped by the frame, still centred.
+ *
+ * Every step is continuous in `extent`, so one more member moves the picture by
+ * a hair. And it reads the frame and the community's reach only — **no viewer**.
+ */
+export function stageCamera(args: {
+  width: number;
+  height: number;
+  /** `communityExtent`, in world units. */
+  extent: number;
+  insets: StageInsets;
+}): Camera {
+  const { width, height, extent, insets } = args;
+  const top = insets.top;
+  const bottom = Math.max(top, height - insets.bottom);
+  const room = Math.max(
+    0,
+    Math.min(width / 2 - VIEWER_MARGIN, (bottom - top) / 2),
+  );
+  return {
+    anchor: { x: width / 2, y: (top + bottom) / 2 },
+    scale:
+      extent > 0
+        ? Math.min(VIEW_SCALE, Math.max(MIN_STAGE_SCALE, room / extent))
+        : VIEW_SCALE,
+  };
+}
+
+/**
+ * Project a bounded window for the **community view**: no copy to clear, so no
+ * node is pushed and none is faded.
+ */
+export function projectCommunityStage(args: {
+  window: GraphWindowInput;
+  width: number;
+  height: number;
+  insets: StageInsets;
+}): GraphWindowView {
+  const { window: input, width, height, insets } = args;
+  return placeWindow(
+    input,
+    width,
+    height,
+    [],
+    stageCamera({ width, height, extent: communityExtent(input), insets }),
+  );
+}
+
+/**
+ * One picture part of the way between two projections of the **same window**.
+ *
+ * Entering and leaving the community view moves every node from one camera's
+ * answer to the other's. Interpolating the finished pictures, rather than the
+ * cameras, is what keeps that honest: behind the copy a node may have been
+ * pushed, which is not something a camera halfway between two cameras would
+ * reproduce, and each node simply travels in a straight line from where it was
+ * drawn to where it will be.
+ *
+ * `t` is 0 at `from` and 1 at `to`. Two views that are not the same nodes in
+ * the same order have nothing to interpolate, and answer `to`.
+ */
+export function blendViews(
+  from: GraphWindowView,
+  to: GraphWindowView,
+  t: number,
+): GraphWindowView {
+  if (t <= 0) return from;
+  if (t >= 1) return to;
+  const comparable =
+    from.nodes.length === to.nodes.length &&
+    from.edges.length === to.edges.length &&
+    from.nodes.every((node, index) => node.id === to.nodes[index].id);
+  if (!comparable) return to;
+
+  const mix = (a: number, b: number) => a + (b - a) * t;
+  const byId = new Map<string, ScreenNode>();
+  const nodes = to.nodes.map((target, index) => {
+    const source = from.nodes[index];
+    const node: ScreenNode = {
+      ...target,
+      screenX: mix(source.screenX, target.screenX),
+      screenY: mix(source.screenY, target.screenY),
+      clearance: mix(source.clearance, target.clearance),
+    };
+    byId.set(node.id, node);
+    return node;
+  });
+  const edges: ScreenEdge[] = [];
+  to.edges.forEach((target, index) => {
+    const a = byId.get(target.from.id);
+    const b = byId.get(target.to.id);
+    if (!a || !b) return;
+    edges.push({
+      from: a,
+      to: b,
+      clearance: mix(from.edges[index].clearance, target.clearance),
+    });
+  });
+  return {
+    scale: mix(from.scale, to.scale),
+    centre: {
+      x: mix(from.centre.x, to.centre.x),
+      y: mix(from.centre.y, to.centre.y),
+    },
+    nodes,
+    edges,
+  };
+}
+
+/** The projection proper: one window, one camera, one keep-out. */
+function placeWindow(
+  input: GraphWindowInput,
+  width: number,
+  height: number,
+  keepOut: Rect[],
+  camera: Camera,
+): GraphWindowView {
+  const { scale } = camera;
   // Where the camera would sit for a visitor, then the smallest nudge that
   // brings the viewer's own dot onto the canvas. For most people the second
   // step changes nothing and their page is the visitor's page exactly.
   const centre = fitViewerInFrame({
-    anchor: pickViewportCentre(width, height, keepOut),
-    viewer: viewerOffset(input),
+    anchor: camera.anchor,
+    viewer: viewerOffset(input, scale),
     width,
     height,
   });
@@ -488,8 +668,8 @@ export function projectGraphWindow(args: {
   const byId = new Map<string, ScreenNode>();
   const nodes = input.nodes.map((node) => {
     // The projection proper. Everything after this line is keep-out.
-    const projectedX = (node.x - input.centre.x) * VIEW_SCALE + centre.x;
-    const projectedY = (node.y - input.centre.y) * VIEW_SCALE + centre.y;
+    const projectedX = (node.x - input.centre.x) * scale + centre.x;
+    const projectedY = (node.y - input.centre.y) * scale + centre.y;
     // The artboard would have rejected this placement and drawn somebody else
     // instead. A window on the real graph has no such option — every node here
     // is a person — so it is walked out of the copy rather than dropped.
@@ -551,5 +731,5 @@ export function projectGraphWindow(args: {
     });
   }
 
-  return { scale: VIEW_SCALE, centre, nodes, edges };
+  return { scale, centre, nodes, edges };
 }

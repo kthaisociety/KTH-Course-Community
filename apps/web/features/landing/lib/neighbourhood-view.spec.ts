@@ -3,17 +3,23 @@ import { describe, expect, it } from "vitest";
 // golden-angle spacing `computeWorldPosition` produces survives the keep-out,
 // so a synthetic field would be testing the wrong spiral.
 import { computeWorldPosition } from "@/server/graph/placement";
+import { MAX_WINDOW_NODES } from "@/server/graph/window";
 import { clearAt, fallbackRects, MAX_PUSH, type Rect } from "./hero-keepout";
 import {
+  blendViews,
+  communityExtent,
   DEFAULT_NODE_COLOR_VAR,
   FALLBACK_NODE_COLOR_VAR,
   fitViewerInFrame,
   type GraphWindowInput,
+  MIN_STAGE_SCALE,
   NODE_COLOR_VARS,
   NODE_RADIUS,
   nodeColorVar,
   pickViewportCentre,
+  projectCommunityStage,
   projectGraphWindow,
+  stageCamera,
   VIEW_SCALE,
   VIEWER_MARGIN,
 } from "./neighbourhood-view";
@@ -87,6 +93,14 @@ function projectedOnto(
     x: (node.x - windowCentre.x) * VIEW_SCALE + view.centre.x,
     y: (node.y - windowCentre.y) * VIEW_SCALE + view.centre.y,
   };
+}
+
+/** The real community: `n` members where placement actually puts them. */
+function sunflower(n: number) {
+  return Array.from({ length: n }, (_, i) => {
+    const at = computeWorldPosition(`user-${i}`, i);
+    return { id: `n${i}`, x: at.x, y: at.y };
+  });
 }
 
 describe("nodeColorVar", () => {
@@ -743,13 +757,6 @@ describe("projectGraphWindow", () => {
  * what says so from the outside.
  */
 describe("nodes are drawn clear of each other, not only of the copy", () => {
-  function sunflower(n: number) {
-    return Array.from({ length: n }, (_, i) => {
-      const at = computeWorldPosition(`user-${i}`, i);
-      return { id: `n${i}`, x: at.x, y: at.y };
-    });
-  }
-
   function closestPairOnScreen(nodes: { screenX: number; screenY: number }[]) {
     let min = Number.POSITIVE_INFINITY;
     for (let i = 0; i < nodes.length; i++) {
@@ -812,5 +819,259 @@ describe("nodes are drawn clear of each other, not only of the copy", () => {
       return Math.hypot(node.screenX - raw.x, node.screenY - raw.y) > 0.01;
     });
     expect(moved.length).toBeGreaterThan(0);
+  });
+});
+
+/**
+ * The **community view**: the copy steps aside, so the whole community is drawn
+ * centred and zoomed to fit instead of in whatever the headline leaves over.
+ */
+describe("the community view", () => {
+  const INSETS = { top: 64, bottom: 112 };
+  const stage = (input: GraphWindowInput) =>
+    projectCommunityStage({
+      window: input,
+      width: WIDTH,
+      height: HEIGHT,
+      insets: INSETS,
+    });
+  const camera = (extent: number) =>
+    stageCamera({ width: WIDTH, height: HEIGHT, extent, insets: INSETS });
+  /** Half the height the insets leave, which is the room on this frame. */
+  const ROOM = (HEIGHT - INSETS.top - INSETS.bottom) / 2;
+
+  describe("communityExtent", () => {
+    it("is how far the farthest member is from the window's centre", () => {
+      const input = graphWindow({ x: 100, y: 100 }, [
+        { id: "near", x: 100, y: 130 },
+        { id: "far", x: 400, y: 500 },
+      ]);
+      expect(communityExtent(input)).toBe(500);
+    });
+
+    it("is nothing for an empty community or one member at the origin", () => {
+      expect(communityExtent(graphWindow({ x: 0, y: 0 }, []))).toBe(0);
+      expect(
+        communityExtent(graphWindow({ x: 0, y: 0 }, [{ id: "a", x: 0, y: 0 }])),
+      ).toBe(0);
+    });
+
+    /**
+     * A member past the window's bound has their own node appended to it, and
+     * a visitor's window has no such node. If that one node counted, the member
+     * would see the whole community drawn smaller than everybody else does.
+     */
+    it("does not count the node appended for a member past the bound", () => {
+      const community = sunflower(MAX_WINDOW_NODES);
+      const visitor = graphWindow({ x: 0, y: 0 }, community);
+      const member = graphWindow({ x: 0, y: 0 }, [
+        ...community,
+        { id: "me", x: 9000, y: -4000, isViewer: true },
+      ]);
+      expect(communityExtent(member)).toBe(communityExtent(visitor));
+    });
+
+    // Inside the bound a member is part of what everybody is shown, so the
+    // newest, outermost member counts like anybody else.
+    it("counts a member inside the bound, even the outermost one", () => {
+      const community = sunflower(20);
+      const asVisitor = graphWindow({ x: 0, y: 0 }, community);
+      const asNewest = graphWindow(
+        { x: 0, y: 0 },
+        community.map((node, i) => ({ ...node, isViewer: i === 19 })),
+      );
+      expect(communityExtent(asNewest)).toBe(communityExtent(asVisitor));
+    });
+  });
+
+  describe("stageCamera", () => {
+    it("centres the community between the header seam and the caption", () => {
+      expect(camera(0).anchor).toEqual({
+        x: WIDTH / 2,
+        y: (INSETS.top + HEIGHT - INSETS.bottom) / 2,
+      });
+    });
+
+    // Three members are not blown up to fill a hero.
+    it("draws a small community at the natural zoom, never larger", () => {
+      expect(camera(0).scale).toBe(VIEW_SCALE);
+      expect(camera((ROOM / VIEW_SCALE) * 0.5).scale).toBe(VIEW_SCALE);
+    });
+
+    it("zooms out exactly far enough to fit a bigger one", () => {
+      const extent = (ROOM / VIEW_SCALE) * 2;
+      const { scale } = camera(extent);
+      expect(scale).toBeLessThan(VIEW_SCALE);
+      expect(scale).toBeGreaterThan(MIN_STAGE_SCALE);
+      expect(extent * scale).toBeCloseTo(ROOM, 9);
+    });
+
+    it("stops at the floor, and crops a community bigger than that", () => {
+      expect(camera(50_000).scale).toBe(MIN_STAGE_SCALE);
+    });
+
+    it("is limited by the narrower of the frame's two dimensions", () => {
+      const tall = stageCamera({
+        width: 320,
+        height: 900,
+        extent: 5000,
+        insets: { top: 0, bottom: 0 },
+      });
+      const fitted = stageCamera({
+        width: 320,
+        height: 900,
+        extent: 400,
+        insets: { top: 0, bottom: 0 },
+      });
+      expect(tall.scale).toBe(MIN_STAGE_SCALE);
+      expect(400 * fitted.scale).toBeCloseTo(320 / 2 - VIEWER_MARGIN, 9);
+    });
+
+    // One more member must never make the picture jump.
+    it("moves by a hair when the community grows by a hair", () => {
+      let previous = camera(0);
+      for (let extent = 1; extent <= 4000; extent += 1) {
+        const next = camera(extent);
+        expect(previous.scale - next.scale).toBeGreaterThanOrEqual(0);
+        expect(previous.scale - next.scale).toBeLessThan(0.01);
+        previous = next;
+      }
+    });
+
+    it("does not go negative on a frame its insets cover entirely", () => {
+      const { scale } = stageCamera({
+        width: 320,
+        height: 100,
+        extent: 300,
+        insets: INSETS,
+      });
+      expect(scale).toBe(MIN_STAGE_SCALE);
+    });
+  });
+
+  describe("projectCommunityStage", () => {
+    /**
+     * What the view is for. Behind the copy, fifteen members were drawn as nine
+     * dots with the rest above the canvas; here every one of them is on it.
+     */
+    it("shows every member of a community that fits", () => {
+      for (const members of [1, 3, 8, 15, 30]) {
+        const view = stage(graphWindow({ x: 0, y: 0 }, sunflower(members)));
+        expect(view.nodes).toHaveLength(members);
+        for (const node of view.nodes) {
+          expect(node.clearance).toBe(1);
+          expect(node.screenX).toBeGreaterThanOrEqual(0);
+          expect(node.screenX).toBeLessThanOrEqual(WIDTH);
+          expect(node.screenY).toBeGreaterThanOrEqual(INSETS.top - 0.01);
+          expect(node.screenY).toBeLessThanOrEqual(
+            HEIGHT - INSETS.bottom + 0.01,
+          );
+        }
+      }
+    });
+
+    // There is no copy to clear, so the picture is the projection and nothing
+    // else: no node pushed, no line faded.
+    it("moves nobody and fades nothing", () => {
+      const input = graphWindow({ x: 0, y: 0 }, sunflower(40), [
+        { fromId: "n1", toId: "n0" },
+      ]);
+      const view = stage(input);
+      for (const node of view.nodes) {
+        const world = input.nodes.find((n) => n.id === node.id);
+        if (!world) throw new Error(`${node.id} was not projected`);
+        expect(node.screenX).toBeCloseTo(world.x * view.scale + view.centre.x);
+        expect(node.screenY).toBeCloseTo(world.y * view.scale + view.centre.y);
+      }
+      expect(view.edges.every((edge) => edge.clearance === 1)).toBe(true);
+    });
+
+    it("shows a visitor and a member the same picture", () => {
+      const community = sunflower(25);
+      const visitor = stage(graphWindow({ x: 0, y: 0 }, community));
+      const member = stage(
+        graphWindow(
+          { x: 0, y: 0 },
+          community.map((node, i) => ({ ...node, isViewer: i === 7 })),
+        ),
+      );
+      expect(member.scale).toBe(visitor.scale);
+      expect(member.centre).toEqual(visitor.centre);
+      expect(member.nodes.map((node) => [node.screenX, node.screenY])).toEqual(
+        visitor.nodes.map((node) => [node.screenX, node.screenY]),
+      );
+    });
+
+    // Past the bound a member's node is appended, far outside what is framed.
+    // The camera pans the least it can to bring their dot onto the canvas.
+    it("still brings a member past the bound onto the canvas", () => {
+      const view = stage(
+        graphWindow({ x: 0, y: 0 }, [
+          ...sunflower(MAX_WINDOW_NODES),
+          { id: "me", x: 9000, y: 0, isViewer: true },
+        ]),
+      );
+      const me = view.nodes.find((node) => node.isViewer);
+      expect(me?.screenX).toBeCloseTo(WIDTH - VIEWER_MARGIN);
+    });
+  });
+
+  describe("blendViews", () => {
+    const input = graphWindow({ x: 0, y: 0 }, sunflower(12), [
+      { fromId: "n1", toId: "n0" },
+      { fromId: "n5", toId: "n2" },
+    ]);
+    const hero = project(input, BAND);
+    const community = stage(input);
+
+    it("is the picture it started from, and the one it is going to", () => {
+      expect(blendViews(hero, community, 0)).toBe(hero);
+      expect(blendViews(hero, community, 1)).toBe(community);
+    });
+
+    it("moves every node in a straight line between the two", () => {
+      const half = blendViews(hero, community, 0.5);
+      half.nodes.forEach((node, index) => {
+        expect(node.id).toBe(hero.nodes[index].id);
+        expect(node.screenX).toBeCloseTo(
+          (hero.nodes[index].screenX + community.nodes[index].screenX) / 2,
+        );
+        expect(node.screenY).toBeCloseTo(
+          (hero.nodes[index].screenY + community.nodes[index].screenY) / 2,
+        );
+      });
+      expect(half.scale).toBeCloseTo((hero.scale + community.scale) / 2);
+    });
+
+    // An edge is drawn between two node objects, so the blended edges have to
+    // join the blended nodes and not the ones either picture came with.
+    it("joins its edges to its own nodes", () => {
+      const half = blendViews(hero, community, 0.5);
+      expect(half.edges).toHaveLength(hero.edges.length);
+      for (const edge of half.edges) {
+        expect(half.nodes).toContain(edge.from);
+        expect(half.nodes).toContain(edge.to);
+      }
+    });
+
+    it("leaves both pictures as they were", () => {
+      const before = structuredClone(hero);
+      blendViews(hero, community, 0.3);
+      expect(hero).toEqual(before);
+    });
+
+    // A refetch mints new ids, so the two pictures are of different people and
+    // there is nothing to travel between.
+    it("cuts to the destination when the two are not the same nodes", () => {
+      const strangers = stage(
+        graphWindow(
+          { x: 0, y: 0 },
+          sunflower(12).map((node) => ({ ...node, id: `other-${node.id}` })),
+        ),
+      );
+      expect(blendViews(hero, strangers, 0.5)).toBe(strangers);
+      const fewer = stage(graphWindow({ x: 0, y: 0 }, sunflower(5)));
+      expect(blendViews(hero, fewer, 0.5)).toBe(fewer);
+    });
   });
 });

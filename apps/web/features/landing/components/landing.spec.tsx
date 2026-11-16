@@ -774,12 +774,17 @@ describe("Landing", () => {
       expect(usePublicWindow).toHaveBeenCalledWith(false);
     });
 
-    it("shows them their own dot once they ask", async () => {
+    // A located dot has no panel of its own. The panel used to stand in front
+    // of the graph and describe what was behind it; the community view shows it.
+    it("shows them their own dot in the community view once they ask", async () => {
       const user = userEvent.setup();
       render(<Landing />);
 
       await openFindYourDot(user);
-      expect(await screen.findByText(/this one is yours/i)).toBeInTheDocument();
+      expect(
+        await screen.findByText(/the lit dot is yours/i),
+      ).toBeInTheDocument();
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     });
   });
 
@@ -802,7 +807,9 @@ describe("Landing", () => {
       expect(
         screen.getByText(/nothing is missing on your side/i),
       ).toBeInTheDocument();
-      expect(screen.queryByText(/this one is yours/i)).not.toBeInTheDocument();
+      expect(
+        screen.queryByText(/the lit dot is yours/i),
+      ).not.toBeInTheDocument();
     });
 
     it("blames nobody and reports no failure — this is a normal state", async () => {
@@ -865,7 +872,10 @@ describe("Landing", () => {
         graphState({ data: NEIGHBOURHOOD, isSuccess: true }),
       );
       render(<Landing />);
-      expect(await screen.findByText(/this one is yours/i)).toBeInTheDocument();
+      expect(
+        await screen.findByText(/the lit dot is yours/i),
+      ).toBeInTheDocument();
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     });
 
     it("takes the outcome back out of the URL so a reload does not replay it", () => {
@@ -910,6 +920,91 @@ describe("Landing", () => {
     expect(
       header().queryByRole("button", { name: /log out/i }),
     ).not.toBeInTheDocument();
+  });
+
+  /**
+   * The copy steps aside and the hero shows the whole community. Behind the
+   * headline the graph only ever had what the copy left over.
+   */
+  describe("the community view", () => {
+    const enter = (user: ReturnType<typeof userEvent.setup>) =>
+      user.click(screen.getByRole("button", { name: /see the community/i }));
+    const searchField = () =>
+      screen.getByLabelText(/search a course, code or subject/i);
+
+    it("is one click away for a visitor, with no account asked for", async () => {
+      const user = userEvent.setup();
+      render(<Landing />);
+      await enter(user);
+
+      expect(
+        await screen.findByText(/every dot is a student who has joined/i),
+      ).toBeInTheDocument();
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      // Nobody's dot is claimed for a visitor.
+      expect(
+        screen.queryByText(/the lit dot is yours/i),
+      ).not.toBeInTheDocument();
+    });
+
+    // Faded out is not gone: the search field would still take the Tab key.
+    it("takes the copy out of reach while it is showing", async () => {
+      const user = userEvent.setup();
+      render(<Landing />);
+      expect(searchField().closest("[inert]")).toBeNull();
+
+      await enter(user);
+      expect(searchField().closest("[inert]")).not.toBeNull();
+    });
+
+    it("puts the focus on the way back, and returns it on leaving", async () => {
+      const user = userEvent.setup();
+      render(<Landing />);
+      await enter(user);
+
+      const back = await screen.findByRole("button", {
+        name: /back to search/i,
+      });
+      expect(back).toHaveFocus();
+
+      await user.click(back);
+      await waitFor(() =>
+        expect(
+          screen.queryByText(/every dot is a student who has joined/i),
+        ).not.toBeInTheDocument(),
+      );
+      expect(searchField().closest("[inert]")).toBeNull();
+      expect(
+        screen.getByRole("button", { name: /see the community/i }),
+      ).toHaveFocus();
+    });
+
+    it("closes on Escape", async () => {
+      const user = userEvent.setup();
+      render(<Landing />);
+      await enter(user);
+      await screen.findByText(/every dot is a student who has joined/i);
+
+      await user.keyboard("{Escape}");
+      await waitFor(() =>
+        expect(
+          screen.queryByText(/every dot is a student who has joined/i),
+        ).not.toBeInTheDocument(),
+      );
+    });
+
+    // Somebody with no node is still asked nothing and told nothing false: the
+    // view is the community, and the panel is where their own answer lives.
+    it("leaves Find your dot's own answers in the panel", async () => {
+      const user = userEvent.setup();
+      render(<Landing />);
+      await openFindYourDot(user);
+
+      expect(await screen.findByRole("dialog")).toBeInTheDocument();
+      expect(
+        screen.queryByText(/every dot is a student who has joined/i),
+      ).not.toBeInTheDocument();
+    });
   });
 
   it("keeps the network decorative — it is never announced", () => {

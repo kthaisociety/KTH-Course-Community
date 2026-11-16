@@ -237,14 +237,27 @@ anybody, so it is nobody's neighbourhood). Not **camera** either: the window is
 which nodes a surface draws, the camera is where it puts them.
 
 **Camera**:
-Where a **graph window** lands on the canvas. Chosen from the frame and the copy
-alone, then nudged by the fewest pixels that bring the reader's own node onto
-the canvas — and by no more, because panning further starts composing a personal
-view of a shared graph. A pan translates every node equally, so it changes which
-part of the graph is on screen and never what the graph looks like. Nodes it
-leaves off the edge are still in the community; they are simply not in this
-viewport.
-_Avoid_: centre (that is the window's, in world units), zoom, focus
+Where a **graph window** lands on the canvas, and how big it is drawn. Behind
+the hero copy it is chosen from the frame and the copy alone, at one fixed
+scale; in the **community view** it is centred and scaled to fit how far the
+community reaches. Either way it never reads who is looking, so a member and a
+visitor get the same picture. It is then nudged by the fewest pixels that bring
+the reader's own node onto the canvas — and by no more, because panning further
+starts composing a personal view of a shared graph. A pan translates every node
+equally, so it changes which part of the graph is on screen and never what the
+graph looks like. Nodes it leaves off the edge are still in the community; they
+are simply not in this viewport.
+_Avoid_: centre (that is the window's, in world units), focus
+
+**Community view**:
+The landing hero with its copy stepped aside, showing the whole **graph window**
+centred and scaled to fit. Behind the headline the graph only has the canvas the
+copy leaves over; here it has the hero to itself. Anybody can open it, and
+**Find your dot** opens it for a member who has a node, with that node labelled.
+It changes the **camera** and nothing else: the same nodes, the same
+arrangement. Nothing about it is stored.
+_Avoid_: graph page, explore mode, fullscreen, stage (that is the code's name
+for the camera state, not a word for readers)
 
 **Node profile**:
 A node's appearance, stored separately from graph topology.
@@ -266,7 +279,8 @@ _Avoid_: signal type, trail, effect
 
 **Burst**:
 The fan of signals a node sends at once, along every **backbone edge** it has
-within the drawn **graph window**, because somebody clicked it. A node near the
+within the drawn **graph window**, because somebody clicked it — or, once, from
+the reader's own node as the **community view** opens. A node near the
 window's rim is attached to nodes outside it; those edges are not part of the
 window and the burst does not reach them. Every node bursts; the tier decides
 only what its signals look like, never whether they go.

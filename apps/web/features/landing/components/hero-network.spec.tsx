@@ -2,7 +2,12 @@ import { fireEvent, render } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { GraphWindow } from "../api/queries";
 import { NODE_RADIUS } from "../lib/neighbourhood-view";
-import { HeroNetwork, SEAM_TAPER, seamTaperDepth } from "./hero-network";
+import {
+  HeroNetwork,
+  SEAM_TAPER,
+  STAGE_INSETS,
+  seamTaperDepth,
+} from "./hero-network";
 
 /**
  * What the hero canvas repaints for, and what it refuses to run a loop for.
@@ -694,6 +699,97 @@ describe("HeroNetwork", () => {
       expect(recorder.erases).toHaveLength(0);
       expect(recorder.calls.arc).toBeGreaterThan(0);
       expect(recorder.ctx.globalCompositeOperation).toBe("source-over");
+    });
+  });
+
+  /**
+   * The community view: the copy has stepped aside, so the community is drawn
+   * centred and whole. The projection is `neighbourhood-view.spec.ts`'s to
+   * hold; what is held here is that the canvas actually goes there, and how.
+   */
+  describe("in the community view", () => {
+    // The scene floors a canvas at 320 by 220, which is what jsdom gets.
+    const CENTRE = {
+      x: 320 / 2,
+      y: (STAGE_INSETS.top + 220 - STAGE_INSETS.bottom) / 2,
+    };
+    /** One member, at the origin: wherever the camera puts the middle. */
+    const ALONE: GraphWindow = {
+      centre: { x: 0, y: 0 },
+      nodes: [node({ id: "first" })],
+      edges: [],
+    };
+    const lastNode = () =>
+      recorder.paths
+        .filter((path) => path.arcs.some(({ r }) => r === NODE_RADIUS))
+        .at(-1)?.arcs[0];
+
+    it("cuts straight to it for a machine that has asked for stillness", () => {
+      preferReducedMotion();
+      const { rerender } = render(
+        <HeroNetwork window={ALONE} labelled={false} />,
+      );
+      const before = lastNode();
+      rerender(<HeroNetwork window={ALONE} labelled={false} stage />);
+
+      expect(lastNode()).toMatchObject(CENTRE);
+      expect(before).not.toMatchObject(CENTRE);
+
+      // And straight back.
+      rerender(<HeroNetwork window={ALONE} labelled={false} />);
+      expect(lastNode()).toMatchObject(before ?? {});
+    });
+
+    it("travels there over several frames when motion is welcome", () => {
+      const clock = frameClock();
+      try {
+        const { rerender } = render(
+          <HeroNetwork window={ALONE} labelled={false} />,
+        );
+        clock.step();
+        const start = lastNode();
+        if (!start) throw new Error("the node was never drawn");
+        rerender(<HeroNetwork window={ALONE} labelled={false} stage />);
+
+        // Drift wanders a node up to 5px from its home, so positions are
+        // compared with that much slack.
+        const off = (at: { x: number; y: number } | undefined) =>
+          at ? Math.hypot(at.x - CENTRE.x, at.y - CENTRE.y) : Number.NaN;
+        const whole = Math.hypot(start.x - CENTRE.x, start.y - CENTRE.y);
+        expect(whole).toBeGreaterThan(30);
+
+        for (let i = 0; i < 20; i++) clock.step();
+        // Part of the way: it has left, and it has not arrived.
+        expect(off(lastNode())).toBeLessThan(whole - 8);
+        expect(off(lastNode())).toBeGreaterThan(8);
+
+        for (let i = 0; i < 60; i++) clock.step();
+        expect(off(lastNode())).toBeLessThan(8);
+      } finally {
+        clock.restore();
+      }
+    });
+
+    it("turns back from wherever it had got to", () => {
+      const clock = frameClock();
+      try {
+        const { rerender } = render(
+          <HeroNetwork window={ALONE} labelled={false} />,
+        );
+        clock.step();
+        const start = lastNode();
+        if (!start) throw new Error("the node was never drawn");
+        rerender(<HeroNetwork window={ALONE} labelled={false} stage />);
+        for (let i = 0; i < 20; i++) clock.step();
+        rerender(<HeroNetwork window={ALONE} labelled={false} />);
+        for (let i = 0; i < 80; i++) clock.step();
+
+        const end = lastNode();
+        if (!end) throw new Error("the node was never drawn");
+        expect(Math.hypot(end.x - start.x, end.y - start.y)).toBeLessThan(11);
+      } finally {
+        clock.restore();
+      }
     });
   });
 
