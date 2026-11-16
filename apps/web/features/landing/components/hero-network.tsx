@@ -98,6 +98,25 @@ const EDGE_ALPHA = 0.26;
  */
 const DIAMOND_REACH = Math.sqrt(Math.PI / 2);
 
+/**
+ * How far down from the header the seam taper reaches, in px.
+ *
+ * About the header's own 66px, so the lines fade over the same distance as the
+ * bar they would otherwise appear to run behind.
+ */
+export const SEAM_TAPER = 64;
+
+/**
+ * The taper's depth on a canvas `height` px tall.
+ *
+ * Capped at a quarter of the canvas so a very short hero keeps most of its
+ * lines; every frame the landing page actually lays out is tall enough for the
+ * full `SEAM_TAPER`.
+ */
+export function seamTaperDepth(height: number) {
+  return Math.min(SEAM_TAPER, height / 4);
+}
+
 /** How much fainter than its node a standing-still signal mark is drawn. */
 const SIGNAL_ALPHA = 0.5;
 
@@ -321,15 +340,23 @@ function draw(scene: Scene) {
   // Signals go under the nodes, so a trail never sits on top of the dot it
   // belongs to. Two passes rather than one interleaved loop, because a node
   // drawn after its own signal would still be drawn before the *next* node's.
+  //
+  // A travelling signal rides an edge, so it is drawn before the seam taper and
+  // dissolves with the line it is on. A standing mark is part of how one node
+  // looks, so it is drawn after and keeps its full strength, like the node.
+  if (!scene.reduced) {
+    for (const signal of field.signals) {
+      drawSignal(scene, palette, signal);
+    }
+  }
+
+  taperHeaderSeam(scene);
+
   if (scene.reduced) {
     for (const node of field.nodes) {
       if (node.clearance <= VISIBLE || node.node.signalStyle === NO_SIGNAL)
         continue;
       drawSignalMark(scene, palette, node);
-    }
-  } else {
-    for (const signal of field.signals) {
-      drawSignal(scene, palette, signal);
     }
   }
 
@@ -350,6 +377,51 @@ function draw(scene: Scene) {
     if (you && you.clearance > VISIBLE) drawYou(scene, palette, you);
   }
   ctx.globalAlpha = 1;
+}
+
+/**
+ * Dissolve the lines that run off the top of the canvas, where it meets the
+ * header.
+ *
+ * The hero is a crop of a bigger network on every side — the artboard says so
+ * itself, `docs/design_ref/2026-09-06/Course Community - Landing.dc.html`
+ * `layoutViz`: "edges and signals cross the edges". On three sides that reads
+ * as continuation. On the fourth the canvas ends at the header's bottom rule,
+ * and a line cut there reads as passing *behind* the navigation bar instead.
+ *
+ * So everything drawn so far — backbone edges and travelling signals — is
+ * erased along a gradient: gone at the top edge, untouched from `SEAM_TAPER`
+ * down. It is called before the nodes are drawn, and that ordering is the whole
+ * of the guarantee: **no node, standing signal mark or reveal is ever dimmed by
+ * it.** A node is somebody, and a header treatment may not decide how visible
+ * they are.
+ *
+ * This is deliberately presentation and not layout. The first attempt at the
+ * seam put a full-width strip into the per-node keep-out, which pushed upper
+ * nodes off the canvas and hid real members. Nothing here reads or moves a
+ * position: the projection, the keep-out, the camera and the hit test are all
+ * exactly what they were.
+ *
+ * Erasing rather than drawing over is what keeps it theme-proof. The canvas is
+ * transparent on `--cc-pg`, so `destination-out` leaves the page showing
+ * through; a gradient painted in the page colour would have to be re-resolved
+ * on every theme change and would still be wrong over anything else.
+ *
+ * A browser with no gradients keeps the hard crop, which is what it had.
+ */
+function taperHeaderSeam(scene: Scene) {
+  const { ctx } = scene;
+  const depth = seamTaperDepth(scene.h);
+  const gradient = ctx.createLinearGradient?.(0, 0, 0, depth);
+  if (!gradient || typeof ctx.fillRect !== "function") return;
+  // Only the alpha matters to `destination-out`; the colour is never seen.
+  gradient.addColorStop(0, "rgba(0, 0, 0, 1)");
+  gradient.addColorStop(1, "rgba(0, 0, 0, 0)");
+  ctx.globalAlpha = 1;
+  ctx.globalCompositeOperation = "destination-out";
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, scene.w, depth);
+  ctx.globalCompositeOperation = "source-over";
 }
 
 /**
