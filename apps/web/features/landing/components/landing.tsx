@@ -300,15 +300,24 @@ export function Landing() {
     setCommunity(false);
     setDotOpen(false);
     setExpired(false);
-    openerRef.current?.focus({ preventScroll: true });
-    openerRef.current = null;
   }
 
   // The view's own control takes the focus on the way in, so Enter and Space
   // lead back out and a screen reader lands on the caption's neighbour rather
   // than on copy that has just been made inert.
+  //
+  // On the way out the focus goes back to whatever opened the view — and it has
+  // to wait for this effect to do it. Both openers are inside the copy, which
+  // is `inert` until the render that leaves the view has committed, and a
+  // browser ignores `focus()` on an inert element. Asking in the click handler
+  // would be asking one render too early, and the focus would be dropped.
   useEffect(() => {
-    if (inCommunity) backRef.current?.focus({ preventScroll: true });
+    if (inCommunity) {
+      backRef.current?.focus({ preventScroll: true });
+      return;
+    }
+    openerRef.current?.focus({ preventScroll: true });
+    openerRef.current = null;
   }, [inCommunity]);
 
   useEffect(() => {
@@ -324,7 +333,14 @@ export function Landing() {
     scroller: rootRef,
     active: inCommunity,
     // A dialog, the menu or a departure owns the page; the wheel is theirs.
-    disabled: leavingFor !== null || menuOpen || authReason !== null || dotOpen,
+    // The Find your dot *panel*, that is, and not `dotOpen` alone: a member
+    // whose dot was found is in the community view with no panel showing, and
+    // scrolling down has to lead out of it like any other way in.
+    disabled:
+      leavingFor !== null ||
+      menuOpen ||
+      authReason !== null ||
+      (dotOpen && !hasNode),
     onEnter: enterCommunity,
     onLeave: leaveCommunity,
   });

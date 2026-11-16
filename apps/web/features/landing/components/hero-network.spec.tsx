@@ -1,4 +1,4 @@
-import { fireEvent, render } from "@testing-library/react";
+import { act, fireEvent, render } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { GraphWindow } from "../api/queries";
 import { NODE_RADIUS } from "../lib/neighbourhood-view";
@@ -765,6 +765,49 @@ describe("HeroNetwork", () => {
 
         for (let i = 0; i < 60; i++) clock.step();
         expect(off(lastNode())).toBeLessThan(8);
+      } finally {
+        clock.restore();
+      }
+    });
+
+    /**
+     * Stillness asked for in the middle of the move. The loop carrying the
+     * camera stops for good, so the move has to finish there and then — left
+     * part of the way back, the keep-out would still be off with the copy
+     * already returned.
+     */
+    it("finishes the move at once if stillness is asked for part-way", () => {
+      const clock = frameClock();
+      try {
+        const { rerender } = render(
+          <HeroNetwork window={ALONE} labelled={false} />,
+        );
+        clock.step();
+        rerender(<HeroNetwork window={ALONE} labelled={false} stage />);
+        for (let i = 0; i < 10; i++) clock.step();
+        const partWay = lastNode();
+        if (!partWay) throw new Error("the node was never drawn");
+        expect(
+          Math.hypot(partWay.x - CENTRE.x, partWay.y - CENTRE.y),
+        ).toBeGreaterThan(30);
+
+        // The media query the scene subscribed to at mount, now answering yes.
+        // The *last* subscription: a scene torn down and rebuilt leaves an
+        // earlier listener behind in the mock, belonging to nobody.
+        const query = vi.mocked(window.matchMedia).mock.results.at(-1)?.value;
+        const onChange = vi
+          .mocked(query.addEventListener)
+          .mock.calls.findLast(([type]: [string]) => type === "change")?.[1];
+        preferReducedMotion();
+        act(() => onChange());
+
+        // There, give or take the few pixels it had already drifted from home:
+        // stillness stops the drift where it is and does not undo it.
+        const settled = lastNode();
+        if (!settled) throw new Error("the node was never drawn");
+        expect(
+          Math.hypot(settled.x - CENTRE.x, settled.y - CENTRE.y),
+        ).toBeLessThan(8);
       } finally {
         clock.restore();
       }

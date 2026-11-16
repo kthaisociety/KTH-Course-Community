@@ -979,6 +979,29 @@ describe("Landing", () => {
       ).toHaveFocus();
     });
 
+    /**
+     * Both openers sit inside the copy, which is `inert` until the render that
+     * leaves the view has committed — and a browser ignores `focus()` on an
+     * inert element. jsdom does not, so this stands in for the browser: the
+     * opener only accepts the focus once nothing above it is inert.
+     */
+    it("returns the focus only once the copy can take it again", async () => {
+      const user = userEvent.setup();
+      render(<Landing />);
+      const opener = screen.getByRole("button", { name: /see the community/i });
+      const realFocus = opener.focus.bind(opener);
+      opener.focus = (options?: FocusOptions) => {
+        if (!opener.closest("[inert]")) realFocus(options);
+      };
+
+      await user.click(opener);
+      await user.click(
+        await screen.findByRole("button", { name: /back to search/i }),
+      );
+
+      await waitFor(() => expect(opener).toHaveFocus());
+    });
+
     it("closes on Escape", async () => {
       const user = userEvent.setup();
       render(<Landing />);

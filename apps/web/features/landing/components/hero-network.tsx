@@ -372,6 +372,21 @@ function showBlend(scene: Scene) {
 }
 
 /**
+ * Put the camera where it is headed, at once, and paint it.
+ *
+ * For whenever no frame loop is going to carry it there: reduced motion, a
+ * hidden tab, a hero scrolled away. A move nobody is watching, or has asked not
+ * to watch, is not worth leaving the canvas on the wrong picture — and a camera
+ * stranded part of the way back would leave the keep-out off with the copy
+ * already returned, drawing lines across the headline.
+ */
+function settleBlend(scene: Scene) {
+  scene.blend = scene.stage ? 1 : 0;
+  showBlend(scene);
+  draw(scene);
+}
+
+/**
  * Move the camera one frame towards wherever it is headed. True if it moved.
  */
 function stepBlend(scene: Scene, dt: number): boolean {
@@ -1103,9 +1118,15 @@ export function HeroNetwork({
         : null;
     const onMedia = () => {
       scene.reduced = prefersReducedMotion();
-      if (scene.reduced) stop();
-      else start();
-      draw(scene);
+      if (scene.reduced) {
+        stop();
+        // Asked for stillness in the middle of a camera move: the loop that was
+        // carrying it has just been stopped for good, so it finishes here.
+        settleBlend(scene);
+      } else {
+        start();
+        draw(scene);
+      }
     };
     media?.addEventListener?.("change", onMedia);
 
@@ -1145,14 +1166,7 @@ export function HeroNetwork({
     if (!scene) return;
     scene.stage = stage;
     scene.startLoop?.();
-    // No loop to carry the camera there — reduced motion, a hidden tab, a hero
-    // scrolled away — so it is simply there. A move nobody is watching, or has
-    // asked not to watch, is not worth leaving the canvas on the wrong picture.
-    if (!scene.raf) {
-      scene.blend = stage ? 1 : 0;
-      showBlend(scene);
-      draw(scene);
-    }
+    if (!scene.raf) settleBlend(scene);
   }, [stage]);
 
   useEffect(() => {
