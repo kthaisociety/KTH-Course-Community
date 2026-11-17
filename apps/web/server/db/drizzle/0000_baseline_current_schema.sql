@@ -45,7 +45,7 @@ CREATE TABLE IF NOT EXISTS "courses" (
 
 CREATE TABLE IF NOT EXISTS "course_rounds" (
   "id" serial PRIMARY KEY NOT NULL,
-  "course_code" text NOT NULL REFERENCES "public"."courses"("code") ON DELETE cascade ON UPDATE no action,
+  "course_code" text NOT NULL CONSTRAINT "course_rounds_course_code_courses_code_fk" REFERENCES "public"."courses"("code") ON DELETE cascade ON UPDATE no action,
   "start_term" integer NOT NULL,
   "study_pace" integer,
   "schema_url" text,
@@ -59,7 +59,7 @@ CREATE TABLE IF NOT EXISTS "course_rounds" (
 --> statement-breakpoint
 
 CREATE TABLE IF NOT EXISTS "course_examinations" (
-  "course_code" text NOT NULL REFERENCES "public"."courses"("code") ON DELETE cascade ON UPDATE no action,
+  "course_code" text NOT NULL CONSTRAINT "course_examinations_course_code_courses_code_fk" REFERENCES "public"."courses"("code") ON DELETE cascade ON UPDATE no action,
   "exam_code" text NOT NULL,
   "title" text,
   "credits" real,
@@ -81,15 +81,15 @@ CREATE TABLE IF NOT EXISTS "users" (
 
 CREATE TABLE IF NOT EXISTS "user_auth_identities" (
   "auth_user_id" text PRIMARY KEY NOT NULL,
-  "user_id" text NOT NULL REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action,
+  "user_id" text NOT NULL CONSTRAINT "user_auth_identities_user_id_users_id_fk" REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action,
   "created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 
 CREATE TABLE IF NOT EXISTS "reviews" (
   "id" text PRIMARY KEY NOT NULL,
-  "user_id" text NOT NULL REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action,
-  "course_code" text NOT NULL REFERENCES "public"."courses"("code") ON DELETE cascade ON UPDATE no action,
+  "user_id" text NOT NULL CONSTRAINT "reviews_user_id_users_id_fk" REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action,
+  "course_code" text NOT NULL CONSTRAINT "reviews_course_code_courses_code_fk" REFERENCES "public"."courses"("code") ON DELETE cascade ON UPDATE no action,
   "examination_methods" integer DEFAULT 0 NOT NULL,
   "theoretical_vs_applied" integer DEFAULT 0 NOT NULL,
   "workload" integer DEFAULT 0 NOT NULL,
@@ -102,8 +102,8 @@ CREATE TABLE IF NOT EXISTS "reviews" (
 --> statement-breakpoint
 
 CREATE TABLE IF NOT EXISTS "review_likes" (
-  "user_id" text NOT NULL REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action,
-  "review_id" text NOT NULL REFERENCES "public"."reviews"("id") ON DELETE cascade ON UPDATE no action,
+  "user_id" text NOT NULL CONSTRAINT "review_likes_user_id_users_id_fk" REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action,
+  "review_id" text NOT NULL CONSTRAINT "review_likes_review_id_reviews_id_fk" REFERENCES "public"."reviews"("id") ON DELETE cascade ON UPDATE no action,
   "vote_type" text NOT NULL,
   "created_at" timestamp with time zone DEFAULT now() NOT NULL,
   CONSTRAINT "review_likes_user_id_review_id_pk" PRIMARY KEY("user_id","review_id")
@@ -111,8 +111,8 @@ CREATE TABLE IF NOT EXISTS "review_likes" (
 --> statement-breakpoint
 
 CREATE TABLE IF NOT EXISTS "user_favorites" (
-  "user_id" text NOT NULL REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action,
-  "fav_course_code" text NOT NULL REFERENCES "public"."courses"("code") ON DELETE cascade ON UPDATE no action,
+  "user_id" text NOT NULL CONSTRAINT "user_favorites_user_id_users_id_fk" REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action,
+  "fav_course_code" text NOT NULL CONSTRAINT "user_favorites_fav_course_code_courses_code_fk" REFERENCES "public"."courses"("code") ON DELETE cascade ON UPDATE no action,
   "created_at" timestamp with time zone DEFAULT now() NOT NULL,
   CONSTRAINT "user_favorites_user_id_fav_course_code_pk" PRIMARY KEY("user_id","fav_course_code")
 );
