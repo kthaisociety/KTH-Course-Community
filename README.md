@@ -91,6 +91,11 @@ From the repo root:
 docker build -t your-dockerhub-username/course-compass-web:latest -f Dockerfile.web .
 ```
 
+The container can apply the committed migrations (`apps/web/server/db/drizzle/`)
+before the server starts. It does so only when `MIGRATE_ON_START=true`; otherwise
+it leaves the database alone. If a migration fails, the container exits and the
+server does not start.
+
 ## Adding a feature
 
 Product code is split by layer: **server owns data and auth, features own UI and
@@ -150,8 +155,10 @@ export const reviewsRouter = createTRPCRouter({
 
 Register it on `appRouter` in `server/api/root.ts`. If you need a new table, add
 it in `server/db/schema.ts` (or `auth-schema.ts` for identity) and run
-`bun run db:push` from the repo root. Types that both server and UI share go in
-`types/`.
+`bun run db:push` from the repo root. Commit the migration from
+`bun run db:generate` with it: a container started with `MIGRATE_ON_START=true`
+gets its schema from the committed migrations, not from `db:push`. Types that
+both server and UI share go in `types/`.
 
 ### 2. Frontend
 
@@ -240,6 +247,7 @@ Repo-local agent skills live under `.agents/skills/`.
 | `bun run format` | Biome format |
 | `bun run db:push` | Pushes the Drizzle schema to Neon |
 | `bun run db:generate` | Generates Drizzle migrations |
+| `bun run db:migrate` | Applies the committed migrations |
 | `bun run ingest` | Ingests KTH courses from www.kth.se into Neon |
 | `bun run add:web` | Adds a dependency to the web workspace |
 | `bun run rm:web` | Removes a dependency from the web workspace |
