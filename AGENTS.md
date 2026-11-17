@@ -11,6 +11,7 @@ Bun workspace monorepo (`workspaces: ["apps/*"]`). The only app is `apps/web`: N
 - Test: `bun run test:web` (Vitest, `apps/web/server/**/*.spec.ts`)
 - Lint / format: `bun run lint` / `bun run format` (Biome)
 - DB: `bun run db:push` / `bun run db:generate`
+- Container start: `apps/web/scripts/migrate-on-start.ts` applies the committed migrations before the server, only when `MIGRATE_ON_START=true` (see `Dockerfile.web`)
 - Ingest: `bun run ingest` (optional `--test`)
 - Programme syllabi for the study plan: `bun run ingest:programmes` (optional `--cache <dir>`; commit `server/programme/data/`)
 - Backfill earned personalization tiers: `bun run backfill:tiers` (idempotent; only ever raises)
