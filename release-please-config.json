@@ -1,0 +1,12 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "bootstrap-sha": "0d993cd4b1b947c62d79036926fea8cf39eb0205",
+  "packages": {
+    ".": {
+      "release-type": "node",
+      "package-name": "kth-course-community",
+      "changelog-path": "CHANGELOG.md",
+      "include-component-in-tag": false
+    }
+  }
+}
