@@ -50,7 +50,7 @@ CREATE UNIQUE INDEX "accounts_issuer_accountId_uidx" ON "accounts" USING btree (
 CREATE INDEX "accounts_userId_idx" ON "accounts" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX "sessions_userId_idx" ON "sessions" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX "verifications_identifier_idx" ON "verifications" USING btree ("identifier");--> statement-breakpoint
-CREATE INDEX "courses_embedding_idx" ON "courses" USING hnsw ("embedding" vector_cosine_ops);--> statement-breakpoint
-CREATE INDEX "courses_name_trgm_idx" ON "courses" USING gin ("name" gin_trgm_ops);--> statement-breakpoint
-CREATE INDEX "courses_code_trgm_idx" ON "courses" USING gin ("code" gin_trgm_ops);--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "courses_embedding_idx" ON "courses" USING hnsw ("embedding" vector_cosine_ops);--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "courses_name_trgm_idx" ON "courses" USING gin ("name" gin_trgm_ops);--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "courses_code_trgm_idx" ON "courses" USING gin ("code" gin_trgm_ops);--> statement-breakpoint
 ALTER TABLE "users" DROP COLUMN "profile_picture";
