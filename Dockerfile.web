@@ -23,7 +23,13 @@ ENV NEXT_TELEMETRY_DISABLED=1
 WORKDIR /app/apps/web
 RUN bun run build
 
-FROM node:20-alpine AS runner
+# The step that applies migrations before the server starts, as one file. The
+# runner stage only has the modules Next traced for the server, so the step
+# carries its own dependencies.
+RUN bun build scripts/migrate-on-start.ts --target=node --format=esm \
+    --outfile=.migrate/migrate-on-start.mjs
+
+FROM node:24-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
@@ -38,6 +44,11 @@ COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/static ./apps/web/
 
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/public ./apps/web/public
 
+# Same relative layout as the source tree: the migration step resolves the SQL
+# files from its own location.
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.migrate/migrate-on-start.mjs ./apps/web/scripts/migrate-on-start.mjs
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/server/db/drizzle ./apps/web/server/db/drizzle
+
 USER nextjs
 
 EXPOSE 3000
@@ -45,4 +56,7 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-CMD ["node", "apps/web/server.js"]
+# Migrations first (a no-op unless MIGRATE_ON_START=true); if they fail the
+# server does not start. `exec` leaves the server as PID 1, so it receives the
+# stop signal on a redeploy.
+CMD ["sh", "-c", "node apps/web/scripts/migrate-on-start.mjs && exec node apps/web/server.js"]
