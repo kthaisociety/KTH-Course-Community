@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, or, sql } from "drizzle-orm";
 import type { z } from "zod";
 import { EMBEDDING_MODEL, embedBatch } from "../ai";
 import { db } from "../db";
@@ -11,8 +11,9 @@ import {
   type InsertCourseExamination,
   type InsertCourseRound,
 } from "../db/schema";
-import { getCourseInformation, getCourses } from "./kopps";
+import { getCourseInformation, getCourses } from "./kth-web";
 import {
+  findAllCourseCodes,
   findCourseExploreSourceHashes,
   upsertCourseExploreSearchState,
 } from "./repository";
@@ -73,7 +74,7 @@ export async function runNeonIngest(
   status.lastError = null;
   console.log("Neon ingestion process started...");
   try {
-    const courses = coursesInput ?? (await getCourses());
+    const courses = coursesInput ?? (await listAllCourses());
     const establishedCourses = courses.filter(
       (course) => course.state === "ESTABLISHED",
     );
@@ -85,6 +86,7 @@ export async function runNeonIngest(
     const {
       courses: converted,
       rounds,
+      roundCoverage,
       examinations,
     } = await convertCourses(establishedCourses);
     console.log(
@@ -93,7 +95,7 @@ export async function runNeonIngest(
 
     console.log("Upserting courses to database...");
     await upsertCourses(converted);
-    await upsertRounds(rounds);
+    await upsertRounds(rounds, roundCoverage);
     await upsertExaminations(examinations);
 
     console.log("Generating embeddings for courses...");
@@ -111,6 +113,33 @@ export async function runNeonIngest(
   }
 }
 
+/**
+ * The source's list plus every catalogue course it leaves out. KTH's search
+ * lists current courses only, so a course discontinued since the last run would
+ * otherwise keep its old state forever. Its course page still answers, and
+ * reports it discontinued; a course whose page is gone is skipped and its row
+ * left as it is. The catalogue codes also seed the source's code search.
+ */
+async function listAllCourses(): Promise<z.infer<typeof CoursesSchema>> {
+  const catalogue = await findAllCourseCodes();
+  const listed = await getCourses(console.warn, catalogue);
+  const listedCodes = new Set(listed.map((c) => c.code));
+  const unlisted = catalogue.filter((code) => !listedCodes.has(code));
+  console.log(
+    `${unlisted.length} catalogue courses are not in the source's list; re-reading their pages`,
+  );
+  return [
+    ...listed,
+    ...unlisted.map((code) => ({
+      code,
+      name: code,
+      department: "",
+      // Placeholder; the stored state is the course page's.
+      state: "ESTABLISHED" as const,
+    })),
+  ];
+}
+
 export async function runNeonTest() {
   console.log("Starting Neon test process...");
   const courses = await getCourses();
@@ -122,9 +151,12 @@ export async function runNeonTest() {
   await runNeonIngest(sample);
 }
 
+type RoundCoverage = { courseCode: string; terms: number[] };
+
 async function convertCourses(courses: z.infer<typeof CoursesSchema>): Promise<{
   courses: InsertCourse[];
   rounds: InsertCourseRound[];
+  roundCoverage: RoundCoverage[];
   examinations: InsertCourseExamination[];
 }> {
   const concurrency = getKoppsConcurrency();
@@ -140,7 +172,10 @@ async function convertCourses(courses: z.infer<typeof CoursesSchema>): Promise<{
         );
       }
 
-      const detail = await getCourseInformation(course).catch(() => null);
+      const detail = await getCourseInformation(course).catch((error) => {
+        console.warn(`Skipping ${course.code}: ${String(error)}`);
+        return null;
+      });
       if (!detail) return null;
 
       const latest = detail.publicSyllabusVersions.reduce(
@@ -152,7 +187,7 @@ async function convertCourses(courses: z.infer<typeof CoursesSchema>): Promise<{
         code: detail.course.courseCode,
         titleSwe: detail.course.title,
         titleEng: detail.course.titleOther,
-        state: course.state,
+        state: detail.course.state,
         credits: detail.course.credits,
         creditUnit: detail.course.creditUnitAbbr,
         departmentCode: detail.course.departmentCode,
@@ -194,6 +229,10 @@ async function convertCourses(courses: z.infer<typeof CoursesSchema>): Promise<{
       return {
         course: insertCourse,
         rounds: insertRounds,
+        roundCoverage: {
+          courseCode: detail.course.courseCode,
+          terms: detail.coveredRoundTerms,
+        },
         examinations: insertExaminations,
       };
     },
@@ -203,6 +242,7 @@ async function convertCourses(courses: z.infer<typeof CoursesSchema>): Promise<{
   return {
     courses: valid.map((r) => r.course),
     rounds: valid.flatMap((r) => r.rounds),
+    roundCoverage: valid.map((r) => r.roundCoverage),
     examinations: valid.flatMap((r) => r.examinations),
   };
 }
@@ -235,12 +275,33 @@ async function upsertCourses(courses: InsertCourse[]) {
   }
 }
 
-async function upsertRounds(rounds: InsertCourseRound[]) {
-  if (!rounds.length) return;
-  const courseCodes = [...new Set(rounds.map((r) => r.courseCode))];
-  await db
-    .delete(courseRoundsTable)
-    .where(inArray(courseRoundsTable.courseCode, courseCodes));
+/**
+ * Replaces each course's rounds for the terms the source reported, and only
+ * those. Rounds for other terms are kept: kth.se lists current terms only, and
+ * the older rounds came from KOPPS, which is closed (ADR 0004, ADR 0012).
+ */
+async function upsertRounds(
+  rounds: InsertCourseRound[],
+  coverage: RoundCoverage[],
+) {
+  const covered = coverage.filter((c) => c.terms.length > 0);
+  const deleteChunk = 200;
+  for (let i = 0; i < covered.length; i += deleteChunk) {
+    await db
+      .delete(courseRoundsTable)
+      .where(
+        or(
+          ...covered
+            .slice(i, i + deleteChunk)
+            .map((c) =>
+              and(
+                eq(courseRoundsTable.courseCode, c.courseCode),
+                inArray(courseRoundsTable.startTerm, c.terms),
+              ),
+            ),
+        ),
+      );
+  }
   const chunkSize = 1000;
   for (let i = 0; i < rounds.length; i += chunkSize) {
     await db.insert(courseRoundsTable).values(rounds.slice(i, i + chunkSize));

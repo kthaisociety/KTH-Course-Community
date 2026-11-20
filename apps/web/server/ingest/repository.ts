@@ -1,6 +1,12 @@
 import { inArray, sql } from "drizzle-orm";
 import { db } from "../db";
-import { courseExplore } from "../db/schema";
+import { courseExplore, courses } from "../db/schema";
+
+/** Every course code in the catalogue, whatever its state. */
+export async function findAllCourseCodes(): Promise<string[]> {
+  const rows = await db.select({ code: courses.code }).from(courses);
+  return rows.map((row) => row.code);
+}
 
 export async function findCourseExploreSourceHashes(
   courseCodes: string[],

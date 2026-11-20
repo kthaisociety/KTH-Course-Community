@@ -81,7 +81,7 @@ bun run ingest
 
 Optional: `bun run ingest -- --test` ingests 10 random established courses.
 
-This talks to KTH KOPPS and writes into Neon (including embeddings). It can take a while.
+This reads KTH's public course pages on www.kth.se (KOPPS is closed, see `docs/adr/0012-ingest-from-kth-course-pages.md`) and writes into Neon (including embeddings). A full run fetches about 4,800 courses in two languages and takes a while.
 
 ### 7. Build Docker Image
 
@@ -240,7 +240,7 @@ Repo-local agent skills live under `.agents/skills/`.
 | `bun run format` | Biome format |
 | `bun run db:push` | Pushes the Drizzle schema to Neon |
 | `bun run db:generate` | Generates Drizzle migrations |
-| `bun run ingest` | Ingests KOPPS courses into Neon |
+| `bun run ingest` | Ingests KTH courses from www.kth.se into Neon |
 | `bun run add:web` | Adds a dependency to the web workspace |
 | `bun run rm:web` | Removes a dependency from the web workspace |
  

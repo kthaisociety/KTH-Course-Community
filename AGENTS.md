@@ -43,7 +43,7 @@ apps/web/
     db/                     # schema, client, drizzle-kit, migrations
     auth.ts                 # Better Auth
     ai.ts                   # embeddings (search/ingest)
-    ingest/                 # KOPPS → Neon; programmes/ = kth.se syllabi → server/programme/data
+    ingest/                 # kth.se course pages → Neon (ADR 0012); programmes/ = kth.se syllabi → server/programme/data
     programme/              # programme syllabi served from committed JSON (ADR 0011)
     text/                   # domain-neutral HTML → text
     email/                  # SES magic-link mail

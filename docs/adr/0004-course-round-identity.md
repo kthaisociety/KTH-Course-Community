@@ -90,3 +90,7 @@ decision forecloses nothing.
   `ladokUID` field and its `round_code` mapping are removed from
   `server/ingest/`. The wider question of what ingest means with the source
   closed is not settled here.
+- **Ingest refreshes again, from 2026-11-15** (ADR 0012), from KTH's course
+  pages. They list current terms only, so ingest now replaces a course's rounds
+  for the terms the source reports and keeps every other row. The KOPPS rounds
+  this ADR describes are therefore never deleted by a run.

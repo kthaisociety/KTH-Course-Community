@@ -1,8 +1,9 @@
 # KTH Course Community
 
 A course catalogue and review site for KTH students: courses are ingested from
-KOPPS, explored, and reviewed. This file records the words this project uses, so
-that the code, the tickets and the conversations all mean the same thing by them.
+KTH's course pages (KOPPS until it closed, ADR 0012), explored, and reviewed.
+This file records the words this project uses, so that the code, the tickets and
+the conversations all mean the same thing by them.
 
 **How to read it.** The words here govern identifiers — tables, columns, types,
 functions, routes. Reader-facing copy follows the design instead, so a term on an
@@ -29,7 +30,7 @@ _Avoid_: guest, anonymous user, unauthenticated user
 ### The catalogue
 
 **Course**:
-A KTH course as ingested from KOPPS, keyed by its course code. The catalogue
+A KTH course as ingested from KTH's course pages, keyed by its course code. The catalogue
 entry, not any particular time it ran.
 _Avoid_: class, subject, module
 
@@ -39,7 +40,7 @@ exactly one course.
 _Avoid_: instance, occasion, session, offering
 
 **Course examination**:
-One assessed component of a course, as KOPPS reports it. Its code is unique
+One assessed component of a course, as the newest course syllabus lists it. Its code is unique
 within its course, never globally.
 _Avoid_: exam type, assessment method, moment
 
@@ -56,14 +57,15 @@ The full source prose stating who may take a course, kept verbatim in
 _Avoid_: prerequisites, requirements text
 
 **School**:
-The KTH school that owns a course, as KOPPS reports it — `department.name` on
-the course detail, ingested into `courses.department`. It is the reader's word
+The KTH school that owns a course, as KTH's course page reports it
+(`course_department`, e.g. "SCI/Matematik"), mapped to `department.name` on the
+course detail and ingested into `courses.department`. It is the reader's word
 for it: Explore's filter is `aria-label="School"` and offers "All schools".
 
 This is the one entry that runs the other way round, and deliberately. The
 identifier stays `department` — the column, the `department ILIKE` the search
-filter runs, and the field on the wire — because that is KOPPS's own name for it
-and renaming it would buy a word no reader ever sees. So School in copy,
+filter runs, and the field on the wire — because that was KOPPS's own name for
+it, is still KTH's (`course_department`), and renaming it would buy a word no reader ever sees. So School in copy,
 `department` in code, and this is a settled mapping rather than a _Today_: no
 migration closes it.
 _Avoid_: faculty, institution, division — in either.
