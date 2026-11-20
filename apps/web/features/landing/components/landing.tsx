@@ -1,7 +1,12 @@
 "use client";
 
 import { LogOut, Menu, Search } from "lucide-react";
-import { motion, useReducedMotion, type Variants } from "motion/react";
+import {
+  AnimatePresence,
+  motion,
+  useReducedMotion,
+  type Variants,
+} from "motion/react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -22,6 +27,7 @@ import {
 import { dismissKeyboard } from "@/lib/dismiss-keyboard";
 import { displayNameOf } from "@/lib/identity";
 import { isUnplaced, useNeighbourhood, usePublicWindow } from "../api/queries";
+import { useCommunityGesture } from "../hooks/use-community-gesture";
 import { FindYourDot, type FindYourDotStatus } from "./find-your-dot";
 import { HeroNetwork } from "./hero-network";
 
@@ -116,6 +122,50 @@ const HERO_EXIT: Variants = {
 };
 
 /**
+ * The hero copy, which also steps aside for the **community view**.
+ *
+ * Behind the headline the graph only ever has what the copy leaves over. The
+ * community view is the copy giving the hero up: it fades, the camera pulls
+ * back, and the whole community is drawn where the headline was. The header and
+ * the sections below keep `HERO_EXIT` and do not move — it is the hero changing
+ * what it shows, not the page going anywhere.
+ *
+ * Out fast and back late: the copy has gone before the nodes travel through
+ * where it was, and it returns once they have left again. `hero-network.tsx`
+ * drops its keep-out for exactly that stretch.
+ */
+const COPY: Variants = {
+  ...HERO_EXIT,
+  "at-rest": {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.26, delay: 0.5, ease: "easeOut" },
+  },
+  community: {
+    opacity: 0,
+    y: -8,
+    transition: { duration: 0.16, ease: EXIT_EASE },
+  },
+};
+
+/**
+ * The search bar steps aside for the community view too, but **not** for the
+ * departure to Explore — it is the one element that hand-off keeps. So it has
+ * the two community states and deliberately no `leaving`.
+ */
+const BAR: Variants = {
+  "at-rest": COPY["at-rest"],
+  community: COPY.community,
+};
+
+/** The same, for a reader who has asked for stillness: a cut, both ways. */
+const COPY_STILL: Variants = {
+  ...HERO_EXIT,
+  "at-rest": { opacity: 1, y: 0, transition: { duration: 0 } },
+  community: { opacity: 0, y: 0, transition: { duration: 0 } },
+};
+
+/**
  * The three supporting blocks under the hero, in the artboard's order.
  *
  * "Search" departs from `Course Community - Landing.dc.html` by one sentence.
@@ -158,6 +208,12 @@ export function Landing() {
   const [dotOpen, setDotOpen] = useState(arrivedFromLink !== null);
   const [expired, setExpired] = useState(arrivedFromLink === "expired");
   const [menuOpen, setMenuOpen] = useState(false);
+  /** The reader asked to see the community, whoever they are. */
+  const [community, setCommunity] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const backRef = useRef<HTMLButtonElement>(null);
+  /** What opened the community view, so leaving it hands the focus back. */
+  const openerRef = useRef<HTMLElement | null>(null);
 
   /** The bar whose box Explore continues. */
   const barRef = useRef<HTMLFormElement>(null);
@@ -218,6 +274,77 @@ export function Landing() {
    * `router` in an effect's dependency array is how two of this repo's earlier
    * render loops started.
    */
+  /**
+   * The **community view**: the copy steps aside and the hero shows the whole
+   * community.
+   *
+   * Two ways in, one picture. Anybody can ask to see the community. A member
+   * who asks for their dot and has one gets the same view with their node lit —
+   * which is why a located dot no longer has a panel of its own: the panel used
+   * to stand in front of the graph and describe what was behind it.
+   */
+  const hasNode = status === "placed";
+  const inCommunity = community || (dotOpen && hasNode);
+  const copy = reduceMotion ? COPY_STILL : COPY;
+
+  function enterCommunity() {
+    if (leavingFor) return;
+    openerRef.current =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
+    setCommunity(true);
+  }
+
+  function leaveCommunity() {
+    setCommunity(false);
+    setDotOpen(false);
+    setExpired(false);
+  }
+
+  // The view's own control takes the focus on the way in, so Enter and Space
+  // lead back out and a screen reader lands on the caption's neighbour rather
+  // than on copy that has just been made inert.
+  //
+  // On the way out the focus goes back to whatever opened the view — and it has
+  // to wait for this effect to do it. Both openers are inside the copy, which
+  // is `inert` until the render that leaves the view has committed, and a
+  // browser ignores `focus()` on an inert element. Asking in the click handler
+  // would be asking one render too early, and the focus would be dropped.
+  useEffect(() => {
+    if (inCommunity) {
+      backRef.current?.focus({ preventScroll: true });
+      return;
+    }
+    openerRef.current?.focus({ preventScroll: true });
+    openerRef.current = null;
+  }, [inCommunity]);
+
+  useEffect(() => {
+    if (!inCommunity) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") leaveCommunity();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  });
+
+  useCommunityGesture({
+    scroller: rootRef,
+    active: inCommunity,
+    // A dialog, the menu or a departure owns the page; the wheel is theirs.
+    // The Find your dot *panel*, that is, and not `dotOpen` alone: a member
+    // whose dot was found is in the community view with no panel showing, and
+    // scrolling down has to lead out of it like any other way in.
+    disabled:
+      leavingFor !== null ||
+      menuOpen ||
+      authReason !== null ||
+      (dotOpen && !hasNode),
+    onEnter: enterCommunity,
+    onLeave: leaveCommunity,
+  });
+
   function warmExplore() {
     if (prefetchedRef.current) return;
     prefetchedRef.current = true;
@@ -302,8 +429,9 @@ export function Landing() {
     // variant every clearing child should be in. `initial={false}` keeps the
     // page from playing its own arrival on mount.
     <motion.div
+      ref={rootRef}
       initial={false}
-      animate={leavingFor ? "leaving" : "at-rest"}
+      animate={leavingFor ? "leaving" : inCommunity ? "community" : "at-rest"}
       className="scrollbar-subtle @container cc-theme min-h-dvh bg-cc-pg text-cc-ink text-sm lg:flex lg:h-dvh lg:flex-col lg:overflow-y-auto"
     >
       <motion.header
@@ -437,13 +565,14 @@ export function Landing() {
           className="absolute inset-0 z-0"
         >
           {/*
-            Find your dot only labels a node that is already on the canvas. The
-            graph does not change when the flow succeeds — the reveal is the
-            label, and closing the panel takes the label back off again.
+            The community view changes the camera and nothing else: the same
+            nodes, in the same arrangement, drawn whole instead of behind the
+            copy. A member's own node is labelled there and only there.
           */}
           <HeroNetwork
             window={heroWindow}
-            labelled={dotOpen && status === "placed"}
+            stage={inCommunity}
+            labelled={inCommunity && hasNode}
             paused={leavingFor !== null}
           />
         </motion.div>
@@ -469,7 +598,12 @@ export function Landing() {
           rather than a failing build.
         */}
         <div className="pointer-events-none relative z-[1] flex min-h-[480px] lg:h-full lg:min-h-0 flex-col items-center justify-center px-4 @lg:px-7">
-          <div className="pointer-events-none flex w-full max-w-[720px] flex-col items-center text-center">
+          <div
+            // Faded out is not gone: without this the search field and the
+            // chips would still take the Tab key from under the community view.
+            inert={inCommunity}
+            className="pointer-events-none flex w-full max-w-[720px] flex-col items-center text-center"
+          >
             {/* The artboard's 70px, and it is load-bearing: it grows the
                 centred column at the top, which is what sits the hero copy
                 where the artboard has it rather than 64px higher.
@@ -480,14 +614,14 @@ export function Landing() {
                 the half of the trade that moves the copy up. Mobile keeps the
                 70, along with its own untouched 16px gap. */}
             <motion.p
-              variants={HERO_EXIT}
+              variants={copy}
               data-hero-clear
               className="pointer-events-auto mt-[70px] @lg:mt-[58px] mb-0 font-semibold text-[11px] text-cc-dim uppercase tracking-[0.09em]"
             >
               Run by students at KTH
             </motion.p>
             <motion.h1
-              variants={HERO_EXIT}
+              variants={copy}
               onAnimationComplete={onExitComplete}
               data-hero-clear
               className="pointer-events-auto mt-3.5 text-balance font-semibold text-[30px] @lg:text-[44px] leading-[1.08] tracking-[-0.025em]"
@@ -528,8 +662,9 @@ export function Landing() {
                 hero bar wider than the one it turns into would snap narrower at
                 the moment of arrival — the one seam the hand-off exists to hide.
                 Only a cap is set here; the bar is still `w-full` below `@lg`. */}
-            <form
+            <motion.form
               ref={barRef}
+              variants={BAR}
               data-hero-clear
               onSubmit={(event) => {
                 event.preventDefault();
@@ -561,10 +696,10 @@ export function Landing() {
                 aria-label="Search a course, code or subject"
                 className="min-w-0 flex-1 border-none bg-transparent text-[14px] text-cc-ink outline-none"
               />
-            </form>
+            </motion.form>
 
             <motion.div
-              variants={HERO_EXIT}
+              variants={copy}
               data-hero-clear
               className="pointer-events-auto mt-6 @lg:mt-[36px] flex flex-wrap items-center justify-center gap-[7px]"
             >
@@ -584,14 +719,23 @@ export function Landing() {
             </motion.div>
 
             <motion.p
-              variants={HERO_EXIT}
+              variants={copy}
               data-hero-clear
-              className="pointer-events-auto mt-5 flex items-center gap-1.5 text-[12.5px] text-cc-dim"
+              className="pointer-events-auto mt-5 flex flex-wrap items-center justify-center gap-x-1.5 gap-y-1 text-[12.5px] text-cc-dim"
             >
+              <button
+                type="button"
+                onClick={enterCommunity}
+                className="cursor-pointer font-medium text-cc-muted underline underline-offset-2 hover:text-cc-brand"
+              >
+                See the community
+              </button>
+              <span aria-hidden>·</span>
               <span>Already a member?</span>
               <button
                 type="button"
-                onClick={() => {
+                onClick={(event) => {
+                  openerRef.current = event.currentTarget;
                   setExpired(false);
                   setDotOpen(true);
                 }}
@@ -602,6 +746,50 @@ export function Landing() {
             </motion.p>
           </div>
         </div>
+
+        {/*
+          The community view's own words, laid over the foot of the canvas:
+          what the dots are, and the way back. `STAGE_INSETS` in
+          `hero-network.tsx` keeps the fitted community clear of this strip.
+
+          Only the button takes the pointer, for the same reason the copy layer
+          works the way it does: everything else here is canvas, and a node
+          under the caption is still a node somebody can click.
+        */}
+        <AnimatePresence>
+          {inCommunity && !leavingFor ? (
+            <motion.div
+              key="community"
+              initial={{ opacity: 0, y: reduceMotion ? 0 : 8 }}
+              animate={{
+                opacity: 1,
+                y: 0,
+                transition: reduceMotion
+                  ? { duration: 0 }
+                  : { duration: 0.3, delay: 0.4, ease: "easeOut" },
+              }}
+              exit={{ opacity: 0, transition: { duration: 0.12 } }}
+              className="pointer-events-none absolute inset-x-0 bottom-0 z-[2] flex flex-col items-center gap-3 px-4 pb-5 text-center"
+            >
+              <p className="m-0 max-w-[440px] text-[13px] text-cc-muted leading-[1.5]">
+                {hasNode
+                  ? "The lit dot is yours. You keep the same place every time you come back."
+                  : "Every dot is a student who has joined. Click one to send a signal through the community."}
+              </p>
+              <button
+                ref={backRef}
+                type="button"
+                onClick={leaveCommunity}
+                className="pointer-events-auto flex h-[34px] cursor-pointer items-center gap-2 rounded-[17px] border border-cc-rule3 bg-cc-surface px-[14px] font-medium text-[13px] text-cc-ink hover:border-cc-hov"
+              >
+                Back to search
+                <kbd className="hidden rounded-[4px] border border-cc-rule2 px-[5px] font-medium font-sans text-[10.5px] text-cc-dim @lg:inline">
+                  Esc
+                </kbd>
+              </button>
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
       </section>
 
       <motion.section
@@ -659,7 +847,7 @@ export function Landing() {
       ) : null}
 
       <FindYourDot
-        open={dotOpen}
+        open={dotOpen && !hasNode}
         status={status}
         onClose={() => {
           setDotOpen(false);

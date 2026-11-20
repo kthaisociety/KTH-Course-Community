@@ -1,8 +1,13 @@
-import { fireEvent, render } from "@testing-library/react";
+import { act, fireEvent, render } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { GraphWindow } from "../api/queries";
 import { NODE_RADIUS } from "../lib/neighbourhood-view";
-import { HeroNetwork } from "./hero-network";
+import {
+  HeroNetwork,
+  SEAM_TAPER,
+  STAGE_INSETS,
+  seamTaperDepth,
+} from "./hero-network";
 
 /**
  * What the hero canvas repaints for, and what it refuses to run a loop for.
@@ -51,16 +56,80 @@ type TracedPath = {
   width: number;
 };
 
+/**
+ * One `fillRect`, and where in the frame it fell.
+ *
+ * The seam taper is the only thing on this canvas that fills a rectangle, and
+ * what it promises is an *ordering*: lines before it, nodes after. `pathsBefore`
+ * is how many paths had been opened when it ran, which is what lets a test say
+ * which side of it any path landed on.
+ */
+type Erase = {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  operation: string;
+  alpha: number;
+  /** The gradient's axis and stops, or `null` if a flat colour was used. */
+  gradient: {
+    from: { x: number; y: number };
+    to: { x: number; y: number };
+    stops: { at: number; colour: string }[];
+  } | null;
+  pathsBefore: number;
+};
+
 function recordingContext() {
   const calls = { arc: 0, clearRect: 0 };
   const paths: TracedPath[] = [];
+  const erases: Erase[] = [];
+  const gradients = new WeakMap<object, NonNullable<Erase["gradient"]>>();
   let dash: number[] = [];
   const open = () => paths[paths.length - 1];
   const state = { cap: "butt", width: 1 };
-  return {
+  const ctx = {
     calls,
     paths,
+    erases,
     ctx: {
+      createLinearGradient: vi.fn(
+        (x0: number, y0: number, x1: number, y1: number) => {
+          const record: NonNullable<Erase["gradient"]> = {
+            from: { x: x0, y: y0 },
+            to: { x: x1, y: y1 },
+            stops: [],
+          };
+          const gradient = {
+            addColorStop: (at: number, colour: string) => {
+              record.stops.push({ at, colour });
+            },
+          };
+          gradients.set(gradient, record);
+          return gradient;
+        },
+      ),
+      fillRect: vi.fn((x: number, y: number, w: number, h: number) => {
+        const live = ctx.ctx as unknown as {
+          fillStyle: unknown;
+          globalAlpha: number;
+          globalCompositeOperation: string;
+        };
+        erases.push({
+          x,
+          y,
+          w,
+          h,
+          operation: live.globalCompositeOperation,
+          alpha: live.globalAlpha,
+          gradient:
+            typeof live.fillStyle === "object" && live.fillStyle !== null
+              ? (gradients.get(live.fillStyle) ?? null)
+              : null,
+          pathsBefore: paths.length,
+        });
+      }),
+      globalCompositeOperation: "source-over",
       setTransform: vi.fn(),
       clearRect: vi.fn(() => {
         calls.clearRect++;
@@ -122,6 +191,7 @@ function recordingContext() {
       textBaseline: "alphabetic",
     } as unknown as CanvasRenderingContext2D,
   };
+  return ctx;
 }
 
 /** A node as the server hands it over, unconfigured on every axis by default. */
@@ -507,6 +577,264 @@ describe("HeroNetwork", () => {
       if (showsViewer) expect(recorder.ctx.fillText).toHaveBeenCalled();
     },
   );
+
+  describe("where the canvas meets the header", () => {
+    /** A backbone edge: one plain 1px line, as opposed to a signal's wake. */
+    const isEdge = (path: TracedPath) =>
+      path.stroked &&
+      path.arcs.length === 0 &&
+      path.moves.length === 1 &&
+      path.lines.length === 1 &&
+      path.cap === "butt" &&
+      path.width === 1;
+    const isNode = (path: TracedPath) =>
+      path.arcs.some(({ r }) => r === NODE_RADIUS);
+
+    it("dissolves the lines towards the top edge and nothing else", () => {
+      render(<HeroNetwork window={WINDOW} labelled={false} />);
+
+      // One taper a frame: the last one is the frame on screen.
+      const erase = recorder.erases.at(-1);
+      if (!erase) throw new Error("the seam was never tapered");
+      // It erases rather than paints, so the page shows through in any theme,
+      // and at full strength whatever alpha the last edge left behind.
+      expect(erase.operation).toBe("destination-out");
+      expect(erase.alpha).toBe(1);
+      // A band across the whole top of the canvas, and only the top.
+      expect(erase).toMatchObject({ x: 0, y: 0 });
+      expect(erase.h).toBe(seamTaperDepth(220));
+      expect(erase.h).toBeLessThan(220 / 2);
+      // Gone at the header, untouched at the bottom of the band.
+      expect(erase.gradient).toEqual({
+        from: { x: 0, y: 0 },
+        to: { x: 0, y: erase.h },
+        stops: [
+          { at: 0, colour: "rgba(0, 0, 0, 1)" },
+          { at: 1, colour: "rgba(0, 0, 0, 0)" },
+        ],
+      });
+      // And the next thing drawn is drawn normally again.
+      expect(recorder.ctx.globalCompositeOperation).toBe("source-over");
+    });
+
+    it("tapers the edges but never a node, its mark or the reveal", () => {
+      preferReducedMotion();
+      const graph: GraphWindow = {
+        centre: { x: 0, y: 0 },
+        nodes: [
+          node({ id: "a", ...CLEAR_LEFT, signalStyle: "fade", isViewer: true }),
+          node({ id: "b", ...CLEAR_RIGHT }),
+        ],
+        edges: [{ fromId: "a", toId: "b" }],
+      };
+      render(<HeroNetwork window={graph} labelled={true} />);
+      // Exactly one frame, so "before" and "after" are about that frame alone.
+      recorder.paths.length = 0;
+      recorder.erases.length = 0;
+      onResize?.();
+
+      expect(recorder.erases).toHaveLength(1);
+      const [erase] = recorder.erases;
+
+      const before = recorder.paths.slice(0, erase.pathsBefore);
+      const after = recorder.paths.slice(erase.pathsBefore);
+      // The line is under the taper...
+      expect(before.some(isEdge)).toBe(true);
+      expect(after.some(isEdge)).toBe(false);
+      // ...and everything that is somebody is over it: both nodes, the standing
+      // `fade` rings around one of them, and the label on the viewer.
+      expect(before.some((path) => path.arcs.length > 0)).toBe(false);
+      expect(after.filter(isNode).length).toBeGreaterThanOrEqual(2);
+      expect(
+        after.some((path) => path.arcs.some(({ r }) => r > NODE_RADIUS)),
+      ).toBe(true);
+      expect(recorder.ctx.fillText).toHaveBeenCalled();
+    });
+
+    it("lets a travelling signal dissolve with the edge it rides", () => {
+      const clock = frameClock();
+      try {
+        const graph: GraphWindow = {
+          centre: { x: 0, y: 0 },
+          nodes: [
+            node({ id: "a", ...CLEAR_LEFT, signalStyle: "comet" }),
+            node({ id: "b", ...CLEAR_RIGHT }),
+          ],
+          edges: [{ fromId: "a", toId: "b" }],
+        };
+        render(<HeroNetwork window={graph} labelled={false} />);
+        // Long enough for ambient traffic to have set out along the edge.
+        for (let i = 0; i < 400; i++) clock.step();
+
+        recorder.paths.length = 0;
+        recorder.erases.length = 0;
+        clock.step();
+
+        const erase = recorder.erases.at(-1);
+        if (!erase) throw new Error("the seam was never tapered");
+        const isWake = (path: TracedPath) =>
+          path.stroked && path.cap === "round";
+        expect(recorder.paths.some(isWake)).toBe(true);
+        expect(recorder.paths.slice(erase.pathsBefore).some(isWake)).toBe(
+          false,
+        );
+      } finally {
+        clock.restore();
+      }
+    });
+
+    it("uses the full depth on every frame the page lays out", () => {
+      // The hero is never shorter than 400px, and the scene itself floors a
+      // canvas at 220.
+      expect(seamTaperDepth(400)).toBe(SEAM_TAPER);
+      expect(seamTaperDepth(1086)).toBe(SEAM_TAPER);
+      expect(seamTaperDepth(220)).toBe(55);
+    });
+
+    it("keeps the hard crop in a browser with no gradients", () => {
+      Reflect.deleteProperty(recorder.ctx, "createLinearGradient");
+
+      render(<HeroNetwork window={WINDOW} labelled={false} />);
+
+      expect(recorder.erases).toHaveLength(0);
+      expect(recorder.calls.arc).toBeGreaterThan(0);
+      expect(recorder.ctx.globalCompositeOperation).toBe("source-over");
+    });
+  });
+
+  /**
+   * The community view: the copy has stepped aside, so the community is drawn
+   * centred and whole. The projection is `neighbourhood-view.spec.ts`'s to
+   * hold; what is held here is that the canvas actually goes there, and how.
+   */
+  describe("in the community view", () => {
+    // The scene floors a canvas at 320 by 220, which is what jsdom gets.
+    const CENTRE = {
+      x: 320 / 2,
+      y: (STAGE_INSETS.top + 220 - STAGE_INSETS.bottom) / 2,
+    };
+    /** One member, at the origin: wherever the camera puts the middle. */
+    const ALONE: GraphWindow = {
+      centre: { x: 0, y: 0 },
+      nodes: [node({ id: "first" })],
+      edges: [],
+    };
+    const lastNode = () =>
+      recorder.paths
+        .filter((path) => path.arcs.some(({ r }) => r === NODE_RADIUS))
+        .at(-1)?.arcs[0];
+
+    it("cuts straight to it for a machine that has asked for stillness", () => {
+      preferReducedMotion();
+      const { rerender } = render(
+        <HeroNetwork window={ALONE} labelled={false} />,
+      );
+      const before = lastNode();
+      rerender(<HeroNetwork window={ALONE} labelled={false} stage />);
+
+      expect(lastNode()).toMatchObject(CENTRE);
+      expect(before).not.toMatchObject(CENTRE);
+
+      // And straight back.
+      rerender(<HeroNetwork window={ALONE} labelled={false} />);
+      expect(lastNode()).toMatchObject(before ?? {});
+    });
+
+    it("travels there over several frames when motion is welcome", () => {
+      const clock = frameClock();
+      try {
+        const { rerender } = render(
+          <HeroNetwork window={ALONE} labelled={false} />,
+        );
+        clock.step();
+        const start = lastNode();
+        if (!start) throw new Error("the node was never drawn");
+        rerender(<HeroNetwork window={ALONE} labelled={false} stage />);
+
+        // Drift wanders a node up to 5px from its home, so positions are
+        // compared with that much slack.
+        const off = (at: { x: number; y: number } | undefined) =>
+          at ? Math.hypot(at.x - CENTRE.x, at.y - CENTRE.y) : Number.NaN;
+        const whole = Math.hypot(start.x - CENTRE.x, start.y - CENTRE.y);
+        expect(whole).toBeGreaterThan(30);
+
+        for (let i = 0; i < 20; i++) clock.step();
+        // Part of the way: it has left, and it has not arrived.
+        expect(off(lastNode())).toBeLessThan(whole - 8);
+        expect(off(lastNode())).toBeGreaterThan(8);
+
+        for (let i = 0; i < 60; i++) clock.step();
+        expect(off(lastNode())).toBeLessThan(8);
+      } finally {
+        clock.restore();
+      }
+    });
+
+    /**
+     * Stillness asked for in the middle of the move. The loop carrying the
+     * camera stops for good, so the move has to finish there and then — left
+     * part of the way back, the keep-out would still be off with the copy
+     * already returned.
+     */
+    it("finishes the move at once if stillness is asked for part-way", () => {
+      const clock = frameClock();
+      try {
+        const { rerender } = render(
+          <HeroNetwork window={ALONE} labelled={false} />,
+        );
+        clock.step();
+        rerender(<HeroNetwork window={ALONE} labelled={false} stage />);
+        for (let i = 0; i < 10; i++) clock.step();
+        const partWay = lastNode();
+        if (!partWay) throw new Error("the node was never drawn");
+        expect(
+          Math.hypot(partWay.x - CENTRE.x, partWay.y - CENTRE.y),
+        ).toBeGreaterThan(30);
+
+        // The media query the scene subscribed to at mount, now answering yes.
+        // The *last* subscription: a scene torn down and rebuilt leaves an
+        // earlier listener behind in the mock, belonging to nobody.
+        const query = vi.mocked(window.matchMedia).mock.results.at(-1)?.value;
+        const onChange = vi
+          .mocked(query.addEventListener)
+          .mock.calls.findLast(([type]: [string]) => type === "change")?.[1];
+        preferReducedMotion();
+        act(() => onChange());
+
+        // There, give or take the few pixels it had already drifted from home:
+        // stillness stops the drift where it is and does not undo it.
+        const settled = lastNode();
+        if (!settled) throw new Error("the node was never drawn");
+        expect(
+          Math.hypot(settled.x - CENTRE.x, settled.y - CENTRE.y),
+        ).toBeLessThan(8);
+      } finally {
+        clock.restore();
+      }
+    });
+
+    it("turns back from wherever it had got to", () => {
+      const clock = frameClock();
+      try {
+        const { rerender } = render(
+          <HeroNetwork window={ALONE} labelled={false} />,
+        );
+        clock.step();
+        const start = lastNode();
+        if (!start) throw new Error("the node was never drawn");
+        rerender(<HeroNetwork window={ALONE} labelled={false} stage />);
+        for (let i = 0; i < 20; i++) clock.step();
+        rerender(<HeroNetwork window={ALONE} labelled={false} />);
+        for (let i = 0; i < 80; i++) clock.step();
+
+        const end = lastNode();
+        if (!end) throw new Error("the node was never drawn");
+        expect(Math.hypot(end.x - start.x, end.y - start.y)).toBeLessThan(11);
+      } finally {
+        clock.restore();
+      }
+    });
+  });
 
   it("labels the viewer's own node once the flow has found it", () => {
     render(<HeroNetwork window={WINDOW} labelled={true} />);

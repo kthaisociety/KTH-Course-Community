@@ -15,13 +15,16 @@ import {
   syncField,
 } from "../lib/hero-signals";
 import {
+  blendViews,
   FALLBACK_NODE_COLOR_VAR,
   type GraphWindowView,
   NO_SIGNAL,
   NODE_COLOR_VARS,
   NODE_RADIUS,
+  projectCommunityStage,
   projectGraphWindow,
   type ScreenNode,
+  type StageInsets,
   VISIBLE,
 } from "../lib/neighbourhood-view";
 
@@ -38,12 +41,20 @@ import {
  *   own node;
  * - a visitor's is centred on the community origin, with no "You".
  *
- * **Find your dot** no longer swaps anything. The graph is already on screen;
- * the flow only labels the viewer's own node, and the reveal is the pulse and
- * the label appearing. The graph does not rearrange itself for it — the
- * artboard's words at :814, *"the graph never moves: the dot grows and pulses
- * in place"* — so the labelled node is also the one node that stops drifting
- * while the label is up.
+ * **Find your dot** swaps nothing and rearranges nothing. The graph is already
+ * on screen; the flow labels the viewer's own node, and the reveal is the pulse
+ * and the label appearing, on the one node that stops drifting while the label
+ * is up.
+ *
+ * What does move is the **camera**. Behind the copy the graph only has the
+ * canvas the headline leaves over, so the **community view** — `stage` — has
+ * the copy step aside and draws the same window centred and scaled to fit. The
+ * artboard has no such view: its words at :814 are *"the graph never moves: the
+ * dot grows and pulses in place"*, written for a synthetic field that fills the
+ * frame by construction. A real community does not, and a member whose dot was
+ * above the canvas could be told it was theirs without being shown it. Every
+ * node keeps its place relative to every other; only where the whole picture
+ * sits, and how big, changes.
  *
  * **The graph is alive, and that is a decision rather than a default.** Nodes
  * drift inside a ±5px box around where the projection put them, signals travel
@@ -98,6 +109,55 @@ const EDGE_ALPHA = 0.26;
  */
 const DIAMOND_REACH = Math.sqrt(Math.PI / 2);
 
+/**
+ * How far down from the header the seam taper reaches, in px.
+ *
+ * About the header's own 66px, so the lines fade over the same distance as the
+ * bar they would otherwise appear to run behind.
+ */
+export const SEAM_TAPER = 64;
+
+/**
+ * The taper's depth on a canvas `height` px tall.
+ *
+ * Capped at a quarter of the canvas so a very short hero keeps most of its
+ * lines; every frame the landing page actually lays out is tall enough for the
+ * full `SEAM_TAPER`.
+ */
+export function seamTaperDepth(height: number) {
+  return Math.min(SEAM_TAPER, height / 4);
+}
+
+/**
+ * Canvas the **community view** keeps free of the fitted community, in px.
+ *
+ * The top is the seam taper's depth, so a community that fits is drawn below
+ * the band where lines dissolve and loses none of them. The bottom is the
+ * caption and the way back, which `landing.tsx` lays over the canvas there.
+ */
+export const STAGE_INSETS: StageInsets = { top: SEAM_TAPER, bottom: 112 };
+
+/**
+ * How long the camera takes between the hero and the community view, in
+ * seconds. Long enough to read as one move — the community pulling back into
+ * view — and short enough that nobody waits for it.
+ */
+const STAGE_SECONDS = 0.9;
+
+/**
+ * How far into the move the community lights up, as a fraction.
+ *
+ * A burst from the reader's own node — or the community's first, for a visitor
+ * — sent while the camera is still settling, so the lines are seen to carry
+ * something the moment they are all on screen.
+ */
+const STAGE_ARRIVAL = 0.55;
+
+/** Slow out of the hero, slow into the community view. */
+function easeInOut(t: number) {
+  return t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2;
+}
+
 /** How much fainter than its node a standing-still signal mark is drawn. */
 const SIGNAL_ALPHA = 0.5;
 
@@ -146,6 +206,16 @@ type Scene = {
   /** The hero is on screen. Assumed true where there is no IntersectionObserver. */
   onScreen: boolean;
   window: GraphWindow | null;
+  /** The window behind the hero copy, and for the community view. */
+  rest: GraphWindowView | null;
+  staged: GraphWindowView | null;
+  /** The measured copy, which only the hero's own projection keeps clear of. */
+  keepOut: Rect[];
+  /** Whether the community view is what is being shown, or headed for. */
+  stage: boolean;
+  /** 0 behind the copy, 1 in the community view, and the camera's progress between. */
+  blend: number;
+  /** What is on the canvas now: `rest`, `staged`, or part of the way between. */
   view: GraphWindowView | null;
   /** Drift and signals: the only mutable state on this canvas. */
   field: ReturnType<typeof createField>;
@@ -257,18 +327,83 @@ function nodeColour(palette: Palette, colorVar: string) {
  */
 function refreshView(scene: Scene) {
   const measured = measureRects(scene.root, scene.canvas);
-  const keepOut = measured.length ? measured : fallbackRects(scene.w, scene.h);
-  scene.view = scene.window
+  scene.keepOut = measured.length ? measured : fallbackRects(scene.w, scene.h);
+  scene.rest = scene.window
     ? projectGraphWindow({
         window: scene.window,
         width: scene.w,
         height: scene.h,
-        keepOut,
+        keepOut: scene.keepOut,
       })
     : null;
-  syncField(scene.field, scene.view, keepOut, scene.w);
+  scene.staged = scene.window
+    ? projectCommunityStage({
+        window: scene.window,
+        width: scene.w,
+        height: scene.h,
+        insets: STAGE_INSETS,
+      })
+    : null;
+  showBlend(scene);
   scene.viewerId =
     scene.field.nodes.find((node) => node.node.isViewer)?.node.id ?? null;
+}
+
+/**
+ * Point the field at wherever the camera is between the hero and the community
+ * view.
+ *
+ * The keep-out goes with it. In the community view the copy has stepped aside
+ * and there is nothing to keep clear of; it is dropped as soon as the camera
+ * leaves the hero and restored only once it is all the way back, because
+ * `landing.tsx` fades the copy out first and in last.
+ */
+function showBlend(scene: Scene) {
+  scene.view =
+    scene.rest && scene.staged
+      ? blendViews(scene.rest, scene.staged, easeInOut(scene.blend))
+      : null;
+  syncField(
+    scene.field,
+    scene.view,
+    scene.blend > 0 ? [] : scene.keepOut,
+    scene.w,
+  );
+}
+
+/**
+ * Put the camera where it is headed, at once, and paint it.
+ *
+ * For whenever no frame loop is going to carry it there: reduced motion, a
+ * hidden tab, a hero scrolled away. A move nobody is watching, or has asked not
+ * to watch, is not worth leaving the canvas on the wrong picture — and a camera
+ * stranded part of the way back would leave the keep-out off with the copy
+ * already returned, drawing lines across the headline.
+ */
+function settleBlend(scene: Scene) {
+  scene.blend = scene.stage ? 1 : 0;
+  showBlend(scene);
+  draw(scene);
+}
+
+/**
+ * Move the camera one frame towards wherever it is headed. True if it moved.
+ */
+function stepBlend(scene: Scene, dt: number): boolean {
+  const target = scene.stage ? 1 : 0;
+  if (scene.blend === target) return false;
+  const before = scene.blend;
+  const step = dt / STAGE_SECONDS;
+  scene.blend = scene.stage
+    ? Math.min(1, before + step)
+    : Math.max(0, before - step);
+  if (scene.stage && before < STAGE_ARRIVAL && scene.blend >= STAGE_ARRIVAL) {
+    const from =
+      scene.field.nodes.find((node) => node.node.isViewer) ??
+      scene.field.nodes[0];
+    if (from) burstAt(scene.field, from);
+  }
+  return true;
 }
 
 function resize(scene: Scene) {
@@ -321,15 +456,23 @@ function draw(scene: Scene) {
   // Signals go under the nodes, so a trail never sits on top of the dot it
   // belongs to. Two passes rather than one interleaved loop, because a node
   // drawn after its own signal would still be drawn before the *next* node's.
+  //
+  // A travelling signal rides an edge, so it is drawn before the seam taper and
+  // dissolves with the line it is on. A standing mark is part of how one node
+  // looks, so it is drawn after and keeps its full strength, like the node.
+  if (!scene.reduced) {
+    for (const signal of field.signals) {
+      drawSignal(scene, palette, signal);
+    }
+  }
+
+  taperHeaderSeam(scene);
+
   if (scene.reduced) {
     for (const node of field.nodes) {
       if (node.clearance <= VISIBLE || node.node.signalStyle === NO_SIGNAL)
         continue;
       drawSignalMark(scene, palette, node);
-    }
-  } else {
-    for (const signal of field.signals) {
-      drawSignal(scene, palette, signal);
     }
   }
 
@@ -350,6 +493,51 @@ function draw(scene: Scene) {
     if (you && you.clearance > VISIBLE) drawYou(scene, palette, you);
   }
   ctx.globalAlpha = 1;
+}
+
+/**
+ * Dissolve the lines that run off the top of the canvas, where it meets the
+ * header.
+ *
+ * The hero is a crop of a bigger network on every side — the artboard says so
+ * itself, `docs/design_ref/2026-09-06/Course Community - Landing.dc.html`
+ * `layoutViz`: "edges and signals cross the edges". On three sides that reads
+ * as continuation. On the fourth the canvas ends at the header's bottom rule,
+ * and a line cut there reads as passing *behind* the navigation bar instead.
+ *
+ * So everything drawn so far — backbone edges and travelling signals — is
+ * erased along a gradient: gone at the top edge, untouched from `SEAM_TAPER`
+ * down. It is called before the nodes are drawn, and that ordering is the whole
+ * of the guarantee: **no node, standing signal mark or reveal is ever dimmed by
+ * it.** A node is somebody, and a header treatment may not decide how visible
+ * they are.
+ *
+ * This is deliberately presentation and not layout. The first attempt at the
+ * seam put a full-width strip into the per-node keep-out, which pushed upper
+ * nodes off the canvas and hid real members. Nothing here reads or moves a
+ * position: the projection, the keep-out, the camera and the hit test are all
+ * exactly what they were.
+ *
+ * Erasing rather than drawing over is what keeps it theme-proof. The canvas is
+ * transparent on `--cc-pg`, so `destination-out` leaves the page showing
+ * through; a gradient painted in the page colour would have to be re-resolved
+ * on every theme change and would still be wrong over anything else.
+ *
+ * A browser with no gradients keeps the hard crop, which is what it had.
+ */
+function taperHeaderSeam(scene: Scene) {
+  const { ctx } = scene;
+  const depth = seamTaperDepth(scene.h);
+  const gradient = ctx.createLinearGradient?.(0, 0, 0, depth);
+  if (!gradient || typeof ctx.fillRect !== "function") return;
+  // Only the alpha matters to `destination-out`; the colour is never seen.
+  gradient.addColorStop(0, "rgba(0, 0, 0, 1)");
+  gradient.addColorStop(1, "rgba(0, 0, 0, 0)");
+  ctx.globalAlpha = 1;
+  ctx.globalCompositeOperation = "destination-out";
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, scene.w, depth);
+  ctx.globalCompositeOperation = "source-over";
 }
 
 /**
@@ -716,6 +904,13 @@ type Props = {
    */
   labelled: boolean;
   /**
+   * Show the **community view**: the copy has stepped aside, so the whole
+   * community is drawn centred and zoomed to fit rather than behind a headline.
+   * The camera travels between the two; where no frame loop runs — reduced
+   * motion above all — it cuts.
+   */
+  stage?: boolean;
+  /**
    * The landing is leaving for Explore.
    *
    * Competing motion is the biggest tell in a shared-element transition, so for
@@ -730,6 +925,7 @@ type Props = {
 export function HeroNetwork({
   window: graphWindow,
   labelled,
+  stage = false,
   paused = false,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -758,6 +954,11 @@ export function HeroNetwork({
       paused: false,
       onScreen: true,
       window: null,
+      rest: null,
+      staged: null,
+      keepOut: [],
+      stage: false,
+      blend: 0,
       view: null,
       field: createField(),
       viewerId: null,
@@ -787,6 +988,7 @@ export function HeroNetwork({
       const dt = Math.max(0, Math.min(0.05, (ts - scene.last) / 1000));
       scene.last = ts;
       if (scene.labelled) scene.pulse += dt;
+      if (stepBlend(scene, dt)) showBlend(scene);
       advanceField(scene.field, dt, {
         holdId: scene.labelled ? scene.viewerId : null,
       });
@@ -916,9 +1118,15 @@ export function HeroNetwork({
         : null;
     const onMedia = () => {
       scene.reduced = prefersReducedMotion();
-      if (scene.reduced) stop();
-      else start();
-      draw(scene);
+      if (scene.reduced) {
+        stop();
+        // Asked for stillness in the middle of a camera move: the loop that was
+        // carrying it has just been stopped for good, so it finishes here.
+        settleBlend(scene);
+      } else {
+        start();
+        draw(scene);
+      }
     };
     media?.addEventListener?.("change", onMedia);
 
@@ -952,6 +1160,14 @@ export function HeroNetwork({
     if (paused) scene.stopLoop?.();
     else scene.startLoop?.();
   }, [paused]);
+
+  useEffect(() => {
+    const scene = sceneRef.current;
+    if (!scene) return;
+    scene.stage = stage;
+    scene.startLoop?.();
+    if (!scene.raf) settleBlend(scene);
+  }, [stage]);
 
   useEffect(() => {
     const scene = sceneRef.current;

@@ -33,7 +33,10 @@ export type FindYourDotStatus =
   | "expired"
   /** Signed in, reading the neighbourhood. */
   | "locating"
-  /** Read, and there is a node: it is drawn behind this panel. */
+  /**
+   * Read, and there is a node. The landing shows it in the community view and
+   * closes this panel, so there is nothing here for it to render.
+   */
   | "placed"
   /** Read, and there is no node for this app user yet. */
   | "unplaced"
@@ -74,10 +77,6 @@ export function FindYourDot({ open, status, onClose, onRetry }: Props) {
    * resolve last — the panel would be reporting on a submission they abandoned.
    */
   const submission = useRef(0);
-
-  // The reveal is the point: while the dot is on screen the panel steps aside
-  // and the scrim lifts, exactly as the artboard does it.
-  const revealing = status === "placed";
 
   /**
    * Two different failures, told apart because they ask different things of the
@@ -139,14 +138,8 @@ export function FindYourDot({ open, status, onClose, onRetry }: Props) {
           scrim, so the two dialogs match rather than each inventing a value. */}
       <DialogContent
         showCloseButton={false}
-        overlayClassName={cn(
-          "supports-backdrop-filter:backdrop-blur-none",
-          revealing ? "bg-[rgba(14,26,44,0.08)]" : "bg-[rgba(14,26,44,0.34)]",
-        )}
-        className={cn(
-          "cc-theme w-[396px] max-w-[calc(100vw-2rem)] gap-0 rounded-[14px] border border-cc-rule2 bg-cc-surface p-6 text-cc-ink shadow-[0_20px_56px_rgba(14,26,44,0.26)]",
-          revealing && "top-auto bottom-9 translate-y-0",
-        )}
+        overlayClassName="bg-[rgba(14,26,44,0.34)] supports-backdrop-filter:backdrop-blur-none"
+        className="cc-theme w-[396px] max-w-[calc(100vw-2rem)] gap-0 rounded-[14px] border border-cc-rule2 bg-cc-surface p-6 text-cc-ink shadow-[0_20px_56px_rgba(14,26,44,0.26)]"
       >
         {status === "sign-in" && sentTo === null ? (
           <SignIn
@@ -205,16 +198,6 @@ export function FindYourDot({ open, status, onClose, onRetry }: Props) {
               <div className="h-full w-3/5 rounded-[2px] bg-cc-brand opacity-80" />
             </div>
           </div>
-        ) : null}
-
-        {status === "placed" ? (
-          <Panel
-            title="This one is yours"
-            onClose={close}
-            body="Your dot is marked in the network behind this panel. It stays yours — you keep the same place every time you come back."
-          >
-            <OutlineButton onClick={close}>Done</OutlineButton>
-          </Panel>
         ) : null}
 
         {status === "unplaced" ? <Unplaced onClose={close} /> : null}

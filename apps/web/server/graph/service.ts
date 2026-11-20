@@ -23,19 +23,9 @@ import type {
 } from "./repository";
 import * as graphRepo from "./repository";
 import { deriveEarnedTier, deriveEffectiveTier } from "./tier";
+import { MAX_WINDOW_NODES } from "./window";
 
-/**
- * How many nodes a window may return.
- *
- * A query policy, not a database column: the landing page never loads the whole
- * community, and the bound belongs to the domain that answers the question.
- *
- * There is **one** number rather than one per caller, because there is now one
- * window. A member and a visitor are served the same slice of the same graph
- * and differ only in whether one node in it is flagged as theirs; a second
- * bound would be a second picture waiting to happen.
- */
-export const MAX_WINDOW_NODES = 150;
+export { MAX_WINDOW_NODES };
 
 /**
  * Where the community's world coordinate system begins, and what **every**
