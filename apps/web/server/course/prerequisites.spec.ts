@@ -30,6 +30,16 @@ describe("readPrerequisites", () => {
     });
   });
 
+  it("reads a code typed with its prefix twice as the code it means", () => {
+    // SF2942's own syllabus: "(SFSF1918, SF1922 eller motsvarande)".
+    const r = readPrerequisites(
+      "<p>Slutförd kurs i matematisk statistik (SFSF1918, SF1922 eller motsvarande).</p>",
+      "SF2942",
+      new Set([...catalogue, "SF1918", "SF1922"]),
+    );
+    expect(r.groups[0].codes).toEqual(["SF1918", "SF1922"]);
+  });
+
   it("splits at samt into separate requirements", () => {
     const r = readPrerequisites(
       "<p>Kunskaper i linjär algebra motsvarande SF1624 samt sannolikhetslära motsvarande SF1912.</p>",

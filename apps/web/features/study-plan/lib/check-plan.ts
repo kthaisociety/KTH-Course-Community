@@ -23,9 +23,10 @@ export type CheckRule =
 
 export type CheckFix =
   | { kind: "move"; slot: Slot; label: string }
-  | { kind: "mark-passed"; label: string }
   | { kind: "remove"; label: string }
-  | { kind: "include"; label: string };
+  | { kind: "include"; label: string }
+  /** Puts another course — a prerequisite — in a period, adding it if the plan hasn't got it. */
+  | { kind: "place"; code: string; slot: Slot; label: string };
 
 export interface PlanCheck {
   key: string;
@@ -35,6 +36,46 @@ export interface PlanCheck {
   message: string;
   evidence?: { text: string; source: string };
   fixes: CheckFix[];
+  /** A prerequisite check's courses, any one of which would meet it. */
+  needs?: string[];
+}
+
+/**
+ * A Swedish course title's subject, as stems: "Numeriska metoder, grundkurs I"
+ * and "Numeriska metoder, grundkurs" are one subject, "Envariabelanalys" and
+ * "Flervariabelanalys" two. For "eller motsvarande", where the syllabus names
+ * examples of a basic course rather than the only courses that will do.
+ */
+const NOT_SUBJECT = new Set([
+  "och",
+  "för",
+  "med",
+  "inom",
+  "till",
+  "del",
+  "grundkurs",
+  "fortsättningskurs",
+  "kurs",
+  "ii",
+  "iii",
+]);
+function subjectStems(title: string): string[] {
+  return title
+    .toLowerCase()
+    .replace(/[^a-zåäö ]/g, " ")
+    .split(/\s+/)
+    .filter((w) => w.length > 2 && !NOT_SUBJECT.has(w))
+    .map((w) => w.slice(0, 7));
+}
+export function sameSubject(a: string, b: string): boolean {
+  const [x, y] = [new Set(subjectStems(a)), new Set(subjectStems(b))];
+  if (!x.size || !y.size) return false;
+  const [short, long] = x.size <= y.size ? [x, y] : [y, x];
+  // One word says too little: "Programmeringsteknik" would cover "Tillämpad
+  // programmering och datalogi", a different course. It must match one word exactly.
+  if (short.size === 1)
+    return long.size === 1 && [...short][0] === [...long][0];
+  return [...short].every((w) => long.has(w));
 }
 
 /** Two first-cycle courses with the same Swedish title are one course under two codes. */
@@ -61,31 +102,73 @@ export function makeSameCourse(plan: BuiltPlan, facts: PlanFactsResult) {
       title(a) === title(b));
 }
 
-function groupMet(
+/**
+ * The first period still to come, and before `beforeIdx`, that a course with
+ * these start periods is given in: where a missing prerequisite can still go.
+ */
+export function firstPeriodBefore(
+  starts: readonly Period[],
+  now: Slot,
+  beforeIdx: number,
+): Slot | null {
+  const nowIdx = slotIndex(now);
+  for (let ay = now.ay; ay <= Math.floor(beforeIdx / 10); ay++)
+    for (const p of [1, 2, 3, 4] as const) {
+      const idx = slotIndex({ ay, p });
+      if (idx > nowIdx && idx < beforeIdx && starts.includes(p))
+        return { ay, p };
+    }
+  return null;
+}
+
+/** How a prerequisite group stands for one course: met, and how, or not, and why. */
+type GroupStatus =
+  | {
+      met: true;
+      via: string;
+      equivalent: boolean;
+      /** Met because `via`, a course already taken, asked for no less. */
+      settled?: boolean;
+    }
+  | { met: false; blockedBy: string | null };
+
+function groupStatus(
   item: PlanItem,
   group: PrerequisiteGroup,
   registeredCounts: boolean,
   plan: BuiltPlan,
   takenCodes: string[],
   same: (a: string, b: string) => boolean,
-) {
-  for (const member of group.codes) {
-    if (takenCodes.some((t) => same(t, member))) return true;
-    const hit = plan.items.find(
-      (x) =>
-        x.code !== item.code &&
-        same(x.code, member) &&
-        x.status !== "not-passed" &&
-        (() => {
-          if (group.strength === "participating")
-            return x.startIdx <= item.startIdx;
-          if (registeredCounts) return x.startIdx < item.startIdx;
-          return x.endIdx < item.startIdx;
-        })(),
-    );
-    if (hit) return true;
+  /** A course "eller motsvarande" lets stand in for one of the group's. */
+  equivalent: (code: string) => boolean,
+  /** Courses that can't be taken as planned, so they meet nothing after them. */
+  blocked: ReadonlySet<string>,
+): GroupStatus {
+  const named = (code: string) => group.codes.some((m) => same(code, m));
+  const inTime = (x: PlanItem) =>
+    x.code !== item.code &&
+    x.status !== "not-passed" &&
+    (group.strength === "participating"
+      ? x.startIdx <= item.startIdx
+      : registeredCounts
+        ? x.startIdx < item.startIdx
+        : x.endIdx < item.startIdx);
+  const earlier = plan.items.filter(inTime);
+  // A passed course first, then a planned one, a named course before an equivalent.
+  for (const [test, equivalentTo] of [
+    [named, false],
+    [equivalent, true],
+  ] as const) {
+    const passed = takenCodes.find(test);
+    if (passed) return { met: true, via: passed, equivalent: equivalentTo };
+    const planned = earlier.find((x) => test(x.code) && !blocked.has(x.code));
+    if (planned)
+      return { met: true, via: planned.code, equivalent: equivalentTo };
   }
-  return false;
+  const stuck = earlier.find(
+    (x) => (named(x.code) || equivalent(x.code)) && blocked.has(x.code),
+  );
+  return { met: false, blockedBy: stuck?.code ?? null };
 }
 
 const periodsText = (ps: Period[]) =>
@@ -103,6 +186,8 @@ export function checkPlan(
    * the student was admitted with covers it.
    */
   entryDegree = false,
+  /** The periods a course starts in, for suggesting where a missing prerequisite fits. */
+  startsOf: (code: string) => readonly Period[] = () => [],
 ): PlanCheck[] {
   const out: PlanCheck[] = [];
   const levelOf = (code: string) =>
@@ -155,50 +240,207 @@ export function checkPlan(
           })),
         });
     }
-    if (it.status === "not-passed")
+    // A course that wasn't passed already says so in its own pill, with "Mark as
+    // passed" beside it. Only a mandatory one needs more: it still has to be
+    // taken, so the check points at the next round it can be retaken in.
+    if (it.status === "not-passed" && it.mandatory) {
+      const retake = nextRound(it.offeredStarts, nowIdx);
       add({
         key: `${it.code}:not-passed`,
         code: it.code,
         rule: "not-passed",
-        severity: it.mandatory ? "warning" : "note",
-        message: `${slotLabel(it.segments[it.segments.length - 1].slot)} has ended and ${it.code} isn't in your taken courses${it.mandatory ? ". It's mandatory, so it still has to be passed" : ""}.`,
-        fixes: [
-          { kind: "mark-passed", label: "I passed it" },
-          ...(it.mandatory
-            ? []
-            : [{ kind: "remove" as const, label: "Remove" }]),
-        ],
+        severity: "warning",
+        message: `${it.code} is mandatory and not passed yet. Plan it again in a period it's given.`,
+        fixes: retake
+          ? [
+              {
+                kind: "move",
+                slot: retake,
+                label: `Move to ${slotLabel(retake)}`,
+              },
+            ]
+          : [],
       });
-    // Prerequisites are never checked for a passed course: there is nothing left to be eligible for.
-    if (it.status === "passed") continue;
-    const f = facts.courses[it.code];
-    if (!f) continue;
-    f.prerequisites.forEach((g, gi) => {
-      if (g.unresolvable) return;
-      if (entryDegree && g.codes.some((c) => levelOf(c) !== "A")) return;
-      if (groupMet(it, g, f.registeredCounts, plan, takenCodes, same)) return;
+    }
+  }
+
+  // ---- Prerequisites. ----
+  const titleOf = (code: string) =>
+    facts.refs[code]?.titleSwe ??
+    facts.courses[code]?.titleSwe ??
+    plan.template.get(code)?.name ??
+    "";
+  /**
+   * "SF1918, SF1922 eller motsvarande": a first-cycle course of the same
+   * department and subject stands in. Without it a student whose programme
+   * gave the subject under another code was flagged as blocked for good.
+   */
+  const equivalentFor = (g: PrerequisiteGroup) => (code: string) =>
+    /motsvarande|equivalent/i.test(g.text) &&
+    levelOf(code) === "B" &&
+    g.codes.some(
+      (m) =>
+        m !== code &&
+        m.slice(0, 2) === code.slice(0, 2) &&
+        sameSubject(titleOf(m), titleOf(code)),
+    );
+  // Only a course still to come is checked. One that has started — passed, under
+  // way, or in the past of a plan without a transcript — had its eligibility settled
+  // when it began: there is nothing left to be eligible for, and no period to fix.
+  const checked = plan.items.filter(
+    (it) =>
+      it.slot &&
+      it.status !== "passed" &&
+      it.startIdx > nowIdx &&
+      facts.courses[it.code],
+  );
+  /**
+   * What a course already taken asked for was met, one way or another: KTH
+   * admits nobody to a course without it, and a transition plan may have met it
+   * with something we can't see. A later course that asks for no more than that
+   * — every course of the earlier group is one of its own — is met as well.
+   */
+  const settledGroups = [...plan.items, ...plan.unplaced]
+    .filter(
+      (i) =>
+        i.status === "passed" ||
+        (i.startIdx <= nowIdx && i.status !== "not-passed"),
+    )
+    .flatMap((i) =>
+      (facts.courses[i.code]?.prerequisites ?? [])
+        .filter((g) => !g.open && !g.unresolvable && g.codes.length)
+        .map((g) => ({ by: i.code, codes: g.codes })),
+    );
+  const settledBy = (g: PrerequisiteGroup) =>
+    settledGroups.find((s) =>
+      s.codes.every((c) => g.codes.some((m) => same(c, m))),
+    )?.by ?? null;
+  const groupsOf = (it: PlanItem) =>
+    (facts.courses[it.code]?.prerequisites ?? []).filter(
+      (g) =>
+        !g.unresolvable &&
+        !(entryDegree && g.codes.some((c) => levelOf(c) !== "A")),
+    );
+  const statusOf = (
+    it: PlanItem,
+    g: PrerequisiteGroup,
+    blocked: ReadonlySet<string>,
+  ): GroupStatus => {
+    const st = groupStatus(
+      it,
+      g,
+      facts.courses[it.code]?.registeredCounts ?? false,
+      plan,
+      takenCodes,
+      same,
+      equivalentFor(g),
+      blocked,
+    );
+    if (st.met) return st;
+    const by = settledBy(g);
+    return by ? { met: true, via: by, equivalent: false, settled: true } : st;
+  };
+  // A course that can't be taken as planned meets nothing after it, so the block
+  // runs down the chain: no SF1922, then no SF2940, then none of the track after it.
+  const blocked = new Set<string>();
+  for (let changed = true, round = 0; changed && round < 12; round++) {
+    changed = false;
+    for (const it of checked)
+      if (
+        !blocked.has(it.code) &&
+        groupsOf(it).some((g) => !g.open && !statusOf(it, g, blocked).met)
+      ) {
+        blocked.add(it.code);
+        changed = true;
+      }
+  }
+  const fitBefore = (code: string, beforeIdx: number) =>
+    firstPeriodBefore(startsOf(code), now, beforeIdx);
+
+  for (const it of checked) {
+    groupsOf(it).forEach((g, gi) => {
+      const st = statusOf(it, g, blocked);
       const names =
         g.codes.slice(0, 3).join(", ") +
         (g.codes.length > 3 ? ` (or ${g.codes.length - 3} more)` : "");
+      const evidence = {
+        text: `The syllabus asks for ${g.codes.length > 1 ? "one of " : ""}${g.codes.slice(0, 8).join(", ")}${g.codes.length > 8 ? " or similar" : ""}${g.strength === "participating" ? ", taken at the same time at the latest" : ", completed first"}.`,
+        source: `${it.code}'s eligibility on kth.se`,
+      };
+      const base = {
+        key: `${it.code}:prerequisite:${gi}`,
+        code: it.code,
+        rule: "prerequisite" as const,
+        evidence,
+        needs: g.codes,
+      };
+      if (st.met) {
+        if (st.settled)
+          add({
+            ...base,
+            severity: "note",
+            message: `${it.code} asks for ${names}. ${st.via}, which you've taken, asked for the same, so it counts as met.`,
+            fixes: [],
+          });
+        else if (st.equivalent)
+          add({
+            ...base,
+            severity: "note",
+            message: `${it.code} asks for ${names} or equivalent, and ${st.via} should count as equivalent. The examiner decides.`,
+            fixes: [],
+          });
+        return;
+      }
+      if (g.open) {
+        add({
+          ...base,
+          severity: "note",
+          message: `${it.code} asks for ${names}, or something we can't check. Read the requirement.`,
+          fixes: [],
+        });
+        return;
+      }
+      if (st.blockedBy) {
+        add({
+          ...base,
+          severity: "warning",
+          message: `${it.code} needs ${st.blockedBy} first, but ${st.blockedBy} can't be taken as planned either: its own prerequisites aren't met.`,
+          fixes: [],
+        });
+        return;
+      }
       const later = plan.items.find(
         (x) =>
           g.codes.some((m) => same(x.code, m)) && x.startIdx >= it.startIdx,
       );
+      // Where a course that meets it fits in time: the one already planned too late,
+      // else a syllabus course of the group, else the first that is given early enough.
+      const order = later
+        ? [later.code]
+        : [
+            ...g.codes.filter((c) => plan.template.has(c)),
+            ...g.codes.filter((c) => !plan.template.has(c)),
+          ];
+      let fix: CheckFix | null = null;
+      for (const c of order) {
+        const slot = fitBefore(c, it.startIdx);
+        if (slot) {
+          fix = {
+            kind: "place",
+            code: c,
+            slot,
+            label: `${later ? "Move" : "Add"} ${c} to ${slotLabel(slot)}`,
+          };
+          break;
+        }
+      }
       add({
-        key: `${it.code}:prerequisite:${gi}`,
-        code: it.code,
-        rule: "prerequisite",
-        severity: g.open ? "note" : "warning",
-        message: g.open
-          ? `${it.code} asks for ${names}, or something we can't check. Read the requirement.`
-          : later
-            ? `${it.code} needs ${later.code} first, and it comes ${later.startIdx === it.startIdx ? "in the same period" : "later"} in your plan.`
-            : `${it.code} needs one of ${names}, and nothing earlier in your plan covers it.`,
-        evidence: {
-          text: `The syllabus asks for ${g.codes.length > 1 ? "one of " : ""}${g.codes.slice(0, 8).join(", ")}${g.codes.length > 8 ? " or similar" : ""}${g.strength === "participating" ? ", taken at the same time at the latest" : ", completed first"}.`,
-          source: `${it.code}'s eligibility on kth.se`,
-        },
-        fixes: [],
+        ...base,
+        severity: "warning",
+        message: later
+          ? `${it.code} needs ${later.code} first, and it comes ${later.startIdx === it.startIdx ? "in the same period" : "later"} in your plan.`
+          : `${it.code} needs one of ${names}, and nothing earlier in your plan covers it.`,
+        fixes: fix ? [fix] : [],
       });
     });
   }
@@ -251,6 +493,16 @@ export function checkPlan(
       });
   }
   return out;
+}
+
+/** The first period after now that one of the course's rounds starts in. */
+function nextRound(starts: readonly Period[], nowIdx: number): Slot | null {
+  const usable = starts.filter((p) => p !== 5);
+  if (!usable.length) return null;
+  for (let ay = Math.floor(nowIdx / 10); ay < Math.floor(nowIdx / 10) + 3; ay++)
+    for (const p of [...usable].sort())
+      if (ay * 10 + p > nowIdx) return { ay, p };
+  return null;
 }
 
 /** Credits per period, using each round's own split. */

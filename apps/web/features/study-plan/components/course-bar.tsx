@@ -1,9 +1,10 @@
 "use client";
 
-import { Check, CircleAlert, TriangleAlert, X } from "lucide-react";
+import { Check, CircleDot, TriangleAlert, X } from "lucide-react";
 import type { DragEvent, KeyboardEvent } from "react";
 import { cn } from "@/lib/utils";
 import type { PlanItem } from "../lib/build-plan";
+import { StatusPill } from "./status-pill";
 
 export const DRAG_TYPE = "application/x-kth-plan-course";
 
@@ -18,13 +19,26 @@ type Props = {
   selected: boolean;
   onSelect: () => void;
   onNudge: (direction: -1 | 1) => void;
+  className?: string;
+};
+
+const STATUS_WORD: Record<PlanItem["status"], string> = {
+  passed: "Passed",
+  "not-passed": "Not passed, period has ended",
+  "in-progress": "In progress",
+  planned: "Planned",
+  unplaced: "Passed",
 };
 
 /**
- * One course in the year grid: code, name, credits and pace, with the state
- * in an icon as well as a colour — passed (✓), not passed (✗), warnings (⚠).
+ * One course in the year grid: code, name, credits and pace.
+ *
+ * Every bar is the same quiet surface; its state is a pill in the corner —
+ * passed (✓), now, not passed (✗) or a warning count (⚠) — so the grid reads
+ * as one plan rather than a patchwork of tints. A course that is only planned
+ * shows no pill: planned is the default, and the default needs no label.
  * Draggable on a pointer; ← and → move a selected bar one period, for the
- * keyboard; the side panel's "Move to" does the same on a phone.
+ * keyboard; the side panel's "Move course" does the same on a phone.
  */
 export function CourseBar({
   item,
@@ -36,15 +50,9 @@ export function CourseBar({
   selected,
   onSelect,
   onNudge,
+  className,
 }: Props) {
-  const status =
-    item.status === "passed"
-      ? "Passed"
-      : item.status === "not-passed"
-        ? "Not passed, period has ended"
-        : item.status === "in-progress"
-          ? "In progress"
-          : "Planned";
+  const status = STATUS_WORD[item.status];
   const onDragStart = (e: DragEvent) => {
     e.dataTransfer.setData(DRAG_TYPE, item.code);
     e.dataTransfer.setData("text/plain", item.code);
@@ -59,8 +67,32 @@ export function CourseBar({
       onNudge(e.key === "ArrowLeft" ? -1 : 1);
     }
   };
+  const pill =
+    item.status === "passed" ? (
+      <StatusPill tone="success" icon={Check} size="sm">
+        Passed
+      </StatusPill>
+    ) : item.status === "not-passed" ? (
+      <StatusPill tone="danger" icon={X} size="sm">
+        Not passed
+      </StatusPill>
+    ) : warnings > 0 ? (
+      <StatusPill
+        tone="warn"
+        icon={TriangleAlert}
+        size="sm"
+        title={`${warnings} warning${warnings > 1 ? "s" : ""}`}
+      >
+        {warnings}
+      </StatusPill>
+    ) : item.status === "in-progress" ? (
+      <StatusPill tone="brand" icon={CircleDot} size="sm">
+        Now
+      </StatusPill>
+    ) : null;
+
   return (
-    // biome-ignore lint/a11y/useSemanticElements: a draggable bar holds a two-line title and icons, which a <button> can't lay out as a grid item.
+    // biome-ignore lint/a11y/useSemanticElements: a draggable bar holds a two-line title and a pill, which a <button> can't lay out as a grid item.
     <div
       role="button"
       tabIndex={0}
@@ -69,63 +101,51 @@ export function CourseBar({
       onClick={onSelect}
       onKeyDown={onKeyDown}
       aria-pressed={selected}
-      aria-label={`${item.code} ${item.title}, ${item.credits} hp, ${status}${warnings ? `, ${warnings} warning${warnings > 1 ? "s" : ""}` : ""}`}
+      aria-label={`${item.code} ${item.title}, ${item.credits} hp, ${item.mandatory ? "mandatory" : "elective"}, ${status}${warnings ? `, ${warnings} warning${warnings > 1 ? "s" : ""}` : ""}`}
       title={`${status}${item.pace ? ` · ${item.pace} % pace` : ""}`}
       style={{ gridColumn: `${col} / span ${span}` }}
       className={cn(
-        "group relative flex min-h-[64px] cursor-grab self-start flex-col gap-1 rounded-[12px] border px-3 py-2.5 text-left outline-none transition-[box-shadow,border-color] active:cursor-grabbing",
+        "group relative flex min-h-[76px] cursor-grab flex-col gap-1.5 self-start rounded-[12px] border bg-cc-surface px-3 py-2.5 text-left outline-none transition-[box-shadow,border-color,transform] duration-150 active:cursor-grabbing",
+        "hover:-translate-y-px hover:shadow-[0_8px_20px_-12px_rgba(20,30,45,0.4)] motion-reduce:transition-none motion-reduce:hover:translate-y-0",
         "focus-visible:ring-[3px] focus-visible:ring-cc-focus/40",
-        item.status === "passed" &&
-          "border-cc-success-tint-border bg-cc-success-tint",
-        item.status === "not-passed" &&
-          "border-cc-danger-tint-border border-dashed bg-cc-danger-tint",
-        item.status === "in-progress" && "border-cc-brand/40 bg-cc-info-solid",
-        item.status === "planned" && "border-cc-rule2 bg-cc-surface",
-        warnings > 0 && item.status !== "not-passed" && "border-cc-warn-border",
+        item.status === "not-passed"
+          ? "border-cc-danger-tint-border border-dashed"
+          : warnings > 0
+            ? "border-cc-warn-border"
+            : item.status === "in-progress"
+              ? "border-cc-brand/35"
+              : "border-cc-rule2",
         selected && "ring-[3px] ring-cc-focus/35",
         continuesLeft && "rounded-l-[4px]",
         continuesRight && "rounded-r-[4px]",
+        className,
       )}
     >
-      <span className="flex items-center justify-between gap-2 font-mono text-[11.5px] text-cc-brand">
-        <span className="flex min-w-0 items-center gap-1.5">
-          {item.status === "passed" ? (
-            <Check
-              aria-hidden
-              size={13}
-              strokeWidth={3}
-              className="shrink-0 text-cc-success-ink"
-            />
-          ) : item.status === "not-passed" ? (
-            <X
-              aria-hidden
-              size={13}
-              strokeWidth={3}
-              className="shrink-0 text-cc-danger-ink"
-            />
-          ) : warnings > 0 ? (
-            <TriangleAlert
-              aria-hidden
-              size={13}
-              className="shrink-0 text-cc-warn-ink"
-            />
-          ) : item.offPeriod ? (
-            <CircleAlert
-              aria-hidden
-              size={13}
-              className="shrink-0 text-cc-dim"
-            />
-          ) : null}
-          <span className="truncate">{item.code}</span>
+      <span className="flex min-h-[19px] items-center justify-between gap-2">
+        <span className="truncate font-mono text-[11.5px] text-cc-brand">
+          {item.code}
         </span>
+        {pill}
       </span>
       <span className="line-clamp-2 text-[12.5px] text-cc-ink leading-snug">
         {item.title}
       </span>
       {/* Credits and pace on their own line, so a narrow period never truncates the code. */}
-      <span className="mt-auto text-[11.5px] text-cc-muted tabular-nums">
-        {item.credits.toLocaleString("sv-SE")} hp
-        {item.pace ? ` · ${item.pace} % pace` : ""}
+      <span className="mt-auto flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
+        <span className="text-[11.5px] text-cc-muted tabular-nums">
+          {item.credits.toLocaleString("sv-SE")} hp
+          {item.pace ? ` · ${item.pace} % pace` : ""}
+        </span>
+        {/* Whether the syllabus requires the course or the student chose it. */}
+        {item.mandatory ? (
+          <StatusPill tone="neutral" size="sm">
+            Mandatory
+          </StatusPill>
+        ) : (
+          <StatusPill tone="outline" size="sm">
+            Elective
+          </StatusPill>
+        )}
       </span>
     </div>
   );

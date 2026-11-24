@@ -37,6 +37,11 @@ export interface PlanSetup {
   /** The master's track. */
   masterTrack: string | null;
   summer: boolean;
+  /**
+   * An open entrance's (Öppen ingång) programme for years 2–5, which the
+   * student applies for during year 1. Absent in plans saved before it existed.
+   */
+  continuation?: string | null;
 }
 
 export interface PlanState {
@@ -83,6 +88,7 @@ function setupFrom(value: unknown): PlanSetup | null {
     track: text(v.track),
     masterTrack: text(v.masterTrack),
     summer: v.summer === true,
+    continuation: text(v.continuation),
   };
 }
 
@@ -208,6 +214,27 @@ export const planStore = {
         if (!IMPORTABLE_KEY.test(key)) continue;
         if (!value || typeof value !== "object") continue;
         store.setItem(prefix + key, JSON.stringify(value));
+      }
+    } catch {
+      /* storage blocked */
+    }
+    announce();
+  },
+  /**
+   * Back to the syllabus: every placement, left-out mark and dismissed check
+   * goes, except the setup and the placements of `keep` — the courses already
+   * passed, whose period records when they were taken rather than a plan.
+   */
+  reset(owner: string, keep: ReadonlySet<string>) {
+    const prefix = `${PLAN_PREFIX}${owner}:`;
+    try {
+      const store = window.localStorage;
+      for (const key of Object.keys(store)) {
+        if (!key.startsWith(prefix)) continue;
+        const rest = key.slice(prefix.length);
+        if (rest === "setup") continue;
+        if (rest.startsWith("at:") && keep.has(rest.slice(3))) continue;
+        store.removeItem(key);
       }
     } catch {
       /* storage blocked */
