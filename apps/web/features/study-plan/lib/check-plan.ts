@@ -316,11 +316,12 @@ export function checkPlan(
    * with something we can't see. A later course that asks for no more than that
    * — every course of the earlier group is one of its own — is met as well.
    */
-  const settledGroups = [...plan.items, ...plan.unplaced]
+  // A passed course left out of the plan was still taken, so it settled its own too.
+  const settledGroups = [...plan.items, ...plan.unplaced, ...plan.leftOut]
     .filter(
       (i) =>
         i.status === "passed" ||
-        (i.startIdx <= nowIdx && i.status !== "not-passed"),
+        (i.counts && i.startIdx <= nowIdx && i.status !== "not-passed"),
     )
     .flatMap((i) =>
       (facts.courses[i.code]?.prerequisites ?? [])
@@ -359,7 +360,13 @@ export function checkPlan(
   // A course that can't be taken as planned meets nothing after it, so the block
   // runs down the chain: no SF1922, then no SF2940, then none of the track after it.
   const blocked = new Set<string>();
-  for (let changed = true, round = 0; changed && round < 12; round++) {
+  // Each round can only add to `blocked`, so one more round than there are
+  // courses always reaches the end of the longest chain.
+  for (
+    let changed = true, round = 0;
+    changed && round <= checked.length;
+    round++
+  ) {
     changed = false;
     for (const it of checked)
       if (

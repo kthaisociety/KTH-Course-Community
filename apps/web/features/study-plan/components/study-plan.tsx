@@ -35,6 +35,7 @@ import { useTakenMutations } from "@/features/taken";
 import { cn } from "@/lib/utils";
 import type { CurrentRound, PlanFactsResult } from "@/types/programme";
 import {
+  PLAN_FACTS_LIMIT,
   useCurrentRounds,
   useDegreeProjects,
   useMasterRequirements,
@@ -224,11 +225,23 @@ export function StudyPlan() {
             .filter(([p]) => p === programme.summary.code || p === "*")
             .flatMap(([, rows]) => rows.flatMap((r) => r.codes))
         : [];
-    // The courses a plan course asks for first, so a missing one can be offered in a period it's given.
-    const prerequisites = plan.items.flatMap(
-      (i) => facts.courses[i.code]?.prerequisites.flatMap((g) => g.codes) ?? [],
-    );
-    return codesNeedingFacts(plan, taken, savedCodes, required, prerequisites);
+    const own = codesNeedingFacts(plan, taken, savedCodes, required);
+    // The courses a plan course asks for first, so a missing one can be offered in a
+    // period it's given. They only fill the room the plan's own courses leave: the
+    // request is capped, and its cut is alphabetical, so they must never push one out.
+    const known = new Set(own);
+    const prerequisites = [
+      ...new Set(
+        plan.items.flatMap(
+          (i) =>
+            facts.courses[i.code]?.prerequisites.flatMap((g) => g.codes) ?? [],
+        ),
+      ),
+    ]
+      .filter((c) => !known.has(c))
+      .sort()
+      .slice(0, Math.max(0, PLAN_FACTS_LIMIT - own.length));
+    return [...own, ...prerequisites].sort();
   }, [plan, taken, savedCodes, masterReq, setup, programme, facts]);
   if (wanted.join() !== factsCodes.join()) setFactsCodes(wanted);
 

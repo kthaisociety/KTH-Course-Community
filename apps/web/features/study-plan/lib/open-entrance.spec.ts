@@ -67,6 +67,13 @@ describe("open entrance", () => {
   it("is told apart by a civilingenjör syllabus that stops after year 1", () => {
     expect(isOpenEntrance(open, "20242")).toBe(true);
     expect(isOpenEntrance(next, "20242")).toBe(false);
+    // Later years present but empty are still no years.
+    const withEmptyYears = detail("COPEN", {
+      "1": [row("OO1001", 60)],
+      "2": [],
+      "3": [],
+    });
+    expect(isOpenEntrance(withEmptyYears, "20242")).toBe(true);
   });
 
   it("takes year 1 from the open entrance and years 2 onward from the chosen programme", () => {

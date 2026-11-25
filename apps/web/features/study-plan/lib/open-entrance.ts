@@ -11,7 +11,10 @@ export function isOpenEntrance(
   intake: string | null,
 ): boolean {
   if (!detail || detail.summary.type !== "CING") return false;
-  const years = Object.keys(intakeOf(detail, intake)?.years ?? {});
+  // Years that list courses: a year present but empty doesn't count as one.
+  const years = Object.entries(intakeOf(detail, intake)?.years ?? {})
+    .filter(([, rows]) => rows.length > 0)
+    .map(([y]) => y);
   return years.length > 0 && years.every((y) => y === "1");
 }
 
