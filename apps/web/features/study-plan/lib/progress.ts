@@ -227,11 +227,17 @@ export function computeProgress(inp: ProgressInputs): ProgressSection[] {
       ""
     ).toLowerCase();
   const all = [...plan.items, ...plan.unplaced];
-  // What a credit total may add up. Of courses that can't both count toward the
-  // degree — an "Endast en av" set, or one course under two codes — only one does:
-  // the passed one, else the larger, else the earlier. Course requirements still
-  // look at `all`, so a mandatory course stays met or planned either way.
-  const counted = countOnce(all, plan.overlaps, same);
+  /**
+   * One credit count: the courses `keep` admits, then one of each set that can't
+   * both count toward the degree — an "Endast en av" set, or one course under two
+   * codes — the passed one, else the larger, else the earlier. Admitting first and
+   * choosing after matters: chosen over the whole plan, a larger course finishing
+   * after a deadline would push out a smaller one before it, and the meter for that
+   * deadline would lose both. Course requirements still look at `all`, so a
+   * mandatory course stays met or planned either way.
+   */
+  const count = (keep: (i: PlanItem) => boolean) =>
+    tally(countOnce(all.filter(keep), plan.overlaps, same), () => true);
   const titleEn = (code: string) =>
     facts.courses[code]?.titleEng ?? plan.template.get(code)?.name ?? code;
 
@@ -260,7 +266,7 @@ export function computeProgress(inp: ProgressInputs): ProgressSection[] {
         : (studyYear(i) ?? 99) <= bachelorYears;
     crit.push(
       creditCriterion(
-        tally(counted, inBachelor),
+        count(inBachelor),
         isCiving ? 180 : programme.summary.credits || 180,
         bachelorYears === 1 ? "Credits" : `Credits, years 1–${bachelorYears}`,
         plan.unplaced.length
@@ -284,8 +290,7 @@ export function computeProgress(inp: ProgressInputs): ProgressSection[] {
       if (placed?.status === "passed")
         crit.push({ state: "met", text: `Degree project ${kex.code}: passed` });
       else if (gate?.credits && placed) {
-        const before = tally(
-          all,
+        const before = count(
           (i) =>
             i !== placed && (i.slot === null || i.endIdx < placed.startIdx),
         );
@@ -317,8 +322,7 @@ export function computeProgress(inp: ProgressInputs): ProgressSection[] {
       );
       const yearsTo = (n: number) => (i: PlanItem) =>
         i.endIdx < due && (studyYear(i) ?? 99) <= n;
-      const total = tally(
-        all,
+      const total = count(
         (i) => (i.slot === null && i.taken !== null) || yearsTo(3)(i),
       );
       crit.push(
@@ -330,14 +334,8 @@ export function computeProgress(inp: ProgressInputs): ProgressSection[] {
         ),
       );
       if (split) {
-        const year1 = tally(
-          counted,
-          (i) => i.endIdx < due && studyYear(i) === 1,
-        );
-        const year2 = tally(
-          counted,
-          (i) => i.endIdx < due && studyYear(i) === 2,
-        );
+        const year1 = count((i) => i.endIdx < due && studyYear(i) === 1);
+        const year2 = count((i) => i.endIdx < due && studyYear(i) === 2);
         crit.push(
           creditCriterion(
             year1,
@@ -355,7 +353,7 @@ export function computeProgress(inp: ProgressInputs): ProgressSection[] {
           ),
         );
       } else {
-        const years12 = tally(counted, yearsTo(2));
+        const years12 = count(yearsTo(2));
         crit.push(
           creditCriterion(
             years12,
@@ -506,7 +504,7 @@ export function computeProgress(inp: ProgressInputs): ProgressSection[] {
       }));
       crit.push(mandatoryCriterion(states, titleEn));
     }
-    const advanced = tally(counted, (i) => i.level === "A" && masterYear(i));
+    const advanced = count((i) => i.level === "A" && masterYear(i));
     crit.push(
       creditCriterion(
         advanced,
@@ -528,7 +526,7 @@ export function computeProgress(inp: ProgressInputs): ProgressSection[] {
         if (gate.credits)
           crit.push(
             creditCriterion(
-              tally(counted, before),
+              count(before),
               gate.credits,
               "Credits",
               `Before ${mex.code} starts`,
@@ -537,7 +535,7 @@ export function computeProgress(inp: ProgressInputs): ProgressSection[] {
         if (gate.advancedCredits)
           crit.push(
             creditCriterion(
-              tally(counted, (i) => i.level === "A" && before(i)),
+              count((i) => i.level === "A" && before(i)),
               gate.advancedCredits,
               "Advanced credits",
               `Before ${mex.code} starts`,
@@ -546,7 +544,7 @@ export function computeProgress(inp: ProgressInputs): ProgressSection[] {
         if (gate.masterCredits)
           crit.push(
             creditCriterion(
-              tally(counted, (i) => masterYear(i) && before(i)),
+              count((i) => masterYear(i) && before(i)),
               gate.masterCredits,
               "Master's credits",
               `Before ${mex.code} starts`,
@@ -596,7 +594,7 @@ export function computeProgress(inp: ProgressInputs): ProgressSection[] {
   if (degreeCredits) {
     const crit = [
       creditCriterion(
-        tally(counted, () => true),
+        count(() => true),
         degreeCredits,
         "All credits",
       ),
@@ -604,7 +602,7 @@ export function computeProgress(inp: ProgressInputs): ProgressSection[] {
     if (isCiving || type === "TMAST")
       crit.push(
         creditCriterion(
-          tally(counted, (i) => i.level === "A"),
+          count((i) => i.level === "A"),
           90,
           "Advanced level",
         ),

@@ -48,6 +48,7 @@ import {
   buildPlan,
   codesNeedingFacts,
   intakeOf,
+  offeredSpansOf,
   offeredStartsOf,
   type PlanItem,
   type TakenRow,
@@ -254,7 +255,7 @@ export function StudyPlan() {
             plan.passedCodes,
             programme?.summary.type === "TMAST",
             (code) =>
-              offeredStartsOf(code, {
+              offeredSpansOf(code, {
                 programme,
                 master,
                 currentRounds,
@@ -298,16 +299,17 @@ export function StudyPlan() {
         plan.items.find((i) => i.code === code)?.startIdx ??
         Number.POSITIVE_INFINITY;
       neededBy.sort((a, b) => startOf(a) - startOf(b));
-      const starts = offeredStartsOf(row.code, {
+      const spans = offeredSpansOf(row.code, {
         programme,
         master,
         currentRounds,
         facts,
       });
-      const inTime = firstPeriodBefore(starts, now, startOf(neededBy[0]));
+      // In time means done before the first course that needs it starts.
+      const inTime = firstPeriodBefore(spans, now, startOf(neededBy[0]));
       // Where none fits before, still the first period it's given: the course after it then moves.
       const earliest =
-        inTime ?? firstPeriodBefore(starts, now, (now.ay + 6) * 10);
+        inTime ?? firstPeriodBefore(spans, now, (now.ay + 6) * 10, "started");
       out.push({
         code: row.code,
         title: facts.courses[row.code]?.titleEng || row.name,

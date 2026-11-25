@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { PlanItem, TemplateCourse } from "../lib/build-plan";
 import type { Period, Slot } from "../lib/slots";
@@ -9,10 +15,14 @@ vi.mock("@/features/courses", () => ({
 }));
 const search = vi.hoisted(() => ({
   results: [] as { courseCode: string; titleEng: string; credits: number }[],
+  /** Whether the hits' facts (and so their periods) have loaded. */
+  factsLoaded: false,
 }));
 vi.mock("../api/queries", () => ({
   useCourseSearch: () => ({ data: { results: search.results } }),
-  usePlanFacts: () => ({ data: undefined }),
+  usePlanFacts: () => ({
+    data: search.factsLoaded ? { courses: {}, refs: {} } : undefined,
+  }),
   useCurrentRounds: () => ({ data: undefined }),
   useProgramme: () => ({ data: undefined }),
 }));
@@ -229,5 +239,31 @@ describe("CourseTray", () => {
       screen.getByRole("button", { name: "Remove DD2352 from the plan" }),
     );
     expect(onRemoveOut).toHaveBeenCalledWith("DD2352");
+  });
+
+  it("keeps search to the period chosen on the grid, once the hits' periods are known", () => {
+    search.results = [
+      { courseCode: "SF2930", titleEng: "Regression Analysis", credits: 7.5 },
+      { courseCode: "SF2701", titleEng: "Financial Mathematics", credits: 7.5 },
+    ];
+    const props = {
+      starts: { SF2930: [3 as const], SF2701: [1 as const] },
+      target: { ay: 2027, p: 3 as const },
+    };
+    // Before the hits' rounds are in, every hit shows.
+    renderTray(props, "Search");
+    expect(screen.getByText("Financial Mathematics")).toBeInTheDocument();
+    cleanup();
+
+    search.factsLoaded = true;
+    renderTray(props, "Search");
+    expect(screen.getByText("Regression Analysis")).toBeInTheDocument();
+    expect(screen.queryByText("Financial Mathematics")).not.toBeInTheDocument();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Show 1 not given in P3" }),
+    );
+    expect(screen.getByText("Financial Mathematics")).toBeInTheDocument();
+    search.factsLoaded = false;
+    search.results = [];
   });
 });

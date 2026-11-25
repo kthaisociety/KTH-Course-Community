@@ -1,5 +1,5 @@
 import type { PlanFactsResult, PrerequisiteGroup } from "@/types/programme";
-import type { BuiltPlan, PlanItem } from "./build-plan";
+import type { BuiltPlan, PeriodSpan, PlanItem } from "./build-plan";
 import type { PlanState } from "./plan-storage";
 import { type Period, type Slot, slotIndex, slotLabel } from "./slots";
 
@@ -103,20 +103,36 @@ export function makeSameCourse(plan: BuiltPlan, facts: PlanFactsResult) {
 }
 
 /**
- * The first period still to come, and before `beforeIdx`, that a course with
- * these start periods is given in: where a missing prerequisite can still go.
+ * How a prerequisite has to stand when the course that needs it starts, as the
+ * check reads it: done (the usual), begun (where the syllabus says a running
+ * course counts as completed), or at most alongside ("aktivt deltagande").
+ */
+export type PrerequisiteTiming = "finished" | "started" | "together";
+
+/**
+ * The first period still to come that a course with these rounds can start in
+ * and still be in time for a course starting at `beforeIdx`: where a missing
+ * prerequisite can go. A round's end counts, not only its start — a P2–P3
+ * round started in P2 is still running when a P3 course begins.
  */
 export function firstPeriodBefore(
-  starts: readonly Period[],
+  spans: readonly PeriodSpan[],
   now: Slot,
   beforeIdx: number,
+  timing: PrerequisiteTiming = "finished",
 ): Slot | null {
   const nowIdx = slotIndex(now);
   for (let ay = now.ay; ay <= Math.floor(beforeIdx / 10); ay++)
     for (const p of [1, 2, 3, 4] as const) {
-      const idx = slotIndex({ ay, p });
-      if (idx > nowIdx && idx < beforeIdx && starts.includes(p))
-        return { ay, p };
+      const startIdx = slotIndex({ ay, p });
+      if (startIdx <= nowIdx) continue;
+      const fits = spans.some((s) => {
+        if (s.start !== p) return false;
+        if (timing === "together") return startIdx <= beforeIdx;
+        if (timing === "started") return startIdx < beforeIdx;
+        return slotIndex({ ay, p: s.end }) < beforeIdx;
+      });
+      if (fits) return { ay, p };
     }
   return null;
 }
@@ -186,8 +202,8 @@ export function checkPlan(
    * the student was admitted with covers it.
    */
   entryDegree = false,
-  /** The periods a course starts in, for suggesting where a missing prerequisite fits. */
-  startsOf: (code: string) => readonly Period[] = () => [],
+  /** When a course's rounds start and end, for suggesting where a missing prerequisite fits. */
+  spansOf: (code: string) => readonly PeriodSpan[] = () => [],
 ): PlanCheck[] {
   const out: PlanCheck[] = [];
   const levelOf = (code: string) =>
@@ -354,8 +370,11 @@ export function checkPlan(
         changed = true;
       }
   }
-  const fitBefore = (code: string, beforeIdx: number) =>
-    firstPeriodBefore(startsOf(code), now, beforeIdx);
+  const fitBefore = (
+    code: string,
+    beforeIdx: number,
+    timing: PrerequisiteTiming,
+  ) => firstPeriodBefore(spansOf(code), now, beforeIdx, timing);
 
   for (const it of checked) {
     groupsOf(it).forEach((g, gi) => {
@@ -423,7 +442,15 @@ export function checkPlan(
           ];
       let fix: CheckFix | null = null;
       for (const c of order) {
-        const slot = fitBefore(c, it.startIdx);
+        const slot = fitBefore(
+          c,
+          it.startIdx,
+          g.strength === "participating"
+            ? "together"
+            : facts.courses[it.code]?.registeredCounts
+              ? "started"
+              : "finished",
+        );
         if (slot) {
           fix = {
             kind: "place",

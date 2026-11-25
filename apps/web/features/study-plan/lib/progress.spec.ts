@@ -320,6 +320,66 @@ describe("computeProgress", () => {
     expect(meter && meter.done + meter.planned).toBe(127.5);
   });
 
+  it("counts one course of an 'Endast en av' set toward the gate to the master's part too", () => {
+    const withChoice = programme(
+      "CXXXX",
+      "CING",
+      300,
+      {
+        ...civingYears,
+        "3": [
+          ...civingYears["3"],
+          { ...row("AA3101", 7.5), category: "VV" },
+          { ...row("AA3102", 7.5), category: "VV" },
+        ],
+      },
+      civingRounds,
+    );
+    withChoice.intakes["20242"].overlaps = [["AA3101", "AA3102"]];
+    const sections = progressOf({
+      programme: withChoice,
+      master,
+      state: {
+        ...empty,
+        placements: { AA3101: at(2026, 2), AA3102: at(2026, 3) },
+      },
+    });
+    const gate = line(sections, "bachelor", "Gate to the master's part")?.meter;
+    expect(gate && gate.done + gate.planned).toBe(172.5);
+  });
+
+  it("keeps an earlier course of a set for a deadline a larger, later one misses", () => {
+    // AA2101 (7.5 hp) ends before the kandidat project starts; AA2102 (9 hp), its
+    // overlap, comes after. Chosen over the whole plan, AA2102 would win and the
+    // project's meter would lose both.
+    const withChoice = programme(
+      "CXXXX",
+      "CING",
+      300,
+      {
+        ...civingYears,
+        "2": [
+          ...civingYears["2"],
+          { ...row("AA2101", 7.5), category: "VV" },
+          { ...row("AA2102", 9), category: "VV" },
+        ],
+      },
+      civingRounds,
+    );
+    withChoice.intakes["20242"].overlaps = [["AA2101", "AA2102"]];
+    const sections = progressOf({
+      programme: withChoice,
+      master,
+      projects: { AA300X: gate("AA300X", { credits: 200 }) },
+      state: {
+        ...empty,
+        placements: { AA2101: at(2025, 2), AA2102: at(2027, 1) },
+      },
+    });
+    const before = line(sections, "bachelor", "Before AA300X starts")?.meter;
+    expect(before && before.done + before.planned).toBe(157.5);
+  });
+
   it("counts a course once when it was taken under another code", () => {
     // AA3001 was taken early as ZZ3001, the same course under its old code.
     const facts: PlanFactsResult = {

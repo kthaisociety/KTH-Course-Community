@@ -295,6 +295,30 @@ type RoundSources = Pick<
 >;
 
 /** The periods a course's rounds start in, from every source the plan reads. */
+/** One round's place in the year: the period it starts in and the one it ends in, e.g. P2–P3. */
+export interface PeriodSpan {
+  start: Period;
+  end: Period;
+}
+
+/**
+ * When each of a course's rounds starts and ends: where it can go, and when it is
+ * done. A prerequisite suggested by start alone could still be running when the
+ * course that needs it begins.
+ */
+export function offeredSpansOf(code: string, src: RoundSources): PeriodSpan[] {
+  const out: PeriodSpan[] = [];
+  for (const r of roundsFor(code, src, null).rounds) {
+    const start = roundStart(r.credits);
+    if (start === null) continue;
+    let end: Period = start;
+    for (let p = start; p <= 5; p++) if (r.credits[p] > 0) end = p as Period;
+    if (!out.some((x) => x.start === start && x.end === end))
+      out.push({ start, end });
+  }
+  return out.sort((a, b) => a.start - b.start || a.end - b.end);
+}
+
 export function offeredStartsOf(code: string, src: RoundSources): Period[] {
   return [
     ...new Set(

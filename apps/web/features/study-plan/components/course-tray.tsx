@@ -360,12 +360,20 @@ export function CourseTray({
   const shownElectives = electives.filter((e) => fits(e.code));
   const toAdd = saved.filter((r) => !r.where);
   const shownSaved = toAdd.filter((r) => fits(r.code));
+  // Search hits follow the chosen period like the other lists. One already in the
+  // plan always shows, and until the hits' rounds are in, every hit does.
+  const hitsKnown = hitFacts !== undefined;
+  const shownResults = results.filter(
+    (r) => whereOf(r.courseCode) || !hitsKnown || fits(r.courseCode),
+  );
   const hidden =
     tab === "programme"
       ? electives.length - shownElectives.length
       : tab === "saved"
         ? toAdd.length - shownSaved.length
-        : 0;
+        : tab === "search"
+          ? results.length - shownResults.length
+          : 0;
   const byYear = new Map<number, TemplateCourse[]>();
   for (const e of shownElectives)
     byYear.set(e.studyYear, [...(byYear.get(e.studyYear) ?? []), e]);
@@ -586,7 +594,7 @@ export function CourseTray({
               />
             </div>
             <ul className="flex flex-col gap-2.5">
-              {results.map((r) => {
+              {shownResults.map((r) => {
                 const where = whereOf(r.courseCode);
                 return (
                   <TrayRow
@@ -603,6 +611,7 @@ export function CourseTray({
                 );
               })}
             </ul>
+            {showHidden}
             {q.trim().length >= 2 &&
             search.data &&
             !search.data.results.length ? (

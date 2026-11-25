@@ -152,7 +152,8 @@ function checksFor(state: PlanState = empty, now = start) {
     currentRounds: {},
   };
   // SF1922 is given in P3; nothing else outside the programme is.
-  const starts = (code: string): Period[] => (code === "SF1922" ? [3] : []);
+  const starts = (code: string) =>
+    code === "SF1922" ? [{ start: 3 as Period, end: 3 as Period }] : [];
   return checkPlan(
     buildPlan(inputs),
     facts,
@@ -232,12 +233,28 @@ describe("sameSubject", () => {
 });
 
 describe("firstPeriodBefore", () => {
+  const p3 = { start: 3 as Period, end: 3 as Period };
   it("finds the first future period the course is given in, before the deadline", () => {
-    expect(firstPeriodBefore([3], { ay: 2024, p: 3 }, 20271)).toEqual({
+    expect(firstPeriodBefore([p3], { ay: 2024, p: 3 }, 20271)).toEqual({
       ay: 2025,
       p: 3,
     });
-    expect(firstPeriodBefore([3], { ay: 2024, p: 1 }, 20243)).toBeNull();
+    expect(firstPeriodBefore([p3], { ay: 2024, p: 1 }, 20243)).toBeNull();
+  });
+
+  it("offers a round only if it finishes before the course that needs it starts", () => {
+    // P2–P3, for a course starting in P3 of the same year: still running then.
+    const p2p3 = { start: 2 as Period, end: 3 as Period };
+    expect(firstPeriodBefore([p2p3], { ay: 2025, p: 1 }, 20253)).toBeNull();
+    // Enough when the syllabus counts a running course as completed.
+    expect(
+      firstPeriodBefore([p2p3], { ay: 2025, p: 1 }, 20253, "started"),
+    ).toEqual({ ay: 2025, p: 2 });
+    // A year earlier, it's done in time.
+    expect(firstPeriodBefore([p2p3], { ay: 2024, p: 1 }, 20253)).toEqual({
+      ay: 2024,
+      p: 2,
+    });
   });
 });
 
