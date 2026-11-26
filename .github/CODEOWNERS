@@ -1,0 +1,9 @@
+# Code owners must approve every PR (ruleset: require code owner review).
+# The last matching pattern wins.
+* @FilipDimitrijevic97 @HetviChaniyara @abdurryy
+
+# Workflows pass the deploy and release app keys to kthaisociety/workflows,
+# so Platform reviews them. Platform also owns this file, so the rule can't be
+# removed without Platform: GitHub applies CODEOWNERS from the base branch.
+/.github/workflows/ @kthaisociety/platform-engineers
+/.github/CODEOWNERS @kthaisociety/platform-engineers
