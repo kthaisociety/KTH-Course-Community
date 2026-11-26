@@ -96,6 +96,34 @@ before the server starts. It does so only when `MIGRATE_ON_START=true`; otherwis
 it leaves the database alone. If a migration fails, the container exits and the
 server does not start.
 
+### 8. Run a Job in a Deployed Container
+
+A deployed database can only be reached from inside its environment, so ingest
+and the backfills run in the app's own container, from its terminal in Dokploy.
+The image holds each of them as one file, built for Node:
+
+| Job | Command |
+| --- | --- |
+| Ingest | `node apps/web/scripts/ingest.mjs` (add `--test` for 10 random courses) |
+| Backfill earned personalization tiers | `node apps/web/scripts/backfill-personalization-tiers.mjs` |
+| Backfill missing graph nodes | `node apps/web/scripts/backfill-graph-placements.mjs` |
+
+They use the container's own settings (`DATABASE_URL`, and `AI_GATEWAY_API_KEY`
+for ingest), so there is nothing to configure. None of them runs on its own.
+
+A full ingest reads every course page and takes a while, and closing the
+terminal can stop a job that runs in it. Start a long job with `nohup`, so it
+keeps running, and follow its log:
+
+```bash
+nohup node apps/web/scripts/ingest.mjs > /tmp/ingest.log 2>&1 &
+tail -f /tmp/ingest.log
+```
+
+The log lives in the container, so a redeploy removes it. A job stopped halfway
+can be run again: ingest only updates the courses it reads, and both backfills
+change nothing on a second run.
+
 ## Adding a feature
 
 Product code is split by layer: **server owns data and auth, features own UI and

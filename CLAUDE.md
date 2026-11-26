@@ -13,6 +13,7 @@ Bun workspace monorepo (`workspaces: ["apps/*"]`). The only app is `apps/web`: N
 - DB: `bun run db:push` / `bun run db:generate`
 - Container start: `apps/web/scripts/migrate-on-start.ts` applies the committed migrations before the server, only when `MIGRATE_ON_START=true` (see `Dockerfile.web`)
 - Ingest: `bun run ingest` (optional `--test`)
+- Jobs in a deployed container: ingest and both backfills are bundled into the image as `apps/web/scripts/*.mjs` and run with `node` from the container's terminal (README, "Run a Job in a Deployed Container")
 - Programme syllabi for the study plan: `bun run ingest:programmes` (optional `--cache <dir>`; commit `server/programme/data/`)
 - Backfill earned personalization tiers: `bun run backfill:tiers` (idempotent; only ever raises)
 - Backfill missing graph nodes: `bun run backfill:placements` (idempotent; places app users who have none)

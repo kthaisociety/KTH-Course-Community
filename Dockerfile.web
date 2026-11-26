@@ -29,6 +29,13 @@ RUN bun run build
 RUN bun build scripts/migrate-on-start.ts --target=node --format=esm \
     --outfile=.migrate/migrate-on-start.mjs
 
+# The jobs someone runs by hand in a deployed container (README, "Run a job in
+# a deployed container"), one file each for the same reason. They never run on
+# their own.
+RUN bun build scripts/ingest.ts scripts/backfill-personalization-tiers.ts \
+    scripts/backfill-graph-placements.ts --target=node --format=esm \
+    --outdir=.jobs --entry-naming="[name].mjs"
+
 FROM node:24-alpine AS runner
 WORKDIR /app
 
@@ -48,6 +55,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/apps/web/public ./apps/web/public
 # files from its own location.
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.migrate/migrate-on-start.mjs ./apps/web/scripts/migrate-on-start.mjs
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/server/db/drizzle ./apps/web/server/db/drizzle
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.jobs/ ./apps/web/scripts/
 
 USER nextjs
 
