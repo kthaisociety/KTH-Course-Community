@@ -81,7 +81,7 @@ bun run ingest
 
 Optional: `bun run ingest -- --test` ingests 10 random established courses.
 
-This reads KTH's public course pages on www.kth.se (KOPPS is closed, see `docs/adr/0012-ingest-from-kth-course-pages.md`) and writes into Neon (including embeddings). A full run fetches about 4,800 courses in two languages and takes a while.
+This reads KTH's public course pages on www.kth.se (KOPPS is closed, see `docs/adr/0012-ingest-from-kth-course-pages.md`) and writes into the database in `DATABASE_URL` (including embeddings). A full run fetches about 4,800 courses in two languages and takes a while.
 
 ### 7. Build Docker Image
 
@@ -100,7 +100,10 @@ server does not start.
 
 A deployed database can only be reached from inside its environment, so ingest
 and the backfills run in the app's own container, from its terminal in Dokploy.
-The image holds each of them as one file, built for Node:
+Choose `/bin/sh`: the image is Alpine and has no Bash. The terminal opens in `/`,
+so start with `cd /app`, where the commands below expect to be.
+
+The image holds each job as one file, built for Node:
 
 | Job | Command |
 | --- | --- |
@@ -115,9 +118,17 @@ A full ingest reads every course page and takes a while, and closing the
 terminal can stop a job that runs in it. Start a long job with `nohup`, so it
 keeps running, and follow its log:
 
-```bash
+```sh
+cd /app
 nohup node apps/web/scripts/ingest.mjs > /tmp/ingest.log 2>&1 &
 tail -f /tmp/ingest.log
+```
+
+Ctrl+C stops only `tail`, not the job. To check on it later:
+
+```sh
+ps | grep '[i]ngest'         # a line while it runs, nothing once it has stopped
+tail -n 20 /tmp/ingest.log   # a full run ends with "Ingest finished"
 ```
 
 The log lives in the container, so a redeploy removes it. A job stopped halfway
@@ -293,7 +304,7 @@ What each environment runs with (hosts, settings, secret names) is declared in
 | `bun run db:push` | Pushes the Drizzle schema to Neon |
 | `bun run db:generate` | Generates Drizzle migrations |
 | `bun run db:migrate` | Applies the committed migrations |
-| `bun run ingest` | Ingests KTH courses from www.kth.se into Neon |
+| `bun run ingest` | Ingests KTH courses from www.kth.se into the database |
 | `bun run add:web` | Adds a dependency to the web workspace |
 | `bun run rm:web` | Removes a dependency from the web workspace |
  
