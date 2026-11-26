@@ -200,20 +200,35 @@ function templateRows(
 ): TemplateCourse[] {
   const intake = intakeOf(detail, term);
   if (!intake) return [];
-  const out: TemplateCourse[] = [];
-  const seen = new Set<string>();
+  const best = new Map<string, TemplateCourse>();
   for (const y of years) {
     for (const row of intake.years[String(y)] ?? []) {
       if (row.track !== null && row.track !== track) continue;
-      const key = row.code;
-      // A course listed as mandatory and elective (two tracks, two headings) keeps its first, strongest listing.
-      if (seen.has(key)) continue;
-      seen.add(key);
-      out.push({ ...row, studyYear: y + yearOffset, source });
+      const here: TemplateCourse = {
+        ...row,
+        studyYear: y + yearOffset,
+        source,
+      };
+      const before = best.get(row.code);
+      // A course listed twice keeps its strongest listing, wherever it comes: TTMAM
+      // lists SF2701 as elective for everyone first and as mandatory in the financial
+      // mathematics track after, and the first listing used to win — so the track's
+      // mandatory courses were never placed.
+      if (!before || STRENGTH[here.category] < STRENGTH[before.category])
+        best.set(row.code, here);
     }
   }
-  return out;
+  return [...best.values()];
 }
+
+/** How binding a syllabus category is: mandatory first. */
+const STRENGTH: Record<PlanCategory, number> = {
+  O: 0,
+  VV: 1,
+  R: 2,
+  V: 3,
+  "?": 4,
+};
 
 /** The first period with credits in a round, ignoring P0 (the summer before P1). */
 export function roundStart(credits: PeriodCredits): Period | null {
@@ -274,9 +289,49 @@ interface RoundChoice {
  * 25 % in the catalogue — and a placement in P3 should take the P3 round's
  * shape, not the programme's P2 round squeezed into P3.
  */
+type RoundSources = Pick<
+  PlanInputs,
+  "programme" | "master" | "currentRounds" | "facts"
+>;
+
+/** The periods a course's rounds start in, from every source the plan reads. */
+/** One round's place in the year: the period it starts in and the one it ends in, e.g. P2–P3. */
+export interface PeriodSpan {
+  start: Period;
+  end: Period;
+}
+
+/**
+ * When each of a course's rounds starts and ends: where it can go, and when it is
+ * done. A prerequisite suggested by start alone could still be running when the
+ * course that needs it begins.
+ */
+export function offeredSpansOf(code: string, src: RoundSources): PeriodSpan[] {
+  const out: PeriodSpan[] = [];
+  for (const r of roundsFor(code, src, null).rounds) {
+    const start = roundStart(r.credits);
+    if (start === null) continue;
+    let end: Period = start;
+    for (let p = start; p <= 5; p++) if (r.credits[p] > 0) end = p as Period;
+    if (!out.some((x) => x.start === start && x.end === end))
+      out.push({ start, end });
+  }
+  return out.sort((a, b) => a.start - b.start || a.end - b.end);
+}
+
+export function offeredStartsOf(code: string, src: RoundSources): Period[] {
+  return [
+    ...new Set(
+      roundsFor(code, src, null)
+        .rounds.map((r) => roundStart(r.credits))
+        .filter((p): p is Period => p !== null),
+    ),
+  ].sort();
+}
+
 function roundsFor(
   code: string,
-  inputs: PlanInputs,
+  inputs: RoundSources,
   prefer: "programme" | "master" | null,
 ): RoundChoice {
   const own = (d: ProgrammeDetail | null) => d?.rounds[code] ?? [];

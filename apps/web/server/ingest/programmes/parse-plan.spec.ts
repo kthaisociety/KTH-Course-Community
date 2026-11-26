@@ -1,5 +1,42 @@
 import { describe, expect, it } from "vitest";
-import { mastersOf, overlapsOf, parseCourseList } from "./parse-plan";
+import {
+  mastersOf,
+  overlapsOf,
+  parseCourseList,
+  trackNamesOf,
+} from "./parse-plan";
+
+describe("trackNamesOf", () => {
+  it("pairs each Swedish track heading with the English one carrying its code", () => {
+    const sv = {
+      kurslistaar3:
+        "<h3>Gemensamma kurser</h3><h3>Inriktning: Matematik och fysik (MAFY)</h3><h3>Inriktning: Matematik och kemi (MAKE)</h3>",
+    };
+    // The English page lists them in another order: the code, not the place, pairs them.
+    const en = {
+      kurslistaar3:
+        "<h3>General Courses</h3><h3>Specialisations: Mathematics and Chemistry (MAKE)</h3><h3>Specialisations: Mathematics and Physics (MAFY)</h3>",
+    };
+    expect(trackNamesOf(sv, en)).toEqual({
+      "Inriktning: Matematik och fysik (MAFY)":
+        "Specialisations: Mathematics and Physics (MAFY)",
+      "Inriktning: Matematik och kemi (MAKE)":
+        "Specialisations: Mathematics and Chemistry (MAKE)",
+    });
+  });
+
+  it("pairs a heading without a code by its place, and only when both lists line up", () => {
+    const sv = { kurslistaar2: "<h3>Gemensamma kurser</h3><h3>Teknik</h3>" };
+    expect(
+      trackNamesOf(sv, {
+        kurslistaar2: "<h3>General Courses</h3><h3>Technology</h3>",
+      }),
+    ).toEqual({ Teknik: "Technology" });
+    expect(
+      trackNamesOf(sv, { kurslistaar2: "<h3>General Courses</h3>" }),
+    ).toEqual({});
+  });
+});
 
 const LIST = `<h3>Gemensamma kurser</h3>
 <h4>Obligatoriska kurser</h4>

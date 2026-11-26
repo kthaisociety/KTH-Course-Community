@@ -53,9 +53,12 @@ export function useDegreeProjects(codes: readonly string[]) {
 }
 
 /** Rounds, levels and prerequisites for the courses in a plan. Previous facts stay up while new codes load. */
+/** The most course codes one plan-facts request answers, as the server caps it. */
+export const PLAN_FACTS_LIMIT = 400;
+
 export function usePlanFacts(codes: readonly string[]) {
   const trpc = useTRPC();
-  const sorted = [...new Set(codes)].sort().slice(0, 400);
+  const sorted = [...new Set(codes)].sort().slice(0, PLAN_FACTS_LIMIT);
   return useQuery(
     trpc.course.planFacts.queryOptions(
       { courseCodes: sorted },

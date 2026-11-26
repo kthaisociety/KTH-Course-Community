@@ -75,6 +75,13 @@ export interface ProgrammeIntake {
   mastersOpen: string[];
   /** "Endast en av …" sets: at most one of each may count toward the degree. */
   overlaps: string[][];
+  /**
+   * A track's Swedish heading (the `track` every row and saved plan keys on) →
+   * KTH's English heading for it, e.g. "Inriktning: Matematik och fysik (MAFY)" →
+   * "Specialisations: Mathematics and Physics (MAFY)". Absent where the English
+   * page wasn't read.
+   */
+  trackNames?: Record<string, string>;
   /** Plan prose, trimmed: conditions for continuing, degree project, eligibility. */
   text: {
     conditions: string;

@@ -111,6 +111,13 @@ _Today_: not a table — `bun run ingest:programmes` writes the syllabi to
 `server/programme/data/` from kth.se (ADR 0011).
 _Avoid_: degree, education, course plan
 
+**Open entrance**:
+A civilingenjör programme whose syllabus covers year 1 only, like Öppen ingång
+(`COPEN`). During that year the student applies for the civilingenjör programme
+of the four years after it, the **continuation**, whose syllabus fills years 2–5
+of their study plan and whose master's mapping and gate rules apply.
+_Avoid_: open entry, base year (that is Tekniskt basår)
+
 **Study plan**:
 One person's intended path through a programme: which course goes in which
 period of which academic year. Lives in the browser (ADR 0011).

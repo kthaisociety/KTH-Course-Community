@@ -10,6 +10,43 @@ const CATEGORY: Record<string, PlanCategory> = {
 
 export const COMMON_TRACK = "Gemensamma kurser";
 
+/** A year's track headings (its h3s), in page order, the common courses included. */
+function headingsOf(html: string | null | undefined): string[] {
+  return [...(html ?? "").matchAll(/<h3[^>]*>([\s\S]*?)<\/h3>/gi)].map((m) =>
+    plainText(m[1]),
+  );
+}
+
+const bracketCode = (heading: string) =>
+  heading.match(/\(([A-ZÅÄÖ0-9]{2,})\)\s*$/)?.[1] ?? null;
+
+/**
+ * Swedish track heading → English, from one plan's course lists read in both
+ * languages (`kurslistaarN`, keyed the same on both pages). A heading pairs with
+ * the English one carrying the same code in brackets, "(MAFY)"; one without a
+ * code pairs by its place in the year's list, which the two pages share.
+ */
+export function trackNamesOf(
+  sv: Record<string, unknown>,
+  en: Record<string, unknown>,
+): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [key, value] of Object.entries(sv)) {
+    if (!/^kurslistaar\d+$/.test(key)) continue;
+    const svHeads = headingsOf(typeof value === "string" ? value : "");
+    const enHeads = headingsOf(typeof en[key] === "string" ? en[key] : "");
+    svHeads.forEach((s, i) => {
+      if (s === COMMON_TRACK || out[s]) return;
+      const code = bracketCode(s);
+      const match =
+        (code && enHeads.find((e) => bracketCode(e) === code)) ||
+        (svHeads.length === enHeads.length ? enHeads[i] : undefined);
+      if (match) out[s] = match;
+    });
+  }
+  return out;
+}
+
 /**
  * One year's course list (kurslistaarN) → rows. The list is HTML: an h3 per
  * track, an h4 per category, then a table of code / name / credits / level.

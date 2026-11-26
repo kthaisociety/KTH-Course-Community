@@ -30,6 +30,7 @@ export function usePlanStore(owner: string) {
       importPlan: (data: Record<string, unknown>) =>
         planStore.importPlan(owner, data),
       clear: () => planStore.clear(owner),
+      reset: (keep: ReadonlySet<string>) => planStore.reset(owner, keep),
     }),
     [owner],
   );

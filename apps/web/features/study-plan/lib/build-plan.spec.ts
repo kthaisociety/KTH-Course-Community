@@ -251,6 +251,27 @@ describe("buildPlan", () => {
 });
 
 describe("checkPlan", () => {
+  it("warns about a mandatory course that wasn't passed, pointing at the next round", () => {
+    const plan = buildPlan(inputs());
+    const c = checkPlan(plan, facts, empty, { ay: 2026, p: 2 }, []).find(
+      (x) => x.rule === "not-passed" && x.code === "ID1018",
+    );
+    expect(c?.severity).toBe("warning");
+    expect(c?.fixes).toEqual([
+      { kind: "move", slot: { ay: 2027, p: 2 }, label: "Move to HT 2027 P2" },
+    ]);
+  });
+
+  it("adds nothing for an elective that wasn't passed: its own pill says so", () => {
+    const state = { ...empty, placements: { DH2642: at(2025, 2) } };
+    const plan = buildPlan(inputs({ state }));
+    expect(
+      checkPlan(plan, facts, state, { ay: 2026, p: 2 }, []).filter(
+        (x) => x.rule === "not-passed" && x.code === "DH2642",
+      ),
+    ).toEqual([]);
+  });
+
   it("warns when a planned course sits in a period it isn't given in, with a move to each one it is", () => {
     const plan = buildPlan(
       inputs({
@@ -291,6 +312,45 @@ describe("checkPlan", () => {
         (x) => x.rule === "prerequisite",
       ),
     ).toEqual([]);
+  });
+
+  it("makes a course mandatory when the chosen track lists it so, even after an elective listing", () => {
+    // TTMAM: SF2701 is elective for everyone, listed first, and mandatory in the
+    // financial mathematics track, listed after.
+    const kand: ProgrammeDetail = {
+      ...programme,
+      summary: { ...programme.summary, code: "KXXXX", type: "GKAND", years: 3 },
+      intakes: {
+        "20242": {
+          ...programme.intakes["20242"],
+          years: {
+            "1": [
+              row("SF2701", "V"),
+              {
+                ...row("SF2701", "O"),
+                track: "Inriktning: Spår, finansiell matematik (FMIA)",
+              },
+            ],
+          },
+          overlaps: [],
+        },
+      },
+      rounds: { SF2701: [[0, 7.5, 0, 0, 0, 0]] },
+    };
+    const plan = buildPlan(
+      inputs({
+        programme: kand,
+        setup: {
+          ...inputs().setup,
+          programme: "KXXXX",
+          track: "Inriktning: Spår, finansiell matematik (FMIA)",
+        },
+        knowsTranscript: false,
+      }),
+    );
+    const sf2701 = plan.items.find((i) => i.code === "SF2701");
+    expect(sf2701?.mandatory).toBe(true);
+    expect(sf2701?.slot).toEqual(at(2024, 1));
   });
 
   it("takes basic-level prerequisites as met when the plan starts from a degree", () => {
