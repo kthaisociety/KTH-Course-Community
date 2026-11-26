@@ -1,9 +1,9 @@
 /** How many random courses `--test` reads when it isn't given a number. */
-export const DEFAULT_TEST_COURSES = 10;
+export const DEFAULT_TEST_COURSES = 50;
 
 /**
  * The ingest script's arguments: nothing for a full ingest, or `--test` for a
- * sample of random established courses. `--test 50` or `--test=50` sets the
+ * sample of random established courses. `--test 200` or `--test=200` sets the
  * sample's size.
  */
 export function parseIngestArgs(args: string[]): { testCourses?: number } {

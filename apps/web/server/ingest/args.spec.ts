@@ -13,7 +13,7 @@ describe("parseIngestArgs", () => {
   });
 
   it("reads the sample size after --test", () => {
-    expect(parseIngestArgs(["--test", "50"])).toEqual({ testCourses: 50 });
+    expect(parseIngestArgs(["--test", "25"])).toEqual({ testCourses: 25 });
   });
 
   it("reads the sample size from --test=", () => {

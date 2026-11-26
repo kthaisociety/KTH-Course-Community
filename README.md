@@ -85,7 +85,7 @@ The app is at [http://localhost:3000](http://localhost:3000).
 The database starts without courses. To fill it, from the repo root:
 
 ```bash
-bun run ingest -- --test       # 10 random established courses, in a few minutes
+bun run ingest -- --test       # 50 random established courses
 bun run ingest -- --test 200   # as many random courses as you ask for
 bun run ingest                 # every course
 ```
@@ -119,7 +119,7 @@ The image holds each job as one file, built for Node:
 
 | Job | Command |
 | --- | --- |
-| Ingest | `node apps/web/scripts/ingest.mjs` (add `--test` for 10 random courses, `--test <n>` for n) |
+| Ingest | `node apps/web/scripts/ingest.mjs` (add `--test` for 50 random courses, `--test <n>` for n) |
 | Backfill earned personalization tiers | `node apps/web/scripts/backfill-personalization-tiers.mjs` |
 | Backfill missing graph nodes | `node apps/web/scripts/backfill-graph-placements.mjs` |
 
