@@ -136,14 +136,24 @@ describe("searchCourses", () => {
       await searchCourses("maths", { page: 1, size: 20 });
 
       expect(searchByKeyword).toHaveBeenCalledWith("maths", 21, null);
-      expect(searchByEmbedding).toHaveBeenCalledWith([0.25, 0.5], 21, null);
+      expect(searchByEmbedding).toHaveBeenCalledWith(
+        [0.25, 0.5],
+        21,
+        null,
+        "maths",
+      );
     });
 
     it("widens the window by whole pages, not by a multiple", async () => {
       await searchCourses("maths", { page: 3, size: 20 });
 
       expect(searchByKeyword).toHaveBeenCalledWith("maths", 61, null);
-      expect(searchByEmbedding).toHaveBeenCalledWith([0.25, 0.5], 61, null);
+      expect(searchByEmbedding).toHaveBeenCalledWith(
+        [0.25, 0.5],
+        61,
+        null,
+        "maths",
+      );
     });
 
     it("reports a next page when the extra row comes back", async () => {
@@ -247,7 +257,12 @@ describe("searchCourses", () => {
       await searchCourses("maths", { page: 3, size: 20, department: "EECS" });
 
       expect(searchByKeyword).toHaveBeenCalledWith("maths", 61, "EECS");
-      expect(searchByEmbedding).toHaveBeenCalledWith([0.25, 0.5], 61, "EECS");
+      expect(searchByEmbedding).toHaveBeenCalledWith(
+        [0.25, 0.5],
+        61,
+        "EECS",
+        "maths",
+      );
     });
 
     it("returns an empty page, not an error, past the end of a short ranking", async () => {
