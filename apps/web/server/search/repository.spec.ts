@@ -28,6 +28,37 @@ describe("searchByKeyword", () => {
     expect(queryText).toContain('left join "course_explore"');
   });
 
+  it("prioritizes title matches over full-text matches in course content", async () => {
+    await searchByKeyword("machine learning", 10, null);
+
+    const query = vi.mocked(db.execute).mock.calls[0]?.[0] as SQL | undefined;
+    expect(query).toBeDefined();
+
+    const { sql: queryText } = new PgDialect().sqlToQuery(query as SQL);
+    const orderBy = queryText.slice(
+      queryText.toLowerCase().lastIndexOf("order by"),
+    );
+    const orderedMatchTiers = [
+      '"courses"."code" ilike',
+      'lower(btrim("courses"."name_english")) = lower(',
+      '"courses"."name_english" ilike',
+      "to_tsvector(",
+      '"courses"."code" ilike',
+      '"course_explore"."search_vector" @@ plainto_tsquery',
+    ];
+    let previousPosition = -1;
+
+    for (const fragment of orderedMatchTiers) {
+      const position = orderBy
+        .toLowerCase()
+        .indexOf(fragment, previousPosition + 1);
+      expect(position).toBeGreaterThan(previousPosition);
+      previousPosition = position;
+    }
+
+    expect(orderBy.toLowerCase()).toContain('"courses"."code" asc');
+  });
+
   /**
    * The LIMIT is the size it was handed, full stop.
    *

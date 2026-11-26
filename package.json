@@ -10,6 +10,7 @@
   "scripts": {
     "test": "bun run test:web",
     "test:web": "bun run --filter kth-course-community-web test",
+    "evaluate:search": "bun run --filter kth-course-community-web evaluate:search",
     "typecheck": "bun run --filter kth-course-community-web typecheck",
     "lint": "biome check --fix",
     "format": "biome format --write",
@@ -21,6 +22,7 @@
     "rm:web": "bun remove --filter=kth-course-community-web",
     "docker:web:build": "bun run --filter kth-course-community-web build",
     "ingest": "bun run --filter kth-course-community-web ingest",
+    "reindex:search": "bun run --filter kth-course-community-web reindex:search",
     "ingest:programmes": "bun run --filter kth-course-community-web ingest:programmes",
     "backfill:tiers": "bun run --filter kth-course-community-web backfill:tiers",
     "backfill:placements": "bun run --filter kth-course-community-web backfill:placements",

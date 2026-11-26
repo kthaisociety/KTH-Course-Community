@@ -153,6 +153,28 @@ export async function runNeonTest() {
 
 type RoundCoverage = { courseCode: string; terms: number[] };
 
+type SearchSourceCourse = Pick<
+  InsertCourse,
+  "code" | "titleEng" | "titleSwe" | "goals" | "content"
+>;
+
+/** Rebuild only course_explore from the course and examination rows already in the database. */
+export async function runSearchReindex() {
+  const courses = await db
+    .select({
+      code: coursesTable.code,
+      titleEng: coursesTable.titleEng,
+      titleSwe: coursesTable.titleSwe,
+      goals: coursesTable.goals,
+      content: coursesTable.content,
+    })
+    .from(coursesTable);
+
+  console.log(`Refreshing search embeddings for ${courses.length} courses...`);
+  await generateAndStoreEmbeddings(courses);
+  console.log("Search embeddings refreshed successfully");
+}
+
 async function convertCourses(courses: z.infer<typeof CoursesSchema>): Promise<{
   courses: InsertCourse[];
   rounds: InsertCourseRound[];
@@ -329,7 +351,7 @@ async function upsertExaminations(examinations: InsertCourseExamination[]) {
   }
 }
 
-async function generateAndStoreEmbeddings(courses: InsertCourse[]) {
+async function generateAndStoreEmbeddings(courses: SearchSourceCourse[]) {
   const BATCH_SIZE = 100;
 
   for (let i = 0; i < courses.length; i += BATCH_SIZE) {
@@ -339,11 +361,47 @@ async function generateAndStoreEmbeddings(courses: InsertCourse[]) {
       `Embedding batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(courses.length / BATCH_SIZE)}`,
     );
 
+    const examinationRows = batch.length
+      ? await db
+          .select({
+            courseCode: courseExaminationsTable.courseCode,
+            examCode: courseExaminationsTable.examCode,
+            title: courseExaminationsTable.title,
+          })
+          .from(courseExaminationsTable)
+          .where(
+            inArray(
+              courseExaminationsTable.courseCode,
+              batch.map((c) => c.code),
+            ),
+          )
+          .orderBy(
+            courseExaminationsTable.courseCode,
+            courseExaminationsTable.examCode,
+          )
+      : [];
+    const examinationTextByCode = new Map<string, string[]>();
+    for (const examination of examinationRows) {
+      const values = examinationTextByCode.get(examination.courseCode) ?? [];
+      values.push(
+        [examination.examCode, examination.title].filter(Boolean).join(" "),
+      );
+      examinationTextByCode.set(examination.courseCode, values);
+    }
+
     const batchWithHash = batch.map((course) => {
       const { code, titleEng, titleSwe, goals, content } = course;
+      const examinationText = examinationTextByCode.get(code)?.join(" ") ?? "";
       // Preserve the legacy embedding-hash input byte for byte so moving its
       // storage does not cause an unnecessary re-embed.
-      const embeddingText = [code, titleEng, titleSwe, goals, content]
+      const embeddingText = [
+        code,
+        titleEng,
+        titleSwe,
+        goals,
+        content,
+        examinationText,
+      ]
         .filter(Boolean)
         .join(" ");
       const sourceHash = createHash("sha256")
@@ -351,7 +409,14 @@ async function generateAndStoreEmbeddings(courses: InsertCourse[]) {
         .digest("hex");
       // This order matches the generated courses.search_vector expression
       // being retired by migration 0013, preserving full-text rank positions.
-      const searchText = [titleEng, titleSwe, code, goals, content]
+      const searchText = [
+        titleEng,
+        titleSwe,
+        code,
+        goals,
+        content,
+        examinationText,
+      ]
         .map((value) => value ?? "")
         .join(" ");
       return { course, embeddingText, sourceHash, searchText };

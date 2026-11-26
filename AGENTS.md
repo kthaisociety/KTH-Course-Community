@@ -12,6 +12,8 @@ Bun workspace monorepo (`workspaces: ["apps/*"]`). The only app is `apps/web`: N
 - Lint / format: `bun run lint` / `bun run format` (Biome)
 - DB: `bun run db:push` / `bun run db:generate`
 - Ingest: `bun run ingest` (optional `--test`)
+- Rebuild search embeddings and full-text vectors from stored data: `bun run reindex:search`
+- Evaluate search ranking on a fixed-seed, department-stratified sample: `bun run evaluate:search`
 - Programme syllabi for the study plan: `bun run ingest:programmes` (optional `--cache <dir>`; commit `server/programme/data/`)
 - Backfill earned personalization tiers: `bun run backfill:tiers` (idempotent; only ever raises)
 - Backfill missing graph nodes: `bun run backfill:placements` (idempotent; places app users who have none)

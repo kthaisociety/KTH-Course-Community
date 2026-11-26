@@ -81,6 +81,25 @@ bun run ingest
 
 Optional: `bun run ingest -- --test` ingests 10 random established courses.
 
+To rebuild embeddings and full-text search data from the courses and examination
+modules already stored in Neon, without fetching KTH pages or changing course,
+round, or examination rows, run `bun run reindex:search`.
+
+To evaluate ranking against a repeatable, department-stratified sample of 50
+stored courses, run `bun run evaluate:search`. When the requested sample is at
+least as large as the number of eligible departments, it includes a course
+from every department and allocates remaining places proportionally. It issues
+code, title, and topic queries against the live search service, reports
+reciprocal-log scores and missed targets, and writes full query/rank data to
+`docs/evaluation/search-ranking-<date>.json`. Use
+`bun run evaluate:search -- --sample-size 100` to evaluate more courses. Broad
+topic phrases are generated in small LLM batches from sampled course titles,
+with goals and descriptions as context, using `AI_GATEWAY_API_KEY`. The model defaults to
+`openai/gpt-5.4-nano`; set `SEARCH_EVAL_TOPIC_MODEL` in `.env.local` to choose a
+different Gateway model. The fixed seed keeps the course sample repeatable;
+generated wording can still vary. The seed defaults to `20261126`; use
+`-- --seed <number>` to choose another sample.
+
 This reads KTH's public course pages on www.kth.se (KOPPS is closed, see `docs/adr/0012-ingest-from-kth-course-pages.md`) and writes into Neon (including embeddings). A full run fetches about 4,800 courses in two languages and takes a while.
 
 ### 7. Build Docker Image
@@ -236,11 +255,12 @@ Repo-local agent skills live under `.agents/skills/`.
 | --- | --- |
 | `bun run dev` | Starts the Next.js development server |
 | `bun run test:web` | Runs Vitest (`apps/web/server/**/*.spec.ts`) |
+| `bun run evaluate:search` | Evaluates live search ranking on a fixed-seed course sample |
 | `bun run lint` | Biome check (writes fixes) |
 | `bun run format` | Biome format |
 | `bun run db:push` | Pushes the Drizzle schema to Neon |
 | `bun run db:generate` | Generates Drizzle migrations |
 | `bun run ingest` | Ingests KTH courses from www.kth.se into Neon |
+| `bun run reindex:search` | Rebuilds search vectors from stored course and examination data |
 | `bun run add:web` | Adds a dependency to the web workspace |
 | `bun run rm:web` | Removes a dependency from the web workspace |
- 

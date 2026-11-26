@@ -7,6 +7,24 @@ export type SearchHit = {
   score: number | null;
 };
 
+function isWithoutFinalExamQuery(query: string): boolean {
+  return /\b(?:without|no|lack(?:ing)?|don't have|do not have)\b.{0,40}\b(?:final\s+)?exam\b/i.test(
+    query,
+  );
+}
+
+const coursesWithoutFinalExam = sql`NOT EXISTS (
+  SELECT 1
+  FROM ${schema.courseExaminations} AS exam_module
+  WHERE exam_module.course_code = ${schema.courses.code}
+    AND (
+      exam_module.exam_code ILIKE 'TEN%'
+      OR exam_module.exam_code ILIKE 'TENT%'
+      OR lower(coalesce(exam_module.title, '')) LIKE '%tentamen%'
+      OR lower(coalesce(exam_module.title, '')) LIKE '%final exam%'
+    )
+)`;
+
 /**
  * `size` is the LIMIT, exactly — never inflated to leave room for a filter
  * applied after the query. Every filter here is a SQL predicate, so every row
@@ -14,8 +32,8 @@ export type SearchHit = {
  *
  * The service asks for a window covering every page up to the one it is
  * serving, plus one row of lookahead. That is a bigger number, not an inflated
- * one, and it works only because this query is *totally* ordered: the three-way
- * bucket, then `ts_rank`, then `courses.code ASC`. A LIMIT over a total order
+ * one, and it works only because this query is *totally* ordered: the match
+ * tier, title relevance, full-text relevance, then `courses.code ASC`. A LIMIT over a total order
  * returns a prefix, so a wider window returns a superset that begins with the
  * narrower one, and page 2 holds the same rows however deep the fetch went.
  */
@@ -27,11 +45,16 @@ export async function searchByKeyword(
   const normalizedQuery = query.trim();
   const queryUpper = normalizedQuery.toUpperCase();
   const textPattern = `%${normalizedQuery}%`;
+  const excludeFinalExam = isWithoutFinalExamQuery(normalizedQuery);
   const codePrefix = `${queryUpper}%`;
   const codeContains = `%${queryUpper}%`;
 
   const conditions = [
-    sql`(
+    ...(excludeFinalExam ? [coursesWithoutFinalExam] : []),
+    ...(excludeFinalExam
+      ? []
+      : [
+          sql`(
         ${schema.courses.code} ILIKE ${codePrefix}
         OR ${schema.courses.code} ILIKE ${codeContains}
         OR ${schema.courses.titleSwe} ILIKE ${textPattern}
@@ -41,6 +64,7 @@ export async function searchByKeyword(
           AND ${schema.courseExplore.searchVector} @@ plainto_tsquery('simple', ${normalizedQuery})
         )
       )`,
+        ]),
   ];
   if (departmentFilter) {
     conditions.push(
@@ -57,15 +81,47 @@ export async function searchByKeyword(
       WHERE ${whereSql}
       ORDER BY
         CASE
-          WHEN ${schema.courses.code} ILIKE ${codePrefix} THEN 0
-          WHEN ${schema.courses.code} ILIKE ${codeContains} THEN 1
+          WHEN ${excludeFinalExam} THEN 0
+          WHEN ${schema.courses.code} ILIKE ${queryUpper} THEN 0
+          WHEN lower(btrim(${schema.courses.titleEng})) = lower(${normalizedQuery})
+            OR lower(btrim(${schema.courses.titleSwe})) = lower(${normalizedQuery}) THEN 1
+          WHEN ${schema.courses.titleEng} ILIKE ${textPattern}
+            OR ${schema.courses.titleSwe} ILIKE ${textPattern} THEN 2
+          WHEN (
+            ${normalizedQuery} <> ''
+            AND to_tsvector(
+              'simple',
+              coalesce(${schema.courses.titleEng}, '') || ' ' || coalesce(${schema.courses.titleSwe}, '')
+            ) @@ plainto_tsquery('simple', ${normalizedQuery})
+          ) THEN 3
+          WHEN ${schema.courses.code} ILIKE ${codePrefix} THEN 4
+          WHEN ${schema.courses.code} ILIKE ${codeContains} THEN 5
           WHEN (
             ${normalizedQuery} <> ''
             AND ${schema.courseExplore.searchVector} @@ plainto_tsquery('simple', ${normalizedQuery})
-          ) THEN 2
-          ELSE 3
+          ) THEN 6
+          ELSE 7
         END,
         CASE
+          WHEN ${excludeFinalExam} THEN 0
+          WHEN (
+            ${normalizedQuery} <> ''
+            AND to_tsvector(
+              'simple',
+              coalesce(${schema.courses.titleEng}, '') || ' ' || coalesce(${schema.courses.titleSwe}, '')
+            ) @@ plainto_tsquery('simple', ${normalizedQuery})
+          )
+            THEN ts_rank(
+              to_tsvector(
+                'simple',
+                coalesce(${schema.courses.titleEng}, '') || ' ' || coalesce(${schema.courses.titleSwe}, '')
+              ),
+              plainto_tsquery('simple', ${normalizedQuery})
+            )
+          ELSE 0
+        END DESC,
+        CASE
+          WHEN ${excludeFinalExam} THEN 0
           WHEN (
             ${normalizedQuery} <> ''
             AND ${schema.courseExplore.searchVector} @@ plainto_tsquery('simple', ${normalizedQuery})
@@ -113,9 +169,15 @@ export async function searchByEmbedding(
   embedding: number[],
   limit: number,
   departmentFilter: string | null,
+  query?: string,
 ): Promise<SearchHit[]> {
   const vectorLiteral = JSON.stringify(embedding);
-  const conditions = [sql`${schema.courseExplore.embedding} IS NOT NULL`];
+  const conditions = [
+    sql`${schema.courseExplore.embedding} IS NOT NULL`,
+    ...(query && isWithoutFinalExamQuery(query)
+      ? [coursesWithoutFinalExam]
+      : []),
+  ];
   if (departmentFilter) {
     conditions.push(
       sql`${schema.courses.department} ILIKE ${`%${departmentFilter}%`}`,

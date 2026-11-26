@@ -1,0 +1,3480 @@
+{
+  "evaluatedAt": "2026-11-26T14:00:03.321Z",
+  "seed": 20261126,
+  "sampleSize": 100,
+  "topK": 100,
+  "topicModel": "openai/gpt-5.4-nano",
+  "averageScores": {
+    "code": 0.7468791517439759,
+    "title": 0.6973797652667538,
+    "topic": 0.6623793035044298
+  },
+  "sampledCourses": [
+    "FAD3116",
+    "A21P1C",
+    "AD1221",
+    "F1A5037",
+    "AB100X",
+    "AE2501",
+    "AG211X",
+    "AF1747",
+    "FAF3001",
+    "FAF3117",
+    "AF1020",
+    "FAF3203",
+    "AF2404",
+    "AF269V",
+    "FAF3851",
+    "HS2012",
+    "FAG3109",
+    "AH2915",
+    "AH2172",
+    "AH2031",
+    "AI2104",
+    "AI2130",
+    "FAI3201",
+    "AK2002",
+    "FAK3016",
+    "AM204U",
+    "FCB3202",
+    "FCB3201",
+    "CB205X",
+    "BB2425",
+    "CB206V",
+    "CK203V",
+    "FHK3006",
+    "HL203X",
+    "KF2390",
+    "KE1140",
+    "DD1333",
+    "ID1018",
+    "DD2402",
+    "FLF3001",
+    "LH225U",
+    "DT2300",
+    "ED2247",
+    "DD1010",
+    "UMK701",
+    "FDH3011",
+    "FAL3304",
+    "FAL3320",
+    "FBB3410",
+    "FCA3006",
+    "FDD3258",
+    "FDD3452",
+    "FDD3353",
+    "FEP3323",
+    "FDT3303",
+    "FED3220",
+    "FEF3370",
+    "FEG3202",
+    "FEI3280",
+    "FEK3214",
+    "FEL3240",
+    "FEO3340",
+    "FIK3227",
+    "FHN3002",
+    "FIH3608",
+    "FIK3507",
+    "FKD3160",
+    "FKF3410",
+    "FLF3009",
+    "ME2016",
+    "MF1050",
+    "FMG3920",
+    "FMH3924",
+    "MJ239X",
+    "MJ2494",
+    "FMJ3391",
+    "SD1002",
+    "SD2809",
+    "SE2137",
+    "SF299X",
+    "FSF3812",
+    "SG2224",
+    "SH2772",
+    "FSK3516",
+    "SK2411",
+    "ML1203",
+    "KH1122",
+    "KE2080",
+    "LT1080",
+    "MF2018",
+    "MF224X",
+    "MF2098",
+    "MF2065",
+    "MG2047",
+    "MJ1015",
+    "MJ148X",
+    "SA113X",
+    "SA2010",
+    "SH1014",
+    "SI2350"
+  ],
+  "departmentSampleCounts": {
+    "ABE/Arkitektur, Fex övr utbildning": 1,
+    "ABE/Arkitektur, kultur och miljö": 1,
+    "ABE/Arkitektur, landskap och städer": 1,
+    "ABE/Arkitektur, teknik och teori": 1,
+    "ABE/Betongbyggnad": 1,
+    "ABE/Brobyggnad inkl stålbyggnad": 1,
+    "ABE/Byggnadsmaterial": 1,
+    "ABE/Byggteknik och design": 1,
+    "ABE/Byggvetenskap gemensamt": 1,
+    "ABE/Fastighetsekonomi och finans": 1,
+    "ABE/Fastighetsföretagande och finansiella system": 1,
+    "ABE/Filosofi": 1,
+    "ABE/Geoinformatik": 1,
+    "ABE/Historiska studier av teknik, vetenskap och miljö": 1,
+    "ABE/Hållbar utveckling, miljövetenskap och teknik": 1,
+    "ABE/Hållbara byggnader": 1,
+    "ABE/Hållbarhet och miljöteknik": 1,
+    "ABE/Jord- och bergmekanik": 1,
+    "ABE/Lantmäteri – fastighetsvetenskap och geodesi": 1,
+    "ABE/Ledning och organisering i byggande och förvaltning": 1,
+    "ABE/Ljusdesign": 1,
+    "ABE/Transport och systemanalys": 1,
+    "ABE/Transportplanering": 1,
+    "ABE/Uppdragsutb, Design och byggande i staden": 1,
+    "ABE/Urbana och regionala studier": 1,
+    "ABE/Utbildningskansli AAB": 1,
+    "ABE/Vatten- och miljöteknik": 1,
+    "ABE/Väg- och banteknik": 1,
+    "BIO/Bioteknologi": 1,
+    "CBH/Fiber- och Polymerteknologi": 1,
+    "CBH/Genteknologi": 1,
+    "CBH/Industriell bioteknologi": 1,
+    "CBH/Ingenjörspedagogik": 1,
+    "CBH/Kemi": 1,
+    "CBH/Kemiteknik": 1,
+    "CBH/Medicinteknik och hälsosystem": 2,
+    "CBH/Proteinvetenskap": 1,
+    "CBH/Skolan för kemi, bioteknologi och hälsa": 1,
+    "CBH/Skolövergripande": 1,
+    "CBH/Teoretisk kemi och biologi": 1,
+    "CHE/Fiber- och polymerteknologi": 1,
+    "CHE/Kemi": 1,
+    "CHE/Kemiteknik": 1,
+    "ECE/Lärarutbildning": 1,
+    "ECE/Skolan för teknikvetenskaplig kommunikation och lärande": 1,
+    "EECS/Beräkningsvetenskap  och beräkningsteknik": 1,
+    "EECS/Datavetenskap": 2,
+    "EECS/Elektronik och inbyggda system": 1,
+    "EECS/Elektroteknik": 1,
+    "EECS/Elektroteknisk teori och konstruktion": 1,
+    "EECS/Elkraftteknik": 1,
+    "EECS/Fusionsplasmafysik": 1,
+    "EECS/Intelligenta system": 1,
+    "EECS/Kommunikationssystem": 1,
+    "EECS/Medieteknik och Interaktionsdesign": 1,
+    "EECS/Mikro-och nanosystem": 1,
+    "EECS/Människocentrerad teknologi": 1,
+    "EECS/Nätverk och systemteknik": 1,
+    "EECS/Programvaruteknik och datorsystem": 1,
+    "EECS/Reglerteknik": 1,
+    "EECS/Robotik, perception och lärande": 1,
+    "EECS/Rymd-och Plasmafysik": 1,
+    "EECS/Skolan för elektroteknik och datavetenskap": 1,
+    "EECS/Tal, musik och hörsel": 1,
+    "EECS/Teknisk informationsvetenskap": 1,
+    "EECS/Teoretisk datalogi": 1,
+    "ITM/Ekv kraft- & värmeteknologi": 1,
+    "ITM/Energisystem": 1,
+    "ITM/Energiteknik": 1,
+    "ITM/Energiteknik - Gru": 1,
+    "ITM/Industriell ekonomi och organisation": 1,
+    "ITM/Integrerad produktutveckling": 1,
+    "ITM/Lärande": 2,
+    "ITM/Maskinkonstruktion": 1,
+    "ITM/Materialvetenskap": 1,
+    "ITM/Mekatronik": 1,
+    "ITM/Produkt- och tjänstedesign": 1,
+    "ITM/Produktionsutveckling": 1,
+    "ITM/Produktionsutveckling Stockholm": 1,
+    "ITM/Produktionsutveckling Södertälje": 1,
+    "ITM/SKD GRU": 1,
+    "ITM/Tillämpad termodynatik": 1,
+    "SCI/Farkost och flyg": 1,
+    "SCI/Fysik": 1,
+    "SCI/Fysik grundutbildning": 1,
+    "SCI/Hållfasthetslära": 1,
+    "SCI/Matematik": 2,
+    "SCI/Mekanik": 1,
+    "SCI/Skolan för teknikvetenskap": 1,
+    "SCI/Teknikvetenskap": 1,
+    "SCI/Teknisk Mekanik": 1,
+    "SCI/Teoretisk fysik grundutbildning": 1,
+    "SCI/Tillämpad fysik": 1,
+    "SCI/Tillämpad fysik grundutbildning": 1,
+    "STH/Ergonomi": 1,
+    "Stockholms universitet": 1
+  },
+  "missingTargets": [
+    {
+      "courseCode": "CB205X",
+      "courseTitle": "Degree Project in Molecular Techniques in Life Science, Second Cycle 30.0 credits",
+      "category": "title",
+      "query": "Degree Project",
+      "rank": null,
+      "score": 0
+    },
+    {
+      "courseCode": "HL203X",
+      "courseTitle": "Degree Project in Medical Imaging, Second Cycle",
+      "category": "title",
+      "query": "Degree Project",
+      "rank": null,
+      "score": 0
+    },
+    {
+      "courseCode": "MJ239X",
+      "courseTitle": "Degree Project in Applied Thermodynamics, Second Cycle",
+      "category": "title",
+      "query": "Degree Project",
+      "rank": null,
+      "score": 0
+    },
+    {
+      "courseCode": "SE2137",
+      "courseTitle": "Fatigue",
+      "category": "topic",
+      "query": "fatigue and structural reliability",
+      "rank": null,
+      "score": 0
+    },
+    {
+      "courseCode": "SF299X",
+      "courseTitle": "Degree Project in Mathematical Statistics, Second Cycle",
+      "category": "title",
+      "query": "Degree Project",
+      "rank": null,
+      "score": 0
+    },
+    {
+      "courseCode": "MF224X",
+      "courseTitle": "Degree Project in Mechatronics, Second Cycle",
+      "category": "title",
+      "query": "Degree Project",
+      "rank": null,
+      "score": 0
+    },
+    {
+      "courseCode": "MJ148X",
+      "courseTitle": "Degree Project in Energy Systems, Sustainability and Industrial Engineering, first cycle",
+      "category": "title",
+      "query": "Degree Project",
+      "rank": null,
+      "score": 0
+    },
+    {
+      "courseCode": "SA113X",
+      "courseTitle": "Degree Project in Simulation Technology and Virtual Design, First Level",
+      "category": "title",
+      "query": "Degree Project",
+      "rank": null,
+      "score": 0
+    }
+  ],
+  "queries": [
+    {
+      "courseCode": "FAD3116",
+      "courseTitle": "Architectural Humanities: Theory, History, and Critical Studies",
+      "category": "code",
+      "query": "FAD3116",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "FAD3116",
+      "courseTitle": "Architectural Humanities: Theory, History, and Critical Studies",
+      "category": "code",
+      "query": "FAD31",
+      "rank": 17,
+      "score": 0.23981246656813146
+    },
+    {
+      "courseCode": "FAD3116",
+      "courseTitle": "Architectural Humanities: Theory, History, and Critical Studies",
+      "category": "title",
+      "query": "Architectural Humanities",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "FAD3116",
+      "courseTitle": "Architectural Humanities: Theory, History, and Critical Studies",
+      "category": "topic",
+      "query": "architectural humanities theory and criticism",
+      "rank": 2,
+      "score": 0.6309297535714575
+    },
+    {
+      "courseCode": "A21P1C",
+      "courseTitle": "Architecture Project 2:1 Structure, Place, Activity",
+      "category": "code",
+      "query": "A21P1C",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "A21P1C",
+      "courseTitle": "Architecture Project 2:1 Structure, Place, Activity",
+      "category": "code",
+      "query": "A21P",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "A21P1C",
+      "courseTitle": "Architecture Project 2:1 Structure, Place, Activity",
+      "category": "title",
+      "query": "Architecture Project",
+      "rank": 4,
+      "score": 0.43067655807339306
+    },
+    {
+      "courseCode": "A21P1C",
+      "courseTitle": "Architecture Project 2:1 Structure, Place, Activity",
+      "category": "topic",
+      "query": "architecture project structure place and activity",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "AD1221",
+      "courseTitle": "Architecture for Teachers in Technology",
+      "category": "code",
+      "query": "AD1221",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "AD1221",
+      "courseTitle": "Architecture for Teachers in Technology",
+      "category": "code",
+      "query": "AD12",
+      "rank": 2,
+      "score": 0.6309297535714575
+    },
+    {
+      "courseCode": "AD1221",
+      "courseTitle": "Architecture for Teachers in Technology",
+      "category": "title",
+      "query": "Architecture Teachers",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "AD1221",
+      "courseTitle": "Architecture for Teachers in Technology",
+      "category": "topic",
+      "query": "teaching architecture in primary and technology education",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "F1A5037",
+      "courseTitle": "Architectural Historiography",
+      "category": "code",
+      "query": "F1A5037",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "F1A5037",
+      "courseTitle": "Architectural Historiography",
+      "category": "code",
+      "query": "F1A50",
+      "rank": 6,
+      "score": 0.3562071871080222
+    },
+    {
+      "courseCode": "F1A5037",
+      "courseTitle": "Architectural Historiography",
+      "category": "title",
+      "query": "Architectural Historiography",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "F1A5037",
+      "courseTitle": "Architectural Historiography",
+      "category": "topic",
+      "query": "architectural historiography methods and research",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "AB100X",
+      "courseTitle": "Degree Project in Build Environment",
+      "category": "code",
+      "query": "AB100X",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "AB100X",
+      "courseTitle": "Degree Project in Build Environment",
+      "category": "code",
+      "query": "AB10",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "AB100X",
+      "courseTitle": "Degree Project in Build Environment",
+      "category": "title",
+      "query": "Degree Project",
+      "rank": 8,
+      "score": 0.31546487678572877
+    },
+    {
+      "courseCode": "AB100X",
+      "courseTitle": "Degree Project in Build Environment",
+      "category": "topic",
+      "query": "build environment degree project",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "AE2501",
+      "courseTitle": "Environmental Impact Assessment",
+      "category": "code",
+      "query": "AE2501",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "AE2501",
+      "courseTitle": "Environmental Impact Assessment",
+      "category": "code",
+      "query": "AE25",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "AE2501",
+      "courseTitle": "Environmental Impact Assessment",
+      "category": "title",
+      "query": "Environmental Impact",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "AE2501",
+      "courseTitle": "Environmental Impact Assessment",
+      "category": "topic",
+      "query": "environmental impact assessment",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "AG211X",
+      "courseTitle": "Degree Project in Urban and Regional Planning, Second Cycle",
+      "category": "code",
+      "query": "AG211X",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "AG211X",
+      "courseTitle": "Degree Project in Urban and Regional Planning, Second Cycle",
+      "category": "code",
+      "query": "AG21",
+      "rank": 12,
+      "score": 0.27023815442731974
+    },
+    {
+      "courseCode": "AG211X",
+      "courseTitle": "Degree Project in Urban and Regional Planning, Second Cycle",
+      "category": "title",
+      "query": "Degree Project",
+      "rank": 57,
+      "score": 0.17070727966372012
+    },
+    {
+      "courseCode": "AG211X",
+      "courseTitle": "Degree Project in Urban and Regional Planning, Second Cycle",
+      "category": "topic",
+      "query": "urban and regional planning research methods",
+      "rank": 11,
+      "score": 0.27894294565112987
+    },
+    {
+      "courseCode": "AF1747",
+      "courseTitle": "Structural Engineering 2",
+      "category": "code",
+      "query": "AF1747",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "AF1747",
+      "courseTitle": "Structural Engineering 2",
+      "category": "code",
+      "query": "AF17",
+      "rank": 15,
+      "score": 0.25
+    },
+    {
+      "courseCode": "AF1747",
+      "courseTitle": "Structural Engineering 2",
+      "category": "title",
+      "query": "Structural Engineering",
+      "rank": 4,
+      "score": 0.43067655807339306
+    },
+    {
+      "courseCode": "AF1747",
+      "courseTitle": "Structural Engineering 2",
+      "category": "topic",
+      "query": "reinforced concrete structural design",
+      "rank": 8,
+      "score": 0.31546487678572877
+    },
+    {
+      "courseCode": "FAF3001",
+      "courseTitle": "Project in Structural Engineering",
+      "category": "code",
+      "query": "FAF3001",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "FAF3001",
+      "courseTitle": "Project in Structural Engineering",
+      "category": "code",
+      "query": "FAF30",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "FAF3001",
+      "courseTitle": "Project in Structural Engineering",
+      "category": "title",
+      "query": "Structural Engineering",
+      "rank": 7,
+      "score": 0.3333333333333333
+    },
+    {
+      "courseCode": "FAF3001",
+      "courseTitle": "Project in Structural Engineering",
+      "category": "topic",
+      "query": "structural engineering project work",
+      "rank": 24,
+      "score": 0.21533827903669653
+    },
+    {
+      "courseCode": "FAF3117",
+      "courseTitle": "Project in Concrete Structures",
+      "category": "code",
+      "query": "FAF3117",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "FAF3117",
+      "courseTitle": "Project in Concrete Structures",
+      "category": "code",
+      "query": "FAF31",
+      "rank": 4,
+      "score": 0.43067655807339306
+    },
+    {
+      "courseCode": "FAF3117",
+      "courseTitle": "Project in Concrete Structures",
+      "category": "title",
+      "query": "Concrete Structures",
+      "rank": 8,
+      "score": 0.31546487678572877
+    },
+    {
+      "courseCode": "FAF3117",
+      "courseTitle": "Project in Concrete Structures",
+      "category": "topic",
+      "query": "concrete structures project work",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "AF1020",
+      "courseTitle": "Buildnings Design and Construction Project",
+      "category": "code",
+      "query": "AF1020",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "AF1020",
+      "courseTitle": "Buildnings Design and Construction Project",
+      "category": "code",
+      "query": "AF10",
+      "rank": 9,
+      "score": 0.3010299956639812
+    },
+    {
+      "courseCode": "AF1020",
+      "courseTitle": "Buildnings Design and Construction Project",
+      "category": "title",
+      "query": "Buildnings Design",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "AF1020",
+      "courseTitle": "Buildnings Design and Construction Project",
+      "category": "topic",
+      "query": "building construction design",
+      "rank": 6,
+      "score": 0.3562071871080222
+    },
+    {
+      "courseCode": "FAF3203",
+      "courseTitle": "Modal Analysis",
+      "category": "code",
+      "query": "FAF3203",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "FAF3203",
+      "courseTitle": "Modal Analysis",
+      "category": "code",
+      "query": "FAF32",
+      "rank": 3,
+      "score": 0.5
+    },
+    {
+      "courseCode": "FAF3203",
+      "courseTitle": "Modal Analysis",
+      "category": "title",
+      "query": "Modal Analysis",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "FAF3203",
+      "courseTitle": "Modal Analysis",
+      "category": "topic",
+      "query": "modal analysis",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "AF2404",
+      "courseTitle": "Building Acoustics",
+      "category": "code",
+      "query": "AF2404",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "AF2404",
+      "courseTitle": "Building Acoustics",
+      "category": "code",
+      "query": "AF24",
+      "rank": 4,
+      "score": 0.43067655807339306
+    },
+    {
+      "courseCode": "AF2404",
+      "courseTitle": "Building Acoustics",
+      "category": "title",
+      "query": "Building Acoustics",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "AF2404",
+      "courseTitle": "Building Acoustics",
+      "category": "topic",
+      "query": "building acoustics",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "AF269V",
+      "courseTitle": "Foundation Engineering",
+      "category": "code",
+      "query": "AF269V",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "AF269V",
+      "courseTitle": "Foundation Engineering",
+      "category": "code",
+      "query": "AF26",
+      "rank": 14,
+      "score": 0.2559580248098155
+    },
+    {
+      "courseCode": "AF269V",
+      "courseTitle": "Foundation Engineering",
+      "category": "title",
+      "query": "Foundation Engineering",
+      "rank": 3,
+      "score": 0.5
+    },
+    {
+      "courseCode": "AF269V",
+      "courseTitle": "Foundation Engineering",
+      "category": "topic",
+      "query": "foundation engineering",
+      "rank": 3,
+      "score": 0.5
+    },
+    {
+      "courseCode": "FAF3851",
+      "courseTitle": "Project in Highway and Railway Engineering",
+      "category": "code",
+      "query": "FAF3851",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "FAF3851",
+      "courseTitle": "Project in Highway and Railway Engineering",
+      "category": "code",
+      "query": "FAF38",
+      "rank": 7,
+      "score": 0.3333333333333333
+    },
+    {
+      "courseCode": "FAF3851",
+      "courseTitle": "Project in Highway and Railway Engineering",
+      "category": "title",
+      "query": "Railway Engineering",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "FAF3851",
+      "courseTitle": "Project in Highway and Railway Engineering",
+      "category": "topic",
+      "query": "highway and railway engineering",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "HS2012",
+      "courseTitle": "Depth in Light Design",
+      "category": "code",
+      "query": "HS2012",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "HS2012",
+      "courseTitle": "Depth in Light Design",
+      "category": "code",
+      "query": "HS20",
+      "rank": 8,
+      "score": 0.31546487678572877
+    },
+    {
+      "courseCode": "HS2012",
+      "courseTitle": "Depth in Light Design",
+      "category": "title",
+      "query": "Light Design",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "HS2012",
+      "courseTitle": "Depth in Light Design",
+      "category": "topic",
+      "query": "lighting design",
+      "rank": 5,
+      "score": 0.38685280723454163
+    },
+    {
+      "courseCode": "FAG3109",
+      "courseTitle": "Visualization of Geoinformation",
+      "category": "code",
+      "query": "FAG3109",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "FAG3109",
+      "courseTitle": "Visualization of Geoinformation",
+      "category": "code",
+      "query": "FAG31",
+      "rank": 8,
+      "score": 0.31546487678572877
+    },
+    {
+      "courseCode": "FAG3109",
+      "courseTitle": "Visualization of Geoinformation",
+      "category": "title",
+      "query": "Visualization Geoinformation",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "FAG3109",
+      "courseTitle": "Visualization of Geoinformation",
+      "category": "topic",
+      "query": "cartographic visualization",
+      "rank": 3,
+      "score": 0.5
+    },
+    {
+      "courseCode": "AH2915",
+      "courseTitle": "Laser Scanning Technology",
+      "category": "code",
+      "query": "AH2915",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "AH2915",
+      "courseTitle": "Laser Scanning Technology",
+      "category": "code",
+      "query": "AH29",
+      "rank": 8,
+      "score": 0.31546487678572877
+    },
+    {
+      "courseCode": "AH2915",
+      "courseTitle": "Laser Scanning Technology",
+      "category": "title",
+      "query": "Laser Scanning",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "AH2915",
+      "courseTitle": "Laser Scanning Technology",
+      "category": "topic",
+      "query": "laser scanning",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "AH2172",
+      "courseTitle": "Transport Data collection and Analysis",
+      "category": "code",
+      "query": "AH2172",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "AH2172",
+      "courseTitle": "Transport Data collection and Analysis",
+      "category": "code",
+      "query": "AH21",
+      "rank": 7,
+      "score": 0.3333333333333333
+    },
+    {
+      "courseCode": "AH2172",
+      "courseTitle": "Transport Data collection and Analysis",
+      "category": "title",
+      "query": "Transport Data",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "AH2172",
+      "courseTitle": "Transport Data collection and Analysis",
+      "category": "topic",
+      "query": "transportation data analysis",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "AH2031",
+      "courseTitle": "Railway Signalling System - Project Planning",
+      "category": "code",
+      "query": "AH2031",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "AH2031",
+      "courseTitle": "Railway Signalling System - Project Planning",
+      "category": "code",
+      "query": "AH20",
+      "rank": 13,
+      "score": 0.26264953503719357
+    },
+    {
+      "courseCode": "AH2031",
+      "courseTitle": "Railway Signalling System - Project Planning",
+      "category": "title",
+      "query": "Railway Signalling",
+      "rank": 3,
+      "score": 0.5
+    },
+    {
+      "courseCode": "AH2031",
+      "courseTitle": "Railway Signalling System - Project Planning",
+      "category": "topic",
+      "query": "railway signalling systems",
+      "rank": 2,
+      "score": 0.6309297535714575
+    },
+    {
+      "courseCode": "AI2104",
+      "courseTitle": "Real Estate Valuation",
+      "category": "code",
+      "query": "AI2104",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "AI2104",
+      "courseTitle": "Real Estate Valuation",
+      "category": "code",
+      "query": "AI21",
+      "rank": 2,
+      "score": 0.6309297535714575
+    },
+    {
+      "courseCode": "AI2104",
+      "courseTitle": "Real Estate Valuation",
+      "category": "title",
+      "query": "Real Estate",
+      "rank": 69,
+      "score": 0.1631512196835108
+    },
+    {
+      "courseCode": "AI2104",
+      "courseTitle": "Real Estate Valuation",
+      "category": "topic",
+      "query": "real estate valuation",
+      "rank": 4,
+      "score": 0.43067655807339306
+    },
+    {
+      "courseCode": "AI2130",
+      "courseTitle": "Quantitative Methods with Real Estate Application",
+      "category": "code",
+      "query": "AI2130",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "AI2130",
+      "courseTitle": "Quantitative Methods with Real Estate Application",
+      "category": "code",
+      "query": "AI21",
+      "rank": 15,
+      "score": 0.25
+    },
+    {
+      "courseCode": "AI2130",
+      "courseTitle": "Quantitative Methods with Real Estate Application",
+      "category": "title",
+      "query": "Quantitative Methods",
+      "rank": 3,
+      "score": 0.5
+    },
+    {
+      "courseCode": "AI2130",
+      "courseTitle": "Quantitative Methods with Real Estate Application",
+      "category": "topic",
+      "query": "econometrics for real estate",
+      "rank": 7,
+      "score": 0.3333333333333333
+    },
+    {
+      "courseCode": "FAI3201",
+      "courseTitle": "Literature Course in Project Communication 1",
+      "category": "code",
+      "query": "FAI3201",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "FAI3201",
+      "courseTitle": "Literature Course in Project Communication 1",
+      "category": "code",
+      "query": "FAI32",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "FAI3201",
+      "courseTitle": "Literature Course in Project Communication 1",
+      "category": "title",
+      "query": "Project Communication",
+      "rank": 2,
+      "score": 0.6309297535714575
+    },
+    {
+      "courseCode": "FAI3201",
+      "courseTitle": "Literature Course in Project Communication 1",
+      "category": "topic",
+      "query": "project communication",
+      "rank": 2,
+      "score": 0.6309297535714575
+    },
+    {
+      "courseCode": "AK2002",
+      "courseTitle": "Good and Bad Science",
+      "category": "code",
+      "query": "AK2002",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "AK2002",
+      "courseTitle": "Good and Bad Science",
+      "category": "code",
+      "query": "AK20",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "AK2002",
+      "courseTitle": "Good and Bad Science",
+      "category": "title",
+      "query": "Bad Science",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "AK2002",
+      "courseTitle": "Good and Bad Science",
+      "category": "topic",
+      "query": "critical thinking in science",
+      "rank": 7,
+      "score": 0.3333333333333333
+    },
+    {
+      "courseCode": "FAK3016",
+      "courseTitle": "Organizational theory and History: Science, Technology and Institutions",
+      "category": "code",
+      "query": "FAK3016",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "FAK3016",
+      "courseTitle": "Organizational theory and History: Science, Technology and Institutions",
+      "category": "code",
+      "query": "FAK30",
+      "rank": 10,
+      "score": 0.2890648263178879
+    },
+    {
+      "courseCode": "FAK3016",
+      "courseTitle": "Organizational theory and History: Science, Technology and Institutions",
+      "category": "title",
+      "query": "Organizational theory",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "FAK3016",
+      "courseTitle": "Organizational theory and History: Science, Technology and Institutions",
+      "category": "topic",
+      "query": "organizational theory and institutions",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "AM204U",
+      "courseTitle": "Complexities and Conflicts in Urban Development",
+      "category": "code",
+      "query": "AM204U",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "AM204U",
+      "courseTitle": "Complexities and Conflicts in Urban Development",
+      "category": "code",
+      "query": "AM20",
+      "rank": 5,
+      "score": 0.38685280723454163
+    },
+    {
+      "courseCode": "AM204U",
+      "courseTitle": "Complexities and Conflicts in Urban Development",
+      "category": "title",
+      "query": "Urban Development",
+      "rank": 7,
+      "score": 0.3333333333333333
+    },
+    {
+      "courseCode": "AM204U",
+      "courseTitle": "Complexities and Conflicts in Urban Development",
+      "category": "topic",
+      "query": "urban planning and conflict management",
+      "rank": 6,
+      "score": 0.3562071871080222
+    },
+    {
+      "courseCode": "FCB3202",
+      "courseTitle": "Molecular Quantum Mechanics",
+      "category": "code",
+      "query": "FCB3202",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "FCB3202",
+      "courseTitle": "Molecular Quantum Mechanics",
+      "category": "code",
+      "query": "FCB32",
+      "rank": 2,
+      "score": 0.6309297535714575
+    },
+    {
+      "courseCode": "FCB3202",
+      "courseTitle": "Molecular Quantum Mechanics",
+      "category": "title",
+      "query": "Molecular Quantum",
+      "rank": 2,
+      "score": 0.6309297535714575
+    },
+    {
+      "courseCode": "FCB3202",
+      "courseTitle": "Molecular Quantum Mechanics",
+      "category": "topic",
+      "query": "molecular quantum mechanics",
+      "rank": 2,
+      "score": 0.6309297535714575
+    },
+    {
+      "courseCode": "FCB3201",
+      "courseTitle": "Methods in Current Research in Medical Biotechnology",
+      "category": "code",
+      "query": "FCB3201",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "FCB3201",
+      "courseTitle": "Methods in Current Research in Medical Biotechnology",
+      "category": "code",
+      "query": "FCB32",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "FCB3201",
+      "courseTitle": "Methods in Current Research in Medical Biotechnology",
+      "category": "title",
+      "query": "Current Research",
+      "rank": 2,
+      "score": 0.6309297535714575
+    },
+    {
+      "courseCode": "FCB3201",
+      "courseTitle": "Methods in Current Research in Medical Biotechnology",
+      "category": "topic",
+      "query": "medical biotechnology research methods",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "CB205X",
+      "courseTitle": "Degree Project in Molecular Techniques in Life Science, Second Cycle 30.0 credits",
+      "category": "code",
+      "query": "CB205X",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "CB205X",
+      "courseTitle": "Degree Project in Molecular Techniques in Life Science, Second Cycle 30.0 credits",
+      "category": "code",
+      "query": "CB20",
+      "rank": 12,
+      "score": 0.27023815442731974
+    },
+    {
+      "courseCode": "CB205X",
+      "courseTitle": "Degree Project in Molecular Techniques in Life Science, Second Cycle 30.0 credits",
+      "category": "title",
+      "query": "Degree Project",
+      "rank": null,
+      "score": 0
+    },
+    {
+      "courseCode": "CB205X",
+      "courseTitle": "Degree Project in Molecular Techniques in Life Science, Second Cycle 30.0 credits",
+      "category": "topic",
+      "query": "molecular techniques in life science",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "BB2425",
+      "courseTitle": "Glycobiotechnology",
+      "category": "code",
+      "query": "BB2425",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "BB2425",
+      "courseTitle": "Glycobiotechnology",
+      "category": "code",
+      "query": "BB24",
+      "rank": 2,
+      "score": 0.6309297535714575
+    },
+    {
+      "courseCode": "BB2425",
+      "courseTitle": "Glycobiotechnology",
+      "category": "title",
+      "query": "Glycobiotechnology",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "BB2425",
+      "courseTitle": "Glycobiotechnology",
+      "category": "topic",
+      "query": "glycobiotechnology",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "CB206V",
+      "courseTitle": "Machine Learning in Biotechnology",
+      "category": "code",
+      "query": "CB206V",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "CB206V",
+      "courseTitle": "Machine Learning in Biotechnology",
+      "category": "code",
+      "query": "CB20",
+      "rank": 14,
+      "score": 0.2559580248098155
+    },
+    {
+      "courseCode": "CB206V",
+      "courseTitle": "Machine Learning in Biotechnology",
+      "category": "title",
+      "query": "Machine Learning",
+      "rank": 5,
+      "score": 0.38685280723454163
+    },
+    {
+      "courseCode": "CB206V",
+      "courseTitle": "Machine Learning in Biotechnology",
+      "category": "topic",
+      "query": "machine learning",
+      "rank": 5,
+      "score": 0.38685280723454163
+    },
+    {
+      "courseCode": "CK203V",
+      "courseTitle": "Organic Structure and Dynamics by NMR Spectroscopy",
+      "category": "code",
+      "query": "CK203V",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "CK203V",
+      "courseTitle": "Organic Structure and Dynamics by NMR Spectroscopy",
+      "category": "code",
+      "query": "CK20",
+      "rank": 8,
+      "score": 0.31546487678572877
+    },
+    {
+      "courseCode": "CK203V",
+      "courseTitle": "Organic Structure and Dynamics by NMR Spectroscopy",
+      "category": "title",
+      "query": "Organic Structure",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "CK203V",
+      "courseTitle": "Organic Structure and Dynamics by NMR Spectroscopy",
+      "category": "topic",
+      "query": "NMR spectroscopy",
+      "rank": 4,
+      "score": 0.43067655807339306
+    },
+    {
+      "courseCode": "FHK3006",
+      "courseTitle": "Master Thesis Supervision for PhD Students",
+      "category": "code",
+      "query": "FHK3006",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "FHK3006",
+      "courseTitle": "Master Thesis Supervision for PhD Students",
+      "category": "code",
+      "query": "FHK30",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "FHK3006",
+      "courseTitle": "Master Thesis Supervision for PhD Students",
+      "category": "title",
+      "query": "Master Thesis",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "FHK3006",
+      "courseTitle": "Master Thesis Supervision for PhD Students",
+      "category": "topic",
+      "query": "thesis supervision",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "HL203X",
+      "courseTitle": "Degree Project in Medical Imaging, Second Cycle",
+      "category": "code",
+      "query": "HL203X",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "HL203X",
+      "courseTitle": "Degree Project in Medical Imaging, Second Cycle",
+      "category": "code",
+      "query": "HL20",
+      "rank": 24,
+      "score": 0.21533827903669653
+    },
+    {
+      "courseCode": "HL203X",
+      "courseTitle": "Degree Project in Medical Imaging, Second Cycle",
+      "category": "title",
+      "query": "Degree Project",
+      "rank": null,
+      "score": 0
+    },
+    {
+      "courseCode": "HL203X",
+      "courseTitle": "Degree Project in Medical Imaging, Second Cycle",
+      "category": "topic",
+      "query": "medical imaging research",
+      "rank": 8,
+      "score": 0.31546487678572877
+    },
+    {
+      "courseCode": "KF2390",
+      "courseTitle": "Functional Materials and Surfaces",
+      "category": "code",
+      "query": "KF2390",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "KF2390",
+      "courseTitle": "Functional Materials and Surfaces",
+      "category": "code",
+      "query": "KF23",
+      "rank": 4,
+      "score": 0.43067655807339306
+    },
+    {
+      "courseCode": "KF2390",
+      "courseTitle": "Functional Materials and Surfaces",
+      "category": "title",
+      "query": "Functional Materials",
+      "rank": 2,
+      "score": 0.6309297535714575
+    },
+    {
+      "courseCode": "KF2390",
+      "courseTitle": "Functional Materials and Surfaces",
+      "category": "topic",
+      "query": "functional materials and surfaces",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "KE1140",
+      "courseTitle": "Engineering Chemistry",
+      "category": "code",
+      "query": "KE1140",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "KE1140",
+      "courseTitle": "Engineering Chemistry",
+      "category": "code",
+      "query": "KE11",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "KE1140",
+      "courseTitle": "Engineering Chemistry",
+      "category": "title",
+      "query": "Engineering Chemistry",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "KE1140",
+      "courseTitle": "Engineering Chemistry",
+      "category": "topic",
+      "query": "engineering chemistry",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "DD1333",
+      "courseTitle": "Fundamentals of Programming",
+      "category": "code",
+      "query": "DD1333",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "DD1333",
+      "courseTitle": "Fundamentals of Programming",
+      "category": "code",
+      "query": "DD13",
+      "rank": 14,
+      "score": 0.2559580248098155
+    },
+    {
+      "courseCode": "DD1333",
+      "courseTitle": "Fundamentals of Programming",
+      "category": "title",
+      "query": "Fundamentals Programming",
+      "rank": 2,
+      "score": 0.6309297535714575
+    },
+    {
+      "courseCode": "DD1333",
+      "courseTitle": "Fundamentals of Programming",
+      "category": "topic",
+      "query": "programming fundamentals",
+      "rank": 2,
+      "score": 0.6309297535714575
+    },
+    {
+      "courseCode": "ID1018",
+      "courseTitle": "Programming I",
+      "category": "code",
+      "query": "ID1018",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "ID1018",
+      "courseTitle": "Programming I",
+      "category": "code",
+      "query": "ID10",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "ID1018",
+      "courseTitle": "Programming I",
+      "category": "title",
+      "query": "Programming",
+      "rank": 53,
+      "score": 0.17376534287144002
+    },
+    {
+      "courseCode": "ID1018",
+      "courseTitle": "Programming I",
+      "category": "topic",
+      "query": "object-oriented programming basics",
+      "rank": 6,
+      "score": 0.3562071871080222
+    },
+    {
+      "courseCode": "DD2402",
+      "courseTitle": "Advanced Individual Course in Computational Biology",
+      "category": "code",
+      "query": "DD2402",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "DD2402",
+      "courseTitle": "Advanced Individual Course in Computational Biology",
+      "category": "code",
+      "query": "DD24",
+      "rank": 2,
+      "score": 0.6309297535714575
+    },
+    {
+      "courseCode": "DD2402",
+      "courseTitle": "Advanced Individual Course in Computational Biology",
+      "category": "title",
+      "query": "Advanced Individual",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "DD2402",
+      "courseTitle": "Advanced Individual Course in Computational Biology",
+      "category": "topic",
+      "query": "computational biology",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "FLF3001",
+      "courseTitle": "Writing Successful Research Applications in Learning",
+      "category": "code",
+      "query": "FLF3001",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "FLF3001",
+      "courseTitle": "Writing Successful Research Applications in Learning",
+      "category": "code",
+      "query": "FLF30",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "FLF3001",
+      "courseTitle": "Writing Successful Research Applications in Learning",
+      "category": "title",
+      "query": "Writing Successful",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "FLF3001",
+      "courseTitle": "Writing Successful Research Applications in Learning",
+      "category": "topic",
+      "query": "research grant writing",
+      "rank": 2,
+      "score": 0.6309297535714575
+    },
+    {
+      "courseCode": "LH225U",
+      "courseTitle": "Gender Theory and Gender Equality in Technical Higher Education",
+      "category": "code",
+      "query": "LH225U",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "LH225U",
+      "courseTitle": "Gender Theory and Gender Equality in Technical Higher Education",
+      "category": "code",
+      "query": "LH22",
+      "rank": 4,
+      "score": 0.43067655807339306
+    },
+    {
+      "courseCode": "LH225U",
+      "courseTitle": "Gender Theory and Gender Equality in Technical Higher Education",
+      "category": "title",
+      "query": "Gender Theory",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "LH225U",
+      "courseTitle": "Gender Theory and Gender Equality in Technical Higher Education",
+      "category": "topic",
+      "query": "gender equality in higher education",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "DT2300",
+      "courseTitle": "Sound in Interaction",
+      "category": "code",
+      "query": "DT2300",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "DT2300",
+      "courseTitle": "Sound in Interaction",
+      "category": "code",
+      "query": "DT23",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "DT2300",
+      "courseTitle": "Sound in Interaction",
+      "category": "title",
+      "query": "Sound Interaction",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "DT2300",
+      "courseTitle": "Sound in Interaction",
+      "category": "topic",
+      "query": "audio interaction design",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "ED2247",
+      "courseTitle": "Project in Fusion Research",
+      "category": "code",
+      "query": "ED2247",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "ED2247",
+      "courseTitle": "Project in Fusion Research",
+      "category": "code",
+      "query": "ED22",
+      "rank": 6,
+      "score": 0.3562071871080222
+    },
+    {
+      "courseCode": "ED2247",
+      "courseTitle": "Project in Fusion Research",
+      "category": "title",
+      "query": "Fusion Research",
+      "rank": 3,
+      "score": 0.5
+    },
+    {
+      "courseCode": "ED2247",
+      "courseTitle": "Project in Fusion Research",
+      "category": "topic",
+      "query": "fusion research experiments",
+      "rank": 7,
+      "score": 0.3333333333333333
+    },
+    {
+      "courseCode": "DD1010",
+      "courseTitle": "Introduction to programming and computer knowledge",
+      "category": "code",
+      "query": "DD1010",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "DD1010",
+      "courseTitle": "Introduction to programming and computer knowledge",
+      "category": "code",
+      "query": "DD10",
+      "rank": 2,
+      "score": 0.6309297535714575
+    },
+    {
+      "courseCode": "DD1010",
+      "courseTitle": "Introduction to programming and computer knowledge",
+      "category": "title",
+      "query": "computer knowledge",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "DD1010",
+      "courseTitle": "Introduction to programming and computer knowledge",
+      "category": "topic",
+      "query": "introductory programming fundamentals",
+      "rank": 20,
+      "score": 0.227670248696953
+    },
+    {
+      "courseCode": "UMK701",
+      "courseTitle": "Learning and Assessment",
+      "category": "code",
+      "query": "UMK701",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "UMK701",
+      "courseTitle": "Learning and Assessment",
+      "category": "code",
+      "query": "UMK7",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "UMK701",
+      "courseTitle": "Learning and Assessment",
+      "category": "title",
+      "query": "Learning Assessment",
+      "rank": 2,
+      "score": 0.6309297535714575
+    },
+    {
+      "courseCode": "UMK701",
+      "courseTitle": "Learning and Assessment",
+      "category": "topic",
+      "query": "learning assessment and evaluation",
+      "rank": 6,
+      "score": 0.3562071871080222
+    },
+    {
+      "courseCode": "FDH3011",
+      "courseTitle": "Interaction Design Research",
+      "category": "code",
+      "query": "FDH3011",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "FDH3011",
+      "courseTitle": "Interaction Design Research",
+      "category": "code",
+      "query": "FDH30",
+      "rank": 7,
+      "score": 0.3333333333333333
+    },
+    {
+      "courseCode": "FDH3011",
+      "courseTitle": "Interaction Design Research",
+      "category": "title",
+      "query": "Interaction Design",
+      "rank": 6,
+      "score": 0.3562071871080222
+    },
+    {
+      "courseCode": "FDH3011",
+      "courseTitle": "Interaction Design Research",
+      "category": "topic",
+      "query": "design research methodology",
+      "rank": 9,
+      "score": 0.3010299956639812
+    },
+    {
+      "courseCode": "FAL3304",
+      "courseTitle": "Environmental Assessment",
+      "category": "code",
+      "query": "FAL3304",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "FAL3304",
+      "courseTitle": "Environmental Assessment",
+      "category": "code",
+      "query": "FAL33",
+      "rank": 5,
+      "score": 0.38685280723454163
+    },
+    {
+      "courseCode": "FAL3304",
+      "courseTitle": "Environmental Assessment",
+      "category": "title",
+      "query": "Environmental Assessment",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "FAL3304",
+      "courseTitle": "Environmental Assessment",
+      "category": "topic",
+      "query": "environmental impact assessment",
+      "rank": 4,
+      "score": 0.43067655807339306
+    },
+    {
+      "courseCode": "FAL3320",
+      "courseTitle": "Environmental geology",
+      "category": "code",
+      "query": "FAL3320",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "FAL3320",
+      "courseTitle": "Environmental geology",
+      "category": "code",
+      "query": "FAL33",
+      "rank": 6,
+      "score": 0.3562071871080222
+    },
+    {
+      "courseCode": "FAL3320",
+      "courseTitle": "Environmental geology",
+      "category": "title",
+      "query": "Environmental geology",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "FAL3320",
+      "courseTitle": "Environmental geology",
+      "category": "topic",
+      "query": "environmental geoscience modeling",
+      "rank": 4,
+      "score": 0.43067655807339306
+    },
+    {
+      "courseCode": "FBB3410",
+      "courseTitle": "Practical Didactics - House of Science",
+      "category": "code",
+      "query": "FBB3410",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "FBB3410",
+      "courseTitle": "Practical Didactics - House of Science",
+      "category": "code",
+      "query": "FBB34",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "FBB3410",
+      "courseTitle": "Practical Didactics - House of Science",
+      "category": "title",
+      "query": "Practical Didactics",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "FBB3410",
+      "courseTitle": "Practical Didactics - House of Science",
+      "category": "topic",
+      "query": "scientific communication and pedagogy",
+      "rank": 2,
+      "score": 0.6309297535714575
+    },
+    {
+      "courseCode": "FCA3006",
+      "courseTitle": "Practical course for doctoral students",
+      "category": "code",
+      "query": "FCA3006",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "FCA3006",
+      "courseTitle": "Practical course for doctoral students",
+      "category": "code",
+      "query": "FCA30",
+      "rank": 6,
+      "score": 0.3562071871080222
+    },
+    {
+      "courseCode": "FCA3006",
+      "courseTitle": "Practical course for doctoral students",
+      "category": "title",
+      "query": "doctoral students",
+      "rank": 5,
+      "score": 0.38685280723454163
+    },
+    {
+      "courseCode": "FCA3006",
+      "courseTitle": "Practical course for doctoral students",
+      "category": "topic",
+      "query": "doctoral research internship planning",
+      "rank": 38,
+      "score": 0.18920035951687003
+    },
+    {
+      "courseCode": "FDD3258",
+      "courseTitle": "Introduction to High Performance Computing",
+      "category": "code",
+      "query": "FDD3258",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "FDD3258",
+      "courseTitle": "Introduction to High Performance Computing",
+      "category": "code",
+      "query": "FDD32",
+      "rank": 3,
+      "score": 0.5
+    },
+    {
+      "courseCode": "FDD3258",
+      "courseTitle": "Introduction to High Performance Computing",
+      "category": "title",
+      "query": "High Performance",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "FDD3258",
+      "courseTitle": "Introduction to High Performance Computing",
+      "category": "topic",
+      "query": "high performance computing",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "FDD3452",
+      "courseTitle": "Formal Methods",
+      "category": "code",
+      "query": "FDD3452",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "FDD3452",
+      "courseTitle": "Formal Methods",
+      "category": "code",
+      "query": "FDD34",
+      "rank": 17,
+      "score": 0.23981246656813146
+    },
+    {
+      "courseCode": "FDD3452",
+      "courseTitle": "Formal Methods",
+      "category": "title",
+      "query": "Formal Methods",
+      "rank": 2,
+      "score": 0.6309297535714575
+    },
+    {
+      "courseCode": "FDD3452",
+      "courseTitle": "Formal Methods",
+      "category": "topic",
+      "query": "formal methods in computer science",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "FDD3353",
+      "courseTitle": "Topics in Robotics I",
+      "category": "code",
+      "query": "FDD3353",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "FDD3353",
+      "courseTitle": "Topics in Robotics I",
+      "category": "code",
+      "query": "FDD33",
+      "rank": 17,
+      "score": 0.23981246656813146
+    },
+    {
+      "courseCode": "FDD3353",
+      "courseTitle": "Topics in Robotics I",
+      "category": "title",
+      "query": "Topics Robotics",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "FDD3353",
+      "courseTitle": "Topics in Robotics I",
+      "category": "topic",
+      "query": "robotics algorithms",
+      "rank": 2,
+      "score": 0.6309297535714575
+    },
+    {
+      "courseCode": "FEP3323",
+      "courseTitle": "Advanced Course in Network Management",
+      "category": "code",
+      "query": "FEP3323",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "FEP3323",
+      "courseTitle": "Advanced Course in Network Management",
+      "category": "code",
+      "query": "FEP33",
+      "rank": 6,
+      "score": 0.3562071871080222
+    },
+    {
+      "courseCode": "FEP3323",
+      "courseTitle": "Advanced Course in Network Management",
+      "category": "title",
+      "query": "Network Management",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "FEP3323",
+      "courseTitle": "Advanced Course in Network Management",
+      "category": "topic",
+      "query": "network management",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "FDT3303",
+      "courseTitle": "Critical Perspectives on Data Science and Machine Learning",
+      "category": "code",
+      "query": "FDT3303",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "FDT3303",
+      "courseTitle": "Critical Perspectives on Data Science and Machine Learning",
+      "category": "code",
+      "query": "FDT33",
+      "rank": 4,
+      "score": 0.43067655807339306
+    },
+    {
+      "courseCode": "FDT3303",
+      "courseTitle": "Critical Perspectives on Data Science and Machine Learning",
+      "category": "title",
+      "query": "Critical Perspectives",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "FDT3303",
+      "courseTitle": "Critical Perspectives on Data Science and Machine Learning",
+      "category": "topic",
+      "query": "machine learning critical evaluation",
+      "rank": 9,
+      "score": 0.3010299956639812
+    },
+    {
+      "courseCode": "FED3220",
+      "courseTitle": "Motion of Charged Particles, Collision Processes and Basis of Transport Theory II",
+      "category": "code",
+      "query": "FED3220",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "FED3220",
+      "courseTitle": "Motion of Charged Particles, Collision Processes and Basis of Transport Theory II",
+      "category": "code",
+      "query": "FED32",
+      "rank": 2,
+      "score": 0.6309297535714575
+    },
+    {
+      "courseCode": "FED3220",
+      "courseTitle": "Motion of Charged Particles, Collision Processes and Basis of Transport Theory II",
+      "category": "title",
+      "query": "Charged Particles",
+      "rank": 2,
+      "score": 0.6309297535714575
+    },
+    {
+      "courseCode": "FED3220",
+      "courseTitle": "Motion of Charged Particles, Collision Processes and Basis of Transport Theory II",
+      "category": "topic",
+      "query": "plasma transport theory",
+      "rank": 3,
+      "score": 0.5
+    },
+    {
+      "courseCode": "FEF3370",
+      "courseTitle": "Seminars in Plasma Physics",
+      "category": "code",
+      "query": "FEF3370",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "FEF3370",
+      "courseTitle": "Seminars in Plasma Physics",
+      "category": "code",
+      "query": "FEF33",
+      "rank": 8,
+      "score": 0.31546487678572877
+    },
+    {
+      "courseCode": "FEF3370",
+      "courseTitle": "Seminars in Plasma Physics",
+      "category": "title",
+      "query": "Plasma Physics",
+      "rank": 10,
+      "score": 0.2890648263178879
+    },
+    {
+      "courseCode": "FEF3370",
+      "courseTitle": "Seminars in Plasma Physics",
+      "category": "topic",
+      "query": "plasma physics seminars",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "FEG3202",
+      "courseTitle": "Seminar Course in Electric Power Systems",
+      "category": "code",
+      "query": "FEG3202",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "FEG3202",
+      "courseTitle": "Seminar Course in Electric Power Systems",
+      "category": "code",
+      "query": "FEG32",
+      "rank": 2,
+      "score": 0.6309297535714575
+    },
+    {
+      "courseCode": "FEG3202",
+      "courseTitle": "Seminar Course in Electric Power Systems",
+      "category": "title",
+      "query": "Electric Power",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "FEG3202",
+      "courseTitle": "Seminar Course in Electric Power Systems",
+      "category": "topic",
+      "query": "electric power systems research",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "FEI3280",
+      "courseTitle": "Electromagnetic Compatibility, PhD Course",
+      "category": "code",
+      "query": "FEI3280",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "FEI3280",
+      "courseTitle": "Electromagnetic Compatibility, PhD Course",
+      "category": "code",
+      "query": "FEI32",
+      "rank": 6,
+      "score": 0.3562071871080222
+    },
+    {
+      "courseCode": "FEI3280",
+      "courseTitle": "Electromagnetic Compatibility, PhD Course",
+      "category": "title",
+      "query": "Electromagnetic Compatibility",
+      "rank": 2,
+      "score": 0.6309297535714575
+    },
+    {
+      "courseCode": "FEI3280",
+      "courseTitle": "Electromagnetic Compatibility, PhD Course",
+      "category": "topic",
+      "query": "electromagnetic compatibility",
+      "rank": 2,
+      "score": 0.6309297535714575
+    },
+    {
+      "courseCode": "FEK3214",
+      "courseTitle": "MEMS- Seminar IV",
+      "category": "code",
+      "query": "FEK3214",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "FEK3214",
+      "courseTitle": "MEMS- Seminar IV",
+      "category": "code",
+      "query": "FEK32",
+      "rank": 5,
+      "score": 0.38685280723454163
+    },
+    {
+      "courseCode": "FEK3214",
+      "courseTitle": "MEMS- Seminar IV",
+      "category": "title",
+      "query": "MEMS Seminar",
+      "rank": 4,
+      "score": 0.43067655807339306
+    },
+    {
+      "courseCode": "FEK3214",
+      "courseTitle": "MEMS- Seminar IV",
+      "category": "topic",
+      "query": "MEMS technology",
+      "rank": 4,
+      "score": 0.43067655807339306
+    },
+    {
+      "courseCode": "FEL3240",
+      "courseTitle": "Games, Decisions and Information",
+      "category": "code",
+      "query": "FEL3240",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "FEL3240",
+      "courseTitle": "Games, Decisions and Information",
+      "category": "code",
+      "query": "FEL32",
+      "rank": 5,
+      "score": 0.38685280723454163
+    },
+    {
+      "courseCode": "FEL3240",
+      "courseTitle": "Games, Decisions and Information",
+      "category": "title",
+      "query": "Games Decisions",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "FEL3240",
+      "courseTitle": "Games, Decisions and Information",
+      "category": "topic",
+      "query": "game theory",
+      "rank": 7,
+      "score": 0.3333333333333333
+    },
+    {
+      "courseCode": "FEO3340",
+      "courseTitle": "Quantum Information Theory",
+      "category": "code",
+      "query": "FEO3340",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "FEO3340",
+      "courseTitle": "Quantum Information Theory",
+      "category": "code",
+      "query": "FEO33",
+      "rank": 5,
+      "score": 0.38685280723454163
+    },
+    {
+      "courseCode": "FEO3340",
+      "courseTitle": "Quantum Information Theory",
+      "category": "title",
+      "query": "Quantum Information",
+      "rank": 2,
+      "score": 0.6309297535714575
+    },
+    {
+      "courseCode": "FEO3340",
+      "courseTitle": "Quantum Information Theory",
+      "category": "topic",
+      "query": "quantum information theory",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "FIK3227",
+      "courseTitle": "Network Systems with Edge or Cloud Datacenters",
+      "category": "code",
+      "query": "FIK3227",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "FIK3227",
+      "courseTitle": "Network Systems with Edge or Cloud Datacenters",
+      "category": "code",
+      "query": "FIK32",
+      "rank": 2,
+      "score": 0.6309297535714575
+    },
+    {
+      "courseCode": "FIK3227",
+      "courseTitle": "Network Systems with Edge or Cloud Datacenters",
+      "category": "title",
+      "query": "Network Systems",
+      "rank": 2,
+      "score": 0.6309297535714575
+    },
+    {
+      "courseCode": "FIK3227",
+      "courseTitle": "Network Systems with Edge or Cloud Datacenters",
+      "category": "topic",
+      "query": "datacenter networks",
+      "rank": 3,
+      "score": 0.5
+    },
+    {
+      "courseCode": "FHN3002",
+      "courseTitle": "The Ergonomics of Muskulosceletal Healt",
+      "category": "code",
+      "query": "FHN3002",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "FHN3002",
+      "courseTitle": "The Ergonomics of Muskulosceletal Healt",
+      "category": "code",
+      "query": "FHN30",
+      "rank": 2,
+      "score": 0.6309297535714575
+    },
+    {
+      "courseCode": "FHN3002",
+      "courseTitle": "The Ergonomics of Muskulosceletal Healt",
+      "category": "title",
+      "query": "Muskulosceletal Healt",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "FHN3002",
+      "courseTitle": "The Ergonomics of Muskulosceletal Healt",
+      "category": "topic",
+      "query": "workplace ergonomics",
+      "rank": 9,
+      "score": 0.3010299956639812
+    },
+    {
+      "courseCode": "FIH3608",
+      "courseTitle": "Nanoelectronic Device Fabrication",
+      "category": "code",
+      "query": "FIH3608",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "FIH3608",
+      "courseTitle": "Nanoelectronic Device Fabrication",
+      "category": "code",
+      "query": "FIH36",
+      "rank": 7,
+      "score": 0.3333333333333333
+    },
+    {
+      "courseCode": "FIH3608",
+      "courseTitle": "Nanoelectronic Device Fabrication",
+      "category": "title",
+      "query": "Nanoelectronic Device",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "FIH3608",
+      "courseTitle": "Nanoelectronic Device Fabrication",
+      "category": "topic",
+      "query": "nanoelectronic device fabrication",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "FIK3507",
+      "courseTitle": "Statistical Problems in Simulation",
+      "category": "code",
+      "query": "FIK3507",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "FIK3507",
+      "courseTitle": "Statistical Problems in Simulation",
+      "category": "code",
+      "query": "FIK35",
+      "rank": 2,
+      "score": 0.6309297535714575
+    },
+    {
+      "courseCode": "FIK3507",
+      "courseTitle": "Statistical Problems in Simulation",
+      "category": "title",
+      "query": "Statistical Problems",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "FIK3507",
+      "courseTitle": "Statistical Problems in Simulation",
+      "category": "topic",
+      "query": "stochastic simulation experiment design",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "FKD3160",
+      "courseTitle": "Application Exercise in Corrosion Science",
+      "category": "code",
+      "query": "FKD3160",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "FKD3160",
+      "courseTitle": "Application Exercise in Corrosion Science",
+      "category": "code",
+      "query": "FKD31",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "FKD3160",
+      "courseTitle": "Application Exercise in Corrosion Science",
+      "category": "title",
+      "query": "Application Exercise",
+      "rank": 2,
+      "score": 0.6309297535714575
+    },
+    {
+      "courseCode": "FKD3160",
+      "courseTitle": "Application Exercise in Corrosion Science",
+      "category": "topic",
+      "query": "corrosion science project work",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "FKF3410",
+      "courseTitle": "Molecular Modeling for Materials Design",
+      "category": "code",
+      "query": "FKF3410",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "FKF3410",
+      "courseTitle": "Molecular Modeling for Materials Design",
+      "category": "code",
+      "query": "FKF34",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "FKF3410",
+      "courseTitle": "Molecular Modeling for Materials Design",
+      "category": "title",
+      "query": "Molecular Modeling",
+      "rank": 3,
+      "score": 0.5
+    },
+    {
+      "courseCode": "FKF3410",
+      "courseTitle": "Molecular Modeling for Materials Design",
+      "category": "topic",
+      "query": "molecular dynamics simulation for materials design",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "FLF3009",
+      "courseTitle": "Literature Course Research Seminars before dissertation",
+      "category": "code",
+      "query": "FLF3009",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "FLF3009",
+      "courseTitle": "Literature Course Research Seminars before dissertation",
+      "category": "code",
+      "query": "FLF30",
+      "rank": 9,
+      "score": 0.3010299956639812
+    },
+    {
+      "courseCode": "FLF3009",
+      "courseTitle": "Literature Course Research Seminars before dissertation",
+      "category": "title",
+      "query": "Research Seminars",
+      "rank": 10,
+      "score": 0.2890648263178879
+    },
+    {
+      "courseCode": "FLF3009",
+      "courseTitle": "Literature Course Research Seminars before dissertation",
+      "category": "topic",
+      "query": "academic literature research seminars",
+      "rank": 2,
+      "score": 0.6309297535714575
+    },
+    {
+      "courseCode": "ME2016",
+      "courseTitle": "Project Management: Leadership and Control",
+      "category": "code",
+      "query": "ME2016",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "ME2016",
+      "courseTitle": "Project Management: Leadership and Control",
+      "category": "code",
+      "query": "ME20",
+      "rank": 6,
+      "score": 0.3562071871080222
+    },
+    {
+      "courseCode": "ME2016",
+      "courseTitle": "Project Management: Leadership and Control",
+      "category": "title",
+      "query": "Project Management",
+      "rank": 2,
+      "score": 0.6309297535714575
+    },
+    {
+      "courseCode": "ME2016",
+      "courseTitle": "Project Management: Leadership and Control",
+      "category": "topic",
+      "query": "project management leadership and control",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "MF1050",
+      "courseTitle": "Design and Product Realization for Teachers in Technology",
+      "category": "code",
+      "query": "MF1050",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "MF1050",
+      "courseTitle": "Design and Product Realization for Teachers in Technology",
+      "category": "code",
+      "query": "MF10",
+      "rank": 17,
+      "score": 0.23981246656813146
+    },
+    {
+      "courseCode": "MF1050",
+      "courseTitle": "Design and Product Realization for Teachers in Technology",
+      "category": "title",
+      "query": "Product Realization",
+      "rank": 6,
+      "score": 0.3562071871080222
+    },
+    {
+      "courseCode": "MF1050",
+      "courseTitle": "Design and Product Realization for Teachers in Technology",
+      "category": "topic",
+      "query": "product design and realization",
+      "rank": 5,
+      "score": 0.38685280723454163
+    },
+    {
+      "courseCode": "FMG3920",
+      "courseTitle": "Additive processes, materials and design for metallic components",
+      "category": "code",
+      "query": "FMG3920",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "FMG3920",
+      "courseTitle": "Additive processes, materials and design for metallic components",
+      "category": "code",
+      "query": "FMG39",
+      "rank": 4,
+      "score": 0.43067655807339306
+    },
+    {
+      "courseCode": "FMG3920",
+      "courseTitle": "Additive processes, materials and design for metallic components",
+      "category": "title",
+      "query": "Additive processes",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "FMG3920",
+      "courseTitle": "Additive processes, materials and design for metallic components",
+      "category": "topic",
+      "query": "additive manufacturing of metals",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "FMH3924",
+      "courseTitle": "Introduction to High-performance Scanning Electron Microscopy in Materials Science with Focus on Metallurgy",
+      "category": "code",
+      "query": "FMH3924",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "FMH3924",
+      "courseTitle": "Introduction to High-performance Scanning Electron Microscopy in Materials Science with Focus on Metallurgy",
+      "category": "code",
+      "query": "FMH39",
+      "rank": 14,
+      "score": 0.2559580248098155
+    },
+    {
+      "courseCode": "FMH3924",
+      "courseTitle": "Introduction to High-performance Scanning Electron Microscopy in Materials Science with Focus on Metallurgy",
+      "category": "title",
+      "query": "High-performance Scanning",
+      "rank": 2,
+      "score": 0.6309297535714575
+    },
+    {
+      "courseCode": "FMH3924",
+      "courseTitle": "Introduction to High-performance Scanning Electron Microscopy in Materials Science with Focus on Metallurgy",
+      "category": "topic",
+      "query": "scanning electron microscopy in materials science",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "MJ239X",
+      "courseTitle": "Degree Project in Applied Thermodynamics, Second Cycle",
+      "category": "code",
+      "query": "MJ239X",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "MJ239X",
+      "courseTitle": "Degree Project in Applied Thermodynamics, Second Cycle",
+      "category": "code",
+      "query": "MJ23",
+      "rank": 21,
+      "score": 0.22424382421757544
+    },
+    {
+      "courseCode": "MJ239X",
+      "courseTitle": "Degree Project in Applied Thermodynamics, Second Cycle",
+      "category": "title",
+      "query": "Degree Project",
+      "rank": null,
+      "score": 0
+    },
+    {
+      "courseCode": "MJ239X",
+      "courseTitle": "Degree Project in Applied Thermodynamics, Second Cycle",
+      "category": "topic",
+      "query": "applied thermodynamics",
+      "rank": 12,
+      "score": 0.27023815442731974
+    },
+    {
+      "courseCode": "MJ2494",
+      "courseTitle": "Polygeneration",
+      "category": "code",
+      "query": "MJ2494",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "MJ2494",
+      "courseTitle": "Polygeneration",
+      "category": "code",
+      "query": "MJ24",
+      "rank": 51,
+      "score": 0.17542506358195453
+    },
+    {
+      "courseCode": "MJ2494",
+      "courseTitle": "Polygeneration",
+      "category": "title",
+      "query": "Polygeneration",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "MJ2494",
+      "courseTitle": "Polygeneration",
+      "category": "topic",
+      "query": "polygeneration and energy system optimization",
+      "rank": 3,
+      "score": 0.5
+    },
+    {
+      "courseCode": "FMJ3391",
+      "courseTitle": "Climate Action in doctoral research",
+      "category": "code",
+      "query": "FMJ3391",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "FMJ3391",
+      "courseTitle": "Climate Action in doctoral research",
+      "category": "code",
+      "query": "FMJ33",
+      "rank": 12,
+      "score": 0.27023815442731974
+    },
+    {
+      "courseCode": "FMJ3391",
+      "courseTitle": "Climate Action in doctoral research",
+      "category": "title",
+      "query": "Climate Action",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "FMJ3391",
+      "courseTitle": "Climate Action in doctoral research",
+      "category": "topic",
+      "query": "climate action research",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "SD1002",
+      "courseTitle": "Vehicle Engineering",
+      "category": "code",
+      "query": "SD1002",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "SD1002",
+      "courseTitle": "Vehicle Engineering",
+      "category": "code",
+      "query": "SD10",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "SD1002",
+      "courseTitle": "Vehicle Engineering",
+      "category": "title",
+      "query": "Vehicle Engineering",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "SD1002",
+      "courseTitle": "Vehicle Engineering",
+      "category": "topic",
+      "query": "vehicle engineering",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "SD2809",
+      "courseTitle": "Computational Aerodynamics Design of Aircraft",
+      "category": "code",
+      "query": "SD2809",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "SD2809",
+      "courseTitle": "Computational Aerodynamics Design of Aircraft",
+      "category": "code",
+      "query": "SD28",
+      "rank": 3,
+      "score": 0.5
+    },
+    {
+      "courseCode": "SD2809",
+      "courseTitle": "Computational Aerodynamics Design of Aircraft",
+      "category": "title",
+      "query": "Computational Aerodynamics",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "SD2809",
+      "courseTitle": "Computational Aerodynamics Design of Aircraft",
+      "category": "topic",
+      "query": "computational fluid dynamics",
+      "rank": 16,
+      "score": 0.24465054211822604
+    },
+    {
+      "courseCode": "SE2137",
+      "courseTitle": "Fatigue",
+      "category": "code",
+      "query": "SE2137",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "SE2137",
+      "courseTitle": "Fatigue",
+      "category": "code",
+      "query": "SE21",
+      "rank": 6,
+      "score": 0.3562071871080222
+    },
+    {
+      "courseCode": "SE2137",
+      "courseTitle": "Fatigue",
+      "category": "title",
+      "query": "Fatigue",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "SE2137",
+      "courseTitle": "Fatigue",
+      "category": "topic",
+      "query": "fatigue and structural reliability",
+      "rank": null,
+      "score": 0
+    },
+    {
+      "courseCode": "SF299X",
+      "courseTitle": "Degree Project in Mathematical Statistics, Second Cycle",
+      "category": "code",
+      "query": "SF299X",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "SF299X",
+      "courseTitle": "Degree Project in Mathematical Statistics, Second Cycle",
+      "category": "code",
+      "query": "SF29",
+      "rank": 19,
+      "score": 0.23137821315975915
+    },
+    {
+      "courseCode": "SF299X",
+      "courseTitle": "Degree Project in Mathematical Statistics, Second Cycle",
+      "category": "title",
+      "query": "Degree Project",
+      "rank": null,
+      "score": 0
+    },
+    {
+      "courseCode": "SF299X",
+      "courseTitle": "Degree Project in Mathematical Statistics, Second Cycle",
+      "category": "topic",
+      "query": "mathematical statistics",
+      "rank": 10,
+      "score": 0.2890648263178879
+    },
+    {
+      "courseCode": "FSF3812",
+      "courseTitle": "Applied Linear Optimization",
+      "category": "code",
+      "query": "FSF3812",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "FSF3812",
+      "courseTitle": "Applied Linear Optimization",
+      "category": "code",
+      "query": "FSF38",
+      "rank": 3,
+      "score": 0.5
+    },
+    {
+      "courseCode": "FSF3812",
+      "courseTitle": "Applied Linear Optimization",
+      "category": "title",
+      "query": "Applied Linear",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "FSF3812",
+      "courseTitle": "Applied Linear Optimization",
+      "category": "topic",
+      "query": "linear optimization",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "SG2224",
+      "courseTitle": "Applied Computational Fluid Dynamics",
+      "category": "code",
+      "query": "SG2224",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "SG2224",
+      "courseTitle": "Applied Computational Fluid Dynamics",
+      "category": "code",
+      "query": "SG22",
+      "rank": 9,
+      "score": 0.3010299956639812
+    },
+    {
+      "courseCode": "SG2224",
+      "courseTitle": "Applied Computational Fluid Dynamics",
+      "category": "title",
+      "query": "Applied Computational",
+      "rank": 2,
+      "score": 0.6309297535714575
+    },
+    {
+      "courseCode": "SG2224",
+      "courseTitle": "Applied Computational Fluid Dynamics",
+      "category": "topic",
+      "query": "computational fluid dynamics",
+      "rank": 4,
+      "score": 0.43067655807339306
+    },
+    {
+      "courseCode": "SH2772",
+      "courseTitle": "Chemistry and Physics of Nuclear Fuels",
+      "category": "code",
+      "query": "SH2772",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "SH2772",
+      "courseTitle": "Chemistry and Physics of Nuclear Fuels",
+      "category": "code",
+      "query": "SH27",
+      "rank": 6,
+      "score": 0.3562071871080222
+    },
+    {
+      "courseCode": "SH2772",
+      "courseTitle": "Chemistry and Physics of Nuclear Fuels",
+      "category": "title",
+      "query": "Nuclear Fuels",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "SH2772",
+      "courseTitle": "Chemistry and Physics of Nuclear Fuels",
+      "category": "topic",
+      "query": "nuclear fuel chemistry",
+      "rank": 3,
+      "score": 0.5
+    },
+    {
+      "courseCode": "FSK3516",
+      "courseTitle": "Mathematical Modeling in Cellular Biophysics",
+      "category": "code",
+      "query": "FSK3516",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "FSK3516",
+      "courseTitle": "Mathematical Modeling in Cellular Biophysics",
+      "category": "code",
+      "query": "FSK35",
+      "rank": 7,
+      "score": 0.3333333333333333
+    },
+    {
+      "courseCode": "FSK3516",
+      "courseTitle": "Mathematical Modeling in Cellular Biophysics",
+      "category": "title",
+      "query": "Mathematical Modeling",
+      "rank": 2,
+      "score": 0.6309297535714575
+    },
+    {
+      "courseCode": "FSK3516",
+      "courseTitle": "Mathematical Modeling in Cellular Biophysics",
+      "category": "topic",
+      "query": "cellular biophysics modeling",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "SK2411",
+      "courseTitle": "Laser Physics",
+      "category": "code",
+      "query": "SK2411",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "SK2411",
+      "courseTitle": "Laser Physics",
+      "category": "code",
+      "query": "SK24",
+      "rank": 3,
+      "score": 0.5
+    },
+    {
+      "courseCode": "SK2411",
+      "courseTitle": "Laser Physics",
+      "category": "title",
+      "query": "Laser Physics",
+      "rank": 3,
+      "score": 0.5
+    },
+    {
+      "courseCode": "SK2411",
+      "courseTitle": "Laser Physics",
+      "category": "topic",
+      "query": "laser physics",
+      "rank": 3,
+      "score": 0.5
+    },
+    {
+      "courseCode": "ML1203",
+      "courseTitle": "Energy Technology",
+      "category": "code",
+      "query": "ML1203",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "ML1203",
+      "courseTitle": "Energy Technology",
+      "category": "code",
+      "query": "ML12",
+      "rank": 2,
+      "score": 0.6309297535714575
+    },
+    {
+      "courseCode": "ML1203",
+      "courseTitle": "Energy Technology",
+      "category": "title",
+      "query": "Energy Technology",
+      "rank": 2,
+      "score": 0.6309297535714575
+    },
+    {
+      "courseCode": "ML1203",
+      "courseTitle": "Energy Technology",
+      "category": "topic",
+      "query": "energy technology",
+      "rank": 2,
+      "score": 0.6309297535714575
+    },
+    {
+      "courseCode": "KH1122",
+      "courseTitle": "Analytical Chemistry",
+      "category": "code",
+      "query": "KH1122",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "KH1122",
+      "courseTitle": "Analytical Chemistry",
+      "category": "code",
+      "query": "KH11",
+      "rank": 4,
+      "score": 0.43067655807339306
+    },
+    {
+      "courseCode": "KH1122",
+      "courseTitle": "Analytical Chemistry",
+      "category": "title",
+      "query": "Analytical Chemistry",
+      "rank": 2,
+      "score": 0.6309297535714575
+    },
+    {
+      "courseCode": "KH1122",
+      "courseTitle": "Analytical Chemistry",
+      "category": "topic",
+      "query": "analytical chemistry",
+      "rank": 2,
+      "score": 0.6309297535714575
+    },
+    {
+      "courseCode": "KE2080",
+      "courseTitle": "Chemical Engineering in Fine and Specialty Chemicals",
+      "category": "code",
+      "query": "KE2080",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "KE2080",
+      "courseTitle": "Chemical Engineering in Fine and Specialty Chemicals",
+      "category": "code",
+      "query": "KE20",
+      "rank": 11,
+      "score": 0.27894294565112987
+    },
+    {
+      "courseCode": "KE2080",
+      "courseTitle": "Chemical Engineering in Fine and Specialty Chemicals",
+      "category": "title",
+      "query": "Chemical Engineering",
+      "rank": 10,
+      "score": 0.2890648263178879
+    },
+    {
+      "courseCode": "KE2080",
+      "courseTitle": "Chemical Engineering in Fine and Specialty Chemicals",
+      "category": "topic",
+      "query": "chemical process engineering",
+      "rank": 6,
+      "score": 0.3562071871080222
+    },
+    {
+      "courseCode": "LT1080",
+      "courseTitle": "Teaching and learning in natural science",
+      "category": "code",
+      "query": "LT1080",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "LT1080",
+      "courseTitle": "Teaching and learning in natural science",
+      "category": "code",
+      "query": "LT10",
+      "rank": 62,
+      "score": 0.16730017881017412
+    },
+    {
+      "courseCode": "LT1080",
+      "courseTitle": "Teaching and learning in natural science",
+      "category": "title",
+      "query": "natural science",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "LT1080",
+      "courseTitle": "Teaching and learning in natural science",
+      "category": "topic",
+      "query": "science education",
+      "rank": 6,
+      "score": 0.3562071871080222
+    },
+    {
+      "courseCode": "MF2018",
+      "courseTitle": "Tribology",
+      "category": "code",
+      "query": "MF2018",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "MF2018",
+      "courseTitle": "Tribology",
+      "category": "code",
+      "query": "MF20",
+      "rank": 4,
+      "score": 0.43067655807339306
+    },
+    {
+      "courseCode": "MF2018",
+      "courseTitle": "Tribology",
+      "category": "title",
+      "query": "Tribology",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "MF2018",
+      "courseTitle": "Tribology",
+      "category": "topic",
+      "query": "tribology",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "MF224X",
+      "courseTitle": "Degree Project in Mechatronics, Second Cycle",
+      "category": "code",
+      "query": "MF224X",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "MF224X",
+      "courseTitle": "Degree Project in Mechatronics, Second Cycle",
+      "category": "code",
+      "query": "MF22",
+      "rank": 8,
+      "score": 0.31546487678572877
+    },
+    {
+      "courseCode": "MF224X",
+      "courseTitle": "Degree Project in Mechatronics, Second Cycle",
+      "category": "title",
+      "query": "Degree Project",
+      "rank": null,
+      "score": 0
+    },
+    {
+      "courseCode": "MF224X",
+      "courseTitle": "Degree Project in Mechatronics, Second Cycle",
+      "category": "topic",
+      "query": "mechatronics engineering",
+      "rank": 6,
+      "score": 0.3562071871080222
+    },
+    {
+      "courseCode": "MF2098",
+      "courseTitle": "Design Methodology in Urban Mobility",
+      "category": "code",
+      "query": "MF2098",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "MF2098",
+      "courseTitle": "Design Methodology in Urban Mobility",
+      "category": "code",
+      "query": "MF20",
+      "rank": 62,
+      "score": 0.16730017881017412
+    },
+    {
+      "courseCode": "MF2098",
+      "courseTitle": "Design Methodology in Urban Mobility",
+      "category": "title",
+      "query": "Design Methodology",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "MF2098",
+      "courseTitle": "Design Methodology in Urban Mobility",
+      "category": "topic",
+      "query": "design thinking",
+      "rank": 17,
+      "score": 0.23981246656813146
+    },
+    {
+      "courseCode": "MF2065",
+      "courseTitle": "Innovations for the Emerging City, Openlab Multidisciplinary Project Course",
+      "category": "code",
+      "query": "MF2065",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "MF2065",
+      "courseTitle": "Innovations for the Emerging City, Openlab Multidisciplinary Project Course",
+      "category": "code",
+      "query": "MF20",
+      "rank": 32,
+      "score": 0.19823986317056053
+    },
+    {
+      "courseCode": "MF2065",
+      "courseTitle": "Innovations for the Emerging City, Openlab Multidisciplinary Project Course",
+      "category": "title",
+      "query": "Emerging City",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "MF2065",
+      "courseTitle": "Innovations for the Emerging City, Openlab Multidisciplinary Project Course",
+      "category": "topic",
+      "query": "innovation management",
+      "rank": 33,
+      "score": 0.1965616322328226
+    },
+    {
+      "courseCode": "MG2047",
+      "courseTitle": "Advanced Manufacturing Equipment",
+      "category": "code",
+      "query": "MG2047",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "MG2047",
+      "courseTitle": "Advanced Manufacturing Equipment",
+      "category": "code",
+      "query": "MG20",
+      "rank": 22,
+      "score": 0.22106472945750374
+    },
+    {
+      "courseCode": "MG2047",
+      "courseTitle": "Advanced Manufacturing Equipment",
+      "category": "title",
+      "query": "Advanced Manufacturing",
+      "rank": 3,
+      "score": 0.5
+    },
+    {
+      "courseCode": "MG2047",
+      "courseTitle": "Advanced Manufacturing Equipment",
+      "category": "topic",
+      "query": "industrial robotics",
+      "rank": 11,
+      "score": 0.27894294565112987
+    },
+    {
+      "courseCode": "MJ1015",
+      "courseTitle": "Electrical and Control Engineering for Industrial Systems",
+      "category": "code",
+      "query": "MJ1015",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "MJ1015",
+      "courseTitle": "Electrical and Control Engineering for Industrial Systems",
+      "category": "code",
+      "query": "MJ10",
+      "rank": 4,
+      "score": 0.43067655807339306
+    },
+    {
+      "courseCode": "MJ1015",
+      "courseTitle": "Electrical and Control Engineering for Industrial Systems",
+      "category": "title",
+      "query": "Control Engineering",
+      "rank": 4,
+      "score": 0.43067655807339306
+    },
+    {
+      "courseCode": "MJ1015",
+      "courseTitle": "Electrical and Control Engineering for Industrial Systems",
+      "category": "topic",
+      "query": "industrial control systems",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "MJ148X",
+      "courseTitle": "Degree Project in Energy Systems, Sustainability and Industrial Engineering, first cycle",
+      "category": "code",
+      "query": "MJ148X",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "MJ148X",
+      "courseTitle": "Degree Project in Energy Systems, Sustainability and Industrial Engineering, first cycle",
+      "category": "code",
+      "query": "MJ14",
+      "rank": 17,
+      "score": 0.23981246656813146
+    },
+    {
+      "courseCode": "MJ148X",
+      "courseTitle": "Degree Project in Energy Systems, Sustainability and Industrial Engineering, first cycle",
+      "category": "title",
+      "query": "Degree Project",
+      "rank": null,
+      "score": 0
+    },
+    {
+      "courseCode": "MJ148X",
+      "courseTitle": "Degree Project in Energy Systems, Sustainability and Industrial Engineering, first cycle",
+      "category": "topic",
+      "query": "energy sustainability engineering",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "SA113X",
+      "courseTitle": "Degree Project in Simulation Technology and Virtual Design, First Level",
+      "category": "code",
+      "query": "SA113X",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "SA113X",
+      "courseTitle": "Degree Project in Simulation Technology and Virtual Design, First Level",
+      "category": "code",
+      "query": "SA11",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "SA113X",
+      "courseTitle": "Degree Project in Simulation Technology and Virtual Design, First Level",
+      "category": "title",
+      "query": "Degree Project",
+      "rank": null,
+      "score": 0
+    },
+    {
+      "courseCode": "SA113X",
+      "courseTitle": "Degree Project in Simulation Technology and Virtual Design, First Level",
+      "category": "topic",
+      "query": "simulation technology and virtual design",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "SA2010",
+      "courseTitle": "Individual exchange project I",
+      "category": "code",
+      "query": "SA2010",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "SA2010",
+      "courseTitle": "Individual exchange project I",
+      "category": "code",
+      "query": "SA20",
+      "rank": 4,
+      "score": 0.43067655807339306
+    },
+    {
+      "courseCode": "SA2010",
+      "courseTitle": "Individual exchange project I",
+      "category": "title",
+      "query": "Individual exchange",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "SA2010",
+      "courseTitle": "Individual exchange project I",
+      "category": "topic",
+      "query": "international exchange engineering project",
+      "rank": 2,
+      "score": 0.6309297535714575
+    },
+    {
+      "courseCode": "SH1014",
+      "courseTitle": "Modern Physics",
+      "category": "code",
+      "query": "SH1014",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "SH1014",
+      "courseTitle": "Modern Physics",
+      "category": "code",
+      "query": "SH10",
+      "rank": 4,
+      "score": 0.43067655807339306
+    },
+    {
+      "courseCode": "SH1014",
+      "courseTitle": "Modern Physics",
+      "category": "title",
+      "query": "Modern Physics",
+      "rank": 3,
+      "score": 0.5
+    },
+    {
+      "courseCode": "SH1014",
+      "courseTitle": "Modern Physics",
+      "category": "topic",
+      "query": "modern physics",
+      "rank": 3,
+      "score": 0.5
+    },
+    {
+      "courseCode": "SI2350",
+      "courseTitle": "Seminar Course in Theoretical Physics",
+      "category": "code",
+      "query": "SI2350",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "SI2350",
+      "courseTitle": "Seminar Course in Theoretical Physics",
+      "category": "code",
+      "query": "SI23",
+      "rank": 1,
+      "score": 1
+    },
+    {
+      "courseCode": "SI2350",
+      "courseTitle": "Seminar Course in Theoretical Physics",
+      "category": "title",
+      "query": "Theoretical Physics",
+      "rank": 3,
+      "score": 0.5
+    },
+    {
+      "courseCode": "SI2350",
+      "courseTitle": "Seminar Course in Theoretical Physics",
+      "category": "topic",
+      "query": "theoretical physics",
+      "rank": 3,
+      "score": 0.5
+    }
+  ]
+}

@@ -102,7 +102,7 @@ async function searchWithEmbedding(
   try {
     const embedding = await resolveEmbedding(query);
     if (!embedding) return [];
-    return await searchByEmbedding(embedding, limit, departmentFilter);
+    return await searchByEmbedding(embedding, limit, departmentFilter, query);
   } catch (err) {
     embeddingSearchFailures += 1;
     const detail = err instanceof Error ? err.message : String(err);
