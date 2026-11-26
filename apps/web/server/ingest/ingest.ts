@@ -62,17 +62,15 @@ async function mapWithConcurrency<T, R>(
   return results;
 }
 
-export async function runNeonIngest(
-  coursesInput?: z.infer<typeof CoursesSchema>,
-) {
+export async function runIngest(coursesInput?: z.infer<typeof CoursesSchema>) {
   if (status.running) {
-    console.warn("Neon ingestion already running; skipping new request");
+    console.warn("Ingest already running; skipping new request");
     return;
   }
   status.running = true;
   status.lastStarted = new Date();
   status.lastError = null;
-  console.log("Neon ingestion process started...");
+  console.log("Ingest started...");
   try {
     const courses = coursesInput ?? (await listAllCourses());
     const establishedCourses = courses.filter(
@@ -103,10 +101,10 @@ export async function runNeonIngest(
     console.log("Embeddings stored successfully");
 
     status.lastCompleted = new Date();
-    console.log("Courses upserted successfully");
+    console.log("Ingest finished");
   } catch (error) {
     status.lastError = String(error);
-    console.error("Neon ingest process failed:", error);
+    console.error("Ingest failed:", error);
     throw error;
   } finally {
     status.running = false;
@@ -140,15 +138,15 @@ async function listAllCourses(): Promise<z.infer<typeof CoursesSchema>> {
   ];
 }
 
-export async function runNeonTest() {
-  console.log("Starting Neon test process...");
+export async function runTestIngest() {
+  console.log("Test ingest started...");
   const courses = await getCourses();
   const sample = courses
     .filter((c) => c.state === "ESTABLISHED")
     .sort(() => Math.random() - 0.5)
     .slice(0, 10);
   console.log(`Sampled ${sample.length} courses`);
-  await runNeonIngest(sample);
+  await runIngest(sample);
 }
 
 type RoundCoverage = { courseCode: string; terms: number[] };
@@ -167,9 +165,7 @@ async function convertCourses(courses: z.infer<typeof CoursesSchema>): Promise<{
     async (course) => {
       processed += 1;
       if (processed % 25 === 0) {
-        console.log(
-          `Neon convertCourses: processed ${processed}/${courses.length}`,
-        );
+        console.log(`Course pages read: ${processed}/${courses.length}`);
       }
 
       const detail = await getCourseInformation(course).catch((error) => {

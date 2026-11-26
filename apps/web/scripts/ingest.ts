@@ -1,14 +1,14 @@
-import { runNeonIngest, runNeonTest } from "../server/ingest/ingest";
+import { runIngest, runTestIngest } from "../server/ingest/ingest";
 
 const args = process.argv.slice(2);
 const test = args.includes("--test");
 
 async function main() {
   if (test) {
-    await runNeonTest();
+    await runTestIngest();
     return;
   }
-  await runNeonIngest();
+  await runIngest();
 }
 
 main().catch((err) => {
