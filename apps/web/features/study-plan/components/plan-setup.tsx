@@ -4,8 +4,11 @@ import { type FormEvent, useMemo, useState } from "react";
 import type { ProgrammeSummary, ProgrammeType } from "@/types/programme";
 import { useProgramme } from "../api/queries";
 import { intakeOf, masterIntakeFor } from "../lib/build-plan";
+import { isOpenEntrance } from "../lib/open-entrance";
 import type { PlanSetup as Setup } from "../lib/plan-storage";
 import { intakeLabel } from "../lib/slots";
+import { trackLabel, trackNamesIn } from "../lib/tracks";
+import { SearchSelect, type SelectOption } from "./search-select";
 
 const TYPE_LABEL: Record<ProgrammeType, string> = {
   CING: "Civilingenjör · 300 hp · 5 years",
@@ -29,6 +32,13 @@ function tracksOf(rows: { track: string | null }[] | undefined) {
   ].sort((a, b) => a.localeCompare(b, "sv"));
 }
 
+/** Tracks as options: the Swedish heading is the value a plan saves, the English name the label. */
+const trackOptions = (
+  values: string[],
+  names: Readonly<Record<string, string>>,
+): SelectOption[] =>
+  values.map((v) => ({ value: v, label: trackLabel(v, names) }));
+
 type Props = {
   programmes: ProgrammeSummary[];
   initial: Setup | null;
@@ -39,14 +49,17 @@ type Props = {
 /**
  * What are you studying, since when, and towards which master's.
  *
- * Every KTH programme the ingest found is listed, grouped by degree type. A
- * civilingenjör student picks a master's from the ones their own intake's
- * syllabus maps, with the rest offered as open competition; a bachelor's
- * student may pick one as their next step, to see its entry requirements.
+ * Every KTH programme the ingest found is listed, grouped by degree type, and
+ * found by typing its code or name. A civilingenjör student picks a master's
+ * from the ones their own intake's syllabus maps, with the rest offered as open
+ * competition; a bachelor's student may pick one as their next step, to see its
+ * entry requirements. An open entrance (Öppen ingång) student also picks the
+ * programme they continue in from year 2.
  */
 export function PlanSetup({ programmes, initial, onSave, onCancel }: Props) {
   const [programme, setProgramme] = useState(initial?.programme ?? "");
   const [intake, setIntake] = useState(initial?.intake ?? "");
+  const [continuation, setContinuation] = useState(initial?.continuation ?? "");
   const [track, setTrack] = useState(initial?.track ?? "");
   const [master, setMaster] = useState(initial?.master ?? "");
   const [masterTrack, setMasterTrack] = useState(initial?.masterTrack ?? "");
@@ -54,6 +67,10 @@ export function PlanSetup({ programmes, initial, onSave, onCancel }: Props) {
 
   const summary = programmes.find((p) => p.code === programme) ?? null;
   const detail = useProgramme(programme || null).data ?? null;
+  const openEntrance = isOpenEntrance(detail, intake || null);
+  const nextDetail =
+    useProgramme(openEntrance && continuation ? continuation : null).data ??
+    null;
   const masterDetail = useProgramme(master || null).data ?? null;
   const isCiving = summary?.type === "CING";
   const canPickMaster =
@@ -65,10 +82,24 @@ export function PlanSetup({ programmes, initial, onSave, onCancel }: Props) {
   const groups = useMemo(() => {
     const by = new Map<ProgrammeType, ProgrammeSummary[]>();
     for (const p of programmes) by.set(p.type, [...(by.get(p.type) ?? []), p]);
-    return [...by.entries()];
+    return [...by.entries()].map(([type, list]) => ({
+      heading: TYPE_LABEL[type],
+      options: list.map((p) => ({
+        value: p.code,
+        code: p.code,
+        label: p.nameEn,
+        hint: p.lastAdmissionTerm
+          ? `No intake after ${intakeLabel(p.lastAdmissionTerm)}`
+          : undefined,
+      })),
+    }));
   }, [programmes]);
 
-  const intakeData = intakeOf(detail, intake || null);
+  // For an open entrance, tracks and master's mappings are the chosen programme's.
+  const intakeData = intakeOf(
+    openEntrance && nextDetail ? nextDetail : detail,
+    intake || null,
+  );
   const programmeTracks = tracksOf(
     Object.entries(intakeData?.years ?? {})
       .filter(([y]) => !isCiving || Number(y) <= 3)
@@ -79,6 +110,9 @@ export function PlanSetup({ programmes, initial, onSave, onCancel }: Props) {
   const masterIntake = isCiving && intake ? masterIntakeFor(intake) : null;
   const masterTracks = tracksOf(
     Object.values(intakeOf(masterDetail, masterIntake)?.years ?? {}).flat(),
+  );
+  const nextProgrammes = programmes.filter(
+    (p) => p.type === "CING" && p.code !== programme,
   );
 
   const submit = (e: FormEvent) => {
@@ -91,17 +125,24 @@ export function PlanSetup({ programmes, initial, onSave, onCancel }: Props) {
       master: canPickMaster ? master || null : null,
       masterTrack: canPickMaster && master ? masterTrack || null : null,
       summer,
+      continuation: openEntrance ? continuation || null : null,
     });
   };
 
   const masterNote = (p: ProgrammeSummary) =>
     p.replacedBy.length
-      ? ` — last intake ${intakeLabel(p.lastAdmissionTerm ?? "")}, replaced by ${p.replacedBy.join(" and ")}`
+      ? `Last intake ${intakeLabel(p.lastAdmissionTerm ?? "")}, replaced by ${p.replacedBy.join(" and ")}`
       : p.firstAdmissionTerm &&
           masterIntake &&
           p.firstAdmissionTerm > masterIntake
-        ? " — opens later"
-        : "";
+        ? "Opens later"
+        : undefined;
+  const masterOption = (m: ProgrammeSummary): SelectOption => ({
+    value: m.code,
+    code: m.code,
+    label: m.nameEn,
+    hint: masterNote(m),
+  });
 
   return (
     <form onSubmit={submit} className="flex flex-col gap-5">
@@ -112,33 +153,22 @@ export function PlanSetup({ programmes, initial, onSave, onCancel }: Props) {
         >
           What are you studying?
         </label>
-        <select
+        <SearchSelect
           id="sp-programme"
           value={programme}
-          onChange={(e) => {
-            setProgramme(e.target.value);
+          onChange={(v) => {
+            setProgramme(v);
             setIntake("");
+            setContinuation("");
             setTrack("");
             setMaster("");
             setMasterTrack("");
           }}
-          className={fieldClass}
-          required
-        >
-          <option value="">Choose your programme</option>
-          {groups.map(([type, list]) => (
-            <optgroup key={type} label={TYPE_LABEL[type]}>
-              {list.map((p) => (
-                <option key={p.code} value={p.code}>
-                  {p.code} · {p.nameEn}
-                  {p.lastAdmissionTerm
-                    ? ` (no intake after ${intakeLabel(p.lastAdmissionTerm)})`
-                    : ""}
-                </option>
-              ))}
-            </optgroup>
-          ))}
-        </select>
+          groups={groups}
+          placeholder="Choose your programme"
+          searchable
+          searchPlaceholder="Search by code or name, e.g. CDATE or computer"
+        />
       </div>
 
       {summary ? (
@@ -149,23 +179,60 @@ export function PlanSetup({ programmes, initial, onSave, onCancel }: Props) {
           >
             When did you start?
           </label>
-          <select
+          <SearchSelect
             id="sp-intake"
             value={intake}
-            onChange={(e) => setIntake(e.target.value)}
-            className={fieldClass}
-            required
-          >
-            <option value="">Choose your intake</option>
-            {summary.intakes.map((t) => (
-              <option key={t} value={t}>
-                {intakeLabel(t)}
-              </option>
-            ))}
-          </select>
+            onChange={setIntake}
+            groups={[
+              {
+                options: summary.intakes.map((t) => ({
+                  value: t,
+                  label: intakeLabel(t),
+                })),
+              },
+            ]}
+            placeholder="Choose your intake"
+          />
           <p className="text-[12px] text-cc-muted">
             Your intake decides which syllabus applies: its mandatory courses,
             and the master's programmes it maps.
+          </p>
+        </div>
+      ) : null}
+
+      {intake && openEntrance ? (
+        <div className="flex flex-col gap-1.5">
+          <label
+            htmlFor="sp-continuation"
+            className="font-medium text-[13px] text-cc-ink"
+          >
+            Which programme from year 2?
+          </label>
+          <SearchSelect
+            id="sp-continuation"
+            value={continuation}
+            onChange={(v) => {
+              setContinuation(v);
+              setTrack("");
+              setMaster("");
+              setMasterTrack("");
+            }}
+            groups={[
+              {
+                options: nextProgrammes.map((p) => ({
+                  value: p.code,
+                  code: p.code,
+                  label: p.nameEn,
+                })),
+              },
+            ]}
+            placeholder="Choose a programme"
+            noneLabel="Not chosen yet"
+            searchable
+          />
+          <p className="text-[12px] text-cc-muted">
+            {summary?.code} covers year 1. Pick the programme you applied for,
+            or got into, and its syllabus fills years 2–5.
           </p>
         </div>
       ) : null}
@@ -178,23 +245,25 @@ export function PlanSetup({ programmes, initial, onSave, onCancel }: Props) {
           >
             Track
           </label>
-          <select
+          <SearchSelect
             id="sp-track"
             value={track}
-            onChange={(e) => setTrack(e.target.value)}
-            className={fieldClass}
-          >
-            <option value="">Not chosen yet</option>
-            {programmeTracks.map((t) => (
-              <option key={t} value={t}>
-                {t}
-              </option>
-            ))}
-          </select>
+            onChange={setTrack}
+            groups={[
+              {
+                options: trackOptions(
+                  programmeTracks,
+                  trackNamesIn(detail, nextDetail),
+                ),
+              },
+            ]}
+            placeholder="Not chosen yet"
+            noneLabel="Not chosen yet"
+          />
         </div>
       ) : null}
 
-      {intake && canPickMaster ? (
+      {intake && canPickMaster && (!openEntrance || continuation) ? (
         <div className="flex flex-col gap-1.5">
           <label
             htmlFor="sp-master"
@@ -204,47 +273,37 @@ export function PlanSetup({ programmes, initial, onSave, onCancel }: Props) {
               ? "Which master's do you want?"
               : "A master's after your degree? (optional)"}
           </label>
-          <select
+          <SearchSelect
             id="sp-master"
             value={master}
-            onChange={(e) => {
-              setMaster(e.target.value);
+            onChange={(v) => {
+              setMaster(v);
               setMasterTrack("");
             }}
-            className={fieldClass}
-          >
-            <option value="">Not chosen yet</option>
-            {isCiving && mapped.size ? (
-              <optgroup
-                label={`Guaranteed place for ${summary.code} ${intakeLabel(intake)}`}
-              >
-                {masters
-                  .filter((m) => mapped.has(m.code))
-                  .map((m) => (
-                    <option key={m.code} value={m.code}>
-                      {m.code} · {m.nameEn}
-                      {masterNote(m)}
-                    </option>
-                  ))}
-              </optgroup>
-            ) : null}
-            <optgroup
-              label={
-                isCiving
+            groups={[
+              ...(isCiving && mapped.size
+                ? [
+                    {
+                      heading: `Guaranteed place for ${openEntrance ? continuation : summary.code} ${intakeLabel(intake)}`,
+                      options: masters
+                        .filter((m) => mapped.has(m.code))
+                        .map(masterOption),
+                    },
+                  ]
+                : []),
+              {
+                heading: isCiving
                   ? "Open competition, no guaranteed place"
-                  : "KTH master's programmes"
-              }
-            >
-              {masters
-                .filter((m) => !mapped.has(m.code))
-                .map((m) => (
-                  <option key={m.code} value={m.code}>
-                    {m.code} · {m.nameEn}
-                    {masterNote(m)}
-                  </option>
-                ))}
-            </optgroup>
-          </select>
+                  : "KTH master's programmes",
+                options: masters
+                  .filter((m) => !mapped.has(m.code))
+                  .map(masterOption),
+              },
+            ]}
+            placeholder="Not chosen yet"
+            noneLabel="Not chosen yet"
+            searchable
+          />
           {isCiving ? (
             <p className="text-[12px] text-cc-muted">
               Its syllabus fills years 4–5, and its entry requirements are
@@ -262,19 +321,18 @@ export function PlanSetup({ programmes, initial, onSave, onCancel }: Props) {
           >
             Master's track
           </label>
-          <select
+          <SearchSelect
             id="sp-mtrack"
             value={masterTrack}
-            onChange={(e) => setMasterTrack(e.target.value)}
-            className={fieldClass}
-          >
-            <option value="">Not chosen yet</option>
-            {masterTracks.map((t) => (
-              <option key={t} value={t}>
-                {t}
-              </option>
-            ))}
-          </select>
+            onChange={setMasterTrack}
+            groups={[
+              {
+                options: trackOptions(masterTracks, trackNamesIn(masterDetail)),
+              },
+            ]}
+            placeholder="Not chosen yet"
+            noneLabel="Not chosen yet"
+          />
         </div>
       ) : null}
 
@@ -293,7 +351,7 @@ export function PlanSetup({ programmes, initial, onSave, onCancel }: Props) {
           <button
             type="button"
             onClick={onCancel}
-            className="h-10 cursor-pointer rounded-[10px] px-4 text-[13.5px] text-cc-ink hover:bg-cc-pill"
+            className="h-10 cursor-pointer rounded-full px-4 text-[13.5px] text-cc-ink hover:bg-cc-pill"
           >
             Cancel
           </button>
@@ -301,7 +359,7 @@ export function PlanSetup({ programmes, initial, onSave, onCancel }: Props) {
         <button
           type="submit"
           disabled={!programme || !intake}
-          className="h-10 cursor-pointer rounded-[10px] bg-cc-btn px-5 font-medium text-[13.5px] text-cc-btn-fg disabled:opacity-50"
+          className="h-10 cursor-pointer rounded-full bg-cc-btn px-5 font-medium text-[13.5px] text-cc-btn-fg disabled:cursor-not-allowed disabled:opacity-50"
         >
           {initial ? "Save" : "Build my plan"}
         </button>

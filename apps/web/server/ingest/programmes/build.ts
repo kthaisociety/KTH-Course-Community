@@ -26,7 +26,12 @@ import {
   KNOWLEDGE_AREAS,
   requirementItems,
 } from "./parse-eligibility";
-import { mastersOf, overlapsOf, parseCourseList } from "./parse-plan";
+import {
+  mastersOf,
+  overlapsOf,
+  parseCourseList,
+  trackNamesOf,
+} from "./parse-plan";
 
 /**
  * Builds the study plan's programme data from kth.se and writes it as JSON
@@ -126,6 +131,8 @@ function intakeOf(
   store: Store,
   term: string,
   masterNames: Map<string, string>,
+  /** The same page in English, for the tracks' English names. */
+  storeEn: Store | null,
 ): ProgrammeIntake {
   const sp = asRecord(store.studyProgramme);
   const years: Record<string, PlanRow[]> = {};
@@ -154,6 +161,9 @@ function intakeOf(
     mastersIndividual: masters.individual,
     mastersOpen: masters.open,
     overlaps: overlapsOf(Object.values(years).flat()),
+    trackNames: storeEn
+      ? trackNamesOf(sp, asRecord(storeEn.studyProgramme))
+      : undefined,
     text: {
       conditions: plainText(str(sp.villkorForDeltagande)).slice(0, 4000),
       degreeProject: plainText(str(sp.examensarbete)).slice(0, 3000),
@@ -277,6 +287,10 @@ export async function buildProgrammeData(opts: BuildOptions) {
     store: await get(
       `${KTH_BASE}/program/${encodeURIComponent(s.code)}/${term}/genomforande`,
     ),
+    // The English page only for its track headings; everything else is read in Swedish.
+    storeEn: await get(
+      `${KTH_BASE}/program/${encodeURIComponent(s.code)}/${term}/genomforande?l=en`,
+    ),
   }));
 
   // Year N of a programme in the running year is studied by the cohort admitted N-1 years ago.
@@ -302,7 +316,7 @@ export async function buildProgrammeData(opts: BuildOptions) {
     const intakes: Record<string, ProgrammeIntake> = {};
     for (const p of plans)
       if (p.code === s.code && p.store)
-        intakes[p.term] = intakeOf(p.store, p.term, masterNames);
+        intakes[p.term] = intakeOf(p.store, p.term, masterNames, p.storeEn);
     fillYears(intakes, s.years);
     const rounds: Record<string, PeriodCredits[]> = {};
     for (const page of yearPages.filter((y) => y.code === s.code))

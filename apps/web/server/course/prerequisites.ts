@@ -14,6 +14,11 @@ import { plainText } from "../text/html";
 const CODE = /\b[A-Z]{2}\d{3}[0-9A-Z]\b/g;
 /** "DD1310-DD1318": a range of codes, expanded against the catalogue. */
 const RANGE = /\b([A-Z]{2})(\d{3}[0-9A-Z])\s*[-–]\s*\1(\d{3}[0-9A-Z])\b/g;
+/**
+ * A course code typed with its prefix twice, "SFSF1918" (SF2942's own text):
+ * read as the code it plainly means, rather than dropped as no code at all.
+ */
+const DOUBLED_PREFIX = /\b([A-Z]{2})\1(\d{3}[0-9A-Z])\b/g;
 /** Ladok's sentence saying a running course counts as completed. */
 const REGISTERED =
   /ännu inte är (ladok)?rapporterad|jämställs med slutförd|den som är registrerad anses|med slutexamination avses/i;
@@ -65,7 +70,7 @@ export function readPrerequisites(
   courseCode: string,
   catalogue: ReadonlySet<string>,
 ): PrerequisiteReading {
-  const text = plainText(eligibilityHtml);
+  const text = plainText(eligibilityHtml).replace(DOUBLED_PREFIX, "$1$2");
   let registeredCounts = false;
   const sentences = text
     .split(/(?<=[.!?])\s+(?=[A-ZÅÄÖ])|\n/)

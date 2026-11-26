@@ -79,24 +79,20 @@ function programme(
 }
 
 // A civilingenjör programme: 60 hp a year in years 1–3, all mandatory, given in P1.
-const civing = programme(
-  "CXXXX",
-  "CING",
-  300,
-  {
-    "1": [row("AA1001", 30), row("AA1002", 30)],
-    "2": [row("AA2001", 30), row("AA2002", 30)],
-    "3": [row("AA3001", 30), row("AA300X", 15)],
-  },
-  {
-    AA1001: [[0, 30, 0, 0, 0, 0]],
-    AA1002: [[0, 0, 0, 30, 0, 0]],
-    AA2001: [[0, 30, 0, 0, 0, 0]],
-    AA2002: [[0, 0, 0, 30, 0, 0]],
-    AA3001: [[0, 30, 0, 0, 0, 0]],
-    AA300X: [[0, 0, 0, 15, 0, 0]],
-  },
-);
+const civingYears: Record<string, PlanRow[]> = {
+  "1": [row("AA1001", 30), row("AA1002", 30)],
+  "2": [row("AA2001", 30), row("AA2002", 30)],
+  "3": [row("AA3001", 30), row("AA300X", 15)],
+};
+const civingRounds: Record<string, number[][]> = {
+  AA1001: [[0, 30, 0, 0, 0, 0]],
+  AA1002: [[0, 0, 0, 30, 0, 0]],
+  AA2001: [[0, 30, 0, 0, 0, 0]],
+  AA2002: [[0, 0, 0, 30, 0, 0]],
+  AA3001: [[0, 30, 0, 0, 0, 0]],
+  AA300X: [[0, 0, 0, 15, 0, 0]],
+};
+const civing = programme("CXXXX", "CING", 300, civingYears, civingRounds);
 // Its master's: an advanced course and a degree project.
 const master = programme(
   "TXXXM",
@@ -163,7 +159,7 @@ function progressOf(
     eligibility: null,
     areas: [],
     projects: over.projects ?? {},
-    facts: noFacts,
+    facts: inputs.facts,
     now: inputs.now,
   });
 }
@@ -175,6 +171,16 @@ const line = (
   sections
     .find((s) => s.id === id)
     ?.criteria.find((c) => c.text.startsWith(starts));
+/** A meter by its exact label and the line under it, e.g. "Advanced credits" / "Before BB200X starts". */
+const meterLine = (
+  sections: ReturnType<typeof progressOf>,
+  id: string,
+  text: string,
+  detail: string,
+) =>
+  sections
+    .find((s) => s.id === id)
+    ?.criteria.find((c) => c.text === text && c.detail === detail);
 
 describe("isPassed", () => {
   it("counts a failing grade or partial credits as not passed", () => {
@@ -201,9 +207,9 @@ describe("isPassed", () => {
         },
       ],
     });
-    expect(line(sections, "bachelor", "Mandatory courses")?.text).toMatch(
-      /^Mandatory courses: 0 of/,
-    );
+    expect(
+      line(sections, "bachelor", "Mandatory courses")?.meter,
+    ).toMatchObject({ done: 0, unit: "courses" });
   });
 });
 
@@ -269,9 +275,167 @@ describe("computeProgress", () => {
     const sections = progressOf({
       state: { ...empty, placements: { AA2002: at(2026, 1) } },
     });
+    const years12 = line(sections, "bachelor", "Of those, from years 1–2");
+    const meter = years12?.meter;
+    expect(meter && meter.done + meter.planned).toBe(120);
+    expect(meter?.need).toBe(110);
+    // The year rows add up to 90 here; the line under the meter says where the other 30 sit.
+    expect(years12?.detail).toBe(
+      "Incl. AA2002, a year 1–2 course placed in year 3",
+    );
+  });
+
+  it("doesn't count a course left out of the plan", () => {
+    const sections = progressOf({ state: { ...empty, leftOut: ["AA2002"] } });
+    const meter = line(sections, "bachelor", "Of those, from years 1–2")?.meter;
+    expect(meter && meter.done + meter.planned).toBe(90);
+  });
+
+  it("counts only one course of an 'Endast en av' set toward the credits", () => {
+    // Two year-2 electives of which only one may count, both placed.
+    const withChoice = programme(
+      "CXXXX",
+      "CING",
+      300,
+      {
+        ...civingYears,
+        "2": [
+          ...civingYears["2"],
+          { ...row("AA2101", 7.5), category: "VV" },
+          { ...row("AA2102", 7.5), category: "VV" },
+        ],
+      },
+      civingRounds,
+    );
+    withChoice.intakes["20242"].overlaps = [["AA2101", "AA2102"]];
+    const sections = progressOf({
+      programme: withChoice,
+      master,
+      state: {
+        ...empty,
+        placements: { AA2101: at(2025, 2), AA2102: at(2025, 3) },
+      },
+    });
+    const meter = line(sections, "bachelor", "Of those, from years 1–2")?.meter;
+    expect(meter && meter.done + meter.planned).toBe(127.5);
+  });
+
+  it("counts one course of an 'Endast en av' set toward the gate to the master's part too", () => {
+    const withChoice = programme(
+      "CXXXX",
+      "CING",
+      300,
+      {
+        ...civingYears,
+        "3": [
+          ...civingYears["3"],
+          { ...row("AA3101", 7.5), category: "VV" },
+          { ...row("AA3102", 7.5), category: "VV" },
+        ],
+      },
+      civingRounds,
+    );
+    withChoice.intakes["20242"].overlaps = [["AA3101", "AA3102"]];
+    const sections = progressOf({
+      programme: withChoice,
+      master,
+      state: {
+        ...empty,
+        placements: { AA3101: at(2026, 2), AA3102: at(2026, 3) },
+      },
+    });
+    const gate = line(sections, "bachelor", "Gate to the master's part")?.meter;
+    expect(gate && gate.done + gate.planned).toBe(172.5);
+  });
+
+  it("keeps an earlier course of a set for a deadline a larger, later one misses", () => {
+    // AA2101 (7.5 hp) ends before the kandidat project starts; AA2102 (9 hp), its
+    // overlap, comes after. Chosen over the whole plan, AA2102 would win and the
+    // project's meter would lose both.
+    const withChoice = programme(
+      "CXXXX",
+      "CING",
+      300,
+      {
+        ...civingYears,
+        "2": [
+          ...civingYears["2"],
+          { ...row("AA2101", 7.5), category: "VV" },
+          { ...row("AA2102", 9), category: "VV" },
+        ],
+      },
+      civingRounds,
+    );
+    withChoice.intakes["20242"].overlaps = [["AA2101", "AA2102"]];
+    const sections = progressOf({
+      programme: withChoice,
+      master,
+      projects: { AA300X: gate("AA300X", { credits: 200 }) },
+      state: {
+        ...empty,
+        placements: { AA2101: at(2025, 2), AA2102: at(2027, 1) },
+      },
+    });
+    const before = line(sections, "bachelor", "Before AA300X starts")?.meter;
+    expect(before && before.done + before.planned).toBe(157.5);
+  });
+
+  it("counts a course once when it was taken under another code", () => {
+    // AA3001 was taken early as ZZ3001, the same course under its old code.
+    const facts: PlanFactsResult = {
+      courses: {},
+      refs: {
+        AA3001: { code: "AA3001", titleSwe: "Signaler", level: "B" },
+        ZZ3001: { code: "ZZ3001", titleSwe: "Signaler", level: "B" },
+      },
+    } as unknown as PlanFactsResult;
+    const sections = progressOf({
+      facts,
+      taken: [
+        {
+          courseCode: "ZZ3001",
+          grade: "A",
+          earnedCredits: 30,
+          attendanceYear: 2025,
+        },
+      ],
+      state: { ...empty, placements: { ZZ3001: at(2025, 1) } },
+    });
+    const meter = line(sections, "bachelor", "Credits, years 1–3")?.meter;
+    expect(meter && meter.done + meter.planned).toBe(165);
+  });
+
+  it("keeps the mandatory courses whole when an overlapping course takes the credits", () => {
+    // AA2101 is passed, so it is the one of the pair that counts; AA2001 must still read as planned.
+    const withChoice = programme(
+      "CXXXX",
+      "CING",
+      300,
+      {
+        ...civingYears,
+        "2": [...civingYears["2"], { ...row("AA2101", 30), category: "VV" }],
+      },
+      civingRounds,
+    );
+    withChoice.intakes["20242"].overlaps = [["AA2001", "AA2101"]];
+    const sections = progressOf({
+      programme: withChoice,
+      master,
+      taken: [
+        {
+          courseCode: "AA2101",
+          grade: "A",
+          earnedCredits: 30,
+          attendanceYear: 2025,
+        },
+      ],
+      state: { ...empty, placements: { AA2101: at(2024, 1) } },
+    });
     expect(
-      line(sections, "bachelor", "Of those, from years 1–2")?.text,
-    ).toMatch(/^Of those, from years 1–2: 120 of 110/);
+      line(sections, "bachelor", "Mandatory courses")?.meter,
+    ).toMatchObject({ done: 0, planned: 6, need: 6 });
+    const meter = line(sections, "bachelor", "Of those, from years 1–2")?.meter;
+    expect(meter).toMatchObject({ done: 30, planned: 90 });
   });
 
   it("checks a master's degree project's total bar as well as its advanced one", () => {
@@ -281,10 +445,11 @@ describe("computeProgress", () => {
       },
     });
     expect(
-      line(sections, "master", "Credits before BB200X starts")?.state,
+      meterLine(sections, "master", "Credits", "Before BB200X starts")?.state,
     ).toBe("short");
     expect(
-      line(sections, "master", "Advanced credits before BB200X starts")?.state,
+      meterLine(sections, "master", "Advanced credits", "Before BB200X starts")
+        ?.state,
     ).toBe("planned");
   });
 
@@ -311,11 +476,10 @@ describe("computeProgress", () => {
       "1": [row("CC1001", 60)],
     });
     expect(
-      line(progressOf({ programme: architect }), "bachelor", "Credits")?.text,
-    ).toMatch(/of 300 hp/);
-    expect(line(progressOf({}), "bachelor", "Credits")?.text).toMatch(
-      /of 180 hp/,
-    );
+      line(progressOf({ programme: architect }), "bachelor", "Credits")?.meter
+        ?.need,
+    ).toBe(300);
+    expect(line(progressOf({}), "bachelor", "Credits")?.meter?.need).toBe(180);
   });
 });
 
