@@ -1,6 +1,6 @@
 # KTH-Course-Community
 
-Bun workspace monorepo (`workspaces: ["apps/*"]`). The only app is `apps/web`: Next.js 16 hosts the UI, Better Auth, Drizzle/Neon, and the tRPC API. There is no `packages/` workspace yet.
+Bun workspace monorepo (`workspaces: ["apps/*"]`). The only app is `apps/web`: Next.js 16 hosts the UI, Better Auth, Drizzle/Postgres, and the tRPC API. There is no `packages/` workspace yet.
 
 ## Quick Reference
 
@@ -10,9 +10,9 @@ Bun workspace monorepo (`workspaces: ["apps/*"]`). The only app is `apps/web`: N
 - Dev: `bun run dev` → http://localhost:3000
 - Test: `bun run test:web` (Vitest, `apps/web/server/**/*.spec.ts`)
 - Lint / format: `bun run lint` / `bun run format` (Biome)
-- DB: `bun run db:push` / `bun run db:generate`
+- Local DB: `docker compose up -d` (Postgres on 127.0.0.1:5438), then `bun run db:migrate`. Schema changes: `bun run db:generate`, then `bun run db:migrate`, and commit the migration
 - Container start: `apps/web/scripts/migrate-on-start.ts` applies the committed migrations before the server, only when `MIGRATE_ON_START=true` (see `Dockerfile.web`)
-- Ingest: `bun run ingest` (optional `--test`)
+- Ingest: `bun run ingest` (`--test` for 10 random courses, `--test <n>` for n)
 - Jobs in a deployed container: ingest and both backfills are bundled into the image as `apps/web/scripts/*.mjs` and run with `node` from the container's terminal (README, "Run a Job in a Deployed Container")
 - Programme syllabi for the study plan: `bun run ingest:programmes` (optional `--cache <dir>`; commit `server/programme/data/`)
 - Backfill earned personalization tiers: `bun run backfill:tiers` (idempotent; only ever raises)
