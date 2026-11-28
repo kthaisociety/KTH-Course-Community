@@ -43,20 +43,16 @@ bun i
 
 ### 3. Set Up Environment Variables
 
-Copy `apps/web/.env.example` to `apps/web/.env.local` and fill in:
+Copy `apps/web/.env.example` to `apps/web/.env.local`. It already points `DATABASE_URL`
+at the local database (step 4) and `BETTER_AUTH_URL` at `http://localhost:3000`. Then fill in:
 
-- `DATABASE_URL`
-- `BETTER_AUTH_URL` (the public site origin, e.g. `http://localhost:3000`)
-- `BETTER_AUTH_SECRET`
-- `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`
-- `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET`
-- `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` / `AWS_REGION` (SES magic-link email)
-- `SES_SENDER` / `SES_REPLY_TO`
-- `AI_GATEWAY_API_KEY` (embeddings for search/ingest)
-
-Google OAuth authorised redirect URI: `${BETTER_AUTH_URL}/api/auth/callback/google`.
-GitHub OAuth authorised callback URL: `${BETTER_AUTH_URL}/api/auth/callback/github`.
-Magic-link sign-in sends mail through Amazon SES from `SES_SENDER`.
+- `BETTER_AUTH_SECRET`: generate one with `openssl rand -base64 32`.
+- `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`, `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET`
+  and `AI_GATEWAY_API_KEY`: **staging's values**. Staging's Google client and GitHub app
+  also accept sign-ins on `http://localhost:3000`, so there's nothing to set up on Google
+  or GitHub. Ask in the project's Mattermost channel for them.
+- Leave the AWS and SES keys empty. Outside production the sign-in email isn't sent: its
+  link is printed in the `bun run dev` output instead.
 
 ### 4. Set Up the Database
 
@@ -278,7 +274,8 @@ slice.
 
 Search and ingest use the Vercel AI SDK for embeddings via `apps/web/server/ai.ts`.
 
-Get a key at [vercel.com/dashboard → AI Gateway → API Keys](https://vercel.com/dashboard/ai-gateway/api-keys).
+Locally, `AI_GATEWAY_API_KEY` is staging's key ("Set Up Environment Variables"). Each
+environment has its own key, on the KTHAIS Vercel account.
 
 ## Agent Files
 
