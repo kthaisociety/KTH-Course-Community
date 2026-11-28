@@ -4,7 +4,7 @@ KTH-Course-Community helps KTH students search for and explore courses.
 
 This is a [Bun](https://bun.sh/) workspace monorepo (`workspaces: ["apps/*"]`).
 The only app today is `apps/web`: Next.js 16 hosts the UI, Better Auth,
-Drizzle/Neon, and the tRPC API. There is no `packages/` workspace yet.
+Drizzle/Postgres, and the tRPC API. There is no `packages/` workspace yet.
 
 ## Open Source Contribution
 
@@ -24,6 +24,7 @@ If you have any suggestions you are always welcome to open an issue in the repos
 ## Prerequisites
 
 - [Bun](https://bun.sh/) 1.3.14 (`packageManager` in the root `package.json`)
+- [Docker](https://docs.docker.com/get-docker/) with Compose, for the local Postgres
 
 ## Getting Started
 
@@ -42,28 +43,30 @@ bun i
 
 ### 3. Set Up Environment Variables
 
-Copy `apps/web/.env.example` to `apps/web/.env.local` and fill in:
+Copy `apps/web/.env.example` to `apps/web/.env.local`. It already points `DATABASE_URL`
+at the local database (step 4) and `BETTER_AUTH_URL` at `http://localhost:3000`. Then fill in:
 
-- `DATABASE_URL`
-- `BETTER_AUTH_URL` (the public site origin, e.g. `http://localhost:3000`)
-- `BETTER_AUTH_SECRET`
-- `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`
-- `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET`
-- `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` / `AWS_REGION` (SES magic-link email)
-- `SES_SENDER` / `SES_REPLY_TO`
-- `AI_GATEWAY_API_KEY` (embeddings for search/ingest)
-
-Google OAuth authorised redirect URI: `${BETTER_AUTH_URL}/api/auth/callback/google`.
-GitHub OAuth authorised callback URL: `${BETTER_AUTH_URL}/api/auth/callback/github`.
-Magic-link sign-in sends mail through Amazon SES from `SES_SENDER`.
+- `BETTER_AUTH_SECRET`: generate one with `openssl rand -base64 32`.
+- `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`, `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET`
+  and `AI_GATEWAY_API_KEY`: **staging's values**. Staging's Google client and GitHub app
+  also accept sign-ins on `http://localhost:3000`, so there's nothing to set up on Google
+  or GitHub. Ask in the project's Mattermost channel for them.
+- Leave the AWS and SES keys empty. Outside production the sign-in email isn't sent: its
+  link is printed in the `bun run dev` output instead.
 
 ### 4. Set Up the Database
 
-From the repo root:
+Development runs on a local Postgres in Docker (`docker-compose.yml`), on the same
+image as staging and production. `apps/web/.env.example` already points
+`DATABASE_URL` at it. From the repo root:
 
 ```bash
-bun run db:push
+docker compose up -d   # Postgres on 127.0.0.1:5438
+bun run db:migrate     # builds the schema from the committed migrations
 ```
+
+The data stays in a Docker volume between restarts. `docker compose down -v`
+removes the database, to start over from an empty one.
 
 ### 5. Start the Development Server
 
@@ -75,11 +78,16 @@ The app is at [http://localhost:3000](http://localhost:3000).
 
 ### 6. Ingest Data
 
+The database starts without courses. To fill it, from the repo root:
+
 ```bash
-bun run ingest
+bun run ingest -- --test       # 50 random established courses
+bun run ingest -- --test 200   # as many random courses as you ask for
+bun run ingest                 # every course
 ```
 
-Optional: `bun run ingest -- --test` ingests 10 random established courses.
+A test ingest is enough for most work, and you can run one again to add more
+courses. Ingest needs `AI_GATEWAY_API_KEY`, to embed the courses for search.
 
 This reads KTH's public course pages on www.kth.se (KOPPS is closed, see `docs/adr/0012-ingest-from-kth-course-pages.md`) and writes into the database in `DATABASE_URL` (including embeddings). A full run fetches about 4,800 courses in two languages and takes a while.
 
@@ -107,7 +115,7 @@ The image holds each job as one file, built for Node:
 
 | Job | Command |
 | --- | --- |
-| Ingest | `node apps/web/scripts/ingest.mjs` (add `--test` for 10 random courses) |
+| Ingest | `node apps/web/scripts/ingest.mjs` (add `--test` for 50 random courses, `--test <n>` for n) |
 | Backfill earned personalization tiers | `node apps/web/scripts/backfill-personalization-tiers.mjs` |
 | Backfill missing graph nodes | `node apps/web/scripts/backfill-graph-placements.mjs` |
 
@@ -193,10 +201,12 @@ export const reviewsRouter = createTRPCRouter({
 ```
 
 Register it on `appRouter` in `server/api/root.ts`. If you need a new table, add
-it in `server/db/schema.ts` (or `auth-schema.ts` for identity) and run
-`bun run db:push` from the repo root. Commit the migration from
-`bun run db:generate` with it: a container started with `MIGRATE_ON_START=true`
-gets its schema from the committed migrations, not from `db:push`. Types that
+it in `server/db/schema.ts` (or `auth-schema.ts` for identity), then run
+`bun run db:generate` and `bun run db:migrate` from the repo root, and commit
+the generated migration with it. Staging and production get their schema only
+from the committed migrations, so applying yours locally first checks it.
+`bun run db:push` skips the migration and is only for trying a schema out on
+your local database. Types that
 both server and UI share go in `types/`.
 
 ### 2. Frontend
@@ -264,7 +274,8 @@ slice.
 
 Search and ingest use the Vercel AI SDK for embeddings via `apps/web/server/ai.ts`.
 
-Get a key at [vercel.com/dashboard → AI Gateway → API Keys](https://vercel.com/dashboard/ai-gateway/api-keys).
+Locally, `AI_GATEWAY_API_KEY` is staging's key ("Set Up Environment Variables"). Each
+environment has its own key, on the KTHAIS Vercel account.
 
 ## Agent Files
 
@@ -301,7 +312,7 @@ What each environment runs with (hosts, settings, secret names) is declared in
 | `bun run test:web` | Runs Vitest (`apps/web/server/**/*.spec.ts`) |
 | `bun run lint` | Biome check (writes fixes) |
 | `bun run format` | Biome format |
-| `bun run db:push` | Pushes the Drizzle schema to Neon |
+| `bun run db:push` | Pushes the Drizzle schema to the local database, without a migration |
 | `bun run db:generate` | Generates Drizzle migrations |
 | `bun run db:migrate` | Applies the committed migrations |
 | `bun run ingest` | Ingests KTH courses from www.kth.se into the database |

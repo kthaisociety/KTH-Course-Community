@@ -1,0 +1,23 @@
+# Local Postgres for development, on the same image as staging and production (pgvector, for the
+# course embeddings). Bound to 127.0.0.1: a dev machine with a public IP would otherwise expose it.
+#   docker compose up -d     start it; the data survives restarts, in the postgres_data volume
+#   docker compose down -v   remove it and its data
+services:
+  db:
+    image: pgvector/pgvector:0.8.7-pg17
+    environment:
+      POSTGRES_DB: course_community
+      POSTGRES_USER: course_community
+      POSTGRES_PASSWORD: course_community
+    ports:
+      - "127.0.0.1:5438:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U course_community -d course_community"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
+volumes:
+  postgres_data:

@@ -138,13 +138,13 @@ async function listAllCourses(): Promise<z.infer<typeof CoursesSchema>> {
   ];
 }
 
-export async function runTestIngest() {
-  console.log("Test ingest started...");
+export async function runTestIngest(count: number) {
+  console.log(`Test ingest started: ${count} random courses...`);
   const courses = await getCourses();
   const sample = courses
     .filter((c) => c.state === "ESTABLISHED")
     .sort(() => Math.random() - 0.5)
-    .slice(0, 10);
+    .slice(0, count);
   console.log(`Sampled ${sample.length} courses`);
   await runIngest(sample);
 }
